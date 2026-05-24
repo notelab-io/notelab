@@ -8,7 +8,7 @@
     "lib": [
       "ESNext"
     ],
-    "jsx": "react-jsx",
-    "jsxImportSource": "hono/jsx"
+    "types": ["node"]
   },
+  "include": ["src", "drizzle.config.ts"]
 }
