@@ -2,12 +2,13 @@
 
 import * as React from "react"
 import { ArrowLeftIcon, GalleryVerticalEndIcon, RotateCcwIcon } from "lucide-react"
-import { Link } from "@tanstack/react-router"
+import { Link, useNavigate } from "@tanstack/react-router"
 
 import { Button } from "@/components/ui/button"
 import {
   Field,
   FieldDescription,
+  FieldError,
   FieldGroup,
 } from "@/components/ui/field"
 import {
@@ -17,21 +18,71 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp"
 import { cn } from "@/lib/utils"
+import { getApiErrorMessage } from "@/lib/api"
+import {
+  useRequestEmailVerificationOtp,
+  useRequestSignInOtp,
+  useSignInWithOtp,
+  useVerifyEmailOtp,
+} from "@/features/auth/hooks"
+import { useAuthFlowStore } from "@/stores/auth-flow-store"
 
 export function OtpForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
+  const navigate = useNavigate()
   const [code, setCode] = React.useState("")
   const [resendCount, setResendCount] = React.useState(0)
+  const { clearAuthFlow, email, purpose } = useAuthFlowStore()
+  const signInWithOtp = useSignInWithOtp()
+  const verifyEmailOtp = useVerifyEmailOtp()
+  const requestSignInOtp = useRequestSignInOtp()
+  const requestEmailVerificationOtp = useRequestEmailVerificationOtp()
+  const isVerifying = signInWithOtp.isPending || verifyEmailOtp.isPending
+  const isResending = requestSignInOtp.isPending || requestEmailVerificationOtp.isPending
+  const verificationError = signInWithOtp.error ?? verifyEmailOtp.error
+  const resendError = requestSignInOtp.error ?? requestEmailVerificationOtp.error
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+
+    if (!email || !purpose) {
+      return
+    }
+
+    try {
+      if (purpose === "sign-in") {
+        await signInWithOtp.mutateAsync({ email, otp: code })
+        clearAuthFlow()
+        void navigate({ to: "/dashboard" })
+        return
+      }
+
+      await verifyEmailOtp.mutateAsync({ email, otp: code })
+      clearAuthFlow()
+      void navigate({ to: "/onboarding" })
+    } catch {
+      // React Query owns the visible error state.
+    }
   }
 
-  function handleResend() {
+  async function handleResend() {
+    if (!email || !purpose) {
+      return
+    }
+
     setCode("")
-    setResendCount((currentCount) => currentCount + 1)
+    try {
+      if (purpose === "sign-in") {
+        await requestSignInOtp.mutateAsync(email)
+      } else {
+        await requestEmailVerificationOtp.mutateAsync(email)
+      }
+      setResendCount((currentCount) => currentCount + 1)
+    } catch {
+      // React Query owns the visible error state.
+    }
   }
 
   return (
@@ -50,7 +101,9 @@ export function OtpForm({
             </a>
             <h1 className="text-xl font-bold">Enter verification code</h1>
             <FieldDescription className="text-center">
-              We sent a 6-digit code to your email.
+              {email
+                ? `We sent a 6-digit code to ${email}.`
+                : "Start from login or signup to receive a code."}
             </FieldDescription>
           </div>
 
@@ -60,6 +113,7 @@ export function OtpForm({
               value={code}
               onChange={setCode}
               containerClassName="justify-center"
+              disabled={isVerifying}
             >
               <InputOTPGroup>
                 <InputOTPSlot index={0} />
@@ -75,9 +129,18 @@ export function OtpForm({
             </InputOTP>
           </Field>
 
+          {(verificationError || resendError) && (
+            <FieldError>
+              {getApiErrorMessage(verificationError ?? resendError)}
+            </FieldError>
+          )}
+
           <Field>
-            <Button type="submit" disabled={code.length !== 6}>
-              Continue
+            <Button
+              type="submit"
+              disabled={!email || !purpose || code.length !== 6 || isVerifying}
+            >
+              {isVerifying ? "Checking code..." : "Continue"}
             </Button>
           </Field>
 
@@ -87,9 +150,10 @@ export function OtpForm({
               variant="outline"
               className="w-full"
               onClick={handleResend}
+              disabled={!email || !purpose || isResending}
             >
               <RotateCcwIcon />
-              Resend code
+              {isResending ? "Sending..." : "Resend code"}
             </Button>
             <FieldDescription className="text-center">
               {resendCount > 0

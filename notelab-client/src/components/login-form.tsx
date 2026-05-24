@@ -1,25 +1,48 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { Link } from "@tanstack/react-router"
+import { Link, useNavigate } from "@tanstack/react-router"
 import { Button } from "@/components/ui/button"
 import {
   Field,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
   FieldSeparator,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { getApiErrorMessage } from "@/lib/api"
+import { useRequestSignInOtp } from "@/features/auth/hooks"
+import { useAuthFlowStore } from "@/stores/auth-flow-store"
 import { GalleryVerticalEndIcon } from "lucide-react"
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
+  const navigate = useNavigate()
+  const requestOtp = useRequestSignInOtp()
+  const setAuthFlow = useAuthFlowStore((state) => state.setAuthFlow)
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    const formData = new FormData(event.currentTarget)
+    const email = String(formData.get("email") ?? "").trim().toLowerCase()
+
+    try {
+      await requestOtp.mutateAsync(email)
+      setAuthFlow({ email, purpose: "sign-in" })
+      void navigate({ to: "/otp" })
+    } catch {
+      // React Query owns the visible error state.
+    }
+  }
+
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <form>
+      <form onSubmit={handleSubmit}>
         <FieldGroup>
           <div className="flex flex-col items-center gap-2 text-center">
             <a
@@ -40,13 +63,21 @@ export function LoginForm({
             <FieldLabel htmlFor="email">Email</FieldLabel>
             <Input
               id="email"
+              name="email"
               type="email"
               placeholder="m@example.com"
+              autoComplete="email"
+              disabled={requestOtp.isPending}
               required
             />
           </Field>
+          {requestOtp.isError && (
+            <FieldError>{getApiErrorMessage(requestOtp.error)}</FieldError>
+          )}
           <Field>
-            <Button type="submit">Login</Button>
+            <Button type="submit" disabled={requestOtp.isPending}>
+              {requestOtp.isPending ? "Sending code..." : "Login"}
+            </Button>
           </Field>
           <FieldSeparator>Or</FieldSeparator>
           <Field className="grid gap-4 sm:grid-cols-2">

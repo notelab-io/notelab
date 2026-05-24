@@ -3,9 +3,7 @@ import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { auth } from "./auth";
-
-const clientUrl = process.env.CLIENT_URL ?? "http://localhost:1420";
-const port = Number(process.env.PORT ?? 3000);
+import { clientOrigins, port } from "./config";
 
 const app = new Hono<{
   Variables: {
@@ -17,7 +15,7 @@ const app = new Hono<{
 app.use(
   "*",
   cors({
-    origin: clientUrl,
+    origin: clientOrigins,
     allowHeaders: ["Content-Type", "Authorization"],
     allowMethods: ["GET", "POST", "OPTIONS"],
     exposeHeaders: ["Content-Length"],

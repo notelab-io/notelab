@@ -1,24 +1,45 @@
 "use client"
 
 import { GalleryVerticalEndIcon } from "lucide-react"
+import { useNavigate } from "@tanstack/react-router"
 
 import { Button } from "@/components/ui/button"
 import {
   Field,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { getApiErrorMessage } from "@/lib/api"
 import { cn } from "@/lib/utils"
+import { useCreateOrganization } from "@/features/organizations/hooks"
 
 export function OnboardingForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
+  const navigate = useNavigate()
+  const createOrganization = useCreateOrganization()
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    const formData = new FormData(event.currentTarget)
+    const organizationName = String(formData.get("organizationName") ?? "").trim()
+
+    try {
+      await createOrganization.mutateAsync(organizationName)
+      void navigate({ to: "/dashboard" })
+    } catch {
+      // React Query owns the visible error state.
+    }
+  }
+
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <form>
+      <form onSubmit={handleSubmit}>
         <FieldGroup>
           <div className="flex flex-col items-center gap-2 text-center">
             <a
@@ -45,11 +66,17 @@ export function OnboardingForm({
               type="text"
               placeholder="Acme Inc."
               autoComplete="organization"
+              disabled={createOrganization.isPending}
               required
             />
           </Field>
+          {createOrganization.isError && (
+            <FieldError>{getApiErrorMessage(createOrganization.error)}</FieldError>
+          )}
           <Field>
-            <Button type="submit">Continue</Button>
+            <Button type="submit" disabled={createOrganization.isPending}>
+              {createOrganization.isPending ? "Creating workspace..." : "Continue"}
+            </Button>
           </Field>
         </FieldGroup>
       </form>

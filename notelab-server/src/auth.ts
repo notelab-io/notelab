@@ -5,13 +5,12 @@ import { emailOTP, magicLink, organization } from "better-auth/plugins";
 import { db } from "./db";
 import * as schema from "./db/schema";
 import { sendConsoleEmail } from "./email";
-
-const clientUrl = process.env.CLIENT_URL ?? "http://localhost:1420";
+import { clientOrigins, primaryClientOrigin } from "./config";
 
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
   secret: process.env.BETTER_AUTH_SECRET,
-  trustedOrigins: [clientUrl],
+  trustedOrigins: clientOrigins,
   database: drizzleAdapter(db, {
     provider: "pg",
     schema,
@@ -47,7 +46,7 @@ export const auth = betterAuth({
         enabled: true,
       },
       async sendInvitationEmail(data) {
-        const inviteLink = `${clientUrl}/accept-invitation?id=${data.id}`;
+        const inviteLink = `${primaryClientOrigin}/accept-invitation?id=${data.id}`;
 
         await sendConsoleEmail({
           to: data.email,
