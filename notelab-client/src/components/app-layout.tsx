@@ -49,18 +49,26 @@ export function AppLayout() {
 
 function AppBreadcrumbs({ pathname }: { pathname: string }) {
   if (pathname.startsWith("/settings")) {
+    const settingsPageTitle = getSettingsPageTitle(pathname)
+
     return (
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem className="hidden sm:inline-flex">
             <BreadcrumbLink asChild>
-              <Link to="/dashboard">Dashboard</Link>
+              <Link to="/settings">Settings</Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
-          <BreadcrumbSeparator className="hidden sm:inline-flex" />
-          <BreadcrumbItem>
-            <BreadcrumbPage className="line-clamp-1">Settings</BreadcrumbPage>
-          </BreadcrumbItem>
+          {settingsPageTitle && (
+            <>
+              <BreadcrumbSeparator className="hidden sm:inline-flex" />
+              <BreadcrumbItem>
+                <BreadcrumbPage className="line-clamp-1">
+                  {settingsPageTitle}
+                </BreadcrumbPage>
+              </BreadcrumbItem>
+            </>
+          )}
         </BreadcrumbList>
       </Breadcrumb>
     )
@@ -75,4 +83,21 @@ function AppBreadcrumbs({ pathname }: { pathname: string }) {
       </BreadcrumbList>
     </Breadcrumb>
   )
+}
+
+function getSettingsPageTitle(pathname: string) {
+  const pathParts = pathname.split("/").filter(Boolean)
+  const page = pathParts[1]
+
+  if (!page) {
+    return null
+  }
+
+  const titles: Record<string, string> = {
+    organization: "Organization",
+    profile: "Profile",
+    team: "Team",
+  }
+
+  return titles[page] ?? null
 }

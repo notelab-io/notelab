@@ -24,18 +24,18 @@ import { ThemeDropdown } from "@/components/theme-dropdown"
 
 const settingsItems = [
   {
-    title: "Organization",
-    href: "/settings#organization",
-    icon: <Building2Icon />,
-  },
-  {
     title: "Profile",
-    href: "/settings#profile",
+    href: "/settings/profile",
     icon: <UserIcon />,
   },
   {
+    title: "Organization",
+    href: "/settings/organization",
+    icon: <Building2Icon />,
+  },
+  {
     title: "Team",
-    href: "/settings#team",
+    href: "/settings/team",
     icon: <UsersIcon />,
   },
 ]
@@ -66,10 +66,10 @@ export function SettingsSidebar({
               {settingsItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <a href={item.href}>
+                    <Link to={item.href}>
                       {item.icon}
                       <span>{item.title}</span>
-                    </a>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
