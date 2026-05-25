@@ -7,7 +7,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 
-import { colorTokens } from "./toolbar-data"
+import { colorTokens, colorWithAlpha } from "./toolbar-data"
 import type { ColorToken, EditorControlProps } from "./types"
 
 function ColorSwatch({
@@ -52,7 +52,12 @@ export function ColorMenu({ editor }: EditorControlProps) {
     }
 
     if (color) {
-      editor.chain().focus().unsetColor().setBackgroundColor(color).run()
+      editor
+        .chain()
+        .focus()
+        .unsetColor()
+        .setBackgroundColor(colorWithAlpha(color, 0.18))
+        .run()
       return
     }
 
@@ -119,7 +124,8 @@ export function ColorMenu({ editor }: EditorControlProps) {
             >
               <ColorSwatch token={token} variant="background" />
               <span>{token.name} background</span>
-              {backgroundColor === token.value ? (
+              {backgroundColor ===
+              (token.value ? colorWithAlpha(token.value, 0.18) : null) ? (
                 <span className="ml-auto text-xs text-muted-foreground">
                   Selected
                 </span>

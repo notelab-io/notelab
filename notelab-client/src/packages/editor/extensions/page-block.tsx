@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/popover"
 import { useWorkspace, useWorkspaces } from "@/features/workspaces/hooks"
 import { getWorkspaceEmoji } from "@/features/workspaces/queries"
+import { colorWithAlpha } from "@/packages/editor/components/editor/toolbar-data"
 
 export type CreatedPage = {
   id: string
@@ -35,6 +36,8 @@ function PageBlockView({
   const [isCreating, setIsCreating] = useState(false)
   const pageId = node.attrs.pageId as string | null
   const shouldOpenPicker = Boolean(node.attrs.openPicker)
+  const textColor = node.attrs.textColor as string | null
+  const backgroundColor = node.attrs.backgroundColor as string | null
   const [isOpen, setIsOpen] = useState(shouldOpenPicker)
   const [selectedIndex, setSelectedIndex] = useState(0)
   const optionRefs = useRef<Array<HTMLButtonElement | null>>([])
@@ -47,6 +50,12 @@ function PageBlockView({
     (workspace) => workspace.id !== options.currentPageId
   )
   const optionCount = linkablePages.length + (options.onCreatePage ? 1 : 0)
+  const cardStyle = {
+    ...(backgroundColor
+      ? { backgroundColor: colorWithAlpha(backgroundColor, 0.18) }
+      : {}),
+    ...(textColor ? { color: textColor } : {}),
+  }
 
   useEffect(() => {
     if (!shouldOpenPicker || pageId) {
@@ -167,6 +176,7 @@ function PageBlockView({
           className="page-block-preview"
           contentEditable={false}
           onClick={openPage}
+          style={cardStyle}
           type="button"
         >
           <span className="page-block-icon">{emoji || <FileText />}</span>
@@ -178,6 +188,7 @@ function PageBlockView({
             <Button
               className="page-block-placeholder"
               contentEditable={false}
+              style={cardStyle}
               type="button"
               variant="ghost"
             >
@@ -283,6 +294,20 @@ export const PageBlock = Node.create<PageBlockOptions>({
     return {
       pageId: {
         default: null,
+      },
+      textColor: {
+        default: null,
+        parseHTML: (element) => element.getAttribute("data-text-color"),
+        renderHTML: (attributes) =>
+          attributes.textColor ? { "data-text-color": attributes.textColor } : {},
+      },
+      backgroundColor: {
+        default: null,
+        parseHTML: (element) => element.getAttribute("data-background-color"),
+        renderHTML: (attributes) =>
+          attributes.backgroundColor
+            ? { "data-background-color": attributes.backgroundColor }
+            : {},
       },
       openPicker: {
         default: false,

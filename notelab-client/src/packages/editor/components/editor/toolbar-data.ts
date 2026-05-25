@@ -84,6 +84,18 @@ export const colorTokens: ColorToken[] = [
   },
 ]
 
+export function colorWithAlpha(color: string, alpha: number) {
+  if (!color.startsWith("#") || color.length !== 7) {
+    return color
+  }
+
+  const normalizedAlpha = Math.round(Math.min(1, Math.max(0, alpha)) * 255)
+    .toString(16)
+    .padStart(2, "0")
+
+  return `${color}${normalizedAlpha}`
+}
+
 export const toolbarGroups: ToolbarItem[][] = [
   [
     {

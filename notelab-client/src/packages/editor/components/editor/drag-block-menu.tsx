@@ -31,7 +31,7 @@ import {
 } from "@/packages/editor/extensions/slash-command"
 
 import { blockContentForItem, insertBlockFromPlus } from "./block-insert"
-import { colorTokens } from "./toolbar-data"
+import { colorTokens, colorWithAlpha } from "./toolbar-data"
 import type { DragHandleTarget } from "./types"
 
 const blockCommandItems = slashCommandItems.filter(
@@ -77,6 +77,7 @@ export function DragBlockMenu({
       ),
     [search]
   )
+  const isPageBlock = target?.node.type.name === "pageBlock"
 
   const runTargetCommand = (command: () => void) => {
     if (!target) {
@@ -152,7 +153,24 @@ export function DragBlockMenu({
     variant: "text" | "background"
   ) => {
     runTargetCommand(() => {
-      if (!target || target.node.isAtom) {
+      if (!target) {
+        return
+      }
+
+      if (target.node.type.name === "pageBlock") {
+        editor
+          .chain()
+          .focus()
+          .setNodeSelection(target.pos)
+          .updateAttributes("pageBlock", {
+            backgroundColor: variant === "background" ? color : null,
+            textColor: variant === "text" ? color : null,
+          })
+          .run()
+        return
+      }
+
+      if (target.node.isAtom) {
         return
       }
 
@@ -170,7 +188,7 @@ export function DragBlockMenu({
         return
       }
 
-      chain.unsetColor().setBackgroundColor(color).run()
+      chain.unsetColor().setBackgroundColor(colorWithAlpha(color, 0.18)).run()
     })
   }
 
@@ -273,31 +291,31 @@ export function DragBlockMenu({
             placeholder="Search actions..."
             value={search}
           />
-          <DropdownMenuLabel>
-            {target?.node.type.name ?? "Block"}
-          </DropdownMenuLabel>
+          <DropdownMenuLabel>{isPageBlock ? "Page" : "Block"}</DropdownMenuLabel>
           <DropdownMenuGroup>
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>
-                <Type />
-                <span>Turn into</span>
-              </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent className="w-52">
-                {filteredTurnIntoItems.map((item) => {
-                  const Icon = item.icon
+            {!isPageBlock ? (
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <Type />
+                  <span>Turn into</span>
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="w-52">
+                  {filteredTurnIntoItems.map((item) => {
+                    const Icon = item.icon
 
-                  return (
-                    <DropdownMenuItem
-                      key={item.title}
-                      onSelect={() => turnTargetInto(item)}
-                    >
-                      <Icon />
-                      <span>{item.title}</span>
-                    </DropdownMenuItem>
-                  )
-                })}
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
+                    return (
+                      <DropdownMenuItem
+                        key={item.title}
+                        onSelect={() => turnTargetInto(item)}
+                      >
+                        <Icon />
+                        <span>{item.title}</span>
+                      </DropdownMenuItem>
+                    )
+                  })}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+            ) : null}
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
                 <Palette />

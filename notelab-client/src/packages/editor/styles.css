@@ -27,6 +27,12 @@
     @apply text-foreground;
   }
 
+  .tiptap-editor span[style*="background-color"] {
+    @apply rounded-sm px-1 py-0.5;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+
   .tiptap-editor ul {
     @apply list-disc pl-6;
   }
