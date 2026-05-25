@@ -6,6 +6,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
@@ -149,6 +150,154 @@ export const workspace = pgTable(
     index("workspace_organization_id_idx").on(table.organizationId),
     index("workspace_type_idx").on(table.type),
     index("workspace_deleted_at_idx").on(table.deletedAt),
+  ],
+);
+
+export const database = pgTable(
+  "database",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    pageId: text("page_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    config: jsonb("config"),
+    deletedById: text("deleted_by_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("database_organization_id_idx").on(table.organizationId),
+    index("database_page_id_idx").on(table.pageId),
+    index("database_deleted_at_idx").on(table.deletedAt),
+  ],
+);
+
+export const databaseProperty = pgTable(
+  "database_property",
+  {
+    id: text("id").primaryKey(),
+    databaseId: text("database_id")
+      .notNull()
+      .references(() => database.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    type: text("type").notNull(),
+    config: jsonb("config"),
+    position: integer("position").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("database_property_database_id_idx").on(table.databaseId),
+    index("database_property_position_idx").on(
+      table.databaseId,
+      table.position,
+    ),
+  ],
+);
+
+export const databaseView = pgTable(
+  "database_view",
+  {
+    id: text("id").primaryKey(),
+    databaseId: text("database_id")
+      .notNull()
+      .references(() => database.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    name: text("name").notNull(),
+    config: jsonb("config"),
+    position: integer("position").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("database_view_database_id_idx").on(table.databaseId),
+    index("database_view_position_idx").on(table.databaseId, table.position),
+  ],
+);
+
+export const databaseRow = pgTable(
+  "database_row",
+  {
+    id: text("id").primaryKey(),
+    databaseId: text("database_id")
+      .notNull()
+      .references(() => database.id, { onDelete: "cascade" }),
+    pageId: text("page_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    parentRowId: text("parent_row_id"),
+    title: text("title").notNull(),
+    position: integer("position").notNull().default(0),
+    createdById: text("created_by_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    lastEditedById: text("last_edited_by_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    deletedById: text("deleted_by_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("database_row_database_id_idx").on(table.databaseId),
+    index("database_row_parent_idx").on(table.databaseId, table.parentRowId),
+    index("database_row_position_idx").on(table.databaseId, table.position),
+    index("database_row_page_id_idx").on(table.pageId),
+    index("database_row_deleted_at_idx").on(table.deletedAt),
+  ],
+);
+
+export const databaseCell = pgTable(
+  "database_cell",
+  {
+    id: text("id").primaryKey(),
+    rowId: text("row_id")
+      .notNull()
+      .references(() => databaseRow.id, { onDelete: "cascade" }),
+    propertyId: text("property_id")
+      .notNull()
+      .references(() => databaseProperty.id, { onDelete: "cascade" }),
+    value: jsonb("value"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("database_cell_row_id_idx").on(table.rowId),
+    index("database_cell_property_id_idx").on(table.propertyId),
+    uniqueIndex("database_cell_row_property_unique").on(
+      table.rowId,
+      table.propertyId,
+    ),
   ],
 );
 

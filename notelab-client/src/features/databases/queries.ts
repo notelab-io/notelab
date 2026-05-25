@@ -1,0 +1,95 @@
+import { queryOptions } from "@tanstack/react-query"
+
+import { ApiError, apiFetch } from "@/lib/api"
+
+export type DatabaseRecord = {
+  id: string
+  organizationId: string
+  pageId: string
+  name: string
+  config?: unknown
+  deletedById?: string | null
+  deletedAt?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type DatabaseProperty = {
+  id: string
+  databaseId: string
+  name: string
+  type: string
+  config?: unknown
+  position: number
+  createdAt: string
+  updatedAt: string
+}
+
+export type DatabaseView = {
+  id: string
+  databaseId: string
+  type: string
+  name: string
+  config?: unknown
+  position: number
+  createdAt: string
+  updatedAt: string
+}
+
+export type DatabaseRow = {
+  id: string
+  databaseId: string
+  pageId: string
+  parentRowId?: string | null
+  title: string
+  position: number
+  createdById?: string | null
+  lastEditedById?: string | null
+  deletedById?: string | null
+  deletedAt?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type DatabaseCell = {
+  id: string
+  rowId: string
+  propertyId: string
+  value: unknown
+  createdAt: string
+  updatedAt: string
+}
+
+export type DatabasePayload = {
+  database: DatabaseRecord
+  properties: DatabaseProperty[]
+  views: DatabaseView[]
+  rows: DatabaseRow[]
+  cells: DatabaseCell[]
+}
+
+export const databaseQueryKey = (databaseId: string | null | undefined) =>
+  ["database", databaseId ?? "none"] as const
+
+export const databaseQueryOptions = (databaseId: string | null | undefined) =>
+  queryOptions({
+    queryKey: databaseQueryKey(databaseId),
+    enabled: Boolean(databaseId),
+    queryFn: async () => {
+      if (!databaseId) {
+        throw new Error("databaseId is required")
+      }
+
+      try {
+        return await apiFetch<DatabasePayload>(`/databases/${databaseId}`, {
+          method: "GET",
+        })
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 401) {
+          return null
+        }
+
+        throw error
+      }
+    },
+  })
