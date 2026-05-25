@@ -116,7 +116,9 @@ type EditorProps = {
   onEmojiChange?: (emoji: string) => void
   onOpenPage?: (pageId: string) => void
   onTitleChange?: (title: string) => void
+  organizationId?: string | null
   title?: string
+  workspaceId?: string | null
 }
 
 type MobileDragState = {
@@ -138,7 +140,9 @@ export function Editor({
   onEmojiChange,
   onOpenPage,
   onTitleChange,
+  organizationId,
   title,
+  workspaceId,
 }: EditorProps = {}) {
   const dragHandlePosRef = useRef<number | null>(null)
   const mobileDragRef = useRef<MobileDragState | null>(null)
@@ -192,8 +196,10 @@ export function Editor({
       FileBlock,
       BookmarkBlock,
       PageBlock.configure({
+        currentPageId: workspaceId,
         onCreatePage,
         onOpenPage,
+        organizationId,
       }),
       EmojiExtension,
       CodeBlockShiki.configure({

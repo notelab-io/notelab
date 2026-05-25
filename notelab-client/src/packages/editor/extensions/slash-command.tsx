@@ -11,6 +11,7 @@ import {
   Heading1,
   Heading2,
   Image,
+  LinkIcon,
   ListCollapse,
   List,
   ListOrdered,
@@ -272,6 +273,19 @@ export function createSlashCommandItems(
         .insertContent({ type: "pageBlock", attrs: { pageId: page.id } })
         .run()
       options.onOpenPage?.(page.id)
+    },
+  },
+  {
+    title: "Link to page",
+    description: "Link an existing workspace page",
+    icon: LinkIcon,
+    command: ({ editor, range }) => {
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({ type: "pageBlock", attrs: { openPicker: true } })
+        .run()
     },
   },
   {

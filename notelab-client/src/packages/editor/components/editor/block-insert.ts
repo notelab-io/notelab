@@ -45,6 +45,8 @@ function blockContentForItem(item: SlashCommandItem): Content {
       return { type: "bookmarkBlock" }
     case "Page":
       return { type: "pageBlock" }
+    case "Link to page":
+      return { type: "pageBlock", attrs: { openPicker: true } }
     case "Toggle":
       return {
         type: "details",

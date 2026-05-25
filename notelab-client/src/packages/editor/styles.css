@@ -283,6 +283,10 @@
     @apply flex h-10 w-full justify-start gap-2 rounded-md bg-muted/50 px-3 text-left text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none;
   }
 
+  .page-block-create-option {
+    @apply mt-1 flex h-8 w-full justify-start gap-2 px-2 text-xs;
+  }
+
   .page-block-preview {
     @apply flex h-10 w-full items-center gap-2 rounded-md border bg-muted/30 px-3 text-left text-sm text-foreground transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none;
   }
@@ -292,7 +296,8 @@
   }
 
   .page-block-icon svg,
-  .page-block-placeholder svg {
+  .page-block-placeholder svg,
+  .page-block-create-option svg {
     @apply size-4;
   }
 

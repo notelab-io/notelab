@@ -161,7 +161,9 @@ export default function WorkspacePage() {
         onEmojiChange={updateEmoji}
         onOpenPage={openPage}
         onTitleChange={setName}
+        organizationId={workspace.organizationId}
         title={name}
+        workspaceId={workspace.id}
       />
     </main>
   )
