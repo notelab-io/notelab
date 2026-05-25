@@ -15,6 +15,13 @@
       "when": 1779668234140,
       "tag": "0001_broken_justin_hammer",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779726027453,
+      "tag": "0002_cheerful_wraith",
+      "breakpoints": true
     }
   ]
 }

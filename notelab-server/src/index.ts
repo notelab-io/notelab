@@ -5,6 +5,7 @@ import { cors } from "hono/cors";
 import { clientOrigins, port } from "./config";
 import { sessionMiddleware } from "./middleware/session";
 import { authRoutes } from "./routes/auth";
+import { databaseRoutes } from "./routes/databases";
 import { healthRoutes } from "./routes/health";
 import { sessionRoutes } from "./routes/session";
 import { workspaceRoutes } from "./routes/workspaces";
@@ -17,7 +18,7 @@ app.use(
   cors({
     origin: clientOrigins,
     allowHeaders: ["Content-Type", "Authorization"],
-    allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     exposeHeaders: ["Content-Length"],
     maxAge: 600,
     credentials: true,
@@ -27,6 +28,7 @@ app.use(
 app.use("*", sessionMiddleware);
 
 app.route("/", authRoutes);
+app.route("/databases", databaseRoutes);
 app.route("/", healthRoutes);
 app.route("/session", sessionRoutes);
 app.route("/workspaces", workspaceRoutes);

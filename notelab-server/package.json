@@ -8,6 +8,8 @@
     "test:flow": "tsx src/scripts/simulate-user-flow.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:reset": "tsx src/scripts/reset-database.ts && drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
     "deploy": "wrangler deploy --minify",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings"
   },
