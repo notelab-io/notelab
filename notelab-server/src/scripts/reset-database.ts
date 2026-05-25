@@ -8,6 +8,7 @@ const pool = new Pool({ connectionString });
 
 try {
   await pool.query("drop schema if exists public cascade");
+  await pool.query("drop schema if exists drizzle cascade");
   await pool.query("create schema public");
   await pool.query("grant all on schema public to public");
   console.info("Database schema reset.");
