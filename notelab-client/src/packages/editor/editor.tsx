@@ -19,6 +19,7 @@ import TextAlign from "@tiptap/extension-text-align"
 import { BackgroundColor, Color, TextStyle } from "@tiptap/extension-text-style"
 import Typography from "@tiptap/extension-typography"
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model"
+import type { EditorView } from "@tiptap/pm/view"
 import StarterKit from "@tiptap/starter-kit"
 
 import {
@@ -33,8 +34,13 @@ import type {
   ToolbarAction,
   ToolbarAttrs,
 } from "@/packages/editor/components/editor/types"
+import { useCreateDatabase } from "@/features/databases/hooks"
 import { BookmarkBlock } from "@/packages/editor/extensions/bookmark-block"
 import { CodeBlockShiki } from "@/packages/editor/extensions/code-block-shiki"
+import {
+  DATABASE_PAGE_DRAG_MIME,
+  DatabaseBlock,
+} from "@/packages/editor/extensions/database"
 import { EmojiExtension } from "@/packages/editor/extensions/emoji"
 import { FileBlock } from "@/packages/editor/extensions/file-block"
 import { ImageBlock } from "@/packages/editor/extensions/image-block"
@@ -132,6 +138,57 @@ type MobileDragState = {
   timeoutId: number | null
 }
 
+function insertDraggedDatabasePage(view: EditorView, event: DragEvent) {
+  const payload = event.dataTransfer?.getData(DATABASE_PAGE_DRAG_MIME)
+
+  if (!payload) {
+    return false
+  }
+
+  let pageId: unknown
+
+  try {
+    pageId = (JSON.parse(payload) as { pageId?: unknown }).pageId
+  } catch {
+    return false
+  }
+
+  if (typeof pageId !== "string" || !pageId) {
+    return false
+  }
+
+  const coords = view.posAtCoords({
+    left: event.clientX,
+    top: event.clientY,
+  })
+  const pageBlockType = view.state.schema.nodes.pageBlock
+
+  if (!coords || !pageBlockType) {
+    return false
+  }
+
+  const pageBlock = pageBlockType.create({ pageId })
+
+  try {
+    view.dispatch(view.state.tr.insert(coords.pos, pageBlock).scrollIntoView())
+    view.focus()
+    event.preventDefault()
+    return true
+  } catch {
+    const $pos = view.state.doc.resolve(coords.pos)
+    const fallbackPos = $pos.depth > 0 ? $pos.after(1) : coords.pos
+
+    try {
+      view.dispatch(view.state.tr.insert(fallbackPos, pageBlock).scrollIntoView())
+      view.focus()
+      event.preventDefault()
+      return true
+    } catch {
+      return false
+    }
+  }
+}
+
 export function Editor({
   content = starterContent,
   emoji,
@@ -150,6 +207,20 @@ export function Editor({
   const [dragHandleTarget, setDragHandleTarget] =
     useState<DragHandleTarget | null>(null)
   const [plusMenuOpen, setPlusMenuOpen] = useState(false)
+  const createDatabase = useCreateDatabase()
+  const createEditorDatabase = useCallback(async () => {
+    if (!organizationId || !workspaceId) {
+      return null
+    }
+
+    const payload = await createDatabase.mutateAsync({
+      name: "New database",
+      organizationId,
+      pageId: workspaceId,
+    })
+
+    return payload.database.id
+  }, [createDatabase, organizationId, workspaceId])
 
   const editor = useEditor({
     extensions: [
@@ -195,6 +266,11 @@ export function Editor({
       VideoBlock,
       FileBlock,
       BookmarkBlock,
+      DatabaseBlock.configure({
+        currentPageId: workspaceId,
+        onOpenPage,
+        organizationId,
+      }),
       PageBlock.configure({
         currentPageId: workspaceId,
         onCreatePage,
@@ -223,6 +299,7 @@ export function Editor({
       Typography,
       CharacterCount,
       SlashCommand.configure({
+        onCreateDatabase: createEditorDatabase,
         onCreatePage,
         onOpenPage,
       }),
@@ -236,6 +313,7 @@ export function Editor({
         class: "tiptap-editor",
         "aria-label": "Document editor",
       },
+      handleDrop: (view, event) => insertDraggedDatabasePage(view, event),
     },
   })
 
@@ -666,6 +744,7 @@ export function Editor({
             <DragBlockMenu
               editor={editor}
               isOpen={plusMenuOpen}
+              onCreateDatabase={createEditorDatabase}
               onOpenChange={setPlusMenuOpen}
               target={dragHandleTarget}
             />

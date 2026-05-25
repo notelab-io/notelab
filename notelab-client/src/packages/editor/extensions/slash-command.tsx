@@ -7,6 +7,7 @@ import {
   Bookmark,
   CheckSquare,
   Code2,
+  Database,
   File,
   Heading1,
   Heading2,
@@ -40,9 +41,11 @@ import {
   EmojiPickerFooter,
   EmojiPickerSearch,
 } from "@/components/ui/emoji-picker"
+import { createDatabaseBlockAttrs } from "@/packages/editor/extensions/database"
 import type { CreatedPage } from "@/packages/editor/extensions/page-block"
 
 export type SlashCommandOptions = {
+  onCreateDatabase?: () => Promise<string | null>
   onCreatePage?: () => Promise<CreatedPage>
   onOpenPage?: (pageId: string) => void
 }
@@ -325,6 +328,28 @@ export function createSlashCommandItems(
         .run()
     },
   },
+  {
+    title: "Database",
+    description: "Table where every row is a page",
+    icon: Database,
+    command: async ({ editor, range }) => {
+      const databaseId = await options.onCreateDatabase?.()
+
+      if (!databaseId) {
+        return
+      }
+
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({
+          type: "databaseBlock",
+          attrs: createDatabaseBlockAttrs(databaseId),
+        })
+        .run()
+    },
+  },
 ]
 }
 
@@ -419,6 +444,7 @@ export const SlashCommand = Extension.create<SlashCommandOptions>({
 
   addOptions() {
     return {
+      onCreateDatabase: undefined,
       onCreatePage: undefined,
       onOpenPage: undefined,
     }

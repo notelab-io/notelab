@@ -137,7 +137,6 @@ databaseRoutes.post("/", async (c) => {
   }
 
   const databaseId = crypto.randomUUID();
-  const propertyId = crypto.randomUUID();
 
   await db.transaction(async (tx) => {
     await tx.insert(database).values({
@@ -145,13 +144,6 @@ databaseRoutes.post("/", async (c) => {
       organizationId,
       pageId,
       name,
-    });
-    await tx.insert(databaseProperty).values({
-      id: propertyId,
-      databaseId,
-      name: "Property",
-      type: "text",
-      position: 0,
     });
     await tx.insert(databaseView).values({
       id: crypto.randomUUID(),
@@ -396,6 +388,69 @@ databaseRoutes.post("/:id/rows", async (c) => {
   const payload = await getDatabasePayload(existing.id);
 
   return c.json(payload, 201);
+});
+
+databaseRoutes.patch("/:id/rows/reorder", async (c) => {
+  const user = requireUser(c);
+
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const existing = await getDatabaseRecord(c.req.param("id"));
+
+  if (!existing) {
+    return c.json({ error: "Database not found" }, 404);
+  }
+
+  if (!(await isOrganizationMember(existing.organizationId, user.id))) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  const body = await c.req.json().catch(() => null);
+
+  if (!body || typeof body !== "object") {
+    return c.json({ error: "A JSON body is required" }, 400);
+  }
+
+  const { rowIds } = body as { rowIds?: unknown };
+
+  if (
+    !Array.isArray(rowIds) ||
+    rowIds.some((rowId) => typeof rowId !== "string")
+  ) {
+    return c.json({ error: "rowIds must be an array of strings" }, 400);
+  }
+
+  const rows = await db
+    .select({ id: databaseRow.id })
+    .from(databaseRow)
+    .where(and(eq(databaseRow.databaseId, existing.id), isNull(databaseRow.deletedAt)));
+  const existingRowIds = new Set(rows.map((row) => row.id));
+
+  if (
+    rowIds.length !== existingRowIds.size ||
+    rowIds.some((rowId) => !existingRowIds.has(rowId))
+  ) {
+    return c.json({ error: "rowIds must include every active database row" }, 400);
+  }
+
+  await db.transaction(async (tx) => {
+    await Promise.all(
+      rowIds.map((rowId, position) =>
+        tx
+          .update(databaseRow)
+          .set({ position, updatedAt: new Date() })
+          .where(
+            and(eq(databaseRow.id, rowId), eq(databaseRow.databaseId, existing.id)),
+          ),
+      ),
+    );
+  });
+
+  const payload = await getDatabasePayload(existing.id);
+
+  return c.json(payload);
 });
 
 databaseRoutes.put("/:id/rows/:rowId/cells/:propertyId", async (c) => {

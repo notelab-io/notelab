@@ -167,6 +167,7 @@
   .tiptap-editor .video-block,
   .tiptap-editor .file-block,
   .tiptap-editor .bookmark-block,
+  .tiptap-editor .database-block,
   .tiptap-editor .page-block {
     @apply my-4;
   }
@@ -311,6 +312,230 @@
     @apply min-w-0 truncate font-medium;
   }
 
+  .database-block-shell {
+    @apply w-full overflow-visible bg-background;
+  }
+
+  .database-toolbar {
+    @apply flex min-h-12 items-center gap-2 py-2 pr-3;
+  }
+
+  .database-title-input {
+    @apply h-auto min-w-0 flex-1 border-0 bg-transparent px-0 py-0 text-2xl font-semibold leading-tight text-foreground shadow-none placeholder:text-muted-foreground/40 focus-visible:ring-0;
+  }
+
+  .database-new-button {
+    @apply h-8 gap-1.5 px-2.5;
+  }
+
+  .database-new-button svg {
+    @apply size-4;
+  }
+
+  .database-table-wrap {
+    @apply relative mt-2 max-w-full overflow-visible;
+  }
+
+  .database-table-scroll {
+    @apply max-w-full overflow-x-auto;
+  }
+
+  .database-table {
+    @apply w-full table-fixed border-collapse overflow-hidden;
+    min-width: max(100%, var(--database-table-min-width, 100%));
+  }
+
+  .tiptap-editor .database-table th,
+  .tiptap-editor .database-table td {
+    @apply h-8 border-0 border-border px-3 py-1 text-left align-middle;
+  }
+
+  .tiptap-editor .database-table tbody td {
+    @apply border-r border-b;
+  }
+
+  .tiptap-editor .database-table tbody td:last-child {
+    @apply border-r-0;
+  }
+
+  .tiptap-editor .database-table tbody td.database-page-cell,
+  .tiptap-editor .database-table tbody td.database-value-cell {
+    @apply p-0;
+  }
+
+  .tiptap-editor .database-table tbody td.database-value-cell {
+    @apply relative overflow-visible;
+  }
+
+  .tiptap-editor .database-table tbody td.database-value-cell[data-active="true"] {
+    @apply z-20;
+  }
+
+  .tiptap-editor .database-table th {
+    @apply relative border-b bg-transparent text-sm font-medium text-muted-foreground;
+  }
+
+  .tiptap-editor .database-table thead th {
+    @apply h-8 p-0;
+  }
+
+  .database-name-header {
+    @apply min-w-0;
+  }
+
+  .database-name-header-content {
+    @apply flex h-8 min-w-0 items-center px-3 py-1;
+  }
+
+  .tiptap-editor .database-table th.database-property-header {
+    @apply min-w-0 overflow-hidden;
+  }
+
+  .tiptap-editor .database-table th.database-property-header:has(button:hover),
+  .tiptap-editor .database-table th.database-property-header:has(button:focus-visible),
+  .tiptap-editor .database-table th.database-property-header:has(button[data-state="open"]) {
+    @apply bg-muted/70 text-foreground;
+  }
+
+  .database-add-property-cell {
+    @apply min-w-0;
+  }
+
+  .database-add-property {
+    @apply flex h-8 w-full items-center gap-2 rounded-sm px-3 py-1 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none;
+  }
+
+  .database-name-header-content span + span {
+    @apply ml-2;
+  }
+
+  .database-add-property svg {
+    @apply size-4;
+  }
+
+  .database-cell-input {
+    @apply block h-8 min-h-8 w-full resize-none overflow-hidden border-0 bg-transparent px-3 py-1 text-sm leading-6 shadow-none outline-none transition-colors placeholder:text-muted-foreground focus-visible:ring-0;
+  }
+
+  .database-value-cell[data-active="true"] .database-cell-input {
+    @apply absolute top-0 left-0 z-20 h-auto min-h-14 w-72 max-w-[calc(100vw-3rem)] rounded-md border border-border bg-muted px-3 py-2 text-foreground shadow-sm;
+  }
+
+  .database-select-cell-trigger {
+    @apply flex h-8 w-full min-w-0 items-center px-3 py-1 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/40;
+  }
+
+  .database-select-badge {
+    @apply inline-flex max-w-full items-center rounded-sm bg-amber-700 px-2 py-0.5 text-sm font-medium leading-5 text-white;
+  }
+
+  .database-select-popover {
+    @apply fixed z-100 w-72 max-w-[calc(100vw-3rem)] overflow-hidden rounded-lg bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10;
+  }
+
+  .database-select-search {
+    @apply h-8 w-full border-0 bg-transparent px-1.5 py-1 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-0;
+  }
+
+  .database-select-popover-label {
+    @apply -mx-1 border-t border-border px-2.5 py-1 text-xs font-medium text-muted-foreground;
+  }
+
+  .database-select-options {
+    @apply flex flex-col gap-0.5 pt-1;
+  }
+
+  .database-select-option,
+  .database-select-create {
+    @apply flex min-h-7 min-w-0 items-center gap-1.5 rounded-md px-2 py-1 text-left text-sm text-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground;
+  }
+
+  .database-select-option svg {
+    @apply size-4 shrink-0 text-muted-foreground;
+  }
+
+  .database-page-link,
+  .database-page-create {
+    @apply flex h-8 w-full min-w-0 items-center gap-2 rounded-none px-3 py-1 text-left text-sm;
+  }
+
+  .database-page-link {
+    @apply text-foreground;
+  }
+
+  .database-page-create {
+    @apply text-muted-foreground hover:bg-muted/60 hover:text-foreground disabled:opacity-70;
+  }
+
+  .database-page-link svg,
+  .database-page-create svg {
+    @apply size-4 shrink-0;
+  }
+
+  .database-row-drag-rail {
+    @apply pointer-events-none absolute bottom-0 left-0 top-0 z-40 hidden md:block;
+    transform: translateX(-2.23rem);
+  }
+
+  .database-row-drag-handle {
+    @apply pointer-events-auto absolute flex size-7 -translate-y-1/2 cursor-grab items-center justify-center rounded-sm bg-transparent text-muted-foreground opacity-0 outline-none transition-opacity hover:text-foreground active:cursor-grabbing focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring/40;
+  }
+
+  .database-row-drag-handle[data-visible="true"],
+  .database-row-drag-handle:focus-visible {
+    @apply opacity-100;
+  }
+
+  .database-row-drag-handle svg {
+    @apply size-4;
+  }
+
+  .database-row-drop-line {
+    @apply pointer-events-none absolute left-0 right-0 z-30 h-0.5 bg-primary;
+    transform: translateY(-1px);
+  }
+
+  .database-page-main {
+    @apply flex min-w-0 flex-1 items-center gap-2;
+  }
+
+  .database-page-icon {
+    @apply flex size-5 shrink-0 items-center justify-center text-muted-foreground;
+  }
+
+  .database-page-title {
+    @apply min-w-0 truncate font-medium;
+  }
+
+  .database-page-open {
+    @apply ml-auto hidden h-6 shrink-0 items-center gap-1.5 rounded-md border bg-background/80 px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none;
+  }
+
+  .database-page-cell:hover .database-page-open,
+  .database-page-cell:focus-within .database-page-open {
+    @apply flex;
+  }
+
+  .database-page-open svg {
+    @apply size-3.5;
+  }
+
+  .database-column-resize-handle {
+    @apply absolute bottom-0 right-[-2px] top-0 z-10 w-1 cursor-col-resize bg-transparent transition-colors;
+    touch-action: none;
+  }
+
+  .database-column-resize-handle:hover,
+  .database-column-resize-handle:active {
+    @apply bg-primary;
+  }
+
+  .database-resize-cursor,
+  .database-resize-cursor * {
+    cursor: col-resize !important;
+    user-select: none;
+  }
+
   .image-block-resize-handle {
     @apply absolute top-1/2 z-10 hidden h-14 w-4 -translate-y-1/2 cursor-ew-resize items-center justify-center;
     touch-action: none;
@@ -344,7 +569,7 @@
 
   .tiptap-editor th,
   .tiptap-editor td {
-    @apply border border-border px-3 py-2 text-left align-top;
+    @apply border border-border px-3 py-1 text-left align-top;
   }
 
   .tiptap-editor th {

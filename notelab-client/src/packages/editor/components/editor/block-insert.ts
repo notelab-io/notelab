@@ -2,10 +2,14 @@ import type { Content } from "@tiptap/core"
 import type { Editor } from "@tiptap/react"
 
 import type { SlashCommandItem } from "@/packages/editor/extensions/slash-command"
+import { createDatabaseBlockAttrs } from "@/packages/editor/extensions/database"
 
 import type { DragHandleTarget } from "./types"
 
-export function blockContentForItem(item: SlashCommandItem): Content {
+export function blockContentForItem(
+  item: SlashCommandItem,
+  attrs?: { databaseId?: string }
+): Content | null {
   switch (item.title) {
     case "Text":
       return { type: "paragraph" }
@@ -83,6 +87,10 @@ export function blockContentForItem(item: SlashCommandItem): Content {
           })),
         ],
       }
+    case "Database":
+      return attrs?.databaseId
+        ? { type: "databaseBlock", attrs: createDatabaseBlockAttrs(attrs.databaseId) }
+        : null
     default:
       return { type: "paragraph" }
   }
@@ -97,13 +105,27 @@ function selectInsertedBlock(editor: Editor, pos: number, item: SlashCommandItem
   editor.chain().focus().setTextSelection(pos + 1).run()
 }
 
-export function insertBlockFromPlus(
+export async function insertBlockFromPlus(
   editor: Editor,
   target: DragHandleTarget,
-  item: SlashCommandItem
+  item: SlashCommandItem,
+  options: { onCreateDatabase?: () => Promise<string | null> } = {}
 ) {
   const isEmptyTextBlock = target.node.isTextblock && target.node.content.size === 0
-  const content = blockContentForItem(item)
+  const databaseId =
+    item.title === "Database" && options.onCreateDatabase
+      ? await options.onCreateDatabase()
+      : undefined
+  const content =
+    item.title === "Database"
+      ? blockContentForItem(item, {
+          databaseId: databaseId ?? undefined,
+        })
+      : blockContentForItem(item)
+
+  if (!content) {
+    return
+  }
 
   if (isEmptyTextBlock) {
     editor

@@ -40,6 +40,11 @@ type AddRowInput = {
   title?: string
 }
 
+type ReorderRowsInput = {
+  databaseId: string
+  rowIds: string[]
+}
+
 type UpdateCellInput = {
   databaseId: string
   propertyId: string
@@ -119,6 +124,17 @@ export function useAddDatabaseRow(organizationId: string | null | undefined) {
         queryKey: workspacesQueryKey(organizationId),
       })
     },
+  })
+}
+
+export function useReorderDatabaseRows() {
+  return useMutation({
+    mutationFn: async ({ databaseId, rowIds }: ReorderRowsInput) =>
+      apiFetch<DatabasePayload>(`/databases/${databaseId}/rows/reorder`, {
+        method: "PATCH",
+        body: JSON.stringify({ rowIds }),
+      }),
+    onSuccess: setDatabasePayload,
   })
 }
 

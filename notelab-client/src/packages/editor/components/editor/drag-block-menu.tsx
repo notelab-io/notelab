@@ -49,11 +49,13 @@ export function DragBlockMenu({
   isOpen,
   target,
   onOpenChange,
+  onCreateDatabase,
 }: {
   editor: Editor
   isOpen: boolean
   target: DragHandleTarget | null
   onOpenChange: (open: boolean) => void
+  onCreateDatabase?: () => Promise<string | null>
 }) {
   const [actionsOpen, setActionsOpen] = useState(false)
   const [activeSubmenu, setActiveSubmenu] = useState<"turnInto" | "color" | null>(
@@ -125,6 +127,10 @@ export function DragBlockMenu({
       }
 
       const content = blockContentForItem(item)
+
+      if (!content) {
+        return
+      }
       const text =
         target.node.isTextblock && target.node.textContent.trim()
           ? target.node.textContent
@@ -472,7 +478,7 @@ export function DragBlockMenu({
                 return
               }
 
-              insertBlockFromPlus(editor, target, item)
+              void insertBlockFromPlus(editor, target, item, { onCreateDatabase })
               onOpenChange(false)
             }}
           />
