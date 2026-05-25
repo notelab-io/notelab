@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useParams } from "@tanstack/react-router"
 
 import { Spinner } from "@/components/ui/spinner"
@@ -16,8 +16,18 @@ export default function WorkspacePage() {
   const { workspaceId } = useParams({ from: "/app/workspace/$workspaceId" })
   const { data: workspace, isLoading } = useWorkspace(workspaceId)
   const updateWorkspace = useUpdateWorkspace()
+  const contentSaveTimeoutRef = useRef<number | null>(null)
   const [name, setName] = useState("")
-  const [emoji, setEmoji] = useState("📝")
+  const [emoji, setEmoji] = useState("")
+
+  const clearContentSaveTimeout = useCallback(() => {
+    if (contentSaveTimeoutRef.current === null) {
+      return
+    }
+
+    window.clearTimeout(contentSaveTimeoutRef.current)
+    contentSaveTimeoutRef.current = null
+  }, [])
 
   useEffect(() => {
     if (!workspace) {
@@ -25,8 +35,12 @@ export default function WorkspacePage() {
     }
 
     setName(workspace.name)
-    setEmoji(getWorkspaceEmoji(workspace))
+    setEmoji(getWorkspaceEmoji(workspace) ?? "")
   }, [workspace])
+
+  useEffect(() => {
+    return clearContentSaveTimeout
+  }, [clearContentSaveTimeout, workspaceId])
 
   useEffect(() => {
     if (!workspace || name.trim() === "" || name === workspace.name) {
@@ -56,6 +70,22 @@ export default function WorkspacePage() {
     })
   }
 
+  const updateContent = useCallback(
+    (content: unknown) => {
+      if (!workspace) {
+        return
+      }
+
+      clearContentSaveTimeout()
+
+      contentSaveTimeoutRef.current = window.setTimeout(() => {
+        updateWorkspace.mutate({ id: workspace.id, content })
+        contentSaveTimeoutRef.current = null
+      }, 800)
+    },
+    [clearContentSaveTimeout, updateWorkspace, workspace],
+  )
+
   if (isLoading) {
     return (
       <main className="flex flex-1 items-center justify-center">
@@ -78,6 +108,7 @@ export default function WorkspacePage() {
         key={workspace.id}
         content={workspace.content ?? ""}
         emoji={emoji}
+        onContentChange={updateContent}
         onEmojiChange={updateEmoji}
         onTitleChange={setName}
         title={name}

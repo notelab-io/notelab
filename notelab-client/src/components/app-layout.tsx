@@ -54,6 +54,7 @@ export function AppLayout() {
 function WorkspaceBreadcrumb({ workspaceId }: { workspaceId: string }) {
   const { data: workspace } = useWorkspace(workspaceId)
   const label = workspace ? workspace.name : "Workspace"
+  const emoji = workspace ? getWorkspaceEmoji(workspace) : null
 
   return (
     <Breadcrumb>
@@ -66,7 +67,7 @@ function WorkspaceBreadcrumb({ workspaceId }: { workspaceId: string }) {
         <BreadcrumbSeparator className="hidden sm:inline-flex" />
         <BreadcrumbItem>
           <BreadcrumbPage className="line-clamp-1">
-            {workspace ? `${getWorkspaceEmoji(workspace)} ${label}` : label}
+            {emoji ? `${emoji} ${label}` : label}
           </BreadcrumbPage>
         </BreadcrumbItem>
       </BreadcrumbList>

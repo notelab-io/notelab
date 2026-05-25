@@ -74,5 +74,5 @@ export const workspaceQueryOptions = (workspaceId: string | null | undefined) =>
   })
 
 export function getWorkspaceEmoji(workspace: Pick<Workspace, "metadata">) {
-  return workspace.metadata?.emoji || "📝"
+  return workspace.metadata?.emoji ?? null
 }

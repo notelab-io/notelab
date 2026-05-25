@@ -107,6 +107,7 @@ const dragHandleNestedOptions: NestedOptions = {
 type EditorProps = {
   content?: unknown
   emoji?: string
+  onContentChange?: (content: unknown) => void
   onEmojiChange?: (emoji: string) => void
   onTitleChange?: (title: string) => void
   title?: string
@@ -126,6 +127,7 @@ type MobileDragState = {
 export function Editor({
   content = starterContent,
   emoji,
+  onContentChange,
   onEmojiChange,
   onTitleChange,
   title,
@@ -205,6 +207,9 @@ export function Editor({
       SlashCommand,
     ],
     content: normalizeEditorContent(content),
+    onUpdate: ({ editor }) => {
+      onContentChange?.(editor.getJSON())
+    },
     editorProps: {
       attributes: {
         class: "tiptap-editor",

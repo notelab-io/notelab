@@ -19,6 +19,7 @@ type CreateWorkspaceInput = {
 
 type UpdateWorkspaceInput = {
   id: string
+  content?: unknown
   name?: string
   metadata?: WorkspaceMetadata
 }
@@ -36,7 +37,7 @@ export function useCreateWorkspace() {
     mutationFn: async ({
       organizationId,
       name = "Untitled",
-      emoji = "📝",
+      emoji,
     }: CreateWorkspaceInput) => {
       const result = await apiFetch<{ workspace: Workspace }>("/workspaces", {
         method: "POST",
@@ -46,7 +47,7 @@ export function useCreateWorkspace() {
           type: "pageblock",
           url: "#",
           content: null,
-          metadata: { emoji },
+          metadata: emoji ? { emoji } : null,
         }),
       })
 
