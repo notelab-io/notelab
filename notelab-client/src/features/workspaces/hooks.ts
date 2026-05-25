@@ -12,9 +12,11 @@ import { apiFetch } from "@/lib/api"
 import { queryClient } from "@/lib/query-client"
 
 type CreateWorkspaceInput = {
+  content?: unknown
   organizationId: string
   name?: string
   emoji?: string
+  parentWorkspaceId?: string
 }
 
 type UpdateWorkspaceInput = {
@@ -35,10 +37,22 @@ export function useWorkspace(workspaceId: string | null | undefined) {
 export function useCreateWorkspace() {
   return useMutation({
     mutationFn: async ({
+      content = null,
       organizationId,
-      name = "Untitled",
+      name = "",
       emoji,
+      parentWorkspaceId,
     }: CreateWorkspaceInput) => {
+      const metadata: WorkspaceMetadata = {}
+
+      if (emoji) {
+        metadata.emoji = emoji
+      }
+
+      if (parentWorkspaceId) {
+        metadata.parentWorkspaceId = parentWorkspaceId
+      }
+
       const result = await apiFetch<{ workspace: Workspace }>("/workspaces", {
         method: "POST",
         body: JSON.stringify({
@@ -46,8 +60,8 @@ export function useCreateWorkspace() {
           name,
           type: "pageblock",
           url: "#",
-          content: null,
-          metadata: emoji ? { emoji } : null,
+          content,
+          metadata: Object.keys(metadata).length > 0 ? metadata : null,
         }),
       })
 

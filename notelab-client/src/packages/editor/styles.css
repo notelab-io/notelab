@@ -160,7 +160,8 @@
 
   .tiptap-editor .video-block,
   .tiptap-editor .file-block,
-  .tiptap-editor .bookmark-block {
+  .tiptap-editor .bookmark-block,
+  .tiptap-editor .page-block {
     @apply my-4;
   }
 
@@ -276,6 +277,27 @@
 
   .bookmark-block-thumbnail img {
     @apply size-full object-cover;
+  }
+
+  .page-block-placeholder {
+    @apply flex h-10 w-full justify-start gap-2 rounded-md bg-muted/50 px-3 text-left text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none;
+  }
+
+  .page-block-preview {
+    @apply flex h-10 w-full items-center gap-2 rounded-md border bg-muted/30 px-3 text-left text-sm text-foreground transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none;
+  }
+
+  .page-block-icon {
+    @apply flex size-5 shrink-0 items-center justify-center text-muted-foreground;
+  }
+
+  .page-block-icon svg,
+  .page-block-placeholder svg {
+    @apply size-4;
+  }
+
+  .page-block-title {
+    @apply min-w-0 truncate font-medium;
   }
 
   .image-block-resize-handle {

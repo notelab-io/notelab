@@ -43,6 +43,8 @@ function blockContentForItem(item: SlashCommandItem): Content {
       return { type: "fileBlock" }
     case "Bookmark":
       return { type: "bookmarkBlock" }
+    case "Page":
+      return { type: "pageBlock" }
     case "Toggle":
       return {
         type: "details",

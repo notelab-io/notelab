@@ -15,6 +15,7 @@ import {
   List,
   ListOrdered,
   Minus,
+  NotebookTabs,
   Pilcrow,
   Quote,
   SmilePlus,
@@ -38,6 +39,12 @@ import {
   EmojiPickerFooter,
   EmojiPickerSearch,
 } from "@/components/ui/emoji-picker"
+import type { CreatedPage } from "@/packages/editor/extensions/page-block"
+
+export type SlashCommandOptions = {
+  onCreatePage?: () => Promise<CreatedPage>
+  onOpenPage?: (pageId: string) => void
+}
 
 export type SlashCommandItem = {
   title: string
@@ -46,7 +53,7 @@ export type SlashCommandItem = {
   command: (props: {
     editor: Editor
     range: Range
-  }) => void
+  }) => void | Promise<void>
 }
 
 function openSlashEmojiPicker({
@@ -111,7 +118,10 @@ function openSlashEmojiPicker({
   )
 }
 
-export const slashCommandItems: SlashCommandItem[] = [
+export function createSlashCommandItems(
+  options: SlashCommandOptions = {}
+): SlashCommandItem[] {
+  return [
   {
     title: "Text",
     description: "Plain paragraph",
@@ -239,6 +249,32 @@ export const slashCommandItems: SlashCommandItem[] = [
     },
   },
   {
+    title: "Page",
+    description: "Nested workspace page",
+    icon: NotebookTabs,
+    command: async ({ editor, range }) => {
+      if (!options.onCreatePage) {
+        editor
+          .chain()
+          .focus()
+          .deleteRange(range)
+          .insertContent({ type: "pageBlock" })
+          .run()
+        return
+      }
+
+      const page = await options.onCreatePage()
+
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({ type: "pageBlock", attrs: { pageId: page.id } })
+        .run()
+      options.onOpenPage?.(page.id)
+    },
+  },
+  {
     title: "Emoji",
     description: "Insert inline emoji",
     icon: SmilePlus,
@@ -276,6 +312,9 @@ export const slashCommandItems: SlashCommandItem[] = [
     },
   },
 ]
+}
+
+export const slashCommandItems = createSlashCommandItems()
 
 export function SlashCommandMenu({
   items,
@@ -361,10 +400,19 @@ function updateMenuPosition(
   })
 }
 
-export const SlashCommand = Extension.create({
+export const SlashCommand = Extension.create<SlashCommandOptions>({
   name: "slashCommand",
 
+  addOptions() {
+    return {
+      onCreatePage: undefined,
+      onOpenPage: undefined,
+    }
+  },
+
   addProseMirrorPlugins() {
+    const items = createSlashCommandItems(this.options)
+
     return [
       Suggestion<SlashCommandItem, SlashCommandItem>({
         editor: this.editor,
@@ -374,7 +422,7 @@ export const SlashCommand = Extension.create({
           props.command({ editor, range })
         },
         items: ({ query }) => {
-          return slashCommandItems
+          return items
             .filter((item) => {
               const search = `${item.title} ${item.description}`.toLowerCase()
 

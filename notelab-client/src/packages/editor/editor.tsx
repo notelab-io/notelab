@@ -38,6 +38,10 @@ import { CodeBlockShiki } from "@/packages/editor/extensions/code-block-shiki"
 import { EmojiExtension } from "@/packages/editor/extensions/emoji"
 import { FileBlock } from "@/packages/editor/extensions/file-block"
 import { ImageBlock } from "@/packages/editor/extensions/image-block"
+import {
+  PageBlock,
+  type CreatedPage,
+} from "@/packages/editor/extensions/page-block"
 import { ShadcnTaskItem } from "@/packages/editor/extensions/shadcn-task-item"
 import { SlashCommand } from "@/packages/editor/extensions/slash-command"
 import { VideoBlock } from "@/packages/editor/extensions/video-block"
@@ -108,7 +112,9 @@ type EditorProps = {
   content?: unknown
   emoji?: string
   onContentChange?: (content: unknown) => void
+  onCreatePage?: () => Promise<CreatedPage>
   onEmojiChange?: (emoji: string) => void
+  onOpenPage?: (pageId: string) => void
   onTitleChange?: (title: string) => void
   title?: string
 }
@@ -128,7 +134,9 @@ export function Editor({
   content = starterContent,
   emoji,
   onContentChange,
+  onCreatePage,
   onEmojiChange,
+  onOpenPage,
   onTitleChange,
   title,
 }: EditorProps = {}) {
@@ -183,6 +191,10 @@ export function Editor({
       VideoBlock,
       FileBlock,
       BookmarkBlock,
+      PageBlock.configure({
+        onCreatePage,
+        onOpenPage,
+      }),
       EmojiExtension,
       CodeBlockShiki.configure({
         defaultLanguage: null,
@@ -204,7 +216,10 @@ export function Editor({
       TableCell,
       Typography,
       CharacterCount,
-      SlashCommand,
+      SlashCommand.configure({
+        onCreatePage,
+        onOpenPage,
+      }),
     ],
     content: normalizeEditorContent(content),
     onUpdate: ({ editor }) => {

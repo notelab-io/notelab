@@ -20,6 +20,7 @@ import { useSession } from "@/features/auth/hooks"
 import { useOrganizations } from "@/features/organizations/hooks"
 import {
   getWorkspaceEmoji,
+  type Workspace,
 } from "@/features/workspaces/queries"
 import {
   useCreateWorkspace,
@@ -27,6 +28,13 @@ import {
 } from "@/features/workspaces/hooks"
 import { useAppStore } from "@/stores/app-store"
 import { SearchIcon, SparklesIcon, HomeIcon, InboxIcon, CalendarIcon, Settings2Icon, BlocksIcon, Trash2Icon, MessageCircleQuestionIcon } from "lucide-react"
+
+type WorkspaceTreeNode = {
+  id: string
+  name: string
+  emoji: React.ReactNode
+  pages: WorkspaceTreeNode[]
+}
 
 // This is sample data.
 const data = {
@@ -174,12 +182,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     null
   const { data: workspaceRecords = [] } = useWorkspaces(organizationId)
   const createWorkspace = useCreateWorkspace()
-  const workspaces = workspaceRecords.map((workspace) => ({
-    id: workspace.id,
-    name: workspace.name,
-    emoji: getWorkspaceEmoji(workspace),
-    pages: [],
-  }))
+  const workspaces = buildWorkspaceTree(workspaceRecords)
 
   const handleCreateWorkspace = async () => {
     if (!organizationId || createWorkspace.isPending) {
@@ -214,4 +217,38 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarRail />
     </Sidebar>
   )
+}
+
+function buildWorkspaceTree(workspaces: Workspace[]): WorkspaceTreeNode[] {
+  const nodesById = new Map(
+    workspaces.map((workspace) => [
+      workspace.id,
+      {
+        id: workspace.id,
+        name: workspace.name,
+        emoji: getWorkspaceEmoji(workspace),
+        pages: [] as WorkspaceTreeNode[],
+      },
+    ]),
+  )
+  const roots: WorkspaceTreeNode[] = []
+
+  for (const workspace of workspaces) {
+    const node = nodesById.get(workspace.id)
+
+    if (!node) {
+      continue
+    }
+
+    const parentWorkspaceId = workspace.metadata?.parentWorkspaceId
+    const parent = parentWorkspaceId ? nodesById.get(parentWorkspaceId) : null
+
+    if (parent && parent.id !== node.id) {
+      parent.pages.push(node)
+    } else {
+      roots.push(node)
+    }
+  }
+
+  return roots
 }

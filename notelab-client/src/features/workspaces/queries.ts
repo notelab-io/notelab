@@ -4,6 +4,7 @@ import { ApiError, apiFetch } from "@/lib/api"
 
 export type WorkspaceMetadata = {
   emoji?: string | null
+  parentWorkspaceId?: string | null
 }
 
 export type Workspace = {

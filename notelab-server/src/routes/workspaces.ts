@@ -88,7 +88,7 @@ workspaceRoutes.post("/", async (c) => {
   const {
     organizationId,
     type = "pageblock",
-    name,
+    name = "",
     url = "#",
     content = null,
     metadata = null,
@@ -105,8 +105,8 @@ workspaceRoutes.post("/", async (c) => {
     return c.json({ error: "organizationId is required" }, 400);
   }
 
-  if (typeof name !== "string" || name.length === 0) {
-    return c.json({ error: "name is required" }, 400);
+  if (typeof name !== "string") {
+    return c.json({ error: "name must be a string" }, 400);
   }
 
   if (typeof type !== "string" || typeof url !== "string") {
@@ -197,8 +197,8 @@ workspaceRoutes.patch("/:id", async (c) => {
   }
 
   if (patch.name !== undefined) {
-    if (typeof patch.name !== "string" || patch.name.length === 0) {
-      return c.json({ error: "name must be a non-empty string" }, 400);
+    if (typeof patch.name !== "string") {
+      return c.json({ error: "name must be a string" }, 400);
     }
 
     values.name = patch.name;
