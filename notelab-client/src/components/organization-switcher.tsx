@@ -75,7 +75,7 @@ export function OrganizationSwitcher() {
             <DropdownMenuTrigger asChild>
               <SidebarMenuButton
                 className="w-fit max-w-full px-1.5"
-                disabled={isLoading || organizations.length === 0}
+                disabled={isLoading}
               >
                 <div className="flex aspect-square size-5 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
                   {activeOrganization ? (
@@ -140,12 +140,18 @@ export function OrganizationSwitcher() {
           </DropdownMenu>
         </SidebarMenuItem>
       </SidebarMenu>
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+      <Dialog
+        open={isCreateDialogOpen}
+        onOpenChange={(open) => {
+          setIsCreateDialogOpen(open)
+          createOrganization.reset()
+        }}
+      >
         <DialogContent>
           <form onSubmit={handleCreateOrganization}>
             <DialogHeader>
               <DialogTitle>Add organization</DialogTitle>
-              <DialogDescription>
+              <DialogDescription className="sr-only">
                 Create a new organization and switch to it.
               </DialogDescription>
             </DialogHeader>
