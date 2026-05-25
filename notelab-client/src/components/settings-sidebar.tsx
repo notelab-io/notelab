@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router"
+import { useRouterState } from "@tanstack/react-router"
 import {
   ArrowLeftIcon,
   Building2Icon,
@@ -43,6 +44,10 @@ const settingsItems = [
 export function SettingsSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar>) {
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  })
+
   return (
     <Sidebar className="border-r-0" {...props}>
       <SidebarHeader>
@@ -65,7 +70,7 @@ export function SettingsSidebar({
             <SidebarMenu>
               {settingsItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
+                  <SidebarMenuButton asChild isActive={pathname === item.href}>
                     <Link to={item.href}>
                       {item.icon}
                       <span>{item.title}</span>
