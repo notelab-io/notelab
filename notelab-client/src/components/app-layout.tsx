@@ -27,6 +27,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
+import { cn } from "@/lib/utils"
 import {
   getWorkspaceEmoji,
   type Workspace,
@@ -41,7 +42,8 @@ type WorkspaceSidePaneContextValue = {
 const WorkspaceSidePaneContext =
   createContext<WorkspaceSidePaneContextValue | null>(null)
 
-const sidePaneWidthClass = "w-[min(48rem,48vw)] min-w-[24rem] shrink-0"
+const sidePaneWidthClass =
+  "w-full min-w-0 md:w-[min(48rem,48vw)] md:min-w-[24rem] md:shrink-0"
 
 export function AppLayout() {
   const location = useLocation()
@@ -117,7 +119,10 @@ function AppHeader({
       />
       {sidePaneWorkspaceId ? (
         <PaneHeaderContent
-          className={`${sidePaneWidthClass} border-l`}
+          className={cn(
+            "animate-in slide-in-from-right-8 absolute inset-0 z-10 border-b bg-background duration-200 md:static md:z-auto md:border-b-0 md:border-l",
+            sidePaneWidthClass,
+          )}
           leadingControl={
             <Button
               aria-label="Close side pane"

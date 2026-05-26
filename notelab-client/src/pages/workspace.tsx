@@ -6,6 +6,7 @@ import {
   useWorkspaceSidePane,
 } from "@/components/app-layout"
 import { Spinner } from "@/components/ui/spinner"
+import { cn } from "@/lib/utils"
 import {
   getWorkspaceEmoji,
   type WorkspaceMetadata,
@@ -33,7 +34,7 @@ export default function WorkspacePage() {
   }, [openSidePane])
 
   return (
-    <main className="flex h-full min-h-[calc(100svh-3rem)] flex-1 overflow-hidden">
+    <main className="relative flex h-full min-h-[calc(100svh-3rem)] flex-1 overflow-hidden">
       <WorkspaceEditorPane
         className="min-w-0 flex-1 overflow-y-auto"
         key={workspaceId}
@@ -42,7 +43,10 @@ export default function WorkspacePage() {
       />
       {sidePaneWorkspaceId ? (
         <aside
-          className={`animate-in slide-in-from-right-8 flex ${sidePaneWidthClass} flex-col border-l bg-background duration-200`}
+          className={cn(
+            "animate-in slide-in-from-right-8 absolute inset-0 z-10 flex flex-col bg-background duration-200 md:static md:z-auto md:border-l",
+            sidePaneWidthClass,
+          )}
           key={sidePaneWorkspaceId}
         >
           <WorkspaceEditorPane
