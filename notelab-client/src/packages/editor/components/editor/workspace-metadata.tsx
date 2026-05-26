@@ -19,6 +19,10 @@ import {
 } from "@/features/workspaces/hooks"
 
 import { getDatabasePropertyType } from "../../extensions/database/constants"
+import {
+  parsePropertyValue,
+  serializePropertyValue,
+} from "../../extensions/database/utils"
 
 type WorkspaceMetadataProps = {
   icon?: string
@@ -48,11 +52,18 @@ export function WorkspaceMetadata({
     const values: Record<string, string> = {}
 
     for (const value of propertyPayload?.values ?? []) {
-      values[value.propertyId] = getPropertyValueText(value.value)
+      const property = propertyPayload?.properties.find(
+        (item) => item.id === value.propertyId
+      )
+      const parsedValue = parsePropertyValue(value.value, property?.type)
+
+      values[value.propertyId] = Array.isArray(parsedValue)
+        ? parsedValue.join(", ")
+        : parsedValue
     }
 
     return values
-  }, [propertyPayload?.values])
+  }, [propertyPayload?.properties, propertyPayload?.values])
 
   const updateIcon = (nextIcon: string) => {
     onIconChange?.(nextIcon)
@@ -212,7 +223,7 @@ export function WorkspaceMetadata({
 
                       updatePropertyValue.mutate({
                         propertyId: property.id,
-                        value: { text: value },
+                        value: serializePropertyValue(property.type, value),
                         workspaceId,
                       })
                     }}
@@ -238,24 +249,4 @@ export function WorkspaceMetadata({
       </div>
     </section>
   )
-}
-
-function getPropertyValueText(value: unknown) {
-  if (typeof value === "string") {
-    return value
-  }
-
-  if (value && typeof value === "object" && "text" in value) {
-    const text = (value as { text?: unknown }).text
-
-    if (typeof text === "string") {
-      return text
-    }
-
-    if (Array.isArray(text)) {
-      return text.filter((item) => typeof item === "string").join(", ")
-    }
-  }
-
-  return ""
 }

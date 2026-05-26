@@ -44,7 +44,11 @@ import { DatabasePageCell } from "./database-page-cell"
 import { DatabasePropertyMenu } from "./database-property-menu"
 import { DatabaseSelectCell } from "./database-select-cell"
 import type { DatabaseBlockOptions } from "./types"
-import { getPropertyValue, type DatabasePropertyValue } from "./utils"
+import {
+  getPropertyValue,
+  serializePropertyValue,
+  type DatabasePropertyValue,
+} from "./utils"
 
 const databasePageDragEvents = new Set([
   "dragstart",
@@ -270,7 +274,8 @@ function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
         values[`${row.pageId}:${property.property.id}`] = getPropertyValue(
           propertyValues,
           row.pageId,
-          property.property.id
+          property.property.id,
+          property.property.type
         )
       }
     }
@@ -304,6 +309,7 @@ function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
   const saveCell = (
     rowId: string,
     propertyId: string,
+    propertyType: string,
     value: DatabasePropertyValue
   ) => {
     if (!databaseId) {
@@ -314,7 +320,7 @@ function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
       databaseId,
       propertyId,
       rowId,
-      value: { text: value },
+      value: serializePropertyValue(propertyType, value),
     })
   }
 
@@ -806,7 +812,12 @@ function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
                               }
                               multiple={isMultiSelectProperty}
                               onSelect={(optionValue) =>
-                                saveCell(row.id, workspaceProperty.id, optionValue)
+                                saveCell(
+                                  row.id,
+                                  workspaceProperty.id,
+                                  workspaceProperty.type,
+                                  optionValue
+                                )
                               }
                               propertyConfig={workspaceProperty.config}
                               propertyId={property.id}
@@ -827,7 +838,12 @@ function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
                                 }))
                               }
                               onCommit={() => {
-                                saveCell(row.id, workspaceProperty.id, value)
+                                saveCell(
+                                  row.id,
+                                  workspaceProperty.id,
+                                  workspaceProperty.type,
+                                  value
+                                )
                                 setDraftCells((drafts) => {
                                   const nextDrafts = { ...drafts }
 

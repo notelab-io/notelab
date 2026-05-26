@@ -21,14 +21,30 @@ export function createDatabaseBlockAttrs(databaseId: string) {
 export function getPropertyValue(
   values: WorkspacePropertyValue[],
   workspaceId: string,
-  propertyId: string
+  propertyId: string,
+  propertyType = "text"
 ): DatabasePropertyValue {
   const value = values.find(
     (item) => item.workspaceId === workspaceId && item.propertyId === propertyId
   )?.value
 
+  return parsePropertyValue(value, propertyType)
+}
+
+export function parsePropertyValue(
+  value: unknown,
+  propertyType = "text"
+): DatabasePropertyValue {
   if (typeof value === "string") {
     return value
+  }
+
+  if (typeof value === "number" && propertyType === "number") {
+    return Number.isFinite(value) ? String(value) : ""
+  }
+
+  if (typeof value === "boolean" && propertyType === "checkbox") {
+    return value ? "true" : "false"
   }
 
   if (Array.isArray(value)) {
@@ -56,4 +72,39 @@ export function getPropertyValue(
   }
 
   return ""
+}
+
+export function serializePropertyValue(
+  propertyType: string,
+  value: DatabasePropertyValue
+) {
+  if (propertyType === "multi_select") {
+    return Array.isArray(value) ? value : value ? [value] : []
+  }
+
+  if (propertyType === "number") {
+    const nextValue = Array.isArray(value) ? value[0] : value
+    const trimmedValue = nextValue.trim()
+
+    if (!trimmedValue) {
+      return null
+    }
+
+    const numberValue = Number(trimmedValue)
+
+    return Number.isFinite(numberValue) ? numberValue : null
+  }
+
+  if (propertyType === "checkbox") {
+    const nextValue = Array.isArray(value) ? value[0] : value
+    const normalizedValue = nextValue.trim().toLowerCase()
+
+    return ["1", "checked", "true", "yes"].includes(normalizedValue)
+  }
+
+  if (propertyType === "select" || propertyType === "status") {
+    return Array.isArray(value) ? (value[0] ?? "") : value
+  }
+
+  return Array.isArray(value) ? value.join(", ") : value
 }
