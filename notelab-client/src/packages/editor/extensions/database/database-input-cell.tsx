@@ -45,8 +45,11 @@ export function DatabaseInputCell({
   const wrapperRef = useRef<HTMLDivElement | null>(null)
   const skipNextBlurCommitRef = useRef(false)
   const isNumberCell = type === "number"
-  const hasNumberError = isNumberCell && value.trim() !== "" && !isValidNumber(value)
+  const hasNumberError =
+    isNumberCell && value.trim() !== "" && !isValidNumber(value)
   const errorMessage = hasNumberError ? "Enter a valid number" : null
+  const actionHref = getActionHref(type, value)
+  const shouldShowActionLink = !isMobile && !popoverPosition && actionHref
 
   const updatePopoverPosition = () => {
     const rect = wrapperRef.current?.getBoundingClientRect()
@@ -88,7 +91,11 @@ export function DatabaseInputCell({
         aria-describedby={errorMessage ? errorId : undefined}
         aria-invalid={hasNumberError ? "true" : undefined}
         aria-label={`${label} value`}
-        className="database-input-cell"
+        className={
+          shouldShowActionLink
+            ? "database-input-cell database-input-cell-underlay"
+            : "database-input-cell"
+        }
         data-database-cell-input
         onBlur={
           isMobile
@@ -105,7 +112,9 @@ export function DatabaseInputCell({
                 onDeactivate()
               }
         }
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) =>
+          onChange(stripActionScheme(type, event.target.value))
+        }
         onFocus={(event) => {
           const element = event.currentTarget
 
@@ -135,6 +144,15 @@ export function DatabaseInputCell({
           {errorMessage}
         </div>
       ) : null}
+      {shouldShowActionLink ? (
+        <a
+          className="database-input-cell-link"
+          href={actionHref}
+          onClick={(event) => event.stopPropagation()}
+        >
+          {stripActionScheme(type, value)}
+        </a>
+      ) : null}
     </div>
   )
 
@@ -160,7 +178,9 @@ export function DatabaseInputCell({
           className="database-input-cell-trigger"
           type="button"
         >
-          {value || <span className="text-muted-foreground">Empty</span>}
+          {stripActionScheme(type, value) || (
+            <span className="text-muted-foreground">Empty</span>
+          )}
         </button>
       </DrawerTrigger>
       <DrawerContent className="max-h-[85vh] bg-popover px-1 pb-2 text-popover-foreground">
@@ -185,4 +205,34 @@ export function DatabaseInputCell({
 
 function isValidNumber(value: string) {
   return /^[-+]?(?:\d+\.?\d*|\.\d+)$/.test(value.trim())
+}
+
+function getActionHref(type: string, value: string) {
+  const displayValue = stripActionScheme(type, value).trim()
+
+  if (!displayValue) {
+    return null
+  }
+
+  if (type === "email") {
+    return `mailto:${displayValue}`
+  }
+
+  if (type === "phone") {
+    return `tel:${displayValue}`
+  }
+
+  return null
+}
+
+function stripActionScheme(type: string, value: string) {
+  if (type === "email") {
+    return value.replace(/^mailto:/i, "")
+  }
+
+  if (type === "phone") {
+    return value.replace(/^tel:/i, "")
+  }
+
+  return value
 }

@@ -39,7 +39,12 @@ export function parsePropertyValue(
     return value
   }
 
-  if (typeof value === "number" && propertyType === "number") {
+  if (
+    typeof value === "number" &&
+    (propertyType === "number" ||
+      propertyType === "phone" ||
+      propertyType === "text")
+  ) {
     return Number.isFinite(value) ? String(value) : ""
   }
 
@@ -93,6 +98,12 @@ export function serializePropertyValue(
     const numberValue = Number(trimmedValue)
 
     return Number.isFinite(numberValue) ? numberValue : null
+  }
+
+  if (propertyType === "phone") {
+    const nextValue = Array.isArray(value) ? value[0] : value
+
+    return nextValue.trim()
   }
 
   if (propertyType === "checkbox") {

@@ -413,8 +413,16 @@
     @apply block h-8 min-h-8 w-full resize-none overflow-hidden border-0 bg-transparent px-3 py-1 text-sm leading-6 shadow-none outline-none transition-colors placeholder:text-muted-foreground focus-visible:ring-0;
   }
 
+  .database-input-cell-underlay {
+    @apply text-transparent caret-transparent;
+  }
+
+  .database-input-cell-link {
+    @apply absolute left-0 top-0 inline-flex h-8 max-w-full items-center truncate px-3 py-1 text-sm leading-6 text-primary underline underline-offset-2 focus-visible:ring-2 focus-visible:ring-ring/40;
+  }
+
   .database-input-cell-wrap {
-    @apply h-8 min-h-8 w-full;
+    @apply relative h-8 min-h-8 w-full;
   }
 
   .database-value-cell[data-active="true"] .database-input-cell-wrap {
