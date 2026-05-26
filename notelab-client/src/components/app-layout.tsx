@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -35,6 +36,7 @@ import {
 import { useWorkspace, useWorkspaces } from "@/features/workspaces/hooks"
 
 type WorkspaceSidePaneContextValue = {
+  closeSidePane: () => void
   openSidePane: (workspaceId: string) => void
   sidePaneWorkspaceId: string | null
 }
@@ -52,17 +54,21 @@ export function AppLayout() {
   const [sidePaneWorkspaceId, setSidePaneWorkspaceId] = useState<string | null>(
     null,
   )
+  const closeSidePane = useCallback(() => {
+    setSidePaneWorkspaceId(null)
+  }, [])
   const sidePaneContext = useMemo<WorkspaceSidePaneContextValue>(
     () => ({
+      closeSidePane,
       openSidePane: setSidePaneWorkspaceId,
       sidePaneWorkspaceId,
     }),
-    [sidePaneWorkspaceId],
+    [closeSidePane, sidePaneWorkspaceId],
   )
 
   useEffect(() => {
-    setSidePaneWorkspaceId(null)
-  }, [workspaceId])
+    closeSidePane()
+  }, [closeSidePane, workspaceId])
 
   return (
     <SidebarProvider>
@@ -72,7 +78,7 @@ export function AppLayout() {
           isSettingsPage={isSettingsPage}
           pathname={location.pathname}
           sidePaneWorkspaceId={sidePaneWorkspaceId}
-          onCloseSidePane={() => setSidePaneWorkspaceId(null)}
+          onCloseSidePane={closeSidePane}
         />
         <div className="min-h-0 flex-1 overflow-y-auto">
           <WorkspaceSidePaneContext.Provider value={sidePaneContext}>

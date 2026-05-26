@@ -36,7 +36,9 @@ type UpdatePropertyInput = {
 
 type AddRowInput = {
   databaseId: string
+  pageId?: string
   parentRowId?: string | null
+  position?: number
   title?: string
 }
 

@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, gte, isNull, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { db } from "../db";
@@ -344,42 +344,127 @@ databaseRoutes.post("/:id/rows", async (c) => {
   }
 
   const body = await c.req.json().catch(() => ({}));
-  const { title = "Untitled", parentRowId = null } = body as {
+  const { pageId: existingPageId = null, parentRowId = null, position } = body as {
+    pageId?: unknown;
     parentRowId?: unknown;
+    position?: unknown;
     title?: unknown;
   };
+  let { title } = body as { title?: unknown };
 
   if (
-    typeof title !== "string" ||
-    (parentRowId !== null && typeof parentRowId !== "string")
+    (title !== undefined && typeof title !== "string") ||
+    (existingPageId !== null && typeof existingPageId !== "string") ||
+    (parentRowId !== null && typeof parentRowId !== "string") ||
+    (position !== undefined &&
+      (!Number.isInteger(position) || (position as number) < 0))
   ) {
     return c.json({ error: "Invalid row input" }, 400);
   }
 
+  if (existingPageId === existing.pageId) {
+    return c.json({ error: "A page cannot be nested inside itself" }, 400);
+  }
+
   const rows = await db
-    .select({ position: databaseRow.position })
+    .select({
+      id: databaseRow.id,
+      pageId: databaseRow.pageId,
+      position: databaseRow.position,
+    })
     .from(databaseRow)
-    .where(eq(databaseRow.databaseId, existing.id));
-  const pageId = crypto.randomUUID();
+    .where(and(eq(databaseRow.databaseId, existing.id), isNull(databaseRow.deletedAt)))
+    .orderBy(asc(databaseRow.position));
+  const targetPosition =
+    position === undefined ? rows.length : Math.min(position as number, rows.length);
+  let pageId = typeof existingPageId === "string" ? existingPageId : crypto.randomUUID();
+  let pageMetadata: Record<string, unknown> = {};
+
+  if (existingPageId) {
+    const [page] = await db
+      .select({
+        id: workspace.id,
+        metadata: workspace.metadata,
+        name: workspace.name,
+        organizationId: workspace.organizationId,
+      })
+      .from(workspace)
+      .where(
+        and(
+          eq(workspace.id, existingPageId),
+          eq(workspace.organizationId, existing.organizationId),
+          isNull(workspace.deletedAt),
+        ),
+      )
+      .limit(1);
+
+    if (!page) {
+      return c.json({ error: "Page not found" }, 404);
+    }
+
+    if (title === undefined) {
+      title = page.name.trim() || "Untitled";
+    }
+
+    if (
+      page.metadata &&
+      typeof page.metadata === "object" &&
+      !Array.isArray(page.metadata)
+    ) {
+      pageMetadata = page.metadata as Record<string, unknown>;
+    }
+  } else {
+    title = title ?? "Untitled";
+  }
+
+  const existingRow = rows.find((row) => row.pageId === pageId);
+
+  if (existingRow) {
+    return c.json({ error: "This page is already in this database" }, 409);
+  }
 
   await db.transaction(async (tx) => {
-    await tx.insert(workspace).values({
-      id: pageId,
-      organizationId: existing.organizationId,
-      createdById: user.id,
-      type: "pageblock",
-      name: title,
-      url: "#",
-      content: null,
-      metadata: { parentWorkspaceId: existing.pageId },
-    });
+    if (existingPageId) {
+      await tx
+        .update(workspace)
+        .set({
+          metadata: { ...pageMetadata, parentWorkspaceId: existing.pageId },
+          updatedAt: new Date(),
+        })
+        .where(eq(workspace.id, existingPageId));
+    } else {
+      await tx.insert(workspace).values({
+        id: pageId,
+        organizationId: existing.organizationId,
+        createdById: user.id,
+        type: "pageblock",
+        name: title as string,
+        url: "#",
+        content: null,
+        metadata: { parentWorkspaceId: existing.pageId },
+      });
+    }
+
+    await tx
+      .update(databaseRow)
+      .set({
+        position: sql`${databaseRow.position} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(databaseRow.databaseId, existing.id),
+          isNull(databaseRow.deletedAt),
+          gte(databaseRow.position, targetPosition),
+        ),
+      );
     await tx.insert(databaseRow).values({
       id: crypto.randomUUID(),
       databaseId: existing.id,
       pageId,
       parentRowId,
-      title,
-      position: rows.length,
+      title: title as string,
+      position: targetPosition,
       createdById: user.id,
       lastEditedById: user.id,
     });

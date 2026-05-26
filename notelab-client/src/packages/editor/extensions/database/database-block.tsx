@@ -13,9 +13,11 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type DragEvent as ReactDragEvent,
   type FormEvent,
   type PointerEvent,
 } from "react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -62,6 +64,13 @@ type RowDragOverlay = {
   width: number
 }
 
+type DatabasePageDragPayload = {
+  databaseId?: string
+  pageId: string
+  rowId?: string
+  title?: string
+}
+
 function isDatabasePageDragEvent(event: Event) {
   if (!databasePageDragEvents.has(event.type) || !(event instanceof DragEvent)) {
     return false
@@ -70,6 +79,43 @@ function isDatabasePageDragEvent(event: Event) {
   return Array.from(event.dataTransfer?.types ?? []).includes(
     DATABASE_PAGE_DRAG_MIME
   )
+}
+
+function getDatabasePageDragPayload(
+  dataTransfer: DataTransfer | null
+): DatabasePageDragPayload | null {
+  const payload = dataTransfer?.getData(DATABASE_PAGE_DRAG_MIME)
+
+  if (!payload) {
+    return null
+  }
+
+  try {
+    const parsed = JSON.parse(payload) as {
+      databaseId?: unknown
+      pageId?: unknown
+      rowId?: unknown
+      title?: unknown
+    }
+
+    if (typeof parsed.pageId !== "string" || !parsed.pageId) {
+      return null
+    }
+
+    return {
+      databaseId:
+        typeof parsed.databaseId === "string" ? parsed.databaseId : undefined,
+      pageId: parsed.pageId,
+      rowId: typeof parsed.rowId === "string" ? parsed.rowId : undefined,
+      title: typeof parsed.title === "string" ? parsed.title : undefined,
+    }
+  } catch {
+    return null
+  }
+}
+
+function hasDatabasePageDragPayload(dataTransfer: DataTransfer | null) {
+  return Array.from(dataTransfer?.types ?? []).includes(DATABASE_PAGE_DRAG_MIME)
 }
 
 function hideNativeDragPreview(dataTransfer: DataTransfer) {
@@ -360,6 +406,70 @@ function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
     reorderRows.mutate({ databaseId, rowIds })
   }
 
+  const addDraggedPageRow = (
+    dragPayload: DatabasePageDragPayload,
+    position = rowDropTargetIndex
+  ) => {
+    if (!databaseId || position === null || addRow.isPending) {
+      return
+    }
+
+    if (dragPayload.pageId === payload?.database.pageId) {
+      toast.error("You can't nest a page inside itself.")
+      return
+    }
+
+    if (rows.some((row) => row.pageId === dragPayload.pageId)) {
+      toast.error("This page is already in this database.")
+      return
+    }
+
+    addRow.mutate({
+      databaseId,
+      pageId: dragPayload.pageId,
+      position,
+      title: dragPayload.title,
+    })
+  }
+
+  const isTableDragEvent = (event: ReactDragEvent<HTMLElement>) =>
+    event.target instanceof HTMLElement &&
+    Boolean(event.target.closest(".database-table-wrap"))
+
+  const handleDatabaseBlockDragOver = (
+    event: ReactDragEvent<HTMLDivElement>
+  ) => {
+    if (isTableDragEvent(event)) {
+      return
+    }
+
+    if (!hasDatabasePageDragPayload(event.dataTransfer)) {
+      return
+    }
+
+    event.preventDefault()
+    event.dataTransfer.dropEffect = "move"
+    measureRows()
+    setRowDropTargetIndex(rows.length)
+  }
+
+  const handleDatabaseBlockDrop = (event: ReactDragEvent<HTMLDivElement>) => {
+    if (isTableDragEvent(event)) {
+      return
+    }
+
+    const dragPayload = getDatabasePageDragPayload(event.dataTransfer)
+
+    if (!dragPayload) {
+      return
+    }
+
+    event.preventDefault()
+    event.stopPropagation()
+    addDraggedPageRow(dragPayload, rows.length)
+    clearRowDrag()
+  }
+
   const clearRowDrag = () => {
     setDraggedRowId(null)
     setRowDragOverlay(null)
@@ -382,7 +492,21 @@ function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
       data-database-id={databaseId ?? undefined}
       data-type="databaseBlock"
     >
-      <div className="database-block-shell" contentEditable={false}>
+      <div
+        className="database-block-shell"
+        contentEditable={false}
+        onDragLeave={(event) => {
+          if (
+            !event.currentTarget.contains(
+              event.relatedTarget as globalThis.Node | null
+            )
+          ) {
+            setRowDropTargetIndex(null)
+          }
+        }}
+        onDragOver={handleDatabaseBlockDragOver}
+        onDrop={handleDatabaseBlockDrop}
+      >
         <div className="database-toolbar">
           <Input
             aria-label="Database title"
@@ -440,32 +564,45 @@ function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
               }
             }}
             onDragOver={(event) => {
-              if (!draggedRowId) {
-                return
-              }
-
-              event.preventDefault()
-              event.dataTransfer.dropEffect = "move"
-              setRowDragOverlay((overlay) =>
-                overlay
-                  ? {
-                      ...overlay,
-                      left: event.clientX - overlay.offsetX,
-                      top: event.clientY - overlay.offsetY,
-                    }
-                  : overlay
+              const hasDragPayload = hasDatabasePageDragPayload(
+                event.dataTransfer
               )
-              measureRows()
-              setRowDropTargetIndex(getRowDropTargetIndex(event.clientY))
-            }}
-            onDrop={(event) => {
-              if (!draggedRowId || rowDropTargetIndex === null) {
+
+              if (!draggedRowId && !hasDragPayload) {
                 return
               }
 
               event.preventDefault()
               event.stopPropagation()
-              moveDraggedRow()
+              event.dataTransfer.dropEffect = "move"
+              if (draggedRowId) {
+                setRowDragOverlay((overlay) =>
+                  overlay
+                    ? {
+                        ...overlay,
+                        left: event.clientX - overlay.offsetX,
+                        top: event.clientY - overlay.offsetY,
+                      }
+                    : overlay
+                )
+              }
+              measureRows()
+              setRowDropTargetIndex(getRowDropTargetIndex(event.clientY))
+            }}
+            onDrop={(event) => {
+              const dragPayload = getDatabasePageDragPayload(event.dataTransfer)
+
+              if ((!draggedRowId && !dragPayload) || rowDropTargetIndex === null) {
+                return
+              }
+
+              event.preventDefault()
+              event.stopPropagation()
+              if (draggedRowId) {
+                moveDraggedRow()
+              } else if (dragPayload) {
+                addDraggedPageRow(dragPayload)
+              }
               clearRowDrag()
             }}
           >

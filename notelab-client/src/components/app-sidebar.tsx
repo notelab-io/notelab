@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { useNavigate } from "@tanstack/react-router"
+import { toast } from "sonner"
 
 import { NavFavorites } from "@/components/nav-favorites"
 import { NavMain } from "@/components/nav-main"
@@ -18,6 +19,7 @@ import {
 } from "@/components/ui/sidebar"
 import { useSession } from "@/features/auth/hooks"
 import { useOrganizations } from "@/features/organizations/hooks"
+import { useAddDatabaseRow } from "@/features/databases/hooks"
 import {
   getWorkspaceEmoji,
   type Workspace,
@@ -30,6 +32,7 @@ import { useAppStore } from "@/stores/app-store"
 import { SearchIcon, SparklesIcon, HomeIcon, InboxIcon, CalendarIcon, Settings2Icon, BlocksIcon, Trash2Icon, MessageCircleQuestionIcon } from "lucide-react"
 
 type WorkspaceTreeNode = {
+  databaseId?: string | null
   id: string
   name: string
   emoji: React.ReactNode
@@ -182,6 +185,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     null
   const { data: workspaceRecords = [] } = useWorkspaces(organizationId)
   const createWorkspace = useCreateWorkspace()
+  const addDatabaseRow = useAddDatabaseRow(organizationId)
   const workspaces = buildWorkspaceTree(workspaceRecords)
 
   const handleCreateWorkspace = async () => {
@@ -197,6 +201,42 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     })
   }
 
+  const handleDropPageOnDatabase = ({
+    databaseId,
+    pageId,
+    targetPageId,
+    title,
+  }: {
+    databaseId: string
+    pageId: string
+    targetPageId: string
+    title?: string
+  }) => {
+    if (pageId === targetPageId) {
+      toast.error("You can't nest a page inside itself.")
+      return
+    }
+
+    if (addDatabaseRow.isPending) {
+      return
+    }
+
+    addDatabaseRow.mutate(
+      {
+        databaseId,
+        pageId,
+        title,
+      },
+      {
+        onError: (error) => {
+          toast.error(
+            error instanceof Error ? error.message : "Could not move page."
+          )
+        },
+      }
+    )
+  }
+
   return (
     <Sidebar className="border-r-0" {...props}>
       <SidebarHeader>
@@ -207,6 +247,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavFavorites favorites={data.favorites} />
         <NavWorkspaces
           onCreateWorkspace={handleCreateWorkspace}
+          onDropPageOnDatabase={handleDropPageOnDatabase}
           workspaces={workspaces}
         />
         <NavSecondary items={data.navSecondary} className="mt-auto" />
@@ -224,6 +265,7 @@ function buildWorkspaceTree(workspaces: Workspace[]): WorkspaceTreeNode[] {
     workspaces.map((workspace) => [
       workspace.id,
       {
+        databaseId: getWorkspaceDatabaseId(workspace),
         id: workspace.id,
         name: workspace.name,
         emoji: getWorkspaceEmoji(workspace),
@@ -251,4 +293,47 @@ function buildWorkspaceTree(workspaces: Workspace[]): WorkspaceTreeNode[] {
   }
 
   return roots
+}
+
+function getWorkspaceDatabaseId(workspace: Workspace) {
+  return findDatabaseBlockId(workspace.content)
+}
+
+function findDatabaseBlockId(content: unknown): string | null {
+  if (typeof content === "string") {
+    const match = content.match(/data-database-id=["']([^"']+)["']/)
+
+    return match?.[1] ?? null
+  }
+
+  if (!content || typeof content !== "object") {
+    return null
+  }
+
+  if (Array.isArray(content)) {
+    for (const child of content) {
+      const databaseId = findDatabaseBlockId(child)
+
+      if (databaseId) {
+        return databaseId
+      }
+    }
+
+    return null
+  }
+
+  const node = content as {
+    attrs?: { databaseId?: unknown }
+    content?: unknown
+    type?: unknown
+  }
+
+  if (
+    node.type === "databaseBlock" &&
+    typeof node.attrs?.databaseId === "string"
+  ) {
+    return node.attrs.databaseId
+  }
+
+  return findDatabaseBlockId(node.content)
 }

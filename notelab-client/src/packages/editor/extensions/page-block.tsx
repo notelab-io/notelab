@@ -5,7 +5,13 @@ import {
   type ReactNodeViewProps,
 } from "@tiptap/react"
 import { FileText, LinkIcon, Loader2, Plus } from "lucide-react"
-import { useEffect, useRef, useState, type KeyboardEvent } from "react"
+import {
+  useEffect,
+  useRef,
+  useState,
+  type DragEvent,
+  type KeyboardEvent,
+} from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -16,6 +22,7 @@ import {
 import { useWorkspace, useWorkspaces } from "@/features/workspaces/hooks"
 import { getWorkspaceEmoji } from "@/features/workspaces/queries"
 import { colorWithAlpha } from "@/packages/editor/components/editor/toolbar-data"
+import { DATABASE_PAGE_DRAG_MIME } from "@/packages/editor/extensions/database/constants"
 
 export type CreatedPage = {
   id: string
@@ -117,6 +124,23 @@ function PageBlockView({
     }
   }
 
+  const startPageDrag = (event: DragEvent<HTMLButtonElement>) => {
+    if (!pageId) {
+      event.preventDefault()
+      return
+    }
+
+    event.dataTransfer.effectAllowed = "copyMove"
+    event.dataTransfer.setData(
+      DATABASE_PAGE_DRAG_MIME,
+      JSON.stringify({
+        pageId,
+        title,
+      })
+    )
+    event.dataTransfer.setData("text/plain", title)
+  }
+
   const selectOption = (index: number) => {
     const linkedPage = linkablePages[index]
 
@@ -175,7 +199,9 @@ function PageBlockView({
         <button
           className="page-block-preview"
           contentEditable={false}
+          draggable
           onClick={openPage}
+          onDragStart={startPageDrag}
           style={cardStyle}
           type="button"
         >

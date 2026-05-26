@@ -26,12 +26,18 @@ type WorkspaceEditorPaneProps = {
 
 export default function WorkspacePage() {
   const { workspaceId } = useParams({ from: "/app/workspace/$workspaceId" })
-  const { openSidePane, sidePaneWorkspaceId } = useWorkspaceSidePane()
+  const { closeSidePane, openSidePane, sidePaneWorkspaceId } =
+    useWorkspaceSidePane()
   const sidePaneWidthClass = getWorkspaceSidePaneWidthClass()
 
   const openPageInSidePane = useCallback((pageId: string) => {
+    if (pageId === workspaceId) {
+      closeSidePane()
+      return
+    }
+
     openSidePane(pageId)
-  }, [openSidePane])
+  }, [closeSidePane, openSidePane, workspaceId])
 
   return (
     <main className="relative flex h-full min-h-[calc(100svh-3rem)] flex-1 overflow-hidden">

@@ -31,8 +31,11 @@ import {
 } from "@/packages/editor/components/editor/drag-block-menu"
 import {
   hasDraggedEditorBlock,
+  deleteDraggedEditorBlockSource,
+  getDraggedEditorBlockPayload,
   insertDraggedEditorBlock,
   registerBlockDragSource,
+  type BlockDragPayload,
 } from "@/packages/editor/components/editor/block-drag"
 import { MobileActionBar } from "@/packages/editor/components/editor/mobile-action-bar"
 import { SelectionBubbleMenu } from "@/packages/editor/components/editor/selection-bubble-menu"
@@ -43,7 +46,7 @@ import type {
   ToolbarAction,
   ToolbarAttrs,
 } from "@/packages/editor/components/editor/types"
-import { useCreateDatabase } from "@/features/databases/hooks"
+import { useAddDatabaseRow, useCreateDatabase } from "@/features/databases/hooks"
 import { BookmarkBlock } from "@/packages/editor/extensions/bookmark-block"
 import { CodeBlockShiki } from "@/packages/editor/extensions/code-block-shiki"
 import {
@@ -60,6 +63,7 @@ import {
 import { ShadcnTaskItem } from "@/packages/editor/extensions/shadcn-task-item"
 import { SlashCommand } from "@/packages/editor/extensions/slash-command"
 import { VideoBlock } from "@/packages/editor/extensions/video-block"
+import { toast } from "sonner"
 
 const starterContent = `
   <h1>Draft your next workspace doc</h1>
@@ -193,10 +197,103 @@ function insertDraggedDatabasePage(view: EditorView, event: DragEvent) {
   }
 }
 
+type DatabasePageDropPayload = {
+  blockPayload?: BlockDragPayload
+  pageId: string
+  title?: string
+}
+
+function getDraggedDatabasePagePayload(event: DragEvent) {
+  const payload = event.dataTransfer?.getData(DATABASE_PAGE_DRAG_MIME)
+
+  if (!payload) {
+    return null
+  }
+
+  try {
+    const parsed = JSON.parse(payload) as {
+      pageId?: unknown
+      title?: unknown
+    }
+
+    if (typeof parsed.pageId !== "string" || !parsed.pageId) {
+      return null
+    }
+
+    return {
+      pageId: parsed.pageId,
+      title: typeof parsed.title === "string" ? parsed.title : undefined,
+    }
+  } catch {
+    return null
+  }
+}
+
+function getDraggedPageBlockPayload(
+  event: DragEvent
+): DatabasePageDropPayload | null {
+  const blockPayload = getDraggedEditorBlockPayload(event.dataTransfer)
+
+  if (blockPayload?.typeName !== "pageBlock") {
+    return null
+  }
+
+  const node = blockPayload.node as { attrs?: { pageId?: unknown } }
+  const pageId = node.attrs?.pageId
+
+  if (typeof pageId !== "string" || !pageId) {
+    return null
+  }
+
+  return {
+    blockPayload,
+    pageId,
+    title: blockPayload.textContent || undefined,
+  }
+}
+
+function getDatabasePageDropPayload(
+  event: DragEvent
+): DatabasePageDropPayload | null {
+  return getDraggedPageBlockPayload(event) ?? getDraggedDatabasePagePayload(event)
+}
+
+function getDropDatabaseElement(event: DragEvent) {
+  if (!(event.target instanceof HTMLElement)) {
+    return null
+  }
+
+  return event.target.closest<HTMLElement>(".database-block[data-database-id]")
+}
+
+function getDatabaseDropPosition(databaseElement: HTMLElement, event: DragEvent) {
+  const rowElements = Array.from(
+    databaseElement.querySelectorAll<HTMLTableRowElement>(
+      ".database-table tbody tr[data-database-row-id]"
+    )
+  )
+
+  if (rowElements.length === 0) {
+    return 0
+  }
+
+  const targetIndex = rowElements.findIndex((rowElement) => {
+    const rect = rowElement.getBoundingClientRect()
+
+    return event.clientY < rect.top + rect.height / 2
+  })
+
+  return targetIndex === -1 ? rowElements.length : targetIndex
+}
+
 function hasDraggedDatabasePage(event: DragEvent) {
   return Array.from(event.dataTransfer?.types ?? []).includes(
     DATABASE_PAGE_DRAG_MIME
   )
+}
+
+function hasDraggedPageBlock(event: DragEvent) {
+  return getDraggedPageBlockPayload(event) !== null
 }
 
 function isMobileViewport() {
@@ -224,6 +321,7 @@ export function Editor({
     useState<DragHandleTarget | null>(null)
   const [plusMenuOpen, setPlusMenuOpen] = useState(false)
   const createDatabase = useCreateDatabase()
+  const addDatabaseRow = useAddDatabaseRow(organizationId)
   const createEditorDatabase = useCallback(async () => {
     if (!organizationId || !workspaceId) {
       return null
@@ -237,6 +335,53 @@ export function Editor({
 
     return payload.database.id
   }, [createDatabase, organizationId, workspaceId])
+  const dropPageOnDatabase = useCallback(
+    (event: DragEvent) => {
+      const databaseElement = getDropDatabaseElement(event)
+      const databaseId = databaseElement?.dataset.databaseId
+
+      if (!databaseElement || !databaseId) {
+        return false
+      }
+
+      const dropPayload = getDatabasePageDropPayload(event)
+
+      if (!dropPayload) {
+        return false
+      }
+
+      event.preventDefault()
+      event.stopPropagation()
+
+      if (addDatabaseRow.isPending) {
+        return true
+      }
+
+      addDatabaseRow.mutate(
+        {
+          databaseId,
+          pageId: dropPayload.pageId,
+          position: getDatabaseDropPosition(databaseElement, event),
+          title: dropPayload.title,
+        },
+        {
+          onError: (error) => {
+            toast.error(
+              error instanceof Error ? error.message : "Could not move page."
+            )
+          },
+          onSuccess: () => {
+            if (dropPayload.blockPayload) {
+              deleteDraggedEditorBlockSource(dropPayload.blockPayload)
+            }
+          },
+        }
+      )
+
+      return true
+    },
+    [addDatabaseRow]
+  )
 
   const editor = useEditor({
     extensions: [
@@ -330,13 +475,26 @@ export function Editor({
         "aria-label": "Document editor",
       },
       handleDrop: (view, event) =>
+        dropPageOnDatabase(event) ||
         insertDraggedEditorBlock({ editorId, event, targetView: view }) ||
         insertDraggedDatabasePage(view, event),
       handleDOMEvents: {
         dragover: (_view, event) => {
           const hasDraggedBlock = hasDraggedEditorBlock(event)
+          const isDatabaseDropTarget = Boolean(getDropDatabaseElement(event))
+          const hasDraggedPage =
+            hasDraggedDatabasePage(event) || hasDraggedPageBlock(event)
 
-          if (!hasDraggedBlock && !hasDraggedDatabasePage(event)) {
+          if (!hasDraggedBlock && !hasDraggedPage) {
+            return false
+          }
+
+          if (isDatabaseDropTarget && hasDraggedPage) {
+            if (event.dataTransfer) {
+              event.preventDefault()
+              event.dataTransfer.dropEffect = "move"
+            }
+
             return false
           }
 

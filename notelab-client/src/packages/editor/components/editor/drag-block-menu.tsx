@@ -25,6 +25,7 @@ import {
 } from "./block-drag"
 import { colorTokens, colorWithAlpha } from "./toolbar-data"
 import type { DragHandleTarget } from "./types"
+import { DATABASE_PAGE_DRAG_MIME } from "@/packages/editor/extensions/database"
 
 const blockCommandItems = slashCommandItems.filter(
   (item) => item.title !== "Emoji"
@@ -343,6 +344,18 @@ export function DragBlockMenu({
             editorId,
             target,
           })
+
+          const pageId = target.node.attrs.pageId
+
+          if (target.node.type.name === "pageBlock" && typeof pageId === "string") {
+            event.dataTransfer.setData(
+              DATABASE_PAGE_DRAG_MIME,
+              JSON.stringify({
+                pageId,
+                title: target.node.textContent || "Untitled",
+              })
+            )
+          }
         }}
         onDragEnd={clearActiveBlockDrag}
         onPointerUp={() => {

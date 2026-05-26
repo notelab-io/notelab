@@ -8,7 +8,7 @@ import type { DragHandleTarget } from "./types"
 export const EDITOR_BLOCK_DRAG_MIME =
   "application/x-notelab-editor-block-drag"
 
-type BlockDragPayload = {
+export type BlockDragPayload = {
   editorId: string
   node: unknown
   pos: number
@@ -119,6 +119,26 @@ export function insertDraggedEditorBlock({
   clearActiveBlockDrag()
 
   return true
+}
+
+export function getDraggedEditorBlockPayload(dataTransfer: DataTransfer | null) {
+  return parseDraggedBlockPayload(dataTransfer)
+}
+
+export function deleteDraggedEditorBlockSource(payload: BlockDragPayload) {
+  const sourceEditor = dragSourceEditors.get(payload.editorId)
+
+  if (!sourceEditor) {
+    return false
+  }
+
+  const deleted = deleteDraggedSourceNode(sourceEditor.view, payload)
+
+  if (deleted) {
+    clearActiveBlockDrag()
+  }
+
+  return deleted
 }
 
 function createBlockDragPayload(
