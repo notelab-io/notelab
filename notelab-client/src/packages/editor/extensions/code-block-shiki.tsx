@@ -10,18 +10,11 @@ import CodeBlockShikiBase from "tiptap-extension-code-block-shiki"
 
 import { Button } from "@/components/ui/button"
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
+  DropDrawer,
+  DropDrawerContent,
+  DropDrawerItem,
+  DropDrawerTrigger,
+} from "@/components/ui/dropdrawer"
 
 const codeBlockLanguages = [
   { label: "Auto detect", value: "auto" },
@@ -146,7 +139,6 @@ const codeBlockLanguages = [
 
 function CodeBlockShikiView({ node, updateAttributes }: ReactNodeViewProps) {
   const [copied, setCopied] = useState(false)
-  const [languagePickerOpen, setLanguagePickerOpen] = useState(false)
   const language = node.attrs.language ?? "auto"
   const codeLanguage = language === "auto" ? "" : language
   const activeLanguage =
@@ -186,15 +178,10 @@ function CodeBlockShikiView({ node, updateAttributes }: ReactNodeViewProps) {
         >
           {copied ? <Check /> : <Copy />}
         </Button>
-        <Popover
-          onOpenChange={setLanguagePickerOpen}
-          open={languagePickerOpen}
-        >
-          <PopoverTrigger asChild>
+        <DropDrawer>
+          <DropDrawerTrigger asChild>
             <Button
-              aria-expanded={languagePickerOpen}
               aria-label="Code block language"
-              className=""
               role="combobox"
               size="sm"
               type="button"
@@ -203,10 +190,10 @@ function CodeBlockShikiView({ node, updateAttributes }: ReactNodeViewProps) {
               <span className="truncate">{activeLanguage.label}</span>
               <ChevronsUpDown className="opacity-50" />
             </Button>
-          </PopoverTrigger>
-          <PopoverContent
+          </DropDrawerTrigger>
+          <DropDrawerContent
             align="end"
-            className="code-block-language-content"
+            side="bottom"
             onMouseDown={(event) => {
               event.stopPropagation()
             }}
@@ -214,31 +201,21 @@ function CodeBlockShikiView({ node, updateAttributes }: ReactNodeViewProps) {
               event.stopPropagation()
             }}
           >
-            <Command>
-              <CommandInput placeholder="Search languages..." />
-              <CommandList>
-                <CommandEmpty>No language found.</CommandEmpty>
-                <CommandGroup>
-                  {codeBlockLanguages.map((option) => (
-                    <CommandItem
-                      data-checked={option.value === language}
-                      key={option.value}
-                      onSelect={() => {
-                        updateAttributes({
-                          language: option.value === "auto" ? null : option.value,
-                        })
-                        setLanguagePickerOpen(false)
-                      }}
-                      value={`${option.label} ${option.value}`}
-                    >
-                      {option.label}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
+            {codeBlockLanguages.map((option) => (
+              <DropDrawerItem
+                icon={option.value === language ? <Check /> : undefined}
+                key={option.value}
+                onSelect={() => {
+                  updateAttributes({
+                    language: option.value === "auto" ? null : option.value,
+                  })
+                }}
+              >
+                {option.label}
+              </DropDrawerItem>
+            ))}
+          </DropDrawerContent>
+        </DropDrawer>
       </div>
       <NodeViewContent<"code">
         as="code"

@@ -138,14 +138,6 @@
     @apply bg-background/95 shadow-sm;
   }
 
-  .code-block-language-trigger {
-    @apply h-7 max-w-44 bg-background/95 shadow-sm;
-  }
-
-  .code-block-language-content {
-    @apply z-50 w-64 gap-0 p-0;
-  }
-
   .dark .tiptap-editor .shiki,
   .dark .tiptap-editor .shiki span {
     color: var(--shiki-dark) !important;
