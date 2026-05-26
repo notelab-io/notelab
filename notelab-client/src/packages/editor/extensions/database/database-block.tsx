@@ -4,10 +4,13 @@ import {
   ReactNodeViewRenderer,
   type ReactNodeViewProps,
 } from "@tiptap/react"
-import { GripVertical, Loader2, Plus } from "lucide-react"
+import { FileText, GripVertical, Loader2, Plus } from "lucide-react"
 import {
+  useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
+  useRef,
   useState,
   type CSSProperties,
   type FormEvent,
@@ -48,6 +51,16 @@ const databasePageDragEvents = new Set([
   "dragend",
 ])
 
+type RowDragOverlay = {
+  height: number
+  left: number
+  offsetX: number
+  offsetY: number
+  title: string
+  top: number
+  width: number
+}
+
 function isDatabasePageDragEvent(event: Event) {
   if (!databasePageDragEvents.has(event.type) || !(event instanceof DragEvent)) {
     return false
@@ -56,6 +69,21 @@ function isDatabasePageDragEvent(event: Event) {
   return Array.from(event.dataTransfer?.types ?? []).includes(
     DATABASE_PAGE_DRAG_MIME
   )
+}
+
+function hideNativeDragPreview(dataTransfer: DataTransfer) {
+  const dragImage = document.createElement("span")
+
+  dragImage.style.position = "fixed"
+  dragImage.style.top = "-100px"
+  dragImage.style.left = "-100px"
+  dragImage.style.width = "1px"
+  dragImage.style.height = "1px"
+  dragImage.style.opacity = "0"
+
+  document.body.appendChild(dragImage)
+  dataTransfer.setDragImage(dragImage, 0, 0)
+  window.requestAnimationFrame(() => dragImage.remove())
 }
 
 function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
@@ -74,15 +102,20 @@ function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
   const [activeCellKey, setActiveCellKey] = useState<string | null>(null)
   const [hoveredRowId, setHoveredRowId] = useState<string | null>(null)
   const [draggedRowId, setDraggedRowId] = useState<string | null>(null)
+  const [rowDragOverlay, setRowDragOverlay] =
+    useState<RowDragOverlay | null>(null)
   const [rowDropTargetIndex, setRowDropTargetIndex] = useState<number | null>(
     null
   )
+  const tableWrapRef = useRef<HTMLDivElement | null>(null)
+  const [rowLayout, setRowLayout] = useState<{
+    centers: Record<string, number>
+    dropTops: number[]
+  }>({ centers: {}, dropTops: [] })
 
   const cells = payload?.cells ?? []
   const properties = payload?.properties ?? []
   const rows = payload?.rows ?? []
-  const rowDragHandleTop = (index: number) => 32 + index * 32 + 16
-  const rowDropLineTop = (index: number) => 32 + index * 32
   const columnKeys = useMemo(
     () => ["name", ...properties.map((property) => property.id), "add-property"],
     [properties]
@@ -104,6 +137,82 @@ function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
       setDraftTitle(payload.database.name)
     }
   }, [payload?.database.id, payload?.database.name])
+
+  const getRowElements = useCallback(() => {
+    return Array.from(
+      tableWrapRef.current?.querySelectorAll<HTMLTableRowElement>(
+        ".database-table tbody tr[data-database-row-id]"
+      ) ?? []
+    )
+  }, [])
+
+  const measureRows = useCallback(() => {
+    const wrapperElement = tableWrapRef.current
+
+    if (!wrapperElement) {
+      return { centers: {}, dropTops: [] }
+    }
+
+    const wrapperRect = wrapperElement.getBoundingClientRect()
+    const rowElements = getRowElements()
+    const centers: Record<string, number> = {}
+    const dropTops: number[] = []
+
+    rowElements.forEach((rowElement, index) => {
+      const rect = rowElement.getBoundingClientRect()
+      const top = rect.top - wrapperRect.top
+      const height = rect.height
+      const rowId = rowElement.dataset.databaseRowId
+
+      if (rowId) {
+        centers[rowId] = top + height / 2
+      }
+
+      dropTops[index] = top
+
+      if (index === rowElements.length - 1) {
+        dropTops[index + 1] = top + height
+      }
+    })
+
+    setRowLayout({ centers, dropTops })
+
+    return { centers, dropTops }
+  }, [getRowElements])
+
+  useLayoutEffect(() => {
+    measureRows()
+  }, [activeCellKey, measureRows, properties.length, rows.length])
+
+  useEffect(() => {
+    window.addEventListener("resize", measureRows)
+
+    return () => window.removeEventListener("resize", measureRows)
+  }, [measureRows])
+
+  const isDraggingDatabaseRow = Boolean(rowDragOverlay)
+
+  useEffect(() => {
+    if (!isDraggingDatabaseRow) {
+      return
+    }
+
+    const moveOverlay = (event: DragEvent) => {
+      setRowDragOverlay((overlay) =>
+        overlay
+          ? {
+              ...overlay,
+              left: event.clientX - overlay.offsetX,
+              top: event.clientY - overlay.offsetY,
+            }
+          : overlay
+      )
+    }
+
+    window.addEventListener("dragover", moveOverlay)
+
+    return () => window.removeEventListener("dragover", moveOverlay)
+  }, [isDraggingDatabaseRow])
 
   const cellValues = useMemo(() => {
     const values: Record<string, string> = {}
@@ -202,11 +311,7 @@ function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
   }
 
   const getRowDropTargetIndex = (clientY: number) => {
-    const rowElements = Array.from(
-      document.querySelectorAll<HTMLTableRowElement>(
-        `[data-database-id="${databaseId}"] .database-table tbody tr[data-database-row-id]`
-      )
-    )
+    const rowElements = getRowElements()
 
     if (rowElements.length === 0) {
       return 0
@@ -252,9 +357,20 @@ function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
 
   const clearRowDrag = () => {
     setDraggedRowId(null)
+    setRowDragOverlay(null)
     setRowDropTargetIndex(null)
   }
 
+  const rowDropLineTop =
+    rowDropTargetIndex === null
+      ? null
+      : (rowLayout.dropTops[rowDropTargetIndex] ?? null)
+  const activeDragRowId = draggedRowId ?? hoveredRowId
+  const activeDragRowIndex = activeDragRowId
+    ? rows.findIndex((row) => row.id === activeDragRowId)
+    : -1
+  const activeDragRow =
+    activeDragRowIndex === -1 ? null : rows[activeDragRowIndex]
   return (
     <NodeViewWrapper
       className="database-block"
@@ -303,6 +419,12 @@ function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
         ) : (
           <div
             className="database-table-wrap"
+            ref={tableWrapRef}
+            onMouseLeave={() => {
+              if (!draggedRowId) {
+                setHoveredRowId(null)
+              }
+            }}
             onDragLeave={(event) => {
               if (
                 !event.currentTarget.contains(
@@ -319,6 +441,16 @@ function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
 
               event.preventDefault()
               event.dataTransfer.dropEffect = "move"
+              setRowDragOverlay((overlay) =>
+                overlay
+                  ? {
+                      ...overlay,
+                      left: event.clientX - overlay.offsetX,
+                      top: event.clientY - overlay.offsetY,
+                    }
+                  : overlay
+              )
+              measureRows()
               setRowDropTargetIndex(getRowDropTargetIndex(event.clientY))
             }}
             onDrop={(event) => {
@@ -333,52 +465,93 @@ function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
             }}
           >
             <div className="database-row-drag-rail">
-              {rows.map((row, index) => (
+              {activeDragRow ? (
                 <button
-                  aria-label={`Drag ${row.title.trim() || "Untitled"}`}
+                  aria-label={`Drag ${activeDragRow.title.trim() || "Untitled"}`}
                   className="database-row-drag-handle"
-                  data-visible={hoveredRowId === row.id ? "true" : undefined}
+                  data-database-row-drag-handle
+                  data-dragging={
+                    draggedRowId === activeDragRow.id ? "true" : undefined
+                  }
+                  data-visible="true"
                   draggable
-                  key={row.id}
+                  key="database-row-drag-handle"
                   onClick={(event) => event.preventDefault()}
                   onDragStart={(event) => {
-                    setDraggedRowId(row.id)
-                    setRowDropTargetIndex(index)
+                    measureRows()
+                    const rowElement = tableWrapRef.current?.querySelector(
+                      `tr[data-database-row-id="${activeDragRow.id}"]`
+                    )
+                    const rowRect = rowElement?.getBoundingClientRect()
+                    const tableRect = tableWrapRef.current
+                      ?.querySelector(".database-table")
+                      ?.getBoundingClientRect()
+
+                    if (rowRect && tableRect) {
+                      setRowDragOverlay({
+                        height: rowRect.height,
+                        left: rowRect.left,
+                        offsetX: event.clientX - rowRect.left,
+                        offsetY: event.clientY - rowRect.top,
+                        title: activeDragRow.title.trim() || "Untitled",
+                        top: rowRect.top,
+                        width: tableRect.width,
+                      })
+                    }
+
+                    hideNativeDragPreview(event.dataTransfer)
+                    setDraggedRowId(activeDragRow.id)
+                    setRowDropTargetIndex(activeDragRowIndex)
                     event.dataTransfer.effectAllowed = "copyMove"
                     event.dataTransfer.setData(
                       DATABASE_PAGE_DRAG_MIME,
                       JSON.stringify({
                         databaseId: payload.database.id,
-                        pageId: row.pageId,
-                        rowId: row.id,
+                        pageId: activeDragRow.pageId,
+                        rowId: activeDragRow.id,
                       })
                     )
                     event.dataTransfer.setData(
                       "text/plain",
-                      row.title.trim() || "Untitled"
+                      activeDragRow.title.trim() || "Untitled"
                     )
                   }}
                   onDragEnd={clearRowDrag}
-                  onMouseEnter={() => setHoveredRowId(row.id)}
-                  onMouseLeave={() =>
-                    setHoveredRowId((currentId) =>
-                      currentId === row.id ? null : currentId
-                    )
-                  }
+                  onMouseEnter={() => {
+                    measureRows()
+                    setHoveredRowId(activeDragRow.id)
+                  }}
                   style={{
-                    top: rowDragHandleTop(index),
+                    top: rowLayout.centers[activeDragRow.id] ?? 0,
                   }}
                   title="Drag page"
                   type="button"
                 >
                   <GripVertical />
                 </button>
-              ))}
+              ) : null}
             </div>
-            {rowDropTargetIndex !== null ? (
+            {rowDragOverlay ? (
               <div
-                className="database-row-drop-line"
-                style={{ top: rowDropLineTop(rowDropTargetIndex) }}
+                aria-hidden="true"
+                className="database-row-drag-overlay"
+                style={{
+                  height: rowDragOverlay.height,
+                  left: rowDragOverlay.left,
+                  top: rowDragOverlay.top,
+                  width: rowDragOverlay.width,
+                }}
+              >
+                <span className="database-row-drag-overlay-cell">
+                  <FileText />
+                  <span>{rowDragOverlay.title}</span>
+                </span>
+              </div>
+            ) : null}
+            {rowDropLineTop !== null ? (
+              <div
+                className="pointer-events-none absolute left-0 right-0 z-30 h-0.5 -translate-y-px bg-primary"
+                style={{ top: rowDropLineTop }}
               />
             ) : null}
             <div className="database-table-scroll">
@@ -451,12 +624,10 @@ function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
                   <tr
                     data-database-row-id={row.id}
                     key={row.id}
-                    onMouseEnter={() => setHoveredRowId(row.id)}
-                    onMouseLeave={() =>
-                      setHoveredRowId((currentId) =>
-                        currentId === row.id ? null : currentId
-                      )
-                    }
+                    onMouseEnter={() => {
+                      measureRows()
+                      setHoveredRowId(row.id)
+                    }}
                   >
                     <td className="database-page-cell">
                       <DatabasePageCell
@@ -490,6 +661,7 @@ function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
                             <textarea
                               aria-label={`${property.name} value`}
                               className="database-cell-input"
+                              data-database-cell-input
                               onBlur={(event) => {
                                 saveCell(
                                   row.id,
@@ -626,7 +798,9 @@ export const DatabaseBlock = Node.create<DatabaseBlockOptions>({
 
         if (
           target instanceof HTMLElement &&
-          target.closest(".database-row-drag-handle")
+          target.closest(
+            "[data-database-row-drag-handle], [data-database-cell-input]"
+          )
         ) {
           return true
         }

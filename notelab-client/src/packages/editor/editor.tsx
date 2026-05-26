@@ -189,6 +189,12 @@ function insertDraggedDatabasePage(view: EditorView, event: DragEvent) {
   }
 }
 
+function hasDraggedDatabasePage(event: DragEvent) {
+  return Array.from(event.dataTransfer?.types ?? []).includes(
+    DATABASE_PAGE_DRAG_MIME
+  )
+}
+
 export function Editor({
   content = starterContent,
   emoji,
@@ -314,6 +320,27 @@ export function Editor({
         "aria-label": "Document editor",
       },
       handleDrop: (view, event) => insertDraggedDatabasePage(view, event),
+      handleDOMEvents: {
+        dragover: (_view, event) => {
+          if (!hasDraggedDatabasePage(event)) {
+            return false
+          }
+
+          if (
+            event.target instanceof HTMLElement &&
+            event.target.closest(".database-table-wrap")
+          ) {
+            return false
+          }
+
+          if (event.dataTransfer) {
+            event.preventDefault()
+            event.dataTransfer.dropEffect = "copy"
+          }
+
+          return false
+        },
+      },
     },
   })
 

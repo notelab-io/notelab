@@ -478,12 +478,26 @@
   }
 
   .database-row-drag-handle {
-    @apply pointer-events-auto absolute flex size-7 -translate-y-1/2 cursor-grab items-center justify-center rounded-sm bg-transparent text-muted-foreground opacity-0 outline-none transition-opacity hover:text-foreground active:cursor-grabbing focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring/40;
+    @apply pointer-events-auto absolute flex size-7 -translate-y-1/2 cursor-grab items-center justify-center rounded-sm bg-transparent text-muted-foreground opacity-0 outline-none hover:text-foreground active:cursor-grabbing focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring/40;
+    transition-duration: 160ms;
+    transition-property: top, opacity, color;
+    transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+    will-change: top, opacity;
+  }
+
+  .database-row-drag-handle::after {
+    @apply absolute inset-y-0 left-0 content-[''];
+    width: 4rem;
   }
 
   .database-row-drag-handle[data-visible="true"],
   .database-row-drag-handle:focus-visible {
     @apply opacity-100;
+  }
+
+  .database-row-drag-handle[data-dragging="true"] {
+    @apply text-foreground;
+    transition: none;
   }
 
   .database-row-drag-handle svg {
@@ -493,6 +507,22 @@
   .database-row-drop-line {
     @apply pointer-events-none absolute left-0 right-0 z-30 h-0.5 bg-primary;
     transform: translateY(-1px);
+  }
+
+  .database-row-drag-overlay {
+    @apply pointer-events-none fixed z-50 overflow-hidden rounded-md border bg-muted/30 text-sm text-foreground opacity-90 shadow-lg;
+  }
+
+  .database-row-drag-overlay-cell {
+    @apply flex h-full min-w-0 items-center gap-2 px-3 py-1;
+  }
+
+  .database-row-drag-overlay-cell svg {
+    @apply size-4 shrink-0 text-muted-foreground;
+  }
+
+  .database-row-drag-overlay-cell span {
+    @apply min-w-0 truncate font-medium;
   }
 
   .database-page-main {
@@ -528,6 +558,14 @@
   .database-column-resize-handle:hover,
   .database-column-resize-handle:active {
     @apply bg-primary;
+  }
+
+  body:has(.tiptap-editor .database-table th:hover) .drag-handle,
+  body:has(.database-row-drag-handle[data-visible="true"]) .drag-handle,
+  body:has(.database-row-drag-handle:focus-visible) .drag-handle,
+  body:has(.database-column-resize-handle:active) .drag-handle,
+  body.database-resize-cursor .drag-handle {
+    @apply pointer-events-none opacity-0;
   }
 
   .database-resize-cursor,
