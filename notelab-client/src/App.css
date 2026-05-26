@@ -126,15 +126,15 @@
     --sidebar-border: oklch(1 0 0 / 10%);
     --sidebar-ring: oklch(0.556 0 0);
     --editor-color-bg-default: var(--color-background);
-    --editor-color-bg-gray: color-mix(in oklab, var(--color-zinc-700) 50%, transparent);
-    --editor-color-bg-brown: color-mix(in oklab, var(--color-stone-700) 50%, transparent);
-    --editor-color-bg-orange: color-mix(in oklab, var(--color-orange-900) 40%, transparent);
-    --editor-color-bg-yellow: color-mix(in oklab, var(--color-amber-900) 40%, transparent);
-    --editor-color-bg-green: color-mix(in oklab, var(--color-emerald-900) 40%, transparent);
-    --editor-color-bg-blue: color-mix(in oklab, var(--color-sky-900) 40%, transparent);
-    --editor-color-bg-purple: color-mix(in oklab, var(--color-violet-900) 40%, transparent);
-    --editor-color-bg-pink: color-mix(in oklab, var(--color-pink-900) 40%, transparent);
-    --editor-color-bg-red: color-mix(in oklab, var(--color-rose-900) 40%, transparent);
+    --editor-color-bg-gray: color-mix(in oklab, var(--color-zinc-500) 45%, transparent);
+    --editor-color-bg-brown: color-mix(in oklab, var(--color-stone-500) 45%, transparent);
+    --editor-color-bg-orange: color-mix(in oklab, var(--color-orange-700) 55%, transparent);
+    --editor-color-bg-yellow: color-mix(in oklab, var(--color-amber-700) 50%, transparent);
+    --editor-color-bg-green: color-mix(in oklab, var(--color-emerald-700) 55%, transparent);
+    --editor-color-bg-blue: color-mix(in oklab, var(--color-sky-700) 55%, transparent);
+    --editor-color-bg-purple: color-mix(in oklab, var(--color-violet-700) 55%, transparent);
+    --editor-color-bg-pink: color-mix(in oklab, var(--color-pink-700) 55%, transparent);
+    --editor-color-bg-red: color-mix(in oklab, var(--color-rose-700) 55%, transparent);
 }
 
 @layer base {

@@ -2,20 +2,25 @@ import {
   ArrowDownUp,
   ArrowLeftToLine,
   ArrowRightToLine,
+  Bell,
   Check,
   ChevronsUpDown,
   ChevronDown,
+  CircleUserRound,
   Copy,
   EyeOff,
   Flag,
   Filter,
   GripVertical,
+  Hash,
   Pin,
   Plus,
   Settings2,
   Sparkles,
   Trash2,
+  UserRound,
 } from "lucide-react"
+import type { ReactNode } from "react"
 
 import {
   DropDrawer,
@@ -56,8 +61,19 @@ type SelectOption = {
 
 type DatabasePropertyConfig = {
   defaultOptionId?: string
+  filesLimit?: FilesLimitValue
+  personDefault?: PersonDefaultValue
+  personLimit?: PersonLimitValue
+  personNotifications?: PersonNotificationsValue
+  selectOptionSort?: SelectOptionSortValue
   options?: SelectOption[]
 }
+
+type FilesLimitValue = "one_file" | "no_limit"
+type PersonLimitValue = "one_person" | "no_limit"
+type PersonDefaultValue = "no_default" | "created_by"
+type PersonNotificationsValue = "users_and_groups" | "users_only" | "none"
+type SelectOptionSortValue = "manual" | "alphabetical" | "reverse_alphabetical"
 
 export function DatabasePropertyMenu({
   config,
@@ -79,6 +95,8 @@ export function DatabasePropertyMenu({
   const PropertyIcon = propertyType.icon
   const isStatusProperty = type === "status"
   const isSelectProperty = type === "select" || type === "multi_select"
+  const isPersonProperty = type === "person"
+  const isFilesProperty = type === "files"
   const statusDefaultOptionId = getStatusDefaultOptionId(config)
   const statusOptions = getStatusOptions(config)
   const selectOptions = getSelectOptions(config)
@@ -134,7 +152,14 @@ export function DatabasePropertyMenu({
             <span>Edit property</span>
           </DropDrawerSubTrigger>
           <DropDrawerSubContent
-            className={isStatusProperty || isSelectProperty ? "w-72" : undefined}
+            className={
+              isStatusProperty ||
+              isSelectProperty ||
+              isPersonProperty ||
+              isFilesProperty
+                ? "w-72"
+                : undefined
+            }
           >
             {isStatusProperty ? (
               <StatusPropertyOptions
@@ -146,6 +171,17 @@ export function DatabasePropertyMenu({
               <SelectPropertyOptions
                 onUpdateConfig={updatePropertyConfig}
                 options={selectOptions}
+                sort={getSelectOptionSort(config)}
+              />
+            ) : isPersonProperty ? (
+              <PersonPropertyOptions
+                config={getPersonConfig(config)}
+                onUpdateConfig={updatePropertyConfig}
+              />
+            ) : isFilesProperty ? (
+              <FilesPropertyOptions
+                config={getFilesConfig(config)}
+                onUpdateConfig={updatePropertyConfig}
               />
             ) : (
               <DropDrawerItem disabled>Property settings</DropDrawerItem>
@@ -218,37 +254,164 @@ export function DatabasePropertyMenu({
   )
 }
 
+function FilesPropertyOptions({
+  config,
+  onUpdateConfig,
+}: {
+  config: Required<Pick<DatabasePropertyConfig, "filesLimit">>
+  onUpdateConfig: (config: DatabasePropertyConfig) => void
+}) {
+  return (
+    <PropertySettingSubmenu
+      icon={<Hash />}
+      label="Limit"
+      options={filesLimitOptions}
+      selectedValue={config.filesLimit}
+      onSelect={(filesLimit) => onUpdateConfig({ filesLimit })}
+    />
+  )
+}
+
+function PersonPropertyOptions({
+  config,
+  onUpdateConfig,
+}: {
+  config: Required<
+    Pick<
+      DatabasePropertyConfig,
+      "personDefault" | "personLimit" | "personNotifications"
+    >
+  >
+  onUpdateConfig: (config: DatabasePropertyConfig) => void
+}) {
+  return (
+    <>
+      <PropertySettingSubmenu
+        icon={<Hash />}
+        label="Limit"
+        options={personLimitOptions}
+        selectedValue={config.personLimit}
+        onSelect={(personLimit) => onUpdateConfig({ personLimit })}
+      />
+      <PropertySettingSubmenu
+        icon={<CircleUserRound />}
+        label="Default"
+        options={personDefaultOptions}
+        selectedValue={config.personDefault}
+        onSelect={(personDefault) => onUpdateConfig({ personDefault })}
+      />
+      <PropertySettingSubmenu
+        icon={<Bell />}
+        label="Notifications"
+        options={personNotificationsOptions}
+        selectedValue={config.personNotifications}
+        onSelect={(personNotifications) =>
+          onUpdateConfig({ personNotifications })
+        }
+      />
+    </>
+  )
+}
+
+function PropertySettingSubmenu<TValue extends string>({
+  icon,
+  label,
+  onSelect,
+  options,
+  selectedValue,
+}: {
+  icon: ReactNode
+  label: string
+  onSelect: (value: TValue) => void
+  options: {
+    icon?: ReactNode
+    label: string
+    value: TValue
+  }[]
+  selectedValue: TValue
+}) {
+  const selectedOption =
+    options.find((option) => option.value === selectedValue) ?? options[0]
+
+  return (
+    <DropDrawerSub>
+      <DropDrawerSubTrigger>
+        {icon}
+        <span className="flex-1">{label}</span>
+        <span className="text-muted-foreground">{selectedOption?.label}</span>
+      </DropDrawerSubTrigger>
+      <DropDrawerSubContent className="w-64">
+        {options.map((option) => (
+          <DropDrawerItem
+            key={option.value}
+            onSelect={(event) => {
+              event.preventDefault()
+              onSelect(option.value)
+            }}
+          >
+            {option.icon ?? null}
+            <span>{option.label}</span>
+            {option.value === selectedValue ? <Check className="ml-auto" /> : null}
+          </DropDrawerItem>
+        ))}
+      </DropDrawerSubContent>
+    </DropDrawerSub>
+  )
+}
+
 function SelectPropertyOptions({
   onUpdateConfig,
   options,
+  sort,
 }: {
   onUpdateConfig: (config: DatabasePropertyConfig) => void
   options: SelectOption[]
+  sort: SelectOptionSortValue
 }) {
   const updateOption = (optionId: string, patch: Partial<SelectOption>) => {
+    const nextOptions = options.map((option) =>
+      option.id === optionId ? { ...option, ...patch } : option
+    )
+
     onUpdateConfig({
-      options: options.map((option) =>
-        option.id === optionId ? { ...option, ...patch } : option
-      ),
+      options: getSortedSelectOptions(nextOptions, sort),
     })
   }
   const addOption = () => {
     const optionName = getUniqueOptionName(options, "Option")
+    const nextOptions = [
+      ...options,
+      {
+        color: getNextOptionColor(options),
+        id: crypto.randomUUID(),
+        name: optionName,
+      },
+    ]
 
     onUpdateConfig({
-      options: [
-        ...options,
-        {
-          color: getNextOptionColor(options),
-          id: crypto.randomUUID(),
-          name: optionName,
-        },
-      ],
+      options: getSortedSelectOptions(nextOptions, sort),
+    })
+  }
+  const updateSort = (selectOptionSort: SelectOptionSortValue) => {
+    onUpdateConfig({
+      options:
+        selectOptionSort === "manual"
+          ? options
+          : getSortedSelectOptions(options, selectOptionSort),
+      selectOptionSort,
     })
   }
 
   return (
     <>
+      <PropertySettingSubmenu
+        icon={<ArrowDownUp />}
+        label="Sort"
+        options={selectOptionSortOptions}
+        selectedValue={sort}
+        onSelect={updateSort}
+      />
+      <DropDrawerSeparator />
       <DropDrawerLabel className="flex items-center justify-between pr-1">
         <span>Options</span>
         <button
@@ -447,6 +610,86 @@ function OptionEditorSubmenu({
 
 const statusColorOptions = colorTokens
 
+const filesLimitOptions = [
+  {
+    label: "1 file",
+    value: "one_file",
+  },
+  {
+    label: "No limit",
+    value: "no_limit",
+  },
+] satisfies {
+  label: string
+  value: FilesLimitValue
+}[]
+
+const personLimitOptions = [
+  {
+    label: "1 Person",
+    value: "one_person",
+  },
+  {
+    label: "No limit",
+    value: "no_limit",
+  },
+] satisfies {
+  label: string
+  value: PersonLimitValue
+}[]
+
+const personDefaultOptions = [
+  {
+    label: "No default",
+    value: "no_default",
+  },
+  {
+    icon: <UserRound />,
+    label: "Created by",
+    value: "created_by",
+  },
+] satisfies {
+  icon?: ReactNode
+  label: string
+  value: PersonDefaultValue
+}[]
+
+const personNotificationsOptions = [
+  {
+    label: "Users and groups",
+    value: "users_and_groups",
+  },
+  {
+    label: "Users only",
+    value: "users_only",
+  },
+  {
+    label: "None",
+    value: "none",
+  },
+] satisfies {
+  label: string
+  value: PersonNotificationsValue
+}[]
+
+const selectOptionSortOptions = [
+  {
+    label: "Manual",
+    value: "manual",
+  },
+  {
+    label: "Alphabetical",
+    value: "alphabetical",
+  },
+  {
+    label: "Reverse alphabetical",
+    value: "reverse_alphabetical",
+  },
+] satisfies {
+  label: string
+  value: SelectOptionSortValue
+}[]
+
 function getStatusOptionGroup(option: StatusOption) {
   return (
     option.group ??
@@ -478,6 +721,58 @@ function getStatusOptions(config: unknown) {
   return validOptions.length > 0 ? validOptions : defaultStatusOptions
 }
 
+function getFilesConfig(config: unknown) {
+  const parsedConfig =
+    config && typeof config === "object"
+      ? (config as DatabasePropertyConfig)
+      : {}
+
+  return {
+    filesLimit: isFilesLimitValue(parsedConfig.filesLimit)
+      ? parsedConfig.filesLimit
+      : "no_limit",
+  }
+}
+
+function isFilesLimitValue(value: unknown): value is FilesLimitValue {
+  return value === "one_file" || value === "no_limit"
+}
+
+function getPersonConfig(config: unknown) {
+  const parsedConfig =
+    config && typeof config === "object"
+      ? (config as DatabasePropertyConfig)
+      : {}
+
+  return {
+    personDefault: isPersonDefaultValue(parsedConfig.personDefault)
+      ? parsedConfig.personDefault
+      : "no_default",
+    personLimit: isPersonLimitValue(parsedConfig.personLimit)
+      ? parsedConfig.personLimit
+      : "no_limit",
+    personNotifications: isPersonNotificationsValue(
+      parsedConfig.personNotifications
+    )
+      ? parsedConfig.personNotifications
+      : "users_only",
+  }
+}
+
+function isPersonLimitValue(value: unknown): value is PersonLimitValue {
+  return value === "one_person" || value === "no_limit"
+}
+
+function isPersonDefaultValue(value: unknown): value is PersonDefaultValue {
+  return value === "no_default" || value === "created_by"
+}
+
+function isPersonNotificationsValue(
+  value: unknown
+): value is PersonNotificationsValue {
+  return value === "users_and_groups" || value === "users_only" || value === "none"
+}
+
 function getSelectOptions(config: unknown) {
   const options =
     config && typeof config === "object" && "options" in config
@@ -495,6 +790,49 @@ function getSelectOptions(config: unknown) {
       typeof option.id === "string" &&
       typeof option.name === "string"
   )
+}
+
+function getSelectOptionSort(config: unknown): SelectOptionSortValue {
+  if (
+    !config ||
+    typeof config !== "object" ||
+    !("selectOptionSort" in config)
+  ) {
+    return "manual"
+  }
+
+  const selectOptionSort = (config as DatabasePropertyConfig).selectOptionSort
+
+  return isSelectOptionSortValue(selectOptionSort) ? selectOptionSort : "manual"
+}
+
+function isSelectOptionSortValue(
+  value: unknown
+): value is SelectOptionSortValue {
+  return (
+    value === "manual" ||
+    value === "alphabetical" ||
+    value === "reverse_alphabetical"
+  )
+}
+
+function getSortedSelectOptions(
+  options: SelectOption[],
+  sort: SelectOptionSortValue
+) {
+  if (sort === "manual") {
+    return options
+  }
+
+  const sortedOptions = [...options].sort((firstOption, secondOption) =>
+    firstOption.name.localeCompare(secondOption.name, undefined, {
+      sensitivity: "base",
+    })
+  )
+
+  return sort === "reverse_alphabetical"
+    ? sortedOptions.reverse()
+    : sortedOptions
 }
 
 function getNextOptionColor(options: SelectOption[]) {
