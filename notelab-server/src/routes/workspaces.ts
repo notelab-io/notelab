@@ -3,6 +3,8 @@ import { Hono } from "hono";
 import type { Context } from "hono";
 import { db } from "../db";
 import {
+  databaseProperty,
+  databaseRow,
   member,
   workspace,
   workspaceProperty,
@@ -45,6 +47,44 @@ const requireUser = (c: Context<AppBindings>) => {
   }
 
   return user;
+};
+
+const getWorkspacePropertyPayload = async (
+  workspaceId: string,
+  organizationId: string,
+) => {
+  const databaseProperties = await db
+    .select({ property: workspaceProperty })
+    .from(databaseRow)
+    .innerJoin(
+      databaseProperty,
+      eq(databaseRow.databaseId, databaseProperty.databaseId),
+    )
+    .innerJoin(
+      workspaceProperty,
+      eq(databaseProperty.propertyId, workspaceProperty.id),
+    )
+    .where(
+      and(
+        eq(databaseRow.pageId, workspaceId),
+        eq(workspaceProperty.organizationId, organizationId),
+        isNull(databaseRow.deletedAt),
+        isNull(workspaceProperty.deletedAt),
+      ),
+    )
+    .orderBy(asc(workspaceProperty.createdAt));
+
+  const properties = Array.from(
+    new Map(
+      databaseProperties.map(({ property }) => [property.id, property]),
+    ).values(),
+  );
+  const values = await db
+    .select()
+    .from(workspacePropertyValue)
+    .where(eq(workspacePropertyValue.workspaceId, workspaceId));
+
+  return { properties, values };
 };
 
 workspaceRoutes.get("/", async (c) => {
@@ -176,24 +216,9 @@ workspaceRoutes.get("/:id/properties", async (c) => {
     return c.json({ error: "Forbidden" }, 403);
   }
 
-  const [properties, values] = await Promise.all([
-    db
-      .select()
-      .from(workspaceProperty)
-      .where(
-        and(
-          eq(workspaceProperty.organizationId, record.organizationId),
-          isNull(workspaceProperty.deletedAt),
-        ),
-      )
-      .orderBy(asc(workspaceProperty.createdAt)),
-    db
-      .select()
-      .from(workspacePropertyValue)
-      .where(eq(workspacePropertyValue.workspaceId, record.id)),
-  ]);
-
-  return c.json({ properties, values });
+  return c.json(
+    await getWorkspacePropertyPayload(record.id, record.organizationId),
+  );
 });
 
 workspaceRoutes.put("/:id/properties/:propertyId/value", async (c) => {
@@ -221,17 +246,13 @@ workspaceRoutes.put("/:id/properties/:propertyId/value", async (c) => {
 
   const propertyId = c.req.param("propertyId");
   const { value = null } = body as { value?: unknown };
-  const [property] = await db
-    .select({ id: workspaceProperty.id })
-    .from(workspaceProperty)
-    .where(
-      and(
-        eq(workspaceProperty.id, propertyId),
-        eq(workspaceProperty.organizationId, record.organizationId),
-        isNull(workspaceProperty.deletedAt),
-      ),
-    )
-    .limit(1);
+  const propertyPayload = await getWorkspacePropertyPayload(
+    record.id,
+    record.organizationId,
+  );
+  const property = propertyPayload.properties.find(
+    (item) => item.id === propertyId,
+  );
 
   if (!property) {
     return c.json({ error: "Property not found" }, 404);
@@ -256,24 +277,9 @@ workspaceRoutes.put("/:id/properties/:propertyId/value", async (c) => {
       },
     });
 
-  const [properties, values] = await Promise.all([
-    db
-      .select()
-      .from(workspaceProperty)
-      .where(
-        and(
-          eq(workspaceProperty.organizationId, record.organizationId),
-          isNull(workspaceProperty.deletedAt),
-        ),
-      )
-      .orderBy(asc(workspaceProperty.createdAt)),
-    db
-      .select()
-      .from(workspacePropertyValue)
-      .where(eq(workspacePropertyValue.workspaceId, record.id)),
-  ]);
-
-  return c.json({ properties, values });
+  return c.json(
+    await getWorkspacePropertyPayload(record.id, record.organizationId),
+  );
 });
 
 workspaceRoutes.patch("/:id", async (c) => {
