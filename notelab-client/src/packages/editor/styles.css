@@ -418,11 +418,11 @@
   }
 
   .database-select-cell-trigger {
-    @apply flex h-8 w-full min-w-0 items-center px-3 py-1 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/40;
+    @apply flex min-h-8 w-full min-w-0 flex-wrap items-center gap-1 px-3 py-1 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/40;
   }
 
   .database-select-badge {
-    @apply inline-flex max-w-full items-center rounded-sm bg-amber-700 px-2 py-0.5 text-sm font-medium leading-5 text-white;
+    @apply inline-flex max-w-full items-center truncate rounded-sm bg-amber-700 px-2 py-0.5 text-sm font-medium leading-5 text-white;
   }
 
   .database-select-popover {
@@ -448,6 +448,18 @@
 
   .database-select-option svg {
     @apply size-4 shrink-0 text-muted-foreground;
+  }
+
+  .database-select-option .database-select-option-check {
+    @apply ml-auto text-foreground;
+  }
+
+  .database-select-option[data-selected="true"] .database-select-badge {
+    @apply ring-1 ring-white/40;
+  }
+
+  .database-select-option[data-selected="true"] .database-select-option-check {
+    @apply text-foreground;
   }
 
   .database-page-link,

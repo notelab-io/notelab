@@ -1,4 +1,4 @@
-import { GripVertical } from "lucide-react"
+import { Check, GripVertical } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 
@@ -50,14 +50,16 @@ export function DatabaseSelectCell({
   propertyId,
   propertyName,
   value,
+  multiple = false,
   onSelect,
 }: {
   databaseId: string
+  multiple?: boolean
   propertyConfig?: unknown
   propertyId: string
   propertyName: string
-  value: string
-  onSelect: (value: string) => void
+  value: string | string[]
+  onSelect: (value: string | string[]) => void
 }) {
   const updateProperty = useUpdateDatabaseProperty()
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -69,6 +71,7 @@ export function DatabaseSelectCell({
   } | null>(null)
   const [query, setQuery] = useState("")
   const selectOptions = getSelectOptions(propertyConfig)
+  const selectedValues = Array.isArray(value) ? value : value ? [value] : []
   const normalizedQuery = query.trim().toLowerCase()
   const filteredSelectOptions = normalizedQuery
     ? selectOptions.filter((option) =>
@@ -131,8 +134,17 @@ export function DatabaseSelectCell({
   }
 
   const selectOption = (optionName: string) => {
-    onSelect(optionName)
-    closePanel()
+    if (!multiple) {
+      onSelect(optionName)
+      closePanel()
+      return
+    }
+
+    const nextValues = selectedValues.includes(optionName)
+      ? selectedValues.filter((selectedValue) => selectedValue !== optionName)
+      : [...selectedValues, optionName]
+
+    onSelect(nextValues)
   }
 
   const createSelectOption = () => {
@@ -158,7 +170,15 @@ export function DatabaseSelectCell({
         propertyId,
       },
       {
-        onSuccess: () => selectOption(optionName),
+        onSuccess: () => {
+          if (multiple) {
+            onSelect([...selectedValues, optionName])
+            setQuery("")
+            return
+          }
+
+          selectOption(optionName)
+        },
       }
     )
   }
@@ -172,7 +192,11 @@ export function DatabaseSelectCell({
         ref={triggerRef}
         type="button"
       >
-        {value ? <span className="database-select-badge">{value}</span> : null}
+        {selectedValues.map((selectedValue) => (
+          <span className="database-select-badge" key={selectedValue}>
+            {selectedValue}
+          </span>
+        ))}
       </button>
       {isOpen && panelPosition && typeof document !== "undefined"
         ? createPortal(
@@ -204,20 +228,32 @@ export function DatabaseSelectCell({
                 value={query}
               />
               <div className="database-select-popover-label">
-                Select an option or create one
+                {multiple
+                  ? "Select options or create one"
+                  : "Select an option or create one"}
               </div>
               <div className="database-select-options">
-                {filteredSelectOptions.map((option) => (
-                  <button
-                    className="database-select-option"
-                    key={option.id}
-                    onClick={() => selectOption(option.name)}
-                    type="button"
-                  >
-                    <GripVertical />
-                    <span className="database-select-badge">{option.name}</span>
-                  </button>
-                ))}
+                {filteredSelectOptions.map((option) => {
+                  const isSelected = selectedValues.includes(option.name)
+
+                  return (
+                    <button
+                      className="database-select-option"
+                      data-selected={isSelected ? "true" : undefined}
+                      key={option.id}
+                      onClick={() => selectOption(option.name)}
+                      type="button"
+                    >
+                      <GripVertical />
+                      <span className="database-select-badge">
+                        {option.name}
+                      </span>
+                      {multiple && isSelected ? (
+                        <Check className="database-select-option-check" />
+                      ) : null}
+                    </button>
+                  )
+                })}
                 {canCreateSelectOption ? (
                   <button
                     className="database-select-create"

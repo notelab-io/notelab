@@ -40,7 +40,7 @@ import { DatabasePageCell } from "./database-page-cell"
 import { DatabasePropertyMenu } from "./database-property-menu"
 import { DatabaseSelectCell } from "./database-select-cell"
 import type { DatabaseBlockOptions } from "./types"
-import { getCellValue } from "./utils"
+import { getCellValue, type DatabaseCellValue } from "./utils"
 
 const databasePageDragEvents = new Set([
   "dragstart",
@@ -215,7 +215,7 @@ function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
   }, [isDraggingDatabaseRow])
 
   const cellValues = useMemo(() => {
-    const values: Record<string, string> = {}
+    const values: Record<string, DatabaseCellValue> = {}
 
     for (const row of rows) {
       for (const property of properties) {
@@ -253,7 +253,11 @@ function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
     })
   }
 
-  const saveCell = (rowId: string, propertyId: string, value: string) => {
+  const saveCell = (
+    rowId: string,
+    propertyId: string,
+    value: DatabaseCellValue
+  ) => {
     if (!databaseId) {
       return
     }
@@ -638,7 +642,11 @@ function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
                     {properties.map((property) => {
                       const key = `${row.id}:${property.id}`
                       const value = draftCells[key] ?? cellValues[key] ?? ""
-                      const isSelectProperty = property.type === "select"
+                      const isSelectProperty =
+                        property.type === "select" ||
+                        property.type === "multi_select"
+                      const isMultiSelectProperty =
+                        property.type === "multi_select"
 
                       return (
                         <td
@@ -649,8 +657,9 @@ function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
                           {isSelectProperty ? (
                             <DatabaseSelectCell
                               databaseId={payload.database.id}
-                              onSelect={(optionName) =>
-                                saveCell(row.id, property.id, optionName)
+                              multiple={isMultiSelectProperty}
+                              onSelect={(optionValue) =>
+                                saveCell(row.id, property.id, optionValue)
                               }
                               propertyConfig={property.config}
                               propertyId={property.id}
@@ -692,7 +701,7 @@ function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
                               }}
                               onInput={handleCellInput}
                               rows={1}
-                              value={value}
+                              value={Array.isArray(value) ? value.join(", ") : value}
                             />
                           )}
                         </td>
