@@ -7,6 +7,7 @@ import { sessionMiddleware } from "./middleware/session";
 import { authRoutes } from "./routes/auth";
 import { databaseRoutes } from "./routes/databases";
 import { healthRoutes } from "./routes/health";
+import { organizationRoutes } from "./routes/organizations";
 import { sessionRoutes } from "./routes/session";
 import { workspaceRoutes } from "./routes/workspaces";
 import type { AppBindings } from "./types";
@@ -30,6 +31,7 @@ app.use("*", sessionMiddleware);
 app.route("/", authRoutes);
 app.route("/databases", databaseRoutes);
 app.route("/", healthRoutes);
+app.route("/organizations", organizationRoutes);
 app.route("/session", sessionRoutes);
 app.route("/workspaces", workspaceRoutes);
 

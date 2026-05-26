@@ -1,13 +1,13 @@
 import { and, asc, eq, gte, inArray, isNull, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Context } from "hono";
+import { canAccessWorkspace } from "../access";
 import { db } from "../db";
 import {
   database,
   databaseProperty,
   databaseRow,
   databaseView,
-  member,
   workspace,
   workspaceProperty,
   workspacePropertyValue,
@@ -38,21 +38,6 @@ const defaultStatusOptions = [
     name: "Done",
   },
 ];
-
-const isOrganizationMember = async (
-  organizationId: string,
-  userId: string,
-) => {
-  const [record] = await db
-    .select({ id: member.id })
-    .from(member)
-    .where(
-      and(eq(member.organizationId, organizationId), eq(member.userId, userId)),
-    )
-    .limit(1);
-
-  return Boolean(record);
-};
 
 const getDatabaseRecord = async (id: string) => {
   const [record] = await db
@@ -229,10 +214,6 @@ databaseRoutes.post("/", async (c) => {
     return c.json({ error: "name must be a string" }, 400);
   }
 
-  if (!(await isOrganizationMember(organizationId, user.id))) {
-    return c.json({ error: "Forbidden" }, 403);
-  }
-
   const [page] = await db
     .select({ id: workspace.id })
     .from(workspace)
@@ -247,6 +228,10 @@ databaseRoutes.post("/", async (c) => {
 
   if (!page) {
     return c.json({ error: "Page not found" }, 404);
+  }
+
+  if (!(await canAccessWorkspace(page.id, user.id, "edit"))) {
+    return c.json({ error: "Forbidden" }, 403);
   }
 
   const databaseId = crypto.randomUUID();
@@ -285,7 +270,7 @@ databaseRoutes.get("/:id", async (c) => {
     return c.json({ error: "Database not found" }, 404);
   }
 
-  if (!(await isOrganizationMember(payload.database.organizationId, user.id))) {
+  if (!(await canAccessWorkspace(payload.database.pageId, user.id, "view"))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -305,7 +290,7 @@ databaseRoutes.patch("/:id", async (c) => {
     return c.json({ error: "Database not found" }, 404);
   }
 
-  if (!(await isOrganizationMember(existing.organizationId, user.id))) {
+  if (!(await canAccessWorkspace(existing.pageId, user.id, "edit"))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -352,7 +337,7 @@ databaseRoutes.post("/:id/properties", async (c) => {
     return c.json({ error: "Database not found" }, 404);
   }
 
-  if (!(await isOrganizationMember(existing.organizationId, user.id))) {
+  if (!(await canAccessWorkspace(existing.pageId, user.id, "edit"))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -407,7 +392,7 @@ databaseRoutes.patch("/:id/properties/:databasePropertyId", async (c) => {
     return c.json({ error: "Database not found" }, 404);
   }
 
-  if (!(await isOrganizationMember(existing.organizationId, user.id))) {
+  if (!(await canAccessWorkspace(existing.pageId, user.id, "edit"))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -535,7 +520,7 @@ databaseRoutes.post("/:id/rows", async (c) => {
     return c.json({ error: "Database not found" }, 404);
   }
 
-  if (!(await isOrganizationMember(existing.organizationId, user.id))) {
+  if (!(await canAccessWorkspace(existing.pageId, user.id, "edit"))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -596,6 +581,10 @@ databaseRoutes.post("/:id/rows", async (c) => {
 
     if (!page) {
       return c.json({ error: "Page not found" }, 404);
+    }
+
+    if (!(await canAccessWorkspace(page.id, user.id, "edit"))) {
+      return c.json({ error: "Forbidden" }, 403);
     }
 
     if (title === undefined) {
@@ -729,7 +718,7 @@ databaseRoutes.patch("/:id/rows/reorder", async (c) => {
     return c.json({ error: "Database not found" }, 404);
   }
 
-  if (!(await isOrganizationMember(existing.organizationId, user.id))) {
+  if (!(await canAccessWorkspace(existing.pageId, user.id, "edit"))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -792,7 +781,7 @@ databaseRoutes.put("/:id/rows/:rowId/properties/:propertyId", async (c) => {
     return c.json({ error: "Database not found" }, 404);
   }
 
-  if (!(await isOrganizationMember(existing.organizationId, user.id))) {
+  if (!(await canAccessWorkspace(existing.pageId, user.id, "edit"))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 

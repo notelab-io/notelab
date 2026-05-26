@@ -1,12 +1,23 @@
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Context } from "hono";
+import {
+  canAccessWorkspace,
+  getAccessibleWorkspaceIds,
+  getEffectiveWorkspaceAccess,
+  getMembership,
+  getWorkspaceRecord,
+  hasAccess,
+  normalizeAccessLevel,
+} from "../access";
 import { db } from "../db";
 import {
   databaseProperty,
   databaseRow,
   member,
+  team,
   workspace,
+  workspaceAccess,
   workspaceProperty,
   workspacePropertyValue,
 } from "../db/schema";
@@ -14,30 +25,7 @@ import type { AppBindings } from "../types";
 
 export const workspaceRoutes = new Hono<AppBindings>();
 
-const getWorkspace = async (id: string) => {
-  const [record] = await db
-    .select()
-    .from(workspace)
-    .where(and(eq(workspace.id, id), isNull(workspace.deletedAt)))
-    .limit(1);
-
-  return record;
-};
-
-const isOrganizationMember = async (
-  organizationId: string,
-  userId: string,
-) => {
-  const [record] = await db
-    .select({ id: member.id })
-    .from(member)
-    .where(
-      and(eq(member.organizationId, organizationId), eq(member.userId, userId)),
-    )
-    .limit(1);
-
-  return Boolean(record);
-};
+const getWorkspace = getWorkspaceRecord;
 
 const requireUser = (c: Context<AppBindings>) => {
   const user = c.get("user");
@@ -100,9 +88,11 @@ workspaceRoutes.get("/", async (c) => {
     return c.json({ error: "organizationId is required" }, 400);
   }
 
-  if (!(await isOrganizationMember(organizationId, user.id))) {
+  if (!(await getMembership(organizationId, user.id))) {
     return c.json({ error: "Forbidden" }, 403);
   }
+
+  const accessibleIds = await getAccessibleWorkspaceIds(organizationId, user.id);
 
   const records = await db
     .select()
@@ -113,8 +103,22 @@ workspaceRoutes.get("/", async (c) => {
         isNull(workspace.deletedAt),
       ),
     );
+  const sharedWorkspaceRows = await db
+    .select({ workspaceId: workspaceAccess.workspaceId })
+    .from(workspaceAccess)
+    .where(eq(workspaceAccess.organizationId, organizationId));
+  const teamspaceIds = new Set(
+    sharedWorkspaceRows.map((row) => row.workspaceId),
+  );
 
-  return c.json({ workspaces: records });
+  return c.json({
+    workspaces: records
+      .filter((record) => accessibleIds.has(record.id))
+      .map((record) => ({
+        ...record,
+        isTeamspace: teamspaceIds.has(record.id),
+      })),
+  });
 });
 
 workspaceRoutes.post("/", async (c) => {
@@ -158,7 +162,22 @@ workspaceRoutes.post("/", async (c) => {
     return c.json({ error: "type and url must be strings" }, 400);
   }
 
-  if (!(await isOrganizationMember(organizationId, user.id))) {
+  if (!(await getMembership(organizationId, user.id))) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  if (
+    typeof metadata === "object" &&
+    metadata &&
+    !Array.isArray(metadata) &&
+    typeof (metadata as { parentWorkspaceId?: unknown }).parentWorkspaceId ===
+      "string" &&
+    !(await canAccessWorkspace(
+      (metadata as { parentWorkspaceId: string }).parentWorkspaceId,
+      user.id,
+      "edit",
+    ))
+  ) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -192,11 +211,174 @@ workspaceRoutes.get("/:id", async (c) => {
     return c.json({ error: "Workspace not found" }, 404);
   }
 
-  if (!(await isOrganizationMember(record.organizationId, user.id))) {
+  const accessLevel = await getEffectiveWorkspaceAccess(record.id, user.id);
+
+  if (!hasAccess(accessLevel, "view")) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
-  return c.json({ workspace: record });
+  return c.json({ accessLevel, workspace: record });
+});
+
+workspaceRoutes.get("/:id/access", async (c) => {
+  const requestUser = requireUser(c);
+
+  if (!requestUser) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const record = await getWorkspace(c.req.param("id"));
+
+  if (!record) {
+    return c.json({ error: "Workspace not found" }, 404);
+  }
+
+  const accessLevel = await getEffectiveWorkspaceAccess(record.id, requestUser.id);
+
+  if (!hasAccess(accessLevel, "full")) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  const rules = await db
+    .select()
+    .from(workspaceAccess)
+    .where(eq(workspaceAccess.workspaceId, record.id))
+    .orderBy(asc(workspaceAccess.createdAt));
+
+  return c.json({ access: rules });
+});
+
+workspaceRoutes.put("/:id/access", async (c) => {
+  const requestUser = requireUser(c);
+
+  if (!requestUser) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const record = await getWorkspace(c.req.param("id"));
+
+  if (!record) {
+    return c.json({ error: "Workspace not found" }, 404);
+  }
+
+  const currentAccess = await getEffectiveWorkspaceAccess(record.id, requestUser.id);
+
+  if (!hasAccess(currentAccess, "full")) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  const body = await c.req.json().catch(() => null);
+
+  if (!body || typeof body !== "object") {
+    return c.json({ error: "A JSON body is required" }, 400);
+  }
+
+  const { targetType, targetId, accessLevel } = body as {
+    accessLevel?: unknown;
+    targetId?: unknown;
+    targetType?: unknown;
+  };
+  const normalizedAccessLevel = normalizeAccessLevel(accessLevel);
+
+  if (targetType !== "user" && targetType !== "team") {
+    return c.json({ error: "targetType must be user or team" }, 400);
+  }
+
+  if (typeof targetId !== "string" || targetId.length === 0) {
+    return c.json({ error: "targetId is required" }, 400);
+  }
+
+  if (!normalizedAccessLevel) {
+    return c.json({ error: "accessLevel must be view, edit, or full" }, 400);
+  }
+
+  const [target] =
+    targetType === "user"
+      ? await db
+          .select({ id: member.id })
+          .from(member)
+          .where(
+            and(
+              eq(member.organizationId, record.organizationId),
+              eq(member.userId, targetId),
+            ),
+          )
+          .limit(1)
+      : await db
+          .select({ id: team.id })
+          .from(team)
+          .where(
+            and(
+              eq(team.organizationId, record.organizationId),
+              eq(team.id, targetId),
+            ),
+          )
+          .limit(1);
+
+  if (!target) {
+    return c.json({ error: "Target not found" }, 404);
+  }
+
+  const [rule] = await db
+    .insert(workspaceAccess)
+    .values({
+      id: crypto.randomUUID(),
+      accessLevel: normalizedAccessLevel,
+      organizationId: record.organizationId,
+      targetId,
+      targetType,
+      workspaceId: record.id,
+    })
+    .onConflictDoUpdate({
+      target: [
+        workspaceAccess.workspaceId,
+        workspaceAccess.targetType,
+        workspaceAccess.targetId,
+      ],
+      set: {
+        accessLevel: normalizedAccessLevel,
+        updatedAt: new Date(),
+      },
+    })
+    .returning();
+
+  return c.json({ access: rule });
+});
+
+workspaceRoutes.delete("/:id/access/:ruleId", async (c) => {
+  const requestUser = requireUser(c);
+
+  if (!requestUser) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const record = await getWorkspace(c.req.param("id"));
+
+  if (!record) {
+    return c.json({ error: "Workspace not found" }, 404);
+  }
+
+  const accessLevel = await getEffectiveWorkspaceAccess(record.id, requestUser.id);
+
+  if (!hasAccess(accessLevel, "full")) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  const [rule] = await db
+    .delete(workspaceAccess)
+    .where(
+      and(
+        eq(workspaceAccess.id, c.req.param("ruleId")),
+        eq(workspaceAccess.workspaceId, record.id),
+      ),
+    )
+    .returning();
+
+  if (!rule) {
+    return c.json({ error: "Access rule not found" }, 404);
+  }
+
+  return c.json({ access: rule });
 });
 
 workspaceRoutes.get("/:id/properties", async (c) => {
@@ -212,7 +394,7 @@ workspaceRoutes.get("/:id/properties", async (c) => {
     return c.json({ error: "Workspace not found" }, 404);
   }
 
-  if (!(await isOrganizationMember(record.organizationId, user.id))) {
+  if (!(await canAccessWorkspace(record.id, user.id, "view"))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -234,7 +416,7 @@ workspaceRoutes.put("/:id/properties/:propertyId/value", async (c) => {
     return c.json({ error: "Workspace not found" }, 404);
   }
 
-  if (!(await isOrganizationMember(record.organizationId, user.id))) {
+  if (!(await canAccessWorkspace(record.id, user.id, "edit"))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -295,7 +477,7 @@ workspaceRoutes.patch("/:id", async (c) => {
     return c.json({ error: "Workspace not found" }, 404);
   }
 
-  if (!(await isOrganizationMember(existing.organizationId, user.id))) {
+  if (!(await canAccessWorkspace(existing.id, user.id, "edit"))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -345,6 +527,28 @@ workspaceRoutes.patch("/:id", async (c) => {
   }
 
   if (patch.metadata !== undefined) {
+    if (
+      patch.metadata &&
+      typeof patch.metadata === "object" &&
+      !Array.isArray(patch.metadata)
+    ) {
+      const parentWorkspaceId = (
+        patch.metadata as { parentWorkspaceId?: unknown }
+      ).parentWorkspaceId;
+
+      if (parentWorkspaceId === existing.id) {
+        return c.json({ error: "A workspace cannot be nested inside itself" }, 400);
+      }
+
+      if (
+        typeof parentWorkspaceId === "string" &&
+        parentWorkspaceId.length > 0 &&
+        !(await canAccessWorkspace(parentWorkspaceId, user.id, "edit"))
+      ) {
+        return c.json({ error: "Forbidden" }, 403);
+      }
+    }
+
     values.metadata = patch.metadata;
   }
 
@@ -370,7 +574,7 @@ workspaceRoutes.delete("/:id", async (c) => {
     return c.json({ error: "Workspace not found" }, 404);
   }
 
-  if (!(await isOrganizationMember(existing.organizationId, user.id))) {
+  if (!(await canAccessWorkspace(existing.id, user.id, "full"))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 

@@ -153,6 +153,42 @@ export const workspace = pgTable(
   ],
 );
 
+export const workspaceAccess = pgTable(
+  "workspace_access",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    targetType: text("target_type").notNull(),
+    targetId: text("target_id").notNull(),
+    accessLevel: text("access_level").notNull().default("view"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("workspace_access_organization_id_idx").on(table.organizationId),
+    index("workspace_access_workspace_id_idx").on(table.workspaceId),
+    index("workspace_access_target_idx").on(
+      table.organizationId,
+      table.targetType,
+      table.targetId,
+    ),
+    uniqueIndex("workspace_access_target_unique").on(
+      table.workspaceId,
+      table.targetType,
+      table.targetId,
+    ),
+  ],
+);
+
 export const workspaceProperty = pgTable(
   "workspace_property",
   {
