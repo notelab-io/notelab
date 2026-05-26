@@ -17,10 +17,23 @@ export type DatabaseRecord = {
 export type DatabaseProperty = {
   id: string
   databaseId: string
+  propertyId: string
+  position: number
+  width?: number | null
+  visible: boolean
+  property: WorkspaceProperty
+  createdAt: string
+  updatedAt: string
+}
+
+export type WorkspaceProperty = {
+  id: string
+  organizationId: string
   name: string
   type: string
   config?: unknown
-  position: number
+  deletedById?: string | null
+  deletedAt?: string | null
   createdAt: string
   updatedAt: string
 }
@@ -41,8 +54,12 @@ export type DatabaseRow = {
   databaseId: string
   pageId: string
   parentRowId?: string | null
-  title: string
   position: number
+  page: {
+    id: string
+    name: string
+    metadata?: unknown
+  }
   createdById?: string | null
   lastEditedById?: string | null
   deletedById?: string | null
@@ -51,9 +68,9 @@ export type DatabaseRow = {
   updatedAt: string
 }
 
-export type DatabaseCell = {
+export type WorkspacePropertyValue = {
   id: string
-  rowId: string
+  workspaceId: string
   propertyId: string
   value: unknown
   createdAt: string
@@ -65,7 +82,7 @@ export type DatabasePayload = {
   properties: DatabaseProperty[]
   views: DatabaseView[]
   rows: DatabaseRow[]
-  cells: DatabaseCell[]
+  values: WorkspacePropertyValue[]
 }
 
 export const databaseQueryKey = (databaseId: string | null | undefined) =>

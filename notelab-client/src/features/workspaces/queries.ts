@@ -22,11 +22,41 @@ export type Workspace = {
   updatedAt: string
 }
 
+export type WorkspaceProperty = {
+  id: string
+  organizationId: string
+  name: string
+  type: string
+  config?: unknown
+  deletedById?: string | null
+  deletedAt?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type WorkspacePropertyValue = {
+  id: string
+  workspaceId: string
+  propertyId: string
+  value: unknown
+  createdAt: string
+  updatedAt: string
+}
+
+export type WorkspacePropertiesPayload = {
+  properties: WorkspaceProperty[]
+  values: WorkspacePropertyValue[]
+}
+
 export const workspacesQueryKey = (organizationId: string | null | undefined) =>
   ["workspaces", organizationId ?? "none"] as const
 
 export const workspaceQueryKey = (workspaceId: string | null | undefined) =>
   ["workspace", workspaceId ?? "none"] as const
+
+export const workspacePropertiesQueryKey = (
+  workspaceId: string | null | undefined,
+) => ["workspace-properties", workspaceId ?? "none"] as const
 
 export const workspacesQueryOptions = (
   organizationId: string | null | undefined,
@@ -71,6 +101,24 @@ export const workspaceQueryOptions = (workspaceId: string | null | undefined) =>
       )
 
       return result.workspace
+    },
+  })
+
+export const workspacePropertiesQueryOptions = (
+  workspaceId: string | null | undefined,
+) =>
+  queryOptions({
+    queryKey: workspacePropertiesQueryKey(workspaceId),
+    enabled: Boolean(workspaceId),
+    queryFn: async () => {
+      if (!workspaceId) {
+        throw new Error("workspaceId is required")
+      }
+
+      return apiFetch<WorkspacePropertiesPayload>(
+        `/workspaces/${workspaceId}/properties`,
+        { method: "GET" },
+      )
     },
   })
 

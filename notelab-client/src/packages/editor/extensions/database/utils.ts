@@ -1,6 +1,6 @@
-import type { DatabaseCell } from "@/features/databases/queries"
+import type { WorkspacePropertyValue } from "@/features/databases/queries"
 
-export type DatabaseCellValue = string | string[]
+export type DatabasePropertyValue = string | string[]
 
 export function createDatabaseBlockContent(databaseId: string) {
   return [
@@ -18,13 +18,13 @@ export function createDatabaseBlockAttrs(databaseId: string) {
   }
 }
 
-export function getCellValue(
-  cells: DatabaseCell[],
-  rowId: string,
+export function getPropertyValue(
+  values: WorkspacePropertyValue[],
+  workspaceId: string,
   propertyId: string
-): DatabaseCellValue {
-  const value = cells.find(
-    (cell) => cell.rowId === rowId && cell.propertyId === propertyId
+): DatabasePropertyValue {
+  const value = values.find(
+    (item) => item.workspaceId === workspaceId && item.propertyId === propertyId
   )?.value
 
   if (typeof value === "string") {

@@ -1,15 +1,16 @@
-import { and, asc, eq, gte, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNull, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { db } from "../db";
 import {
   database,
-  databaseCell,
   databaseProperty,
   databaseRow,
   databaseView,
   member,
   workspace,
+  workspaceProperty,
+  workspacePropertyValue,
 } from "../db/schema";
 import type { AppBindings } from "../types";
 
@@ -49,11 +50,23 @@ const getDatabasePayload = async (id: string) => {
     return null;
   }
 
-  const [properties, views, rows, cells] = await Promise.all([
+  const [properties, views, rows] = await Promise.all([
     db
-      .select()
+      .select({
+        column: databaseProperty,
+        property: workspaceProperty,
+      })
       .from(databaseProperty)
-      .where(eq(databaseProperty.databaseId, id))
+      .innerJoin(
+        workspaceProperty,
+        eq(databaseProperty.propertyId, workspaceProperty.id),
+      )
+      .where(
+        and(
+          eq(databaseProperty.databaseId, id),
+          isNull(workspaceProperty.deletedAt),
+        ),
+      )
       .orderBy(asc(databaseProperty.position)),
     db
       .select()
@@ -61,23 +74,53 @@ const getDatabasePayload = async (id: string) => {
       .where(eq(databaseView.databaseId, id))
       .orderBy(asc(databaseView.position)),
     db
-      .select()
+      .select({
+        row: databaseRow,
+        page: {
+          id: workspace.id,
+          name: workspace.name,
+          metadata: workspace.metadata,
+        },
+      })
       .from(databaseRow)
-      .where(and(eq(databaseRow.databaseId, id), isNull(databaseRow.deletedAt)))
+      .innerJoin(workspace, eq(databaseRow.pageId, workspace.id))
+      .where(
+        and(
+          eq(databaseRow.databaseId, id),
+          isNull(databaseRow.deletedAt),
+          isNull(workspace.deletedAt),
+        ),
+      )
       .orderBy(asc(databaseRow.position)),
-    db
-      .select()
-      .from(databaseCell)
-      .innerJoin(databaseRow, eq(databaseCell.rowId, databaseRow.id))
-      .where(and(eq(databaseRow.databaseId, id), isNull(databaseRow.deletedAt))),
   ]);
+
+  const pageIds = rows.map(({ row }) => row.pageId);
+  const propertyIds = properties.map(({ property }) => property.id);
+  const values =
+    pageIds.length > 0 && propertyIds.length > 0
+      ? await db
+          .select()
+          .from(workspacePropertyValue)
+          .where(
+            and(
+              inArray(workspacePropertyValue.workspaceId, pageIds),
+              inArray(workspacePropertyValue.propertyId, propertyIds),
+            ),
+          )
+      : [];
 
   return {
     database: record,
-    properties,
+    properties: properties.map(({ column, property }) => ({
+      ...column,
+      property,
+    })),
     views,
-    rows,
-    cells: cells.map(({ database_cell }) => database_cell),
+    rows: rows.map(({ row, page }) => ({
+      ...row,
+      page,
+    })),
+    values,
   };
 };
 
@@ -244,26 +287,36 @@ databaseRoutes.post("/:id/properties", async (c) => {
   }
 
   const body = await c.req.json().catch(() => ({}));
-  const { name = "Property", type = "text" } = body as {
+  const { name = "Property", type = "text", config = null } = body as {
     name?: unknown;
     type?: unknown;
+    config?: unknown;
   };
 
   if (typeof name !== "string" || typeof type !== "string") {
     return c.json({ error: "name and type must be strings" }, 400);
   }
 
-  const properties = await db
+  const columns = await db
     .select({ position: databaseProperty.position })
     .from(databaseProperty)
     .where(eq(databaseProperty.databaseId, existing.id));
+  const propertyId = crypto.randomUUID();
 
-  await db.insert(databaseProperty).values({
-    id: crypto.randomUUID(),
-    databaseId: existing.id,
-    name,
-    type,
-    position: properties.length,
+  await db.transaction(async (tx) => {
+    await tx.insert(workspaceProperty).values({
+      id: propertyId,
+      organizationId: existing.organizationId,
+      name,
+      type,
+      config,
+    });
+    await tx.insert(databaseProperty).values({
+      id: crypto.randomUUID(),
+      databaseId: existing.id,
+      propertyId,
+      position: columns.length,
+    });
   });
 
   const payload = await getDatabasePayload(existing.id);
@@ -271,7 +324,7 @@ databaseRoutes.post("/:id/properties", async (c) => {
   return c.json(payload, 201);
 });
 
-databaseRoutes.patch("/:id/properties/:propertyId", async (c) => {
+databaseRoutes.patch("/:id/properties/:databasePropertyId", async (c) => {
   const user = requireUser(c);
 
   if (!user) {
@@ -294,8 +347,33 @@ databaseRoutes.patch("/:id/properties/:propertyId", async (c) => {
     return c.json({ error: "A JSON body is required" }, 400);
   }
 
-  const patch = body as { name?: unknown; config?: unknown };
-  const values: Partial<typeof databaseProperty.$inferInsert> = {
+  const [column] = await db
+    .select()
+    .from(databaseProperty)
+    .where(
+      and(
+        eq(databaseProperty.id, c.req.param("databasePropertyId")),
+        eq(databaseProperty.databaseId, existing.id),
+      ),
+    )
+    .limit(1);
+
+  if (!column) {
+    return c.json({ error: "Property not found" }, 404);
+  }
+
+  const patch = body as {
+    config?: unknown;
+    name?: unknown;
+    position?: unknown;
+    type?: unknown;
+    visible?: unknown;
+    width?: unknown;
+  };
+  const columnValues: Partial<typeof databaseProperty.$inferInsert> = {
+    updatedAt: new Date(),
+  };
+  const propertyValues: Partial<typeof workspaceProperty.$inferInsert> = {
     updatedAt: new Date(),
   };
 
@@ -304,22 +382,70 @@ databaseRoutes.patch("/:id/properties/:propertyId", async (c) => {
       return c.json({ error: "name must be a string" }, 400);
     }
 
-    values.name = patch.name;
+    propertyValues.name = patch.name;
+  }
+
+  if (patch.type !== undefined) {
+    if (typeof patch.type !== "string") {
+      return c.json({ error: "type must be a string" }, 400);
+    }
+
+    propertyValues.type = patch.type;
   }
 
   if (patch.config !== undefined) {
-    values.config = patch.config;
+    propertyValues.config = patch.config;
   }
 
-  await db
-    .update(databaseProperty)
-    .set(values)
-    .where(
-      and(
-        eq(databaseProperty.id, c.req.param("propertyId")),
-        eq(databaseProperty.databaseId, existing.id),
-      ),
-    );
+  if (patch.position !== undefined) {
+    if (!Number.isInteger(patch.position) || (patch.position as number) < 0) {
+      return c.json({ error: "position must be a non-negative integer" }, 400);
+    }
+
+    columnValues.position = patch.position as number;
+  }
+
+  if (patch.width !== undefined) {
+    if (
+      patch.width !== null &&
+      (!Number.isInteger(patch.width) || (patch.width as number) < 0)
+    ) {
+      return c.json({ error: "width must be a non-negative integer" }, 400);
+    }
+
+    columnValues.width = patch.width as number | null;
+  }
+
+  if (patch.visible !== undefined) {
+    if (typeof patch.visible !== "boolean") {
+      return c.json({ error: "visible must be a boolean" }, 400);
+    }
+
+    columnValues.visible = patch.visible;
+  }
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(databaseProperty)
+      .set(columnValues)
+      .where(eq(databaseProperty.id, column.id));
+
+    if (
+      patch.name !== undefined ||
+      patch.type !== undefined ||
+      patch.config !== undefined
+    ) {
+      await tx
+        .update(workspaceProperty)
+        .set(propertyValues)
+        .where(
+          and(
+            eq(workspaceProperty.id, column.propertyId),
+            eq(workspaceProperty.organizationId, existing.organizationId),
+          ),
+        );
+    }
+  });
 
   const payload = await getDatabasePayload(existing.id);
 
@@ -463,7 +589,6 @@ databaseRoutes.post("/:id/rows", async (c) => {
       databaseId: existing.id,
       pageId,
       parentRowId,
-      title: title as string,
       position: targetPosition,
       createdById: user.id,
       lastEditedById: user.id,
@@ -538,7 +663,7 @@ databaseRoutes.patch("/:id/rows/reorder", async (c) => {
   return c.json(payload);
 });
 
-databaseRoutes.put("/:id/rows/:rowId/cells/:propertyId", async (c) => {
+databaseRoutes.put("/:id/rows/:rowId/properties/:propertyId", async (c) => {
   const user = requireUser(c);
 
   if (!user) {
@@ -566,17 +691,29 @@ databaseRoutes.put("/:id/rows/:rowId/cells/:propertyId", async (c) => {
   const propertyId = c.req.param("propertyId");
 
   const [row] = await db
-    .select({ id: databaseRow.id })
+    .select({ id: databaseRow.id, pageId: databaseRow.pageId })
     .from(databaseRow)
-    .where(and(eq(databaseRow.id, rowId), eq(databaseRow.databaseId, existing.id)))
-    .limit(1);
-  const [property] = await db
-    .select({ id: databaseProperty.id })
-    .from(databaseProperty)
     .where(
       and(
-        eq(databaseProperty.id, propertyId),
+        eq(databaseRow.id, rowId),
+        eq(databaseRow.databaseId, existing.id),
+        isNull(databaseRow.deletedAt),
+      ),
+    )
+    .limit(1);
+  const [property] = await db
+    .select({ id: workspaceProperty.id })
+    .from(databaseProperty)
+    .innerJoin(
+      workspaceProperty,
+      eq(databaseProperty.propertyId, workspaceProperty.id),
+    )
+    .where(
+      and(
         eq(databaseProperty.databaseId, existing.id),
+        eq(databaseProperty.propertyId, propertyId),
+        eq(workspaceProperty.organizationId, existing.organizationId),
+        isNull(workspaceProperty.deletedAt),
       ),
     )
     .limit(1);
@@ -586,15 +723,18 @@ databaseRoutes.put("/:id/rows/:rowId/cells/:propertyId", async (c) => {
   }
 
   await db
-    .insert(databaseCell)
+    .insert(workspacePropertyValue)
     .values({
       id: crypto.randomUUID(),
-      rowId,
+      workspaceId: row.pageId,
       propertyId,
       value,
     })
     .onConflictDoUpdate({
-      target: [databaseCell.rowId, databaseCell.propertyId],
+      target: [
+        workspacePropertyValue.workspaceId,
+        workspacePropertyValue.propertyId,
+      ],
       set: {
         value,
         updatedAt: new Date(),

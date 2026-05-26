@@ -153,6 +153,61 @@ export const workspace = pgTable(
   ],
 );
 
+export const workspaceProperty = pgTable(
+  "workspace_property",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    type: text("type").notNull(),
+    config: jsonb("config"),
+    deletedById: text("deleted_by_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("workspace_property_organization_id_idx").on(table.organizationId),
+    index("workspace_property_deleted_at_idx").on(table.deletedAt),
+  ],
+);
+
+export const workspacePropertyValue = pgTable(
+  "workspace_property_value",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    propertyId: text("property_id")
+      .notNull()
+      .references(() => workspaceProperty.id, { onDelete: "cascade" }),
+    value: jsonb("value"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("workspace_property_value_workspace_id_idx").on(table.workspaceId),
+    index("workspace_property_value_property_id_idx").on(table.propertyId),
+    uniqueIndex("workspace_property_value_unique").on(
+      table.workspaceId,
+      table.propertyId,
+    ),
+  ],
+);
+
 export const database = pgTable(
   "database",
   {
@@ -190,10 +245,12 @@ export const databaseProperty = pgTable(
     databaseId: text("database_id")
       .notNull()
       .references(() => database.id, { onDelete: "cascade" }),
-    name: text("name").notNull(),
-    type: text("type").notNull(),
-    config: jsonb("config"),
+    propertyId: text("property_id")
+      .notNull()
+      .references(() => workspaceProperty.id, { onDelete: "cascade" }),
     position: integer("position").notNull().default(0),
+    width: integer("width"),
+    visible: boolean("visible").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true })
       .$defaultFn(() => new Date())
       .notNull(),
@@ -206,6 +263,10 @@ export const databaseProperty = pgTable(
     index("database_property_position_idx").on(
       table.databaseId,
       table.position,
+    ),
+    uniqueIndex("database_property_database_property_unique").on(
+      table.databaseId,
+      table.propertyId,
     ),
   ],
 );
@@ -245,7 +306,6 @@ export const databaseRow = pgTable(
       .notNull()
       .references(() => workspace.id, { onDelete: "cascade" }),
     parentRowId: text("parent_row_id"),
-    title: text("title").notNull(),
     position: integer("position").notNull().default(0),
     createdById: text("created_by_id").references(() => user.id, {
       onDelete: "set null",
@@ -270,33 +330,9 @@ export const databaseRow = pgTable(
     index("database_row_position_idx").on(table.databaseId, table.position),
     index("database_row_page_id_idx").on(table.pageId),
     index("database_row_deleted_at_idx").on(table.deletedAt),
-  ],
-);
-
-export const databaseCell = pgTable(
-  "database_cell",
-  {
-    id: text("id").primaryKey(),
-    rowId: text("row_id")
-      .notNull()
-      .references(() => databaseRow.id, { onDelete: "cascade" }),
-    propertyId: text("property_id")
-      .notNull()
-      .references(() => databaseProperty.id, { onDelete: "cascade" }),
-    value: jsonb("value"),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .$defaultFn(() => new Date())
-      .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .$defaultFn(() => new Date())
-      .notNull(),
-  },
-  (table) => [
-    index("database_cell_row_id_idx").on(table.rowId),
-    index("database_cell_property_id_idx").on(table.propertyId),
-    uniqueIndex("database_cell_row_property_unique").on(
-      table.rowId,
-      table.propertyId,
+    uniqueIndex("database_row_database_page_unique").on(
+      table.databaseId,
+      table.pageId,
     ),
   ],
 );

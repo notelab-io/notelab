@@ -1,9 +1,7 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import {
-  CalendarDays,
   ImagePlus,
   SmilePlus,
-  UserRound,
   X,
 } from "lucide-react"
 
@@ -15,12 +13,19 @@ import {
 } from "@/components/ui/emoji-picker"
 import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  useUpdateWorkspacePropertyValue,
+  useWorkspaceProperties,
+} from "@/features/workspaces/hooks"
+
+import { getDatabasePropertyType } from "../../extensions/database/constants"
 
 type WorkspaceMetadataProps = {
   icon?: string
   onIconChange?: (icon: string) => void
   onTitleChange?: (title: string) => void
   title?: string
+  workspaceId?: string | null
 }
 
 export function WorkspaceMetadata({
@@ -28,13 +33,26 @@ export function WorkspaceMetadata({
   onIconChange,
   onTitleChange,
   title: titleProp,
+  workspaceId,
 }: WorkspaceMetadataProps) {
   const [coverVisible, setCoverVisible] = useState(false)
   const [iconOpen, setIconOpen] = useState(false)
   const [localIcon, setLocalIcon] = useState("")
   const [localTitle, setLocalTitle] = useState("")
+  const [draftValues, setDraftValues] = useState<Record<string, string>>({})
+  const { data: propertyPayload } = useWorkspaceProperties(workspaceId)
+  const updatePropertyValue = useUpdateWorkspacePropertyValue()
   const icon = iconProp ?? localIcon
   const title = titleProp ?? localTitle
+  const propertyValues = useMemo(() => {
+    const values: Record<string, string> = {}
+
+    for (const value of propertyPayload?.values ?? []) {
+      values[value.propertyId] = getPropertyValueText(value.value)
+    }
+
+    return values
+  }, [propertyPayload?.values])
 
   const updateIcon = (nextIcon: string) => {
     onIconChange?.(nextIcon)
@@ -168,33 +186,76 @@ export function WorkspaceMetadata({
           />
         </div>
 
-        <div className="mt-6 grid gap-1 border-y py-2">
-          <div className="grid min-h-8 grid-cols-[9rem_minmax(0,1fr)] items-center gap-3 text-sm">
-            <span className="flex min-w-0 items-center gap-2 text-muted-foreground [&_svg]:size-4 [&_svg]:shrink-0">
-              <UserRound />
-              Owner
-            </span>
-            <button
-              className="min-w-0 rounded-md px-2 py-1 text-left text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none"
-              type="button"
-            >
-              Empty
-            </button>
+        {propertyPayload?.properties.length ? (
+          <div className="mt-6 grid gap-1 border-y py-2">
+            {propertyPayload.properties.map((property) => {
+              const PropertyIcon = getDatabasePropertyType(property.type).icon
+              const value =
+                draftValues[property.id] ?? propertyValues[property.id] ?? ""
+
+              return (
+                <div
+                  className="grid min-h-8 grid-cols-[9rem_minmax(0,1fr)] items-center gap-3 text-sm"
+                  key={property.id}
+                >
+                  <span className="flex min-w-0 items-center gap-2 text-muted-foreground [&_svg]:size-4 [&_svg]:shrink-0">
+                    <PropertyIcon />
+                    <span className="truncate">{property.name}</span>
+                  </span>
+                  <Input
+                    aria-label={property.name}
+                    className="h-8 min-w-0 rounded-md border-0 bg-transparent px-2 py-1 text-sm text-foreground shadow-none placeholder:text-muted-foreground focus-visible:bg-muted focus-visible:ring-0 dark:bg-transparent"
+                    onBlur={() => {
+                      if (!workspaceId) {
+                        return
+                      }
+
+                      updatePropertyValue.mutate({
+                        propertyId: property.id,
+                        value: { text: value },
+                        workspaceId,
+                      })
+                    }}
+                    onChange={(event) =>
+                      setDraftValues((drafts) => ({
+                        ...drafts,
+                        [property.id]: event.target.value,
+                      }))
+                    }
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.currentTarget.blur()
+                      }
+                    }}
+                    placeholder="Empty"
+                    value={value}
+                  />
+                </div>
+              )
+            })}
           </div>
-          <div className="grid min-h-8 grid-cols-[9rem_minmax(0,1fr)] items-center gap-3 text-sm">
-            <span className="flex min-w-0 items-center gap-2 text-muted-foreground [&_svg]:size-4 [&_svg]:shrink-0">
-              <CalendarDays />
-              Date
-            </span>
-            <button
-              className="min-w-0 rounded-md px-2 py-1 text-left text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none"
-              type="button"
-            >
-              Empty
-            </button>
-          </div>
-        </div>
+        ) : null}
       </div>
     </section>
   )
+}
+
+function getPropertyValueText(value: unknown) {
+  if (typeof value === "string") {
+    return value
+  }
+
+  if (value && typeof value === "object" && "text" in value) {
+    const text = (value as { text?: unknown }).text
+
+    if (typeof text === "string") {
+      return text
+    }
+
+    if (Array.isArray(text)) {
+      return text.filter((item) => typeof item === "string").join(", ")
+    }
+  }
+
+  return ""
 }

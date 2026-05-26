@@ -3,10 +3,13 @@ import { useMutation, useQuery } from "@tanstack/react-query"
 import {
   workspaceQueryKey,
   workspaceQueryOptions,
+  workspacePropertiesQueryKey,
+  workspacePropertiesQueryOptions,
   workspacesQueryKey,
   workspacesQueryOptions,
   type Workspace,
   type WorkspaceMetadata,
+  type WorkspacePropertiesPayload,
 } from "@/features/workspaces/queries"
 import { apiFetch } from "@/lib/api"
 import { queryClient } from "@/lib/query-client"
@@ -26,12 +29,22 @@ type UpdateWorkspaceInput = {
   metadata?: WorkspaceMetadata
 }
 
+type UpdateWorkspacePropertyValueInput = {
+  propertyId: string
+  value: unknown
+  workspaceId: string
+}
+
 export function useWorkspaces(organizationId: string | null | undefined) {
   return useQuery(workspacesQueryOptions(organizationId))
 }
 
 export function useWorkspace(workspaceId: string | null | undefined) {
   return useQuery(workspaceQueryOptions(workspaceId))
+}
+
+export function useWorkspaceProperties(workspaceId: string | null | undefined) {
+  return useQuery(workspacePropertiesQueryOptions(workspaceId))
 }
 
 export function useCreateWorkspace() {
@@ -94,6 +107,29 @@ export function useUpdateWorkspace() {
       await queryClient.invalidateQueries({
         queryKey: workspacesQueryKey(workspace.organizationId),
       })
+    },
+  })
+}
+
+export function useUpdateWorkspacePropertyValue() {
+  return useMutation({
+    mutationFn: async ({
+      propertyId,
+      value,
+      workspaceId,
+    }: UpdateWorkspacePropertyValueInput) =>
+      apiFetch<WorkspacePropertiesPayload>(
+        `/workspaces/${workspaceId}/properties/${propertyId}/value`,
+        {
+          method: "PUT",
+          body: JSON.stringify({ value }),
+        },
+      ),
+    onSuccess: (payload, variables) => {
+      queryClient.setQueryData(
+        workspacePropertiesQueryKey(variables.workspaceId),
+        payload,
+      )
     },
   })
 }

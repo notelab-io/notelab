@@ -182,7 +182,7 @@ export function DatabaseSelectCell({
       {
         config: getSelectConfigWithOptions(propertyConfig, nextOptions),
         databaseId,
-        propertyId,
+        databasePropertyId: propertyId,
       },
       {
         onSuccess: () => {

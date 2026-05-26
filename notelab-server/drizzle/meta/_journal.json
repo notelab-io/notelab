@@ -5,22 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1779665141944,
-      "tag": "0000_daily_victor_mancha",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1779668234140,
-      "tag": "0001_broken_justin_hammer",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1779726027453,
-      "tag": "0002_cheerful_wraith",
+      "when": 1779816234141,
+      "tag": "0000_talented_wong",
       "breakpoints": true
     }
   ]

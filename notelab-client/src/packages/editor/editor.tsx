@@ -904,6 +904,7 @@ export function Editor({
           onIconChange={onEmojiChange}
           onTitleChange={onTitleChange}
           title={title}
+          workspaceId={workspaceId}
         />
         <EditorContent editor={editor} />
         {mobileNodeTarget ? (

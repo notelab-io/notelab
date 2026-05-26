@@ -29,9 +29,12 @@ type AddPropertyInput = {
 
 type UpdatePropertyInput = {
   databaseId: string
-  propertyId: string
-  name?: string
+  databasePropertyId: string
   config?: unknown
+  name?: string
+  type?: string
+  visible?: boolean
+  width?: number | null
 }
 
 type AddRowInput = {
@@ -47,7 +50,7 @@ type ReorderRowsInput = {
   rowIds: string[]
 }
 
-type UpdateCellInput = {
+type UpdatePropertyValueInput = {
   databaseId: string
   propertyId: string
   rowId: string
@@ -101,9 +104,13 @@ export function useAddDatabaseProperty() {
 
 export function useUpdateDatabaseProperty() {
   return useMutation({
-    mutationFn: async ({ databaseId, propertyId, ...patch }: UpdatePropertyInput) =>
+    mutationFn: async ({
+      databaseId,
+      databasePropertyId,
+      ...patch
+    }: UpdatePropertyInput) =>
       apiFetch<DatabasePayload>(
-        `/databases/${databaseId}/properties/${propertyId}`,
+        `/databases/${databaseId}/properties/${databasePropertyId}`,
         {
           method: "PATCH",
           body: JSON.stringify(patch),
@@ -140,16 +147,16 @@ export function useReorderDatabaseRows() {
   })
 }
 
-export function useUpdateDatabaseCell() {
+export function useUpdateDatabasePropertyValue() {
   return useMutation({
     mutationFn: async ({
       databaseId,
       propertyId,
       rowId,
       value,
-    }: UpdateCellInput) =>
+    }: UpdatePropertyValueInput) =>
       apiFetch<DatabasePayload>(
-        `/databases/${databaseId}/rows/${rowId}/cells/${propertyId}`,
+        `/databases/${databaseId}/rows/${rowId}/properties/${propertyId}`,
         {
           method: "PUT",
           body: JSON.stringify({ value }),

@@ -1,8 +1,13 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { db } from "../db";
-import { member, workspace } from "../db/schema";
+import {
+  member,
+  workspace,
+  workspaceProperty,
+  workspacePropertyValue,
+} from "../db/schema";
 import type { AppBindings } from "../types";
 
 export const workspaceRoutes = new Hono<AppBindings>();
@@ -152,6 +157,123 @@ workspaceRoutes.get("/:id", async (c) => {
   }
 
   return c.json({ workspace: record });
+});
+
+workspaceRoutes.get("/:id/properties", async (c) => {
+  const user = requireUser(c);
+
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const record = await getWorkspace(c.req.param("id"));
+
+  if (!record) {
+    return c.json({ error: "Workspace not found" }, 404);
+  }
+
+  if (!(await isOrganizationMember(record.organizationId, user.id))) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  const [properties, values] = await Promise.all([
+    db
+      .select()
+      .from(workspaceProperty)
+      .where(
+        and(
+          eq(workspaceProperty.organizationId, record.organizationId),
+          isNull(workspaceProperty.deletedAt),
+        ),
+      )
+      .orderBy(asc(workspaceProperty.createdAt)),
+    db
+      .select()
+      .from(workspacePropertyValue)
+      .where(eq(workspacePropertyValue.workspaceId, record.id)),
+  ]);
+
+  return c.json({ properties, values });
+});
+
+workspaceRoutes.put("/:id/properties/:propertyId/value", async (c) => {
+  const user = requireUser(c);
+
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const record = await getWorkspace(c.req.param("id"));
+
+  if (!record) {
+    return c.json({ error: "Workspace not found" }, 404);
+  }
+
+  if (!(await isOrganizationMember(record.organizationId, user.id))) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  const body = await c.req.json().catch(() => null);
+
+  if (!body || typeof body !== "object") {
+    return c.json({ error: "A JSON body is required" }, 400);
+  }
+
+  const propertyId = c.req.param("propertyId");
+  const { value = null } = body as { value?: unknown };
+  const [property] = await db
+    .select({ id: workspaceProperty.id })
+    .from(workspaceProperty)
+    .where(
+      and(
+        eq(workspaceProperty.id, propertyId),
+        eq(workspaceProperty.organizationId, record.organizationId),
+        isNull(workspaceProperty.deletedAt),
+      ),
+    )
+    .limit(1);
+
+  if (!property) {
+    return c.json({ error: "Property not found" }, 404);
+  }
+
+  await db
+    .insert(workspacePropertyValue)
+    .values({
+      id: crypto.randomUUID(),
+      workspaceId: record.id,
+      propertyId,
+      value,
+    })
+    .onConflictDoUpdate({
+      target: [
+        workspacePropertyValue.workspaceId,
+        workspacePropertyValue.propertyId,
+      ],
+      set: {
+        value,
+        updatedAt: new Date(),
+      },
+    });
+
+  const [properties, values] = await Promise.all([
+    db
+      .select()
+      .from(workspaceProperty)
+      .where(
+        and(
+          eq(workspaceProperty.organizationId, record.organizationId),
+          isNull(workspaceProperty.deletedAt),
+        ),
+      )
+      .orderBy(asc(workspaceProperty.createdAt)),
+    db
+      .select()
+      .from(workspacePropertyValue)
+      .where(eq(workspacePropertyValue.workspaceId, record.id)),
+  ]);
+
+  return c.json({ properties, values });
 });
 
 workspaceRoutes.patch("/:id", async (c) => {
