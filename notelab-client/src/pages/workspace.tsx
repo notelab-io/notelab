@@ -31,13 +31,13 @@ export default function WorkspacePage() {
   const sidePaneWidthClass = getWorkspaceSidePaneWidthClass()
 
   const openPageInSidePane = useCallback((pageId: string) => {
-    if (pageId === workspaceId) {
+    if (pageId === workspaceId || pageId === sidePaneWorkspaceId) {
       closeSidePane()
       return
     }
 
     openSidePane(pageId)
-  }, [closeSidePane, openSidePane, workspaceId])
+  }, [closeSidePane, openSidePane, sidePaneWorkspaceId, workspaceId])
 
   return (
     <main className="relative flex h-full min-h-[calc(100svh-3rem)] flex-1 overflow-hidden">

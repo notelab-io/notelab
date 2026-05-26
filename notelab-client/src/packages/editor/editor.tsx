@@ -521,6 +521,24 @@ export function Editor({
       return
     }
 
+    for (const extension of editor.extensionManager.extensions) {
+      if (extension.name === "databaseBlock") {
+        extension.options.currentPageId = workspaceId
+        extension.options.onOpenPage = onOpenPage
+      }
+
+      if (extension.name === "pageBlock" || extension.name === "slashCommand") {
+        extension.options.onOpenPage = onOpenPage
+      }
+    }
+
+  }, [editor, onOpenPage, workspaceId])
+
+  useEffect(() => {
+    if (!editor) {
+      return
+    }
+
     return registerBlockDragSource(editorId, editor)
   }, [editor, editorId])
 

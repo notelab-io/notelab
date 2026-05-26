@@ -1,5 +1,6 @@
-import { ExternalLink, FileText } from "lucide-react"
+import { ExternalLink, FileText, X } from "lucide-react"
 
+import { useWorkspaceSidePane } from "@/components/app-layout"
 import { useWorkspace } from "@/features/workspaces/hooks"
 import { getWorkspaceEmoji } from "@/features/workspaces/queries"
 
@@ -10,9 +11,20 @@ export function DatabasePageCell({
   onOpen?: (pageId: string) => void
   pageId: string
 }) {
+  const { closeSidePane, sidePaneWorkspaceId } = useWorkspaceSidePane()
   const { data: page } = useWorkspace(pageId)
+  const isOpen = sidePaneWorkspaceId === pageId
   const title = page?.name.trim() || "Untitled"
   const emoji = page ? getWorkspaceEmoji(page) : null
+  const actionLabel = isOpen ? "Close" : "Open"
+  const handleClick = () => {
+    if (isOpen) {
+      closeSidePane()
+      return
+    }
+
+    onOpen?.(pageId)
+  }
 
   return (
     <div className="database-page-link">
@@ -22,11 +34,11 @@ export function DatabasePageCell({
       </span>
       <button
         className="database-page-open"
-        onClick={() => onOpen?.(pageId)}
+        onClick={handleClick}
         type="button"
       >
-        <ExternalLink />
-        <span>Open</span>
+        {isOpen ? <X /> : <ExternalLink />}
+        <span>{actionLabel}</span>
       </button>
     </div>
   )
