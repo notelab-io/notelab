@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-router"
 
 import { AppLayout } from "@/components/app-layout"
+import AcceptInvitationPage from "@/pages/accept-invitation"
 import DashboardPage from "@/pages/dashboard"
 import LoginPage from "@/pages/login"
 import OnboardingPage from "@/pages/onboarding"
@@ -95,6 +96,12 @@ const otpRoute = createRoute({
   component: OtpPage,
 })
 
+const acceptInvitationRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/accept-invitation",
+  component: AcceptInvitationPage,
+})
+
 const appRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: "app",
@@ -158,6 +165,7 @@ const routeTree = rootRoute.addChildren([
   signupRoute,
   onboardingRoute,
   otpRoute,
+  acceptInvitationRoute,
   appRoute.addChildren([
     dashboardRoute,
     workspaceRoute,

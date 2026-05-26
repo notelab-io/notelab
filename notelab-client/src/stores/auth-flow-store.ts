@@ -6,7 +6,12 @@ export type AuthFlowPurpose = "email-verification" | "sign-in"
 type AuthFlowState = {
   email: string | null
   purpose: AuthFlowPurpose | null
-  setAuthFlow: (flow: { email: string; purpose: AuthFlowPurpose }) => void
+  returnTo: string | null
+  setAuthFlow: (flow: {
+    email: string
+    purpose: AuthFlowPurpose
+    returnTo?: string | null
+  }) => void
   clearAuthFlow: () => void
 }
 
@@ -15,12 +20,17 @@ export const useAuthFlowStore = create<AuthFlowState>()(
     (set) => ({
       email: null,
       purpose: null,
+      returnTo: null,
       setAuthFlow: (flow) => set(flow),
-      clearAuthFlow: () => set({ email: null, purpose: null }),
+      clearAuthFlow: () => set({ email: null, purpose: null, returnTo: null }),
     }),
     {
       name: "notelab-auth-flow",
-      partialize: ({ email, purpose }) => ({ email, purpose }),
+      partialize: ({ email, purpose, returnTo }) => ({
+        email,
+        purpose,
+        returnTo,
+      }),
     },
   ),
 )

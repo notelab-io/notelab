@@ -34,7 +34,7 @@ export function OtpForm({
   const navigate = useNavigate()
   const [code, setCode] = React.useState("")
   const [resendCount, setResendCount] = React.useState(0)
-  const { clearAuthFlow, email, purpose } = useAuthFlowStore()
+  const { clearAuthFlow, email, purpose, returnTo } = useAuthFlowStore()
   const signInWithOtp = useSignInWithOtp()
   const verifyEmailOtp = useVerifyEmailOtp()
   const requestSignInOtp = useRequestSignInOtp()
@@ -55,7 +55,11 @@ export function OtpForm({
       if (purpose === "sign-in") {
         await signInWithOtp.mutateAsync({ email, otp: code })
         clearAuthFlow()
-        void navigate({ to: "/dashboard" })
+        if (returnTo) {
+          window.location.assign(returnTo)
+        } else {
+          void navigate({ to: "/dashboard" })
+        }
         return
       }
 

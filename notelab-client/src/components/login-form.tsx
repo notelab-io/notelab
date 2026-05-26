@@ -30,10 +30,11 @@ export function LoginForm({
 
     const formData = new FormData(event.currentTarget)
     const email = String(formData.get("email") ?? "").trim().toLowerCase()
+    const returnTo = new URLSearchParams(window.location.search).get("returnTo")
 
     try {
       await requestOtp.mutateAsync(email)
-      setAuthFlow({ email, purpose: "sign-in" })
+      setAuthFlow({ email, purpose: "sign-in", returnTo })
       void navigate({ to: "/otp" })
     } catch {
       // React Query owns the visible error state.
