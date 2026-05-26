@@ -28,6 +28,27 @@ export const databaseColumnMinWidth = 180
 export const databaseNameColumnDefaultWidth = 220
 export const databaseAddPropertyColumnDefaultWidth = 180
 
+export const defaultStatusOptions = [
+  {
+    color: "gray",
+    group: "To-do",
+    id: "not-started",
+    name: "Not started",
+  },
+  {
+    color: "blue",
+    group: "In progress",
+    id: "in-progress",
+    name: "In progress",
+  },
+  {
+    color: "green",
+    group: "Complete",
+    id: "done",
+    name: "Done",
+  },
+]
+
 export type DatabasePropertyType = {
   icon: LucideIcon
   label: string

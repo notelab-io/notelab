@@ -37,6 +37,7 @@ import {
   databaseAddPropertyColumnDefaultWidth,
   databaseColumnMinWidth,
   databaseNameColumnDefaultWidth,
+  defaultStatusOptions,
 } from "./constants"
 import { DatabaseInputCell } from "./database-input-cell"
 import { DatabasePageCell } from "./database-page-cell"
@@ -726,6 +727,7 @@ function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
                   {properties.map((property) => (
                     <th key={property.id} className="database-property-header">
                       <DatabasePropertyMenu
+                        config={property.config}
                         name={property.name}
                         type={property.type}
                         onRename={(name) =>
@@ -782,7 +784,8 @@ function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
                       const value = draftCells[key] ?? cellValues[key] ?? ""
                       const isSelectProperty =
                         property.type === "select" ||
-                        property.type === "multi_select"
+                        property.type === "multi_select" ||
+                        property.type === "status"
                       const isMultiSelectProperty =
                         property.type === "multi_select"
 
@@ -795,6 +798,11 @@ function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
                           {isSelectProperty ? (
                             <DatabaseSelectCell
                               databaseId={payload.database.id}
+                              defaultOptions={
+                                property.type === "status"
+                                  ? defaultStatusOptions
+                                  : undefined
+                              }
                               multiple={isMultiSelectProperty}
                               onSelect={(optionValue) =>
                                 saveCell(row.id, property.id, optionValue)
@@ -833,6 +841,7 @@ function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
                                 )
                               }
                               onInput={handleCellInput}
+                              type={property.type}
                               value={Array.isArray(value) ? value.join(", ") : value}
                             />
                           )}

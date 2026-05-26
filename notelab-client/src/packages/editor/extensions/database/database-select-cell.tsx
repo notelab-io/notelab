@@ -55,6 +55,7 @@ function getSelectConfigWithOptions(
 export function DatabaseSelectCell({
   databaseId,
   propertyConfig,
+  defaultOptions = [],
   propertyId,
   propertyName,
   value,
@@ -62,6 +63,7 @@ export function DatabaseSelectCell({
   onSelect,
 }: {
   databaseId: string
+  defaultOptions?: DatabaseSelectOption[]
   multiple?: boolean
   propertyConfig?: unknown
   propertyId: string
@@ -79,8 +81,12 @@ export function DatabaseSelectCell({
     top: number
   } | null>(null)
   const [query, setQuery] = useState("")
-  const selectOptions = getSelectOptions(propertyConfig)
+  const configuredOptions = getSelectOptions(propertyConfig)
+  const selectOptions =
+    configuredOptions.length > 0 ? configuredOptions : defaultOptions
   const selectedValues = Array.isArray(value) ? value : value ? [value] : []
+  const getOptionColor = (optionName: string) =>
+    selectOptions.find((option) => option.name === optionName)?.color
   const normalizedQuery = query.trim().toLowerCase()
   const filteredSelectOptions = normalizedQuery
     ? selectOptions.filter((option) =>
@@ -201,7 +207,11 @@ export function DatabaseSelectCell({
       type="button"
     >
       {selectedValues.map((selectedValue) => (
-        <span className="database-select-badge" key={selectedValue}>
+        <span
+          className="database-select-badge"
+          data-option-color={getOptionColor(selectedValue)}
+          key={selectedValue}
+        >
           {selectedValue}
         </span>
       ))}
@@ -249,7 +259,12 @@ export function DatabaseSelectCell({
               type="button"
             >
               <GripVertical />
-              <span className="database-select-badge">{option.name}</span>
+              <span
+                className="database-select-badge"
+                data-option-color={option.color}
+              >
+                {option.name}
+              </span>
               {multiple && isSelected ? (
                 <Check className="database-select-option-check" />
               ) : null}

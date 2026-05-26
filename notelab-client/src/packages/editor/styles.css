@@ -413,8 +413,33 @@
     @apply block h-8 min-h-8 w-full resize-none overflow-hidden border-0 bg-transparent px-3 py-1 text-sm leading-6 shadow-none outline-none transition-colors placeholder:text-muted-foreground focus-visible:ring-0;
   }
 
+  .database-input-cell-wrap {
+    @apply h-8 min-h-8 w-full;
+  }
+
+  .database-value-cell[data-active="true"] .database-input-cell-wrap {
+    @apply fixed z-50 h-auto min-h-14 w-72 max-w-[calc(100vw-3rem)] overflow-hidden rounded-md border border-border bg-muted text-foreground shadow-sm;
+    max-height: min(24rem, calc(100vh - var(--database-input-cell-top, 0px) - 1rem));
+    top: var(--database-input-cell-top, 0px);
+    left: var(--database-input-cell-left, 0px);
+  }
+
   .database-value-cell[data-active="true"] .database-input-cell {
-    @apply absolute top-0 left-0 z-20 h-auto min-h-14 w-72 max-w-[calc(100vw-3rem)] rounded-md border border-border bg-muted px-3 py-2 text-foreground shadow-sm;
+    @apply h-auto min-h-14 overflow-y-auto px-3 py-2;
+    max-height: min(21rem, calc(100vh - var(--database-input-cell-top, 0px) - 4rem));
+  }
+
+  .database-input-cell[aria-invalid="true"] {
+    @apply text-destructive;
+  }
+
+  .database-input-cell-error {
+    @apply hidden border-t border-destructive/20 px-3 pb-2 pt-1 text-xs leading-4 text-destructive;
+  }
+
+  .database-value-cell[data-active="true"] .database-input-cell-error,
+  .database-input-cell-drawer .database-input-cell-error {
+    @apply block;
   }
 
   .database-input-cell-trigger {
@@ -423,6 +448,10 @@
 
   .database-input-cell-drawer {
     @apply max-h-[70vh] w-full max-w-none overflow-y-auto px-1 pb-2 pt-1;
+  }
+
+  .database-input-cell-drawer .database-input-cell-wrap {
+    @apply h-auto min-h-40;
   }
 
   .database-input-cell-drawer .database-input-cell {
@@ -435,6 +464,21 @@
 
   .database-select-badge {
     @apply inline-flex max-w-full items-center truncate rounded-sm bg-amber-700 px-2 py-0.5 text-sm font-medium leading-5 text-white;
+  }
+
+  .database-select-badge[data-option-color="gray"],
+  [data-status-color="gray"] {
+    @apply bg-zinc-600;
+  }
+
+  .database-select-badge[data-option-color="blue"],
+  [data-status-color="blue"] {
+    @apply bg-blue-600;
+  }
+
+  .database-select-badge[data-option-color="green"],
+  [data-status-color="green"] {
+    @apply bg-emerald-700;
   }
 
   .database-select-popover {

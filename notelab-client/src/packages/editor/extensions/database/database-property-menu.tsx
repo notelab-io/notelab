@@ -7,7 +7,9 @@ import {
   Copy,
   EyeOff,
   Filter,
+  GripVertical,
   Pin,
+  Plus,
   Settings2,
   Sparkles,
   Trash2,
@@ -25,19 +27,34 @@ import {
 } from "@/components/ui/dropdrawer"
 import { Input } from "@/components/ui/input"
 
-import { getDatabasePropertyType } from "./constants"
+import { defaultStatusOptions, getDatabasePropertyType } from "./constants"
+
+type StatusOption = {
+  color?: string
+  group?: string
+  id: string
+  name: string
+}
+
+type DatabasePropertyConfig = {
+  options?: StatusOption[]
+}
 
 export function DatabasePropertyMenu({
+  config,
   name,
-  type,
   onRename,
+  type,
 }: {
+  config?: unknown
   name: string
-  type: string
   onRename: (name: string) => void
+  type: string
 }) {
   const propertyType = getDatabasePropertyType(type)
   const PropertyIcon = propertyType.icon
+  const isStatusProperty = type === "status"
+  const statusOptions = getStatusOptions(config)
 
   return (
     <DropDrawer>
@@ -82,8 +99,14 @@ export function DatabasePropertyMenu({
             <Settings2 />
             <span>Edit property</span>
           </DropDrawerSubTrigger>
-          <DropDrawerSubContent>
-            <DropDrawerItem disabled>Property settings</DropDrawerItem>
+          <DropDrawerSubContent
+            className={isStatusProperty ? "w-100 p-4" : undefined}
+          >
+            {isStatusProperty ? (
+              <StatusPropertyOptions options={statusOptions} />
+            ) : (
+              <DropDrawerItem disabled>Property settings</DropDrawerItem>
+            )}
           </DropDrawerSubContent>
         </DropDrawerSub>
         <DropDrawerSub>
@@ -150,4 +173,102 @@ export function DatabasePropertyMenu({
       </DropDrawerContent>
     </DropDrawer>
   )
+}
+
+function StatusPropertyOptions({
+  options,
+}: {
+  options: StatusOption[]
+}) {
+  const groups = [
+    {
+      name: "To-do",
+      options: options.filter(
+        (option) => getStatusOptionGroup(option) === "To-do"
+      ),
+    },
+    {
+      name: "In progress",
+      options: options.filter(
+        (option) => getStatusOptionGroup(option) === "In progress"
+      ),
+    },
+    {
+      name: "Complete",
+      options: options.filter(
+        (option) => getStatusOptionGroup(option) === "Complete"
+      ),
+    },
+  ]
+
+  return (
+    <div className="space-y-4">
+      {groups.map((group) => (
+        <div className="space-y-2" key={group.name}>
+          <div className="flex items-center justify-between text-sm font-medium text-muted-foreground">
+            <span>{group.name}</span>
+            <button
+              aria-label={`Add ${group.name} status`}
+              className="flex size-6 items-center justify-center rounded-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              type="button"
+            >
+              <Plus className="size-4" />
+            </button>
+          </div>
+          {group.options.map((option) => (
+            <button
+              className="flex min-h-8 w-full items-center gap-2 rounded-md px-0 py-1 text-left text-sm text-foreground outline-none hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent"
+              key={option.id}
+              type="button"
+            >
+              <GripVertical className="size-4 shrink-0 text-muted-foreground" />
+              <span
+                className="inline-flex max-w-full items-center gap-1.5 truncate rounded-full px-2 py-0.5 leading-5 text-white"
+                data-status-color={option.color}
+              >
+                <span className="size-1.5 shrink-0 rounded-full bg-white/50" />
+                <span className="truncate">{option.name}</span>
+              </span>
+              {option.name === "Not started" ? (
+                <span className="ml-auto text-xs font-medium text-muted-foreground">
+                  DEFAULT
+                </span>
+              ) : null}
+            </button>
+          ))}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function getStatusOptionGroup(option: StatusOption) {
+  return (
+    option.group ??
+    defaultStatusOptions.find(
+      (defaultOption) => defaultOption.name === option.name
+    )?.group ??
+    "To-do"
+  )
+}
+
+function getStatusOptions(config: unknown) {
+  const options =
+    config && typeof config === "object" && "options" in config
+      ? (config as DatabasePropertyConfig).options
+      : null
+
+  if (!Array.isArray(options) || options.length === 0) {
+    return defaultStatusOptions
+  }
+
+  const validOptions = options.filter(
+    (option): option is StatusOption =>
+      Boolean(option) &&
+      typeof option === "object" &&
+      typeof option.id === "string" &&
+      typeof option.name === "string"
+  )
+
+  return validOptions.length > 0 ? validOptions : defaultStatusOptions
 }
