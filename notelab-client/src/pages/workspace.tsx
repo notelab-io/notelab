@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import { X } from "lucide-react"
 import { useParams } from "@tanstack/react-router"
 
-import { Button } from "@/components/ui/button"
+import {
+  getWorkspaceSidePaneWidthClass,
+  useWorkspaceSidePane,
+} from "@/components/app-layout"
 import { Spinner } from "@/components/ui/spinner"
 import {
   getWorkspaceEmoji,
@@ -23,17 +25,12 @@ type WorkspaceEditorPaneProps = {
 
 export default function WorkspacePage() {
   const { workspaceId } = useParams({ from: "/app/workspace/$workspaceId" })
-  const [sidePaneWorkspaceId, setSidePaneWorkspaceId] = useState<string | null>(
-    null,
-  )
-
-  useEffect(() => {
-    setSidePaneWorkspaceId(null)
-  }, [workspaceId])
+  const { openSidePane, sidePaneWorkspaceId } = useWorkspaceSidePane()
+  const sidePaneWidthClass = getWorkspaceSidePaneWidthClass()
 
   const openPageInSidePane = useCallback((pageId: string) => {
-    setSidePaneWorkspaceId(pageId)
-  }, [])
+    openSidePane(pageId)
+  }, [openSidePane])
 
   return (
     <main className="flex h-full min-h-[calc(100svh-3rem)] flex-1 overflow-hidden">
@@ -45,20 +42,9 @@ export default function WorkspacePage() {
       />
       {sidePaneWorkspaceId ? (
         <aside
-          className="animate-in slide-in-from-right-8 flex w-[min(48rem,48vw)] min-w-[24rem] shrink-0 flex-col border-l bg-background duration-200"
+          className={`animate-in slide-in-from-right-8 flex ${sidePaneWidthClass} flex-col border-l bg-background duration-200`}
           key={sidePaneWorkspaceId}
         >
-          <div className="flex h-10 shrink-0 items-center justify-end border-b px-2">
-            <Button
-              aria-label="Close pane"
-              onClick={() => setSidePaneWorkspaceId(null)}
-              size="icon-sm"
-              type="button"
-              variant="ghost"
-            >
-              <X />
-            </Button>
-          </div>
           <WorkspaceEditorPane
             className="min-h-0 flex-1 overflow-y-auto"
             onOpenPage={openPageInSidePane}

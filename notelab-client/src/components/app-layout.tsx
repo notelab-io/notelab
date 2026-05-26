@@ -1,8 +1,18 @@
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react"
+import type { ReactNode } from "react"
 import { Link, Outlet, useLocation } from "@tanstack/react-router"
+import { ArrowRight } from "lucide-react"
 
 import { AppSidebar } from "@/components/app-sidebar"
 import { NavActions } from "@/components/nav-actions"
 import { SettingsSidebar } from "@/components/settings-sidebar"
+import { Button } from "@/components/ui/button"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -23,34 +33,137 @@ import {
 } from "@/features/workspaces/queries"
 import { useWorkspace, useWorkspaces } from "@/features/workspaces/hooks"
 
+type WorkspaceSidePaneContextValue = {
+  openSidePane: (workspaceId: string) => void
+  sidePaneWorkspaceId: string | null
+}
+
+const WorkspaceSidePaneContext =
+  createContext<WorkspaceSidePaneContextValue | null>(null)
+
+const sidePaneWidthClass = "w-[min(48rem,48vw)] min-w-[24rem] shrink-0"
+
 export function AppLayout() {
   const location = useLocation()
   const isSettingsPage = location.pathname.startsWith("/settings")
+  const workspaceId = getWorkspaceId(location.pathname)
+  const [sidePaneWorkspaceId, setSidePaneWorkspaceId] = useState<string | null>(
+    null,
+  )
+  const sidePaneContext = useMemo<WorkspaceSidePaneContextValue>(
+    () => ({
+      openSidePane: setSidePaneWorkspaceId,
+      sidePaneWorkspaceId,
+    }),
+    [sidePaneWorkspaceId],
+  )
+
+  useEffect(() => {
+    setSidePaneWorkspaceId(null)
+  }, [workspaceId])
 
   return (
     <SidebarProvider>
       {isSettingsPage ? <SettingsSidebar /> : <AppSidebar />}
       <SidebarInset className="h-svh overflow-hidden">
-        <header className="relative z-20 flex h-12 shrink-0 items-center gap-2 border-b bg-background">
-          <div className="flex min-w-0 flex-1 items-center gap-2 px-3">
-            <SidebarTrigger />
-            <Separator
-              orientation="vertical"
-              className="mr-2 data-[orientation=vertical]:h-4"
-            />
-            <AppBreadcrumbs pathname={location.pathname} />
-          </div>
-          {!isSettingsPage && (
-            <div className="ml-auto px-3">
-              <NavActions />
-            </div>
-          )}
-        </header>
+        <AppHeader
+          isSettingsPage={isSettingsPage}
+          pathname={location.pathname}
+          sidePaneWorkspaceId={sidePaneWorkspaceId}
+          onCloseSidePane={() => setSidePaneWorkspaceId(null)}
+        />
         <div className="min-h-0 flex-1 overflow-y-auto">
-          <Outlet />
+          <WorkspaceSidePaneContext.Provider value={sidePaneContext}>
+            <Outlet />
+          </WorkspaceSidePaneContext.Provider>
         </div>
       </SidebarInset>
     </SidebarProvider>
+  )
+}
+
+export function useWorkspaceSidePane() {
+  const context = useContext(WorkspaceSidePaneContext)
+
+  if (!context) {
+    throw new Error("useWorkspaceSidePane must be used inside AppLayout")
+  }
+
+  return context
+}
+
+export function getWorkspaceSidePaneWidthClass() {
+  return sidePaneWidthClass
+}
+
+function AppHeader({
+  isSettingsPage,
+  onCloseSidePane,
+  pathname,
+  sidePaneWorkspaceId,
+}: {
+  isSettingsPage: boolean
+  onCloseSidePane: () => void
+  pathname: string
+  sidePaneWorkspaceId: string | null
+}) {
+  return (
+    <header className="relative z-20 flex h-12 shrink-0 border-b bg-background">
+      <PaneHeaderContent
+        className="min-w-0 flex-1"
+        leadingControl={<SidebarTrigger />}
+        pathname={pathname}
+        showActions={!isSettingsPage}
+      />
+      {sidePaneWorkspaceId ? (
+        <PaneHeaderContent
+          className={`${sidePaneWidthClass} border-l`}
+          leadingControl={
+            <Button
+              aria-label="Close side pane"
+              onClick={onCloseSidePane}
+              size="icon-sm"
+              type="button"
+              variant="ghost"
+            >
+              <ArrowRight />
+            </Button>
+          }
+          pathname={`/workspace/${encodeURIComponent(sidePaneWorkspaceId)}`}
+          showActions
+        />
+      ) : null}
+    </header>
+  )
+}
+
+function PaneHeaderContent({
+  className,
+  leadingControl,
+  pathname,
+  showActions,
+}: {
+  className?: string
+  leadingControl: ReactNode
+  pathname: string
+  showActions: boolean
+}) {
+  return (
+    <div className={`${className ?? ""} flex items-center gap-2`}>
+      <div className="flex min-w-0 flex-1 items-center gap-2 px-3">
+        {leadingControl}
+        <Separator
+          orientation="vertical"
+          className="mr-2 data-[orientation=vertical]:h-4"
+        />
+        <AppBreadcrumbs pathname={pathname} />
+      </div>
+      {showActions ? (
+        <div className="ml-auto px-3">
+          <NavActions />
+        </div>
+      ) : null}
+    </div>
   )
 }
 
