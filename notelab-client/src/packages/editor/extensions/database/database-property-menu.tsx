@@ -19,7 +19,9 @@ import {
   DropDrawer,
   DropDrawerContent,
   DropDrawerItem,
+  DropDrawerLabel,
   DropDrawerSeparator,
+  DropDrawerShortcut,
   DropDrawerSub,
   DropDrawerSubContent,
   DropDrawerSubTrigger,
@@ -100,7 +102,7 @@ export function DatabasePropertyMenu({
             <span>Edit property</span>
           </DropDrawerSubTrigger>
           <DropDrawerSubContent
-            className={isStatusProperty ? "w-100 p-4" : undefined}
+            className={isStatusProperty ? "w-72" : undefined}
           >
             {isStatusProperty ? (
               <StatusPropertyOptions options={statusOptions} />
@@ -202,43 +204,42 @@ function StatusPropertyOptions({
   ]
 
   return (
-    <div className="space-y-4">
-      {groups.map((group) => (
-        <div className="space-y-2" key={group.name}>
-          <div className="flex items-center justify-between text-sm font-medium text-muted-foreground">
+    <>
+      {groups.map((group, groupIndex) => (
+        <div key={group.name}>
+          {groupIndex > 0 ? <DropDrawerSeparator /> : null}
+          <DropDrawerLabel className="flex items-center justify-between pr-1">
             <span>{group.name}</span>
             <button
               aria-label={`Add ${group.name} status`}
-              className="flex size-6 items-center justify-center rounded-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              className="-my-1 flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground"
               type="button"
             >
               <Plus className="size-4" />
             </button>
-          </div>
+          </DropDrawerLabel>
           {group.options.map((option) => (
-            <button
-              className="flex min-h-8 w-full items-center gap-2 rounded-md px-0 py-1 text-left text-sm text-foreground outline-none hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent"
+            <DropDrawerItem
               key={option.id}
-              type="button"
+              onSelect={(event) => event.preventDefault()}
             >
-              <GripVertical className="size-4 shrink-0 text-muted-foreground" />
+              <GripVertical />
               <span
-                className="inline-flex max-w-full items-center gap-1.5 truncate rounded-full px-2 py-0.5 leading-5 text-white"
-                data-status-color={option.color}
+                className="database-select-badge"
+                data-option-color={option.color}
               >
-                <span className="size-1.5 shrink-0 rounded-full bg-white/50" />
-                <span className="truncate">{option.name}</span>
+                {option.name}
               </span>
               {option.name === "Not started" ? (
-                <span className="ml-auto text-xs font-medium text-muted-foreground">
+                <DropDrawerShortcut>
                   DEFAULT
-                </span>
+                </DropDrawerShortcut>
               ) : null}
-            </button>
+            </DropDrawerItem>
           ))}
         </div>
       ))}
-    </div>
+    </>
   )
 }
 
