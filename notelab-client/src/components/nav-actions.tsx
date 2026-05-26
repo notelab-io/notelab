@@ -1,11 +1,45 @@
 import * as React from "react"
+import {
+  ChevronsUpDownIcon,
+  LinkIcon,
+  LockIcon,
+  MoreHorizontalIcon,
+  Share2Icon,
+  StarIcon,
+  Trash2Icon,
+} from "lucide-react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   Sidebar,
   SidebarContent,
@@ -15,125 +49,48 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { Settings2Icon, FileTextIcon, LinkIcon, CopyIcon, CornerUpRightIcon, Trash2Icon, CornerUpLeftIcon, ChartLineIcon, GalleryVerticalEndIcon, TrashIcon, BellIcon, ArrowUpIcon, ArrowDownIcon, StarIcon, MoreHorizontalIcon } from "lucide-react"
+import { useSession } from "@/features/auth/hooks"
+import {
+  useDeleteWorkspaceAccess,
+  useUpsertWorkspaceAccess,
+  useWorkspace,
+  useWorkspaceAccess,
+  useWorkspaceAccessLevel,
+  useWorkspaceAccessTargets,
+} from "@/features/workspaces/hooks"
+import type {
+  AccessLevel,
+  AccessTargetType,
+  WorkspaceAccessRule,
+} from "@/features/workspaces/queries"
 
-const data = [
-  [
-    {
-      label: "Customize Page",
-      icon: (
-        <Settings2Icon
-        />
-      ),
-    },
-    {
-      label: "Turn into wiki",
-      icon: (
-        <FileTextIcon
-        />
-      ),
-    },
-  ],
-  [
-    {
-      label: "Copy Link",
-      icon: (
-        <LinkIcon
-        />
-      ),
-    },
-    {
-      label: "Duplicate",
-      icon: (
-        <CopyIcon
-        />
-      ),
-    },
-    {
-      label: "Move to",
-      icon: (
-        <CornerUpRightIcon
-        />
-      ),
-    },
-    {
-      label: "Move to Trash",
-      icon: (
-        <Trash2Icon
-        />
-      ),
-    },
-  ],
-  [
-    {
-      label: "Undo",
-      icon: (
-        <CornerUpLeftIcon
-        />
-      ),
-    },
-    {
-      label: "View analytics",
-      icon: (
-        <ChartLineIcon
-        />
-      ),
-    },
-    {
-      label: "Version History",
-      icon: (
-        <GalleryVerticalEndIcon
-        />
-      ),
-    },
-    {
-      label: "Show delete pages",
-      icon: (
-        <TrashIcon
-        />
-      ),
-    },
-    {
-      label: "Notifications",
-      icon: (
-        <BellIcon
-        />
-      ),
-    },
-  ],
-  [
-    {
-      label: "Import",
-      icon: (
-        <ArrowUpIcon
-        />
-      ),
-    },
-    {
-      label: "Export",
-      icon: (
-        <ArrowDownIcon
-        />
-      ),
-    },
-  ],
+const moreActions = [
+  "Customize Page",
+  "Copy Link",
+  "Duplicate",
+  "Move to Trash",
+  "Version History",
 ]
 
-export function NavActions() {
-  const [isOpen, setIsOpen] = React.useState(false)
+const accessLabels: Record<AccessLevel, string> = {
+  edit: "Edit access",
+  full: "Full access",
+  view: "View access",
+}
 
-  React.useEffect(() => {
-    setIsOpen(true)
-  }, [])
+type ShareTargetValue = `${AccessTargetType}:${string}`
+
+export function NavActions({ workspaceId }: { workspaceId?: string | null }) {
+  const [isOpen, setIsOpen] = React.useState(false)
 
   return (
     <div className="flex items-center gap-2 text-sm">
       <div className="hidden font-medium text-muted-foreground md:inline-block">
-        Edit Oct 08
+        Edited recently
       </div>
+      {workspaceId ? <WorkspaceShareDialog workspaceId={workspaceId} /> : null}
       <Button variant="ghost" size="icon" className="h-7 w-7">
-        <StarIcon
-        />
+        <StarIcon />
       </Button>
       <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger asChild>
@@ -142,8 +99,7 @@ export function NavActions() {
             size="icon"
             className="h-7 w-7 data-[state=open]:bg-accent"
           >
-            <MoreHorizontalIcon
-            />
+            <MoreHorizontalIcon />
           </Button>
         </PopoverTrigger>
         <PopoverContent
@@ -152,25 +108,303 @@ export function NavActions() {
         >
           <Sidebar collapsible="none" className="bg-transparent">
             <SidebarContent>
-              {data.map((group, index) => (
-                <SidebarGroup key={index} className="border-b last:border-none">
-                  <SidebarGroupContent className="gap-0">
-                    <SidebarMenu>
-                      {group.map((item, index) => (
-                        <SidebarMenuItem key={index}>
-                          <SidebarMenuButton>
-                            {item.icon} <span>{item.label}</span>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      ))}
-                    </SidebarMenu>
-                  </SidebarGroupContent>
-                </SidebarGroup>
-              ))}
+              <SidebarGroup>
+                <SidebarGroupContent className="gap-0">
+                  <SidebarMenu>
+                    {moreActions.map((label) => (
+                      <SidebarMenuItem key={label}>
+                        <SidebarMenuButton>
+                          <span>{label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
             </SidebarContent>
           </Sidebar>
         </PopoverContent>
       </Popover>
+    </div>
+  )
+}
+
+function WorkspaceShareDialog({ workspaceId }: { workspaceId: string }) {
+  const { data: session } = useSession()
+  const { data: workspace } = useWorkspace(workspaceId)
+  const { data: accessLevel } = useWorkspaceAccessLevel(workspaceId)
+  const { data: accessPayload } = useWorkspaceAccess(workspaceId)
+  const { data: targets } = useWorkspaceAccessTargets(workspace?.organizationId)
+  const upsertAccess = useUpsertWorkspaceAccess()
+  const deleteAccess = useDeleteWorkspaceAccess()
+  const [targetValue, setTargetValue] = React.useState<ShareTargetValue | "">("")
+  const [targetPickerOpen, setTargetPickerOpen] = React.useState(false)
+  const [nextAccessLevel, setNextAccessLevel] =
+    React.useState<AccessLevel>("view")
+  const canManage = accessLevel === "full"
+  const shareableMembers = React.useMemo(
+    () =>
+      (targets?.members ?? []).filter(
+        (member) => member.id !== session?.user?.id,
+      ),
+    [session?.user?.id, targets?.members],
+  )
+  const targetByKey = React.useMemo(() => {
+    const map = new Map<string, { label: string; detail?: string }>()
+
+    for (const member of targets?.members ?? []) {
+      map.set(`user:${member.id}`, {
+        detail: member.email,
+        label: member.name || member.email,
+      })
+    }
+
+    return map
+  }, [targets?.members])
+  const rules = accessPayload?.access ?? []
+  const selectedTarget = targetValue ? targetByKey.get(targetValue) : null
+
+  const shareWorkspace = () => {
+    if (!targetValue || !workspace) {
+      return
+    }
+
+    const [targetType, targetId] = targetValue.split(":") as [
+      AccessTargetType,
+      string,
+    ]
+
+    upsertAccess.mutate(
+      {
+        accessLevel: nextAccessLevel,
+        targetId,
+        targetType,
+        workspaceId: workspace.id,
+      },
+      {
+        onSuccess: () => {
+          setTargetValue("")
+          toast.success("Workspace access updated.")
+        },
+        onError: (error) => {
+          toast.error(error instanceof Error ? error.message : "Could not share.")
+        },
+      },
+    )
+  }
+
+  const copyLink = async () => {
+    await navigator.clipboard.writeText(window.location.href)
+    toast.success("Workspace link copied.")
+  }
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button className="h-8 gap-2" size="sm" variant="outline">
+          <LockIcon />
+          Share
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle>Share workspace</DialogTitle>
+          <DialogDescription>
+            Access applies to this workspace and nested workspaces.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid gap-4">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Popover
+              open={targetPickerOpen}
+              onOpenChange={setTargetPickerOpen}
+            >
+              <PopoverTrigger asChild>
+                <Button
+                  className="min-w-0 flex-1 justify-between"
+                  disabled={!canManage}
+                  role="combobox"
+                  type="button"
+                  variant="outline"
+                >
+                  <span className="min-w-0 truncate text-left">
+                    {selectedTarget?.detail ?? "Search members"}
+                  </span>
+                  <ChevronsUpDownIcon className="opacity-60" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-[min(28rem,calc(100vw-3rem))] p-0">
+                <Command>
+                  <CommandInput placeholder="Search by name or email..." />
+                  <CommandList>
+                    <CommandEmpty>No members found.</CommandEmpty>
+                    <CommandGroup>
+                      {shareableMembers.map((member) => {
+                        const value: ShareTargetValue = `user:${member.id}`
+                        const label = member.name || member.email
+
+                        return (
+                          <CommandItem
+                            data-checked={targetValue === value}
+                            key={member.id}
+                            onSelect={() => {
+                              setTargetValue(value)
+                              setTargetPickerOpen(false)
+                            }}
+                            value={`${member.email} ${member.name}`}
+                          >
+                            <div className="min-w-0">
+                              <div className="truncate font-medium">{label}</div>
+                              <div className="truncate text-xs text-muted-foreground">
+                                {member.email}
+                              </div>
+                            </div>
+                          </CommandItem>
+                        )
+                      })}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+            <Select
+              disabled={!canManage}
+              onValueChange={(value) =>
+                setNextAccessLevel(value as AccessLevel)
+              }
+              value={nextAccessLevel}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="view">View</SelectItem>
+                <SelectItem value="edit">Edit</SelectItem>
+                <SelectItem value="full">Full</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              disabled={!canManage || !targetValue || upsertAccess.isPending}
+              onClick={shareWorkspace}
+              type="button"
+            >
+              <Share2Icon />
+              Share
+            </Button>
+          </div>
+
+          <div className="grid gap-2">
+            <AccessRow
+              detail={session?.user?.email}
+              label={session?.user?.name || "You"}
+              level={accessLevel ?? "view"}
+              suffix="You"
+            />
+            {rules.map((rule) => (
+              <RuleRow
+                canManage={canManage}
+                deleteRule={() =>
+                  deleteAccess.mutate(
+                    { ruleId: rule.id, workspaceId },
+                    {
+                      onError: (error) => {
+                        toast.error(
+                          error instanceof Error
+                            ? error.message
+                            : "Could not remove access.",
+                        )
+                      },
+                    },
+                  )
+                }
+                key={rule.id}
+                rule={rule}
+                target={targetByKey.get(`${rule.targetType}:${rule.targetId}`)}
+              />
+            ))}
+          </div>
+
+          {!canManage ? (
+            <div className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
+              You need full access to manage sharing for this workspace.
+            </div>
+          ) : null}
+
+          <div className="flex items-center gap-2">
+            <Input readOnly value={window.location.href} />
+            <Button onClick={copyLink} type="button" variant="outline">
+              <LinkIcon />
+              Copy link
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function RuleRow({
+  canManage,
+  deleteRule,
+  rule,
+  target,
+}: {
+  canManage: boolean
+  deleteRule: () => void
+  rule: WorkspaceAccessRule
+  target?: { detail?: string; label: string }
+}) {
+  return (
+    <div className="flex min-h-11 items-center gap-3 rounded-md border px-3 py-2">
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-sm font-medium">
+          {target?.label ?? "Unknown target"}
+        </div>
+        <div className="truncate text-xs text-muted-foreground">
+          {target?.detail ?? rule.targetType}
+        </div>
+      </div>
+      <span className="text-xs text-muted-foreground">
+        {accessLabels[rule.accessLevel]}
+      </span>
+      {canManage ? (
+        <Button
+          aria-label="Remove access"
+          onClick={deleteRule}
+          size="icon-sm"
+          type="button"
+          variant="ghost"
+        >
+          <Trash2Icon />
+        </Button>
+      ) : null}
+    </div>
+  )
+}
+
+function AccessRow({
+  detail,
+  label,
+  level,
+  suffix,
+}: {
+  detail?: string
+  label: string
+  level: AccessLevel
+  suffix?: string
+}) {
+  return (
+    <div className="flex min-h-11 items-center gap-3 rounded-md border px-3 py-2">
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-sm font-medium">
+          {label} {suffix ? <span className="text-muted-foreground">({suffix})</span> : null}
+        </div>
+        <div className="truncate text-xs text-muted-foreground">{detail}</div>
+      </div>
+      <span className="text-xs text-muted-foreground">
+        {accessLabels[level]}
+      </span>
     </div>
   )
 }

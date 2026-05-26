@@ -34,6 +34,7 @@ import { SearchIcon, SparklesIcon, HomeIcon, InboxIcon, CalendarIcon, Settings2I
 type WorkspaceTreeNode = {
   databaseId?: string | null
   id: string
+  isTeamspace: boolean
   name: string
   emoji: React.ReactNode
   pages: WorkspaceTreeNode[]
@@ -186,7 +187,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { data: workspaceRecords = [] } = useWorkspaces(organizationId)
   const createWorkspace = useCreateWorkspace()
   const addDatabaseRow = useAddDatabaseRow(organizationId)
-  const workspaces = buildWorkspaceTree(workspaceRecords)
+  const workspaceSections = buildWorkspaceTreeSections(workspaceRecords)
 
   const handleCreateWorkspace = async () => {
     if (!organizationId || createWorkspace.isPending) {
@@ -248,7 +249,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavWorkspaces
           onCreateWorkspace={handleCreateWorkspace}
           onDropPageOnDatabase={handleDropPageOnDatabase}
-          workspaces={workspaces}
+          privateWorkspaces={workspaceSections.privateWorkspaces}
+          teamspaceWorkspaces={workspaceSections.teamspaceWorkspaces}
         />
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
@@ -260,13 +262,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   )
 }
 
-function buildWorkspaceTree(workspaces: Workspace[]): WorkspaceTreeNode[] {
+function buildWorkspaceTreeSections(workspaces: Workspace[]) {
+  const orderedWorkspaces = [...workspaces].sort(
+    (first, second) =>
+      getWorkspaceCreatedTime(first) - getWorkspaceCreatedTime(second),
+  )
   const nodesById = new Map(
-    workspaces.map((workspace) => [
+    orderedWorkspaces.map((workspace) => [
       workspace.id,
       {
         databaseId: getWorkspaceDatabaseId(workspace),
         id: workspace.id,
+        isTeamspace: Boolean(workspace.isTeamspace),
         name: workspace.name,
         emoji: getWorkspaceEmoji(workspace),
         pages: [] as WorkspaceTreeNode[],
@@ -275,7 +282,7 @@ function buildWorkspaceTree(workspaces: Workspace[]): WorkspaceTreeNode[] {
   )
   const roots: WorkspaceTreeNode[] = []
 
-  for (const workspace of workspaces) {
+  for (const workspace of orderedWorkspaces) {
     const node = nodesById.get(workspace.id)
 
     if (!node) {
@@ -292,7 +299,16 @@ function buildWorkspaceTree(workspaces: Workspace[]): WorkspaceTreeNode[] {
     }
   }
 
-  return roots
+  return {
+    privateWorkspaces: roots.filter((workspace) => !workspace.isTeamspace),
+    teamspaceWorkspaces: roots.filter((workspace) => workspace.isTeamspace),
+  }
+}
+
+function getWorkspaceCreatedTime(workspace: Workspace) {
+  const time = new Date(workspace.createdAt).getTime()
+
+  return Number.isFinite(time) ? time : 0
 }
 
 function getWorkspaceDatabaseId(workspace: Workspace) {

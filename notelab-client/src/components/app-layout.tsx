@@ -171,7 +171,7 @@ function PaneHeaderContent({
       </div>
       {showActions ? (
         <div className="ml-auto px-3">
-          <NavActions />
+          <NavActions workspaceId={getWorkspaceId(pathname)} />
         </div>
       ) : null}
     </div>

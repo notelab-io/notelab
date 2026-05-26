@@ -24,6 +24,7 @@ import { DATABASE_PAGE_DRAG_MIME } from "@/packages/editor/extensions/database"
 type WorkspaceNavItem = {
   databaseId?: string | null
   id: string
+  isTeamspace: boolean
   name: string
   emoji: ReactNode
   pages: WorkspaceNavItem[]
@@ -39,11 +40,13 @@ type DatabaseDropInput = {
 export function NavWorkspaces({
   onCreateWorkspace,
   onDropPageOnDatabase,
-  workspaces,
+  privateWorkspaces,
+  teamspaceWorkspaces,
 }: {
   onCreateWorkspace: () => void
   onDropPageOnDatabase?: (input: DatabaseDropInput) => void
-  workspaces: WorkspaceNavItem[]
+  privateWorkspaces: WorkspaceNavItem[]
+  teamspaceWorkspaces: WorkspaceNavItem[]
 }) {
   const location = useLocation()
   const [databaseDropTargetId, setDatabaseDropTargetId] = useState<
@@ -51,15 +54,60 @@ export function NavWorkspaces({
   >(null)
 
   return (
+    <>
+      <WorkspaceSection
+        databaseDropTargetId={databaseDropTargetId}
+        label="Private"
+        onCreateWorkspace={onCreateWorkspace}
+        onDatabaseDropTargetChange={setDatabaseDropTargetId}
+        onDropPageOnDatabase={onDropPageOnDatabase}
+        pathname={location.pathname}
+        showCreateAction
+        workspaces={privateWorkspaces}
+      />
+      <WorkspaceSection
+        databaseDropTargetId={databaseDropTargetId}
+        label="Team"
+        onDatabaseDropTargetChange={setDatabaseDropTargetId}
+        onDropPageOnDatabase={onDropPageOnDatabase}
+        pathname={location.pathname}
+        workspaces={teamspaceWorkspaces}
+      />
+    </>
+  )
+}
+
+function WorkspaceSection({
+  databaseDropTargetId,
+  label,
+  onCreateWorkspace,
+  onDatabaseDropTargetChange,
+  onDropPageOnDatabase,
+  pathname,
+  showCreateAction = false,
+  workspaces,
+}: {
+  databaseDropTargetId: string | null
+  label: string
+  onCreateWorkspace?: () => void
+  onDatabaseDropTargetChange: (workspaceId: string | null) => void
+  onDropPageOnDatabase?: (input: DatabaseDropInput) => void
+  pathname: string
+  showCreateAction?: boolean
+  workspaces: WorkspaceNavItem[]
+}) {
+  return (
     <SidebarGroup>
-      <SidebarGroupLabel>Workspaces</SidebarGroupLabel>
-      <SidebarGroupAction
-        aria-label="Create workspace"
-        title="Create workspace"
-        onClick={onCreateWorkspace}
-      >
-        <PlusIcon />
-      </SidebarGroupAction>
+      <SidebarGroupLabel>{label}</SidebarGroupLabel>
+      {showCreateAction ? (
+        <SidebarGroupAction
+          aria-label="Create workspace"
+          title="Create workspace"
+          onClick={onCreateWorkspace}
+        >
+          <PlusIcon />
+        </SidebarGroupAction>
+      ) : null}
       <SidebarGroupContent>
         <SidebarMenu>
           {workspaces.map((workspace) => (
@@ -68,18 +116,26 @@ export function NavWorkspaces({
               isRoot
               item={workspace}
               key={workspace.id}
-              onDatabaseDropTargetChange={setDatabaseDropTargetId}
+              onDatabaseDropTargetChange={onDatabaseDropTargetChange}
               onDropPageOnDatabase={onDropPageOnDatabase}
-              pathname={location.pathname}
+              pathname={pathname}
             />
           ))}
-          <SidebarMenuItem>
-            <SidebarMenuButton className="text-sidebar-foreground/70">
-              <MoreHorizontalIcon
-              />
-              <span>More</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+          {workspaces.length === 0 ? (
+            <SidebarMenuItem>
+              <SidebarMenuButton className="text-sidebar-foreground/50">
+                <span>No workspaces</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ) : null}
+          {workspaces.length > 0 ? (
+            <SidebarMenuItem>
+              <SidebarMenuButton className="text-sidebar-foreground/70">
+                <MoreHorizontalIcon />
+                <span>More</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ) : null}
         </SidebarMenu>
       </SidebarGroupContent>
     </SidebarGroup>
