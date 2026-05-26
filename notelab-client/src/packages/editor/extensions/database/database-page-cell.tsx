@@ -12,7 +12,7 @@ export function DatabasePageCell({
   pageId: string
 }) {
   const { closeSidePane, sidePaneWorkspaceId } = useWorkspaceSidePane()
-  const { data: page } = useWorkspace(pageId)
+  const { data: page, isLoading } = useWorkspace(pageId)
   const isOpen = sidePaneWorkspaceId === pageId
   const title = page?.name.trim() || "Untitled"
   const emoji = page ? getWorkspaceEmoji(page) : null
@@ -30,16 +30,22 @@ export function DatabasePageCell({
     <div className="database-page-link">
       <span className="database-page-main">
         <span className="database-page-icon">{emoji || <FileText />}</span>
-        <span className="database-page-title">{title}</span>
+        <span className="database-page-title">
+          {!isLoading && !page
+            ? "You don't have access to this block"
+            : title}
+        </span>
       </span>
-      <button
-        className="database-page-open"
-        onClick={handleClick}
-        type="button"
-      >
-        {isOpen ? <X /> : <ExternalLink />}
-        <span>{actionLabel}</span>
-      </button>
+      {page ? (
+        <button
+          className="database-page-open"
+          onClick={handleClick}
+          type="button"
+        >
+          {isOpen ? <X /> : <ExternalLink />}
+          <span>{actionLabel}</span>
+        </button>
+      ) : null}
     </div>
   )
 }

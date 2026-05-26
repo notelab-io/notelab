@@ -25,6 +25,7 @@ import {
 } from "../../extensions/database/utils"
 
 type WorkspaceMetadataProps = {
+  editable?: boolean
   icon?: string
   onIconChange?: (icon: string) => void
   onTitleChange?: (title: string) => void
@@ -33,6 +34,7 @@ type WorkspaceMetadataProps = {
 }
 
 export function WorkspaceMetadata({
+  editable = true,
   icon: iconProp,
   onIconChange,
   onTitleChange,
@@ -66,6 +68,10 @@ export function WorkspaceMetadata({
   }, [propertyPayload?.properties, propertyPayload?.values])
 
   const updateIcon = (nextIcon: string) => {
+    if (!editable) {
+      return
+    }
+
     onIconChange?.(nextIcon)
 
     if (iconProp === undefined) {
@@ -74,6 +80,10 @@ export function WorkspaceMetadata({
   }
 
   const updateTitle = (nextTitle: string) => {
+    if (!editable) {
+      return
+    }
+
     onTitleChange?.(nextTitle)
 
     if (titleProp === undefined) {
@@ -88,6 +98,7 @@ export function WorkspaceMetadata({
           <button
             aria-label="Change workspace icon"
             className="flex size-11 items-center justify-center rounded-md text-3xl transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none"
+            disabled={!editable}
             type="button"
           >
             {icon}
@@ -119,6 +130,7 @@ export function WorkspaceMetadata({
           updateIcon("")
           setIconOpen(false)
         }}
+        disabled={!editable}
         type="button"
       >
         <X />
@@ -129,6 +141,7 @@ export function WorkspaceMetadata({
       <PopoverTrigger asChild>
         <button
           className="inline-flex h-7 items-center gap-1 rounded-md px-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none [&_svg]:size-4"
+          disabled={!editable}
           type="button"
         >
           <SmilePlus />
@@ -164,6 +177,7 @@ export function WorkspaceMetadata({
             aria-label="Remove cover"
             className="absolute right-3 top-3 flex size-7 items-center justify-center rounded-md bg-background/80 text-muted-foreground shadow-sm backdrop-blur transition-colors hover:bg-background hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none [&_svg]:size-4"
             onClick={() => setCoverVisible(false)}
+            disabled={!editable}
             type="button"
           >
             <X />
@@ -178,6 +192,7 @@ export function WorkspaceMetadata({
             <button
               className="inline-flex h-7 items-center gap-1 rounded-md px-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none [&_svg]:size-4"
               onClick={() => setCoverVisible(true)}
+              disabled={!editable}
               type="button"
             >
               <ImagePlus />
@@ -193,6 +208,7 @@ export function WorkspaceMetadata({
             className="h-auto min-w-0 border-0 bg-transparent px-0 py-0 text-3xl font-semibold leading-tight tracking-normal text-foreground shadow-none placeholder:text-muted-foreground/40 focus-visible:ring-0 md:text-3xl dark:bg-transparent"
             onChange={(event) => updateTitle(event.target.value)}
             placeholder="New workspace"
+            readOnly={!editable}
             value={title}
           />
         </div>
@@ -217,7 +233,7 @@ export function WorkspaceMetadata({
                     aria-label={property.name}
                     className="h-8 min-w-0 rounded-md border-0 bg-transparent px-2 py-1 text-sm text-foreground shadow-none placeholder:text-muted-foreground focus-visible:bg-muted focus-visible:ring-0 dark:bg-transparent"
                     onBlur={() => {
-                      if (!workspaceId) {
+                      if (!workspaceId || !editable) {
                         return
                       }
 
@@ -228,10 +244,12 @@ export function WorkspaceMetadata({
                       })
                     }}
                     onChange={(event) =>
-                      setDraftValues((drafts) => ({
-                        ...drafts,
-                        [property.id]: event.target.value,
-                      }))
+                      editable
+                        ? setDraftValues((drafts) => ({
+                            ...drafts,
+                            [property.id]: event.target.value,
+                          }))
+                        : undefined
                     }
                     onKeyDown={(event) => {
                       if (event.key === "Enter") {
@@ -239,6 +257,7 @@ export function WorkspaceMetadata({
                       }
                     }}
                     placeholder="Empty"
+                    readOnly={!editable}
                     value={value}
                   />
                 </div>

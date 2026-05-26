@@ -15,6 +15,7 @@ import {
   useUpdateWorkspace,
   useCreateWorkspace,
   useWorkspace,
+  useWorkspaceAccessLevel,
 } from "@/features/workspaces/hooks"
 import { Editor } from "@/packages/editor"
 
@@ -72,6 +73,7 @@ function WorkspaceEditorPane({
   workspaceId,
 }: WorkspaceEditorPaneProps) {
   const { data: workspace, isLoading } = useWorkspace(workspaceId)
+  const { data: accessLevel } = useWorkspaceAccessLevel(workspaceId)
   const createWorkspace = useCreateWorkspace()
   const updateWorkspace = useUpdateWorkspace()
   const contentSaveTimeoutRef = useRef<number | null>(null)
@@ -120,7 +122,11 @@ function WorkspaceEditorPane({
   }, [flushContentSaveTimeout, workspaceId])
 
   useEffect(() => {
-    if (!workspace || name.trim() === workspace.name) {
+    if (
+      !workspace ||
+      (accessLevel !== "edit" && accessLevel !== "full") ||
+      name.trim() === workspace.name
+    ) {
       return
     }
 
@@ -129,12 +135,12 @@ function WorkspaceEditorPane({
     }, 600)
 
     return () => window.clearTimeout(timeout)
-  }, [name, updateWorkspace, workspace])
+  }, [accessLevel, name, updateWorkspace, workspace])
 
   const updateEmoji = (nextEmoji: string) => {
     setEmoji(nextEmoji)
 
-    if (!workspace) {
+    if (!workspace || (accessLevel !== "edit" && accessLevel !== "full")) {
       return
     }
 
@@ -152,6 +158,9 @@ function WorkspaceEditorPane({
       if (!workspace) {
         return
       }
+      if (accessLevel !== "edit" && accessLevel !== "full") {
+        return
+      }
 
       clearContentSaveTimeout()
       pendingContentRef.current = content
@@ -162,11 +171,11 @@ function WorkspaceEditorPane({
         pendingContentRef.current = null
       }, 800)
     },
-    [clearContentSaveTimeout, updateWorkspace, workspace],
+    [accessLevel, clearContentSaveTimeout, updateWorkspace, workspace],
   )
 
   const createNestedPage = useCallback(async () => {
-    if (!workspace) {
+    if (!workspace || (accessLevel !== "edit" && accessLevel !== "full")) {
       throw new Error("Workspace is required")
     }
 
@@ -177,7 +186,7 @@ function WorkspaceEditorPane({
       organizationId: workspace.organizationId,
       parentWorkspaceId: workspace.id,
     })
-  }, [createWorkspace, workspace])
+  }, [accessLevel, createWorkspace, workspace])
 
   if (isLoading) {
     return (
@@ -202,6 +211,7 @@ function WorkspaceEditorPane({
       <Editor
         key={workspace.id}
         content={workspace.content ?? ""}
+        editable={accessLevel === "edit" || accessLevel === "full"}
         emoji={emoji}
         onContentChange={updateContent}
         onCreatePage={createNestedPage}

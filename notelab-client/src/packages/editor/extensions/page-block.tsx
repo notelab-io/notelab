@@ -48,7 +48,7 @@ function PageBlockView({
   const [isOpen, setIsOpen] = useState(shouldOpenPicker)
   const [selectedIndex, setSelectedIndex] = useState(0)
   const optionRefs = useRef<Array<HTMLButtonElement | null>>([])
-  const { data: page } = useWorkspace(pageId)
+  const { data: page, isLoading: isPageLoading } = useWorkspace(pageId)
   const title = page?.name.trim() || "Untitled"
   const emoji = page ? getWorkspaceEmoji(page) : null
   const options = extension.options as PageBlockOptions
@@ -195,7 +195,20 @@ function PageBlockView({
       data-page-id={pageId ?? undefined}
       data-src={pageId ? "true" : "false"}
     >
-      {pageId ? (
+      {pageId && !isPageLoading && !page ? (
+        <div
+          className="page-block-preview text-muted-foreground"
+          contentEditable={false}
+          style={cardStyle}
+        >
+          <span className="page-block-icon">
+            <FileText />
+          </span>
+          <span className="page-block-title">
+            You don't have access to this block
+          </span>
+        </div>
+      ) : pageId ? (
         <button
           className="page-block-preview"
           contentEditable={false}

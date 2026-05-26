@@ -130,6 +130,7 @@ const dragHandleNestedOptions: NestedOptions = {
 type EditorProps = {
   content?: unknown
   emoji?: string
+  editable?: boolean
   onContentChange?: (content: unknown) => void
   onCreatePage?: () => Promise<CreatedPage>
   onEmojiChange?: (emoji: string) => void
@@ -302,6 +303,7 @@ function isMobileViewport() {
 
 export function Editor({
   content = starterContent,
+  editable = true,
   emoji,
   onContentChange,
   onCreatePage,
@@ -466,7 +468,12 @@ export function Editor({
       }),
     ],
     content: normalizeEditorContent(content),
+    editable,
     onUpdate: ({ editor }) => {
+      if (!editable) {
+        return
+      }
+
       onContentChange?.(editor.getJSON())
     },
     editorProps: {
@@ -533,6 +540,10 @@ export function Editor({
     }
 
   }, [editor, onOpenPage, workspaceId])
+
+  useEffect(() => {
+    editor?.setEditable(editable)
+  }, [editable, editor])
 
   useEffect(() => {
     if (!editor) {
@@ -918,6 +929,7 @@ export function Editor({
         <SelectionBubbleMenu editor={editor} runCommand={runCommand} />
         <TableControls editor={editor} />
         <WorkspaceMetadata
+          editable={editable}
           icon={emoji}
           onIconChange={onEmojiChange}
           onTitleChange={onTitleChange}
