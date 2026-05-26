@@ -1,26 +1,99 @@
+"use client"
+
 import * as React from "react"
 import { Popover as PopoverPrimitive } from "radix-ui"
 
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
 
+const PopoverContext = React.createContext<{ isMobile: boolean }>({
+  isMobile: false,
+})
+
 function Popover({
+  children,
   ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Root>) {
-  return <PopoverPrimitive.Root data-slot="popover" {...props} />
+  const isMobile = useIsMobile()
+  const PopoverComponent = isMobile ? Drawer : PopoverPrimitive.Root
+
+  return (
+    <PopoverContext.Provider value={{ isMobile }}>
+      <PopoverComponent data-slot="popover" {...props}>
+        {children}
+      </PopoverComponent>
+    </PopoverContext.Provider>
+  )
 }
 
 function PopoverTrigger({
   ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Trigger>) {
-  return <PopoverPrimitive.Trigger data-slot="popover-trigger" {...props} />
+  const { isMobile } = React.useContext(PopoverContext)
+  const TriggerComponent = isMobile ? DrawerTrigger : PopoverPrimitive.Trigger
+
+  return <TriggerComponent data-slot="popover-trigger" {...props} />
 }
 
 function PopoverContent({
   className,
+  children,
   align = "center",
   sideOffset = 4,
   ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Content>) {
+  const { isMobile } = React.useContext(PopoverContext)
+  const {
+    align: _align,
+    side: _side,
+    sideOffset: _sideOffset,
+    alignOffset: _alignOffset,
+    avoidCollisions: _avoidCollisions,
+    collisionBoundary: _collisionBoundary,
+    collisionPadding: _collisionPadding,
+    sticky: _sticky,
+    hideWhenDetached: _hideWhenDetached,
+    updatePositionStrategy: _updatePositionStrategy,
+    onOpenAutoFocus: _onOpenAutoFocus,
+    onCloseAutoFocus: _onCloseAutoFocus,
+    onEscapeKeyDown: _onEscapeKeyDown,
+    onPointerDownOutside: _onPointerDownOutside,
+    onFocusOutside: _onFocusOutside,
+    onInteractOutside: _onInteractOutside,
+    ...drawerContentProps
+  } = props as React.ComponentProps<typeof PopoverPrimitive.Content> &
+    React.ComponentProps<typeof DrawerContent>
+
+  if (isMobile) {
+    return (
+      <DrawerContent
+        data-slot="popover-content"
+        className="max-h-[85vh] bg-popover px-1 pb-2 text-popover-foreground"
+        {...drawerContentProps}
+      >
+        <DrawerHeader className="sr-only">
+          <DrawerTitle>Popover</DrawerTitle>
+        </DrawerHeader>
+        <div
+          className={cn(
+            "max-h-[70vh] w-full max-w-none overflow-y-auto text-sm",
+            className,
+            "max-h-[70vh] w-full max-w-none"
+          )}
+        >
+          {children}
+        </div>
+      </DrawerContent>
+    )
+  }
+
   return (
     <PopoverPrimitive.Portal>
       <PopoverPrimitive.Content
@@ -32,7 +105,9 @@ function PopoverContent({
           className
         )}
         {...props}
-      />
+      >
+        {children}
+      </PopoverPrimitive.Content>
     </PopoverPrimitive.Portal>
   )
 }
@@ -40,6 +115,12 @@ function PopoverContent({
 function PopoverAnchor({
   ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Anchor>) {
+  const { isMobile } = React.useContext(PopoverContext)
+
+  if (isMobile) {
+    return <div data-slot="popover-anchor" {...props} />
+  }
+
   return <PopoverPrimitive.Anchor data-slot="popover-anchor" {...props} />
 }
 
