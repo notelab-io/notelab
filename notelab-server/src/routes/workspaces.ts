@@ -185,6 +185,41 @@ const getNestedWorkspaceIds = async (
   return [...nestedIds];
 };
 
+const getNestedFavoriteTargetIds = async (
+  rootWorkspaceId: string,
+  organizationId: string,
+  accessibleIds: Set<string>,
+) => {
+  const workspaceIds = await getNestedWorkspaceIds(
+    rootWorkspaceId,
+    organizationId,
+    accessibleIds,
+  );
+  const workspaceIdSet = new Set(workspaceIds);
+  const databaseRecords = await db
+    .select({
+      id: database.id,
+      pageId: database.pageId,
+    })
+    .from(database)
+    .where(
+      and(
+        eq(database.organizationId, organizationId),
+        isNull(database.deletedAt),
+      ),
+    );
+
+  return {
+    databaseIds: databaseRecords
+      .filter(
+        (record) =>
+          workspaceIdSet.has(record.pageId) && accessibleIds.has(record.pageId),
+      )
+      .map((record) => record.id),
+    workspaceIds,
+  };
+};
+
 workspaceRoutes.get("/", async (c) => {
   const user = requireUser(c);
 
@@ -218,14 +253,24 @@ workspaceRoutes.get("/", async (c) => {
     .from(workspaceAccess)
     .where(eq(workspaceAccess.organizationId, organizationId));
   const favoriteRows = await db
-    .select({ workspaceId: favorite.workspaceId })
+    .select({
+      databaseId: favorite.databaseId,
+      workspaceId: favorite.workspaceId,
+    })
     .from(favorite)
     .where(eq(favorite.userId, user.id));
   const teamspaceIds = new Set(
     sharedWorkspaceRows.map((row) => row.workspaceId),
   );
   const favoriteWorkspaceIds = new Set(
-    favoriteRows.map((row) => row.workspaceId),
+    favoriteRows
+      .map((row) => row.workspaceId)
+      .filter((workspaceId): workspaceId is string => Boolean(workspaceId)),
+  );
+  const favoriteDatabaseIds = new Set(
+    favoriteRows
+      .map((row) => row.databaseId)
+      .filter((databaseId): databaseId is string => Boolean(databaseId)),
   );
   const accessibleRecords = records.filter((record) =>
     accessibleIds.has(record.id),
@@ -269,6 +314,7 @@ workspaceRoutes.get("/", async (c) => {
     string,
     Array<
       (typeof activeDatabases)[number] & {
+        isFavorite: boolean;
         rows: typeof databaseRows;
       }
     >
@@ -281,7 +327,7 @@ workspaceRoutes.get("/", async (c) => {
 
     databasesByPageId.set(record.pageId, [
       ...(databasesByPageId.get(record.pageId) ?? []),
-      { ...record, rows },
+      { ...record, isFavorite: favoriteDatabaseIds.has(record.id), rows },
     ]);
   }
 
@@ -430,24 +476,43 @@ workspaceRoutes.put("/:id/favorite", async (c) => {
     record.organizationId,
     user.id,
   );
-  const nestedWorkspaceIds = await getNestedWorkspaceIds(
+  const { databaseIds, workspaceIds } = await getNestedFavoriteTargetIds(
     record.id,
     record.organizationId,
     accessibleIds,
   );
 
-  await db
-    .insert(favorite)
-    .values(
-      nestedWorkspaceIds.map((workspaceId) => ({
-        id: crypto.randomUUID(),
-        userId: user.id,
-        workspaceId,
-      })),
-    )
-    .onConflictDoNothing({
-      target: [favorite.userId, favorite.workspaceId],
-    });
+  await db.transaction(async (tx) => {
+    if (workspaceIds.length > 0) {
+      await tx
+        .insert(favorite)
+        .values(
+          workspaceIds.map((workspaceId) => ({
+            id: crypto.randomUUID(),
+            userId: user.id,
+            workspaceId,
+          })),
+        )
+        .onConflictDoNothing({
+          target: [favorite.userId, favorite.workspaceId],
+        });
+    }
+
+    if (databaseIds.length > 0) {
+      await tx
+        .insert(favorite)
+        .values(
+          databaseIds.map((databaseId) => ({
+            databaseId,
+            id: crypto.randomUUID(),
+            userId: user.id,
+          })),
+        )
+        .onConflictDoNothing({
+          target: [favorite.userId, favorite.databaseId],
+        });
+    }
+  });
 
   return c.json({ workspace: { ...record, isFavorite: true } });
 });
@@ -473,20 +538,35 @@ workspaceRoutes.delete("/:id/favorite", async (c) => {
     record.organizationId,
     user.id,
   );
-  const nestedWorkspaceIds = await getNestedWorkspaceIds(
+  const { databaseIds, workspaceIds } = await getNestedFavoriteTargetIds(
     record.id,
     record.organizationId,
     accessibleIds,
   );
 
-  await db
-    .delete(favorite)
-    .where(
-      and(
-        eq(favorite.userId, user.id),
-        inArray(favorite.workspaceId, nestedWorkspaceIds),
-      ),
-    );
+  await db.transaction(async (tx) => {
+    if (workspaceIds.length > 0) {
+      await tx
+        .delete(favorite)
+        .where(
+          and(
+            eq(favorite.userId, user.id),
+            inArray(favorite.workspaceId, workspaceIds),
+          ),
+        );
+    }
+
+    if (databaseIds.length > 0) {
+      await tx
+        .delete(favorite)
+        .where(
+          and(
+            eq(favorite.userId, user.id),
+            inArray(favorite.databaseId, databaseIds),
+          ),
+        );
+    }
+  });
 
   return c.json({ workspace: { ...record, isFavorite: false } });
 });

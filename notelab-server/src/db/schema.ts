@@ -196,9 +196,12 @@ export const favorite = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    workspaceId: text("workspace_id")
-      .notNull()
-      .references(() => workspace.id, { onDelete: "cascade" }),
+    workspaceId: text("workspace_id").references(() => workspace.id, {
+      onDelete: "cascade",
+    }),
+    databaseId: text("database_id").references(() => database.id, {
+      onDelete: "cascade",
+    }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .$defaultFn(() => new Date())
       .notNull(),
@@ -206,9 +209,14 @@ export const favorite = pgTable(
   (table) => [
     index("favorites_user_id_idx").on(table.userId),
     index("favorites_workspace_id_idx").on(table.workspaceId),
+    index("favorites_database_id_idx").on(table.databaseId),
     uniqueIndex("favorites_user_workspace_unique").on(
       table.userId,
       table.workspaceId,
+    ),
+    uniqueIndex("favorites_user_database_unique").on(
+      table.userId,
+      table.databaseId,
     ),
   ],
 );

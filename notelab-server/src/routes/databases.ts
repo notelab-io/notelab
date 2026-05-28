@@ -1,13 +1,14 @@
 import { and, asc, eq, gte, inArray, isNull, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Context } from "hono";
-import { canAccessWorkspace } from "../access";
+import { canAccessWorkspace, getAccessibleWorkspaceIds } from "../access";
 import { db } from "../db";
 import {
   database,
   databaseProperty,
   databaseRow,
   databaseView,
+  favorite,
   workspace,
   workspaceProperty,
   workspacePropertyValue,
@@ -47,6 +48,118 @@ const getDatabaseRecord = async (id: string) => {
     .limit(1);
 
   return record;
+};
+
+const readParentWorkspaceId = (metadata: unknown) => {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return null;
+  }
+
+  const parentWorkspaceId = (metadata as { parentWorkspaceId?: unknown })
+    .parentWorkspaceId;
+
+  return typeof parentWorkspaceId === "string" && parentWorkspaceId.length > 0
+    ? parentWorkspaceId
+    : null;
+};
+
+const getNestedDatabasePageIds = async (
+  rootDatabaseId: string,
+  organizationId: string,
+  accessibleIds: Set<string>,
+) => {
+  const [workspaceRecords, databaseRecords, databaseRows] = await Promise.all([
+    db
+      .select({
+        id: workspace.id,
+        metadata: workspace.metadata,
+      })
+      .from(workspace)
+      .where(
+        and(
+          eq(workspace.organizationId, organizationId),
+          isNull(workspace.deletedAt),
+        ),
+      ),
+    db
+      .select({
+        id: database.id,
+        pageId: database.pageId,
+      })
+      .from(database)
+      .where(
+        and(
+          eq(database.organizationId, organizationId),
+          isNull(database.deletedAt),
+        ),
+      ),
+    db
+      .select({
+        databaseId: databaseRow.databaseId,
+        pageId: databaseRow.pageId,
+      })
+      .from(databaseRow)
+      .where(isNull(databaseRow.deletedAt)),
+  ]);
+  const childIdsByParentId = new Map<string, Set<string>>();
+  const rootPageIds = new Set<string>();
+
+  for (const record of workspaceRecords) {
+    const parentWorkspaceId = readParentWorkspaceId(record.metadata);
+
+    if (!parentWorkspaceId) {
+      continue;
+    }
+
+    const childIds = childIdsByParentId.get(parentWorkspaceId) ?? new Set();
+
+    childIds.add(record.id);
+    childIdsByParentId.set(parentWorkspaceId, childIds);
+  }
+
+  const databasePageIdByDatabaseId = new Map(
+    databaseRecords.map((record) => [record.id, record.pageId]),
+  );
+
+  for (const row of databaseRows) {
+    if (row.databaseId === rootDatabaseId) {
+      rootPageIds.add(row.pageId);
+    }
+
+    const parentWorkspaceId = databasePageIdByDatabaseId.get(row.databaseId);
+
+    if (!parentWorkspaceId) {
+      continue;
+    }
+
+    const childIds = childIdsByParentId.get(parentWorkspaceId) ?? new Set();
+
+    childIds.add(row.pageId);
+    childIdsByParentId.set(parentWorkspaceId, childIds);
+  }
+
+  const nestedIds = new Set<string>();
+  const pendingIds = [...rootPageIds];
+
+  while (pendingIds.length > 0) {
+    const workspaceId = pendingIds.shift();
+
+    if (
+      !workspaceId ||
+      nestedIds.has(workspaceId) ||
+      !accessibleIds.has(workspaceId)
+    ) {
+      continue;
+    }
+
+    nestedIds.add(workspaceId);
+
+    for (const childId of childIdsByParentId.get(workspaceId) ?? []) {
+      pendingIds.push(childId);
+    }
+  }
+
+  return [...nestedIds];
 };
 
 type StatusOption = {
@@ -98,7 +211,7 @@ const getStatusDefaultValue = (config: unknown) => {
   return options[0]?.name ?? null;
 };
 
-const getDatabasePayload = async (id: string) => {
+const getDatabasePayload = async (id: string, userId?: string) => {
   const record = await getDatabaseRecord(id);
 
   if (!record) {
@@ -163,9 +276,16 @@ const getDatabasePayload = async (id: string) => {
             ),
           )
       : [];
+  const [favoriteRecord] = userId
+    ? await db
+        .select({ id: favorite.id })
+        .from(favorite)
+        .where(and(eq(favorite.userId, userId), eq(favorite.databaseId, id)))
+        .limit(1)
+    : [];
 
   return {
-    database: record,
+    database: { ...record, isFavorite: Boolean(favoriteRecord) },
     properties: properties.map(({ column, property }) => ({
       ...column,
       property,
@@ -252,7 +372,7 @@ databaseRoutes.post("/", async (c) => {
     });
   });
 
-  const payload = await getDatabasePayload(databaseId);
+  const payload = await getDatabasePayload(databaseId, user.id);
 
   return c.json(payload, 201);
 });
@@ -264,7 +384,7 @@ databaseRoutes.get("/:id", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const payload = await getDatabasePayload(c.req.param("id"));
+  const payload = await getDatabasePayload(c.req.param("id"), user.id);
 
   if (!payload) {
     return c.json({ error: "Database not found" }, 404);
@@ -273,6 +393,117 @@ databaseRoutes.get("/:id", async (c) => {
   if (!(await canAccessWorkspace(payload.database.pageId, user.id, "view"))) {
     return c.json({ error: "Forbidden" }, 403);
   }
+
+  return c.json(payload);
+});
+
+databaseRoutes.put("/:id/favorite", async (c) => {
+  const user = requireUser(c);
+
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const existing = await getDatabaseRecord(c.req.param("id"));
+
+  if (!existing) {
+    return c.json({ error: "Database not found" }, 404);
+  }
+
+  if (!(await canAccessWorkspace(existing.pageId, user.id, "view"))) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  const accessibleIds = await getAccessibleWorkspaceIds(
+    existing.organizationId,
+    user.id,
+  );
+  const nestedPageIds = await getNestedDatabasePageIds(
+    existing.id,
+    existing.organizationId,
+    accessibleIds,
+  );
+
+  await db.transaction(async (tx) => {
+    await tx
+      .insert(favorite)
+      .values({
+        databaseId: existing.id,
+        id: crypto.randomUUID(),
+        userId: user.id,
+      })
+      .onConflictDoNothing({
+        target: [favorite.userId, favorite.databaseId],
+      });
+
+    if (nestedPageIds.length > 0) {
+      await tx
+        .insert(favorite)
+        .values(
+          nestedPageIds.map((workspaceId) => ({
+            id: crypto.randomUUID(),
+            userId: user.id,
+            workspaceId,
+          })),
+        )
+        .onConflictDoNothing({
+          target: [favorite.userId, favorite.workspaceId],
+        });
+    }
+  });
+
+  const payload = await getDatabasePayload(existing.id, user.id);
+
+  return c.json(payload);
+});
+
+databaseRoutes.delete("/:id/favorite", async (c) => {
+  const user = requireUser(c);
+
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const existing = await getDatabaseRecord(c.req.param("id"));
+
+  if (!existing) {
+    return c.json({ error: "Database not found" }, 404);
+  }
+
+  if (!(await canAccessWorkspace(existing.pageId, user.id, "view"))) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  const accessibleIds = await getAccessibleWorkspaceIds(
+    existing.organizationId,
+    user.id,
+  );
+  const nestedPageIds = await getNestedDatabasePageIds(
+    existing.id,
+    existing.organizationId,
+    accessibleIds,
+  );
+
+  await db.transaction(async (tx) => {
+    await tx
+      .delete(favorite)
+      .where(
+        and(eq(favorite.userId, user.id), eq(favorite.databaseId, existing.id)),
+      );
+
+    if (nestedPageIds.length > 0) {
+      await tx
+        .delete(favorite)
+        .where(
+          and(
+            eq(favorite.userId, user.id),
+            inArray(favorite.workspaceId, nestedPageIds),
+          ),
+        );
+    }
+  });
+
+  const payload = await getDatabasePayload(existing.id, user.id);
 
   return c.json(payload);
 });
@@ -319,7 +550,7 @@ databaseRoutes.patch("/:id", async (c) => {
 
   await db.update(database).set(values).where(eq(database.id, existing.id));
 
-  const payload = await getDatabasePayload(existing.id);
+  const payload = await getDatabasePayload(existing.id, user.id);
 
   return c.json(payload);
 });
@@ -374,7 +605,7 @@ databaseRoutes.post("/:id/properties", async (c) => {
     });
   });
 
-  const payload = await getDatabasePayload(existing.id);
+  const payload = await getDatabasePayload(existing.id, user.id);
 
   return c.json(payload, 201);
 });
@@ -502,7 +733,7 @@ databaseRoutes.patch("/:id/properties/:databasePropertyId", async (c) => {
     }
   });
 
-  const payload = await getDatabasePayload(existing.id);
+  const payload = await getDatabasePayload(existing.id, user.id);
 
   return c.json(payload);
 });
@@ -700,7 +931,7 @@ databaseRoutes.post("/:id/rows", async (c) => {
     }
   });
 
-  const payload = await getDatabasePayload(existing.id);
+  const payload = await getDatabasePayload(existing.id, user.id);
 
   return c.json(payload, 201);
 });
@@ -763,7 +994,7 @@ databaseRoutes.patch("/:id/rows/reorder", async (c) => {
     );
   });
 
-  const payload = await getDatabasePayload(existing.id);
+  const payload = await getDatabasePayload(existing.id, user.id);
 
   return c.json(payload);
 });
@@ -846,7 +1077,7 @@ databaseRoutes.put("/:id/rows/:rowId/properties/:propertyId", async (c) => {
       },
     });
 
-  const payload = await getDatabasePayload(existing.id);
+  const payload = await getDatabasePayload(existing.id, user.id);
 
   return c.json(payload);
 });
