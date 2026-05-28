@@ -18,15 +18,23 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar"
-import { ChevronRightIcon, PlusIcon, MoreHorizontalIcon } from "lucide-react"
+import {
+  ArrowUpRightIcon,
+  ChevronRightIcon,
+  MoreHorizontalIcon,
+  PlusIcon,
+} from "lucide-react"
 import { DATABASE_PAGE_DRAG_MIME } from "@/packages/editor/extensions/database"
 
 type WorkspaceNavItem = {
   databaseId?: string | null
   id: string
+  isDatabase?: boolean
+  isLinked?: boolean
   isTeamspace: boolean
   name: string
   emoji: ReactNode
+  workspaceId: string
   pages: WorkspaceNavItem[]
 }
 
@@ -49,6 +57,7 @@ export function NavWorkspaces({
   teamspaceWorkspaces: WorkspaceNavItem[]
 }) {
   const location = useLocation()
+  const activeWorkspaceId = getActiveWorkspaceId(location.pathname)
   const [databaseDropTargetId, setDatabaseDropTargetId] = useState<
     string | null
   >(null)
@@ -56,21 +65,21 @@ export function NavWorkspaces({
   return (
     <>
       <WorkspaceSection
+        activeWorkspaceId={activeWorkspaceId}
         databaseDropTargetId={databaseDropTargetId}
         label="Private"
         onCreateWorkspace={onCreateWorkspace}
         onDatabaseDropTargetChange={setDatabaseDropTargetId}
         onDropPageOnDatabase={onDropPageOnDatabase}
-        pathname={location.pathname}
         showCreateAction
         workspaces={privateWorkspaces}
       />
       <WorkspaceSection
+        activeWorkspaceId={activeWorkspaceId}
         databaseDropTargetId={databaseDropTargetId}
         label="Team"
         onDatabaseDropTargetChange={setDatabaseDropTargetId}
         onDropPageOnDatabase={onDropPageOnDatabase}
-        pathname={location.pathname}
         workspaces={teamspaceWorkspaces}
       />
     </>
@@ -78,21 +87,21 @@ export function NavWorkspaces({
 }
 
 function WorkspaceSection({
+  activeWorkspaceId,
   databaseDropTargetId,
   label,
   onCreateWorkspace,
   onDatabaseDropTargetChange,
   onDropPageOnDatabase,
-  pathname,
   showCreateAction = false,
   workspaces,
 }: {
+  activeWorkspaceId: string | null
   databaseDropTargetId: string | null
   label: string
   onCreateWorkspace?: () => void
   onDatabaseDropTargetChange: (workspaceId: string | null) => void
   onDropPageOnDatabase?: (input: DatabaseDropInput) => void
-  pathname: string
   showCreateAction?: boolean
   workspaces: WorkspaceNavItem[]
 }) {
@@ -112,13 +121,13 @@ function WorkspaceSection({
         <SidebarMenu>
           {workspaces.map((workspace) => (
             <WorkspaceTreeItem
+              activeWorkspaceId={activeWorkspaceId}
               databaseDropTargetId={databaseDropTargetId}
               isRoot
               item={workspace}
               key={workspace.id}
               onDatabaseDropTargetChange={onDatabaseDropTargetChange}
               onDropPageOnDatabase={onDropPageOnDatabase}
-              pathname={pathname}
             />
           ))}
           {workspaces.length === 0 ? (
@@ -142,35 +151,44 @@ function WorkspaceSection({
   )
 }
 
-function hasActiveDescendant(item: WorkspaceNavItem, pathname: string): boolean {
+function hasActiveDescendant(
+  item: WorkspaceNavItem,
+  activeWorkspaceId: string | null,
+): boolean {
   return item.pages.some(
     (page) =>
-      pathname === `/workspace/${page.id}` || hasActiveDescendant(page, pathname),
+      activeWorkspaceId === page.id ||
+      hasActiveDescendant(page, activeWorkspaceId),
   )
 }
 
 function WorkspaceTreeItem({
+  activeWorkspaceId,
   databaseDropTargetId,
   isRoot = false,
   item,
   onDatabaseDropTargetChange,
   onDropPageOnDatabase,
-  pathname,
 }: {
+  activeWorkspaceId: string | null
   databaseDropTargetId: string | null
   isRoot?: boolean
   item: WorkspaceNavItem
   onDatabaseDropTargetChange: (workspaceId: string | null) => void
   onDropPageOnDatabase?: (input: DatabaseDropInput) => void
-  pathname: string
 }) {
-  const isActive = pathname === `/workspace/${item.id}`
+  const isActive = activeWorkspaceId === item.id
   const hasPages = item.pages.length > 0
-  const isOpen = isActive || hasActiveDescendant(item, pathname)
+  const isOpen = isActive || hasActiveDescendant(item, activeWorkspaceId)
   const displayName = item.name.trim() || "Untitled"
   const isDatabaseDropTarget = databaseDropTargetId === item.id
   const canDropOnDatabase = Boolean(item.databaseId && onDropPageOnDatabase)
+  const linkWorkspaceId = item.workspaceId
   const startPageDrag = (event: DragEvent<HTMLAnchorElement>) => {
+    if (item.isDatabase) {
+      return
+    }
+
     event.dataTransfer.effectAllowed = "copyMove"
     event.dataTransfer.setData(
       DATABASE_PAGE_DRAG_MIME,
@@ -212,7 +230,7 @@ function WorkspaceTreeItem({
     onDropPageOnDatabase?.({
       databaseId: item.databaseId,
       pageId: dragPayload.pageId,
-      targetPageId: item.id,
+      targetPageId: linkWorkspaceId,
       title: dragPayload.title,
     })
   }
@@ -231,26 +249,32 @@ function WorkspaceTreeItem({
       <SidebarMenuSubItem>
         <SidebarMenuSubButton asChild isActive={isActive}>
           <Link
-            draggable
+            draggable={!item.isDatabase}
             onDragStart={startPageDrag}
             to="/workspace/$workspaceId"
-            params={{ workspaceId: item.id }}
+            params={{ workspaceId: linkWorkspaceId }}
             {...databaseDropProps}
           >
             <span>{item.emoji}</span>
             <span>{displayName}</span>
+            {item.isLinked ? (
+              <ArrowUpRightIcon
+                aria-label="Linked from another parent"
+                className="ml-auto size-3 text-sidebar-foreground/45"
+              />
+            ) : null}
           </Link>
         </SidebarMenuSubButton>
         {hasPages ? (
           <SidebarMenuSub>
             {item.pages.map((page) => (
               <WorkspaceTreeItem
+                activeWorkspaceId={activeWorkspaceId}
                 databaseDropTargetId={databaseDropTargetId}
                 item={page}
                 key={page.id}
                 onDatabaseDropTargetChange={onDatabaseDropTargetChange}
                 onDropPageOnDatabase={onDropPageOnDatabase}
-                pathname={pathname}
               />
             ))}
           </SidebarMenuSub>
@@ -264,14 +288,20 @@ function WorkspaceTreeItem({
       <SidebarMenuItem>
         <SidebarMenuButton asChild isActive={isActive}>
           <Link
-            draggable
+            draggable={!item.isDatabase}
             onDragStart={startPageDrag}
             to="/workspace/$workspaceId"
-            params={{ workspaceId: item.id }}
+            params={{ workspaceId: linkWorkspaceId }}
             {...databaseDropProps}
           >
             <span>{item.emoji}</span>
             <span>{displayName}</span>
+            {item.isLinked ? (
+              <ArrowUpRightIcon
+                aria-label="Linked from another parent"
+                className="ml-auto size-3 text-sidebar-foreground/45"
+              />
+            ) : null}
           </Link>
         </SidebarMenuButton>
         {hasPages ? (
@@ -288,12 +318,12 @@ function WorkspaceTreeItem({
           <SidebarMenuSub>
             {item.pages.map((page) => (
               <WorkspaceTreeItem
+                activeWorkspaceId={activeWorkspaceId}
                 databaseDropTargetId={databaseDropTargetId}
                 item={page}
                 key={page.id}
                 onDatabaseDropTargetChange={onDatabaseDropTargetChange}
                 onDropPageOnDatabase={onDropPageOnDatabase}
-                pathname={pathname}
               />
             ))}
           </SidebarMenuSub>
@@ -301,6 +331,16 @@ function WorkspaceTreeItem({
       </SidebarMenuItem>
     </Collapsible>
   )
+}
+
+function getActiveWorkspaceId(pathname: string) {
+  const match = pathname.match(/^\/workspace\/([^/?#]+)/)
+
+  if (!match) {
+    return null
+  }
+
+  return decodeURIComponent(match[1])
 }
 
 function getDraggedPagePayload(event: DragEvent) {

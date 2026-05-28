@@ -26,17 +26,21 @@ import {
 } from "@/features/workspaces/queries"
 import {
   useCreateWorkspace,
+  useSetWorkspaceFavorite,
   useWorkspaces,
 } from "@/features/workspaces/hooks"
 import { useAppStore } from "@/stores/app-store"
-import { SearchIcon, SparklesIcon, HomeIcon, InboxIcon, CalendarIcon, Settings2Icon, BlocksIcon, Trash2Icon, MessageCircleQuestionIcon } from "lucide-react"
+import { SearchIcon, SparklesIcon, HomeIcon, InboxIcon, CalendarIcon, Settings2Icon, BlocksIcon, Trash2Icon, MessageCircleQuestionIcon, DatabaseIcon, FileIcon, FileTextIcon } from "lucide-react"
 
 type WorkspaceTreeNode = {
   databaseId?: string | null
   id: string
   isTeamspace: boolean
+  isDatabase?: boolean
+  isLinked?: boolean
   name: string
   emoji: React.ReactNode
+  workspaceId: string
   pages: WorkspaceTreeNode[]
 }
 
@@ -120,58 +124,6 @@ const data = {
       ),
     },
   ],
-  favorites: [
-    {
-      name: "Project Management & Task Tracking",
-      url: "#",
-      emoji: "📊",
-    },
-    {
-      name: "Family Recipe Collection & Meal Planning",
-      url: "#",
-      emoji: "🍳",
-    },
-    {
-      name: "Fitness Tracker & Workout Routines",
-      url: "#",
-      emoji: "💪",
-    },
-    {
-      name: "Book Notes & Reading List",
-      url: "#",
-      emoji: "📚",
-    },
-    {
-      name: "Sustainable Gardening Tips & Plant Care",
-      url: "#",
-      emoji: "🌱",
-    },
-    {
-      name: "Language Learning Progress & Resources",
-      url: "#",
-      emoji: "🗣️",
-    },
-    {
-      name: "Home Renovation Ideas & Budget Tracker",
-      url: "#",
-      emoji: "🏠",
-    },
-    {
-      name: "Personal Finance & Investment Portfolio",
-      url: "#",
-      emoji: "💰",
-    },
-    {
-      name: "Movie & TV Show Watchlist with Reviews",
-      url: "#",
-      emoji: "🎬",
-    },
-    {
-      name: "Daily Habit Tracker & Goal Setting",
-      url: "#",
-      emoji: "✅",
-    },
-  ],
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -186,8 +138,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     null
   const { data: workspaceRecords = [] } = useWorkspaces(organizationId)
   const createWorkspace = useCreateWorkspace()
+  const setFavorite = useSetWorkspaceFavorite()
   const addDatabaseRow = useAddDatabaseRow(organizationId)
   const workspaceSections = buildWorkspaceTreeSections(workspaceRecords)
+  const favorites = buildFavoriteItems(workspaceRecords)
 
   const handleCreateWorkspace = async () => {
     if (!organizationId || createWorkspace.isPending) {
@@ -238,6 +192,25 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     )
   }
 
+  const handleRemoveFavorite = (workspaceId: string) => {
+    if (setFavorite.isPending) {
+      return
+    }
+
+    setFavorite.mutate(
+      { isFavorite: false, workspaceId },
+      {
+        onError: (error) => {
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "Could not update favorite.",
+          )
+        },
+      },
+    )
+  }
+
   return (
     <Sidebar className="border-r-0" {...props}>
       <SidebarHeader>
@@ -245,7 +218,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavMain items={data.navMain} />
       </SidebarHeader>
       <SidebarContent>
-        <NavFavorites favorites={data.favorites} />
+        <NavFavorites
+          favorites={favorites}
+          onRemoveFavorite={handleRemoveFavorite}
+        />
         <NavWorkspaces
           onCreateWorkspace={handleCreateWorkspace}
           onDropPageOnDatabase={handleDropPageOnDatabase}
@@ -262,6 +238,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   )
 }
 
+function buildFavoriteItems(workspaces: Workspace[]) {
+  return [...workspaces]
+    .filter((workspace) => workspace.isFavorite)
+    .sort(
+      (first, second) =>
+        getWorkspaceCreatedTime(first) - getWorkspaceCreatedTime(second),
+    )
+    .map((workspace) => ({
+      id: workspace.id,
+      name: workspace.name.trim() || "Untitled",
+      emoji: getWorkspaceIcon(workspace),
+    }))
+}
+
 function buildWorkspaceTreeSections(workspaces: Workspace[]) {
   const orderedWorkspaces = [...workspaces].sort(
     (first, second) =>
@@ -275,12 +265,56 @@ function buildWorkspaceTreeSections(workspaces: Workspace[]) {
         id: workspace.id,
         isTeamspace: Boolean(workspace.isTeamspace),
         name: workspace.name,
-        emoji: getWorkspaceEmoji(workspace),
+        emoji: getWorkspaceIcon(workspace),
+        workspaceId: workspace.id,
         pages: [] as WorkspaceTreeNode[],
       },
     ]),
   )
   const roots: WorkspaceTreeNode[] = []
+  const databaseNodesById = new Map<string, WorkspaceTreeNode>()
+  const rowPageIds = new Set(
+    orderedWorkspaces.flatMap((workspace) =>
+      (workspace.databases ?? []).flatMap((database) =>
+        database.rows.map((row) => row.pageId),
+      ),
+    ),
+  )
+
+  for (const workspace of orderedWorkspaces) {
+    const parentNode = nodesById.get(workspace.id)
+
+    if (!parentNode) {
+      continue
+    }
+
+    for (const database of workspace.databases ?? []) {
+      const databaseNode: WorkspaceTreeNode = {
+        databaseId: database.id,
+        id: `database:${database.id}`,
+        isDatabase: true,
+        isTeamspace: Boolean(workspace.isTeamspace),
+        name: database.name,
+        emoji: <DatabaseIcon className="size-4" />,
+        workspaceId: workspace.id,
+        pages: [],
+      }
+
+      databaseNodesById.set(database.id, databaseNode)
+
+      for (const row of [...database.rows].sort(
+        (first, second) => first.position - second.position,
+      )) {
+        const rowNode = nodesById.get(row.pageId)
+
+        if (rowNode && rowNode.id !== parentNode.id) {
+          databaseNode.pages.push(rowNode)
+        }
+      }
+
+      parentNode.pages.push(databaseNode)
+    }
+  }
 
   for (const workspace of orderedWorkspaces) {
     const node = nodesById.get(workspace.id)
@@ -292,10 +326,50 @@ function buildWorkspaceTreeSections(workspaces: Workspace[]) {
     const parentWorkspaceId = workspace.metadata?.parentWorkspaceId
     const parent = parentWorkspaceId ? nodesById.get(parentWorkspaceId) : null
 
+    if (rowPageIds.has(workspace.id)) {
+      continue
+    }
+
     if (parent && parent.id !== node.id) {
       parent.pages.push(node)
     } else {
       roots.push(node)
+    }
+  }
+
+  for (const workspace of orderedWorkspaces) {
+    const node = nodesById.get(workspace.id)
+
+    if (!node) {
+      continue
+    }
+
+    const existingChildIds = new Set(node.pages.map((page) => page.id))
+
+    for (const pageId of findPageBlockIds(workspace.content)) {
+      const linkedPage = nodesById.get(pageId)
+
+      if (
+        !linkedPage ||
+        linkedPage.id === node.id ||
+        existingChildIds.has(linkedPage.id)
+      ) {
+        continue
+      }
+
+      node.pages.push(cloneLinkedTreeNode(linkedPage, new Set([node.id])))
+      existingChildIds.add(linkedPage.id)
+    }
+
+    for (const databaseId of findDatabaseBlockIds(workspace.content)) {
+      const linkedDatabase = databaseNodesById.get(databaseId)
+
+      if (!linkedDatabase || existingChildIds.has(linkedDatabase.id)) {
+        continue
+      }
+
+      node.pages.push(cloneLinkedTreeNode(linkedDatabase, new Set([node.id])))
+      existingChildIds.add(linkedDatabase.id)
     }
   }
 
@@ -313,6 +387,135 @@ function getWorkspaceCreatedTime(workspace: Workspace) {
 
 function getWorkspaceDatabaseId(workspace: Workspace) {
   return findDatabaseBlockId(workspace.content)
+}
+
+function getWorkspaceIcon(workspace: Workspace) {
+  return (
+    getWorkspaceEmoji(workspace) ??
+    (hasWorkspaceContent(workspace.content) ? (
+      <FileTextIcon className="size-4" />
+    ) : (
+      <FileIcon className="size-4" />
+    ))
+  )
+}
+
+function hasWorkspaceContent(content: unknown): boolean {
+  if (content === null || content === undefined) {
+    return false
+  }
+
+  if (typeof content === "string") {
+    return content.trim().length > 0
+  }
+
+  if (Array.isArray(content)) {
+    return content.some(hasWorkspaceContent)
+  }
+
+  if (typeof content !== "object") {
+    return true
+  }
+
+  const node = content as {
+    attrs?: unknown
+    content?: unknown
+    text?: unknown
+    type?: unknown
+  }
+
+  if (typeof node.text === "string" && node.text.trim().length > 0) {
+    return true
+  }
+
+  if (
+    typeof node.type === "string" &&
+    !["doc", "paragraph", "text"].includes(node.type)
+  ) {
+    return true
+  }
+
+  return hasWorkspaceContent(node.content)
+}
+
+function cloneLinkedTreeNode(
+  node: WorkspaceTreeNode,
+  visitedIds: Set<string>,
+): WorkspaceTreeNode {
+  if (visitedIds.has(node.id)) {
+    return { ...node, isLinked: true, pages: [] }
+  }
+
+  const nextVisitedIds = new Set(visitedIds)
+
+  nextVisitedIds.add(node.id)
+
+  return {
+    ...node,
+    isLinked: true,
+    pages: node.pages.map((page) => cloneLinkedTreeNode(page, nextVisitedIds)),
+  }
+}
+
+function findPageBlockIds(content: unknown): string[] {
+  const pageIds: string[] = []
+
+  collectBlockIds(content, "pageBlock", "pageId", pageIds)
+
+  return pageIds
+}
+
+function findDatabaseBlockIds(content: unknown): string[] {
+  const databaseIds: string[] = []
+
+  collectBlockIds(content, "databaseBlock", "databaseId", databaseIds)
+
+  return databaseIds
+}
+
+function collectBlockIds(
+  content: unknown,
+  blockType: string,
+  attrName: string,
+  ids: string[],
+) {
+  if (typeof content === "string") {
+    const attrPattern =
+      attrName === "databaseId" ? "data-database-id" : "data-page-id"
+    const regex = new RegExp(`${attrPattern}=["']([^"']+)["']`, "g")
+
+    for (const match of content.matchAll(regex)) {
+      if (match[1]) {
+        ids.push(match[1])
+      }
+    }
+
+    return
+  }
+
+  if (!content || typeof content !== "object") {
+    return
+  }
+
+  if (Array.isArray(content)) {
+    for (const child of content) {
+      collectBlockIds(child, blockType, attrName, ids)
+    }
+
+    return
+  }
+
+  const node = content as {
+    attrs?: Record<string, unknown>
+    content?: unknown
+    type?: unknown
+  }
+
+  if (node.type === blockType && typeof node.attrs?.[attrName] === "string") {
+    ids.push(node.attrs[attrName])
+  }
+
+  collectBlockIds(node.content, blockType, attrName, ids)
 }
 
 function findDatabaseBlockId(content: unknown): string | null {

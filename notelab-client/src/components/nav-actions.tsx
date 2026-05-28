@@ -1,4 +1,5 @@
 import * as React from "react"
+import { useNavigate } from "@tanstack/react-router"
 import {
   ChevronsUpDownIcon,
   LinkIcon,
@@ -51,16 +52,21 @@ import {
 } from "@/components/ui/sidebar"
 import { useSession } from "@/features/auth/hooks"
 import {
+  useCreateWorkspace,
   useDeleteWorkspaceAccess,
+  useSetWorkspaceFavorite,
   useUpsertWorkspaceAccess,
   useWorkspace,
   useWorkspaceAccess,
   useWorkspaceAccessLevel,
   useWorkspaceAccessTargets,
+  useWorkspaces,
 } from "@/features/workspaces/hooks"
+import { cn } from "@/lib/utils"
 import type {
   AccessLevel,
   AccessTargetType,
+  WorkspaceMetadata,
   WorkspaceAccessRule,
 } from "@/features/workspaces/queries"
 
@@ -81,7 +87,83 @@ const accessLabels: Record<AccessLevel, string> = {
 type ShareTargetValue = `${AccessTargetType}:${string}`
 
 export function NavActions({ workspaceId }: { workspaceId?: string | null }) {
+  const navigate = useNavigate()
   const [isOpen, setIsOpen] = React.useState(false)
+  const { data: workspace } = useWorkspace(workspaceId)
+  const { data: workspaces = [] } = useWorkspaces(workspace?.organizationId)
+  const createWorkspace = useCreateWorkspace()
+  const setFavorite = useSetWorkspaceFavorite()
+  const listWorkspace = workspaces.find((item) => item.id === workspaceId)
+  const isFavorite = Boolean(workspace?.isFavorite ?? listWorkspace?.isFavorite)
+  const toggleFavorite = () => {
+    if (!workspaceId || setFavorite.isPending) {
+      return
+    }
+
+    setFavorite.mutate(
+      { isFavorite: !isFavorite, workspaceId },
+      {
+        onError: (error) => {
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "Could not update favorite.",
+          )
+        },
+      },
+    )
+  }
+  const copyLink = async () => {
+    if (!workspaceId) {
+      return
+    }
+
+    await navigator.clipboard.writeText(
+      `${window.location.origin}/workspace/${workspaceId}`,
+    )
+    setIsOpen(false)
+    toast.success("Workspace link copied.")
+  }
+  const duplicateWorkspace = async () => {
+    if (!workspace || createWorkspace.isPending) {
+      return
+    }
+
+    const metadata = (workspace.metadata ?? {}) as WorkspaceMetadata
+    try {
+      const duplicate = await createWorkspace.mutateAsync({
+        content: cloneWorkspaceContent(workspace.content ?? null),
+        emoji: metadata.emoji ?? undefined,
+        name: getDuplicateWorkspaceName(workspace.name),
+        organizationId: workspace.organizationId,
+        parentWorkspaceId: metadata.parentWorkspaceId ?? undefined,
+      })
+
+      setIsOpen(false)
+      toast.success("Workspace duplicated.")
+      await navigate({
+        to: "/workspace/$workspaceId",
+        params: { workspaceId: duplicate.id },
+      })
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not duplicate workspace.",
+      )
+    }
+  }
+  const runMoreAction = (label: string) => {
+    if (label === "Copy Link") {
+      void copyLink()
+      return
+    }
+
+    if (label === "Duplicate") {
+      void duplicateWorkspace()
+      return
+    }
+  }
 
   return (
     <div className="flex items-center gap-2 text-sm">
@@ -89,8 +171,17 @@ export function NavActions({ workspaceId }: { workspaceId?: string | null }) {
         Edited recently
       </div>
       {workspaceId ? <WorkspaceShareDialog workspaceId={workspaceId} /> : null}
-      <Button variant="ghost" size="icon" className="h-7 w-7">
-        <StarIcon />
+      <Button
+        aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+        className={cn("h-7 w-7", isFavorite && "text-yellow-500")}
+        disabled={!workspaceId || setFavorite.isPending}
+        onClick={toggleFavorite}
+        size="icon"
+        title={isFavorite ? "Remove from favorites" : "Add to favorites"}
+        type="button"
+        variant="ghost"
+      >
+        <StarIcon className={isFavorite ? "fill-current" : undefined} />
       </Button>
       <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger asChild>
@@ -113,7 +204,15 @@ export function NavActions({ workspaceId }: { workspaceId?: string | null }) {
                   <SidebarMenu>
                     {moreActions.map((label) => (
                       <SidebarMenuItem key={label}>
-                        <SidebarMenuButton>
+                        <SidebarMenuButton
+                          disabled={
+                            (label === "Copy Link" && !workspaceId) ||
+                            (label === "Duplicate" &&
+                              (!workspace || createWorkspace.isPending))
+                          }
+                          onClick={() => runMoreAction(label)}
+                          type="button"
+                        >
                           <span>{label}</span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -127,6 +226,20 @@ export function NavActions({ workspaceId }: { workspaceId?: string | null }) {
       </Popover>
     </div>
   )
+}
+
+function getDuplicateWorkspaceName(name: string) {
+  const trimmedName = name.trim() || "Untitled"
+
+  return `${trimmedName} copy`
+}
+
+function cloneWorkspaceContent(content: unknown) {
+  if (typeof structuredClone === "function") {
+    return structuredClone(content)
+  }
+
+  return JSON.parse(JSON.stringify(content)) as unknown
 }
 
 function WorkspaceShareDialog({ workspaceId }: { workspaceId: string }) {
