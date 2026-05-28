@@ -21,6 +21,7 @@ import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { useSession } from "@/features/auth/hooks"
 import {
   useAddDatabaseProperty,
   useAddDatabaseRow,
@@ -30,6 +31,7 @@ import {
   useUpdateDatabaseProperty,
   useUpdateDatabasePropertyValue,
 } from "@/features/databases/hooks"
+import { useWorkspacePersonAccessTargets } from "@/features/workspaces/hooks"
 
 import { AddDatabasePropertyMenu } from "./add-database-property-menu"
 import {
@@ -123,6 +125,16 @@ function hasDatabasePageDragPayload(dataTransfer: DataTransfer | null) {
   return Array.from(dataTransfer?.types ?? []).includes(DATABASE_PAGE_DRAG_MIME)
 }
 
+function getPersonLimit(config: unknown) {
+  if (!config || typeof config !== "object" || Array.isArray(config)) {
+    return "no_limit"
+  }
+
+  const personLimit = (config as { personLimit?: unknown }).personLimit
+
+  return personLimit === "one_person" ? "one_person" : "no_limit"
+}
+
 function hideNativeDragPreview(dataTransfer: DataTransfer) {
   const dragImage = document.createElement("span")
 
@@ -149,6 +161,10 @@ function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
   const reorderRows = useReorderDatabaseRows()
   const updateValue = useUpdateDatabasePropertyValue()
   const { data: payload, isLoading } = useDatabase(databaseId)
+  const { data: session } = useSession()
+  const { data: accessTargets } = useWorkspacePersonAccessTargets(
+    payload?.database.pageId
+  )
   const [draftTitle, setDraftTitle] = useState("New database")
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({})
   const [activeCellKey, setActiveCellKey] = useState<string | null>(null)
@@ -168,6 +184,15 @@ function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
   const propertyValues = payload?.values ?? []
   const properties = payload?.properties ?? []
   const rows = payload?.rows ?? []
+  const personOptions = useMemo(
+    () =>
+      (accessTargets?.members ?? []).map((member) => ({
+        id: member.id,
+        name: member.name || member.email,
+        suffix: member.id === session?.user?.id ? "(you)" : undefined,
+      })),
+    [accessTargets?.members, session?.user?.id]
+  )
   const columnKeys = useMemo(
     () => ["name", ...properties.map((property) => property.id), "add-property"],
     [properties]
@@ -802,8 +827,12 @@ function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
                         workspaceProperty.type === "select" ||
                         workspaceProperty.type === "multi_select" ||
                         workspaceProperty.type === "status"
+                      const isPersonProperty = workspaceProperty.type === "person"
                       const isMultiSelectProperty =
-                        workspaceProperty.type === "multi_select"
+                        workspaceProperty.type === "multi_select" ||
+                        (isPersonProperty &&
+                          getPersonLimit(workspaceProperty.config) !==
+                            "one_person")
 
                       return (
                         <td
@@ -811,12 +840,15 @@ function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
                           data-active={activeCellKey === key ? "true" : undefined}
                           key={property.id}
                         >
-                          {isSelectProperty ? (
+                          {isSelectProperty || isPersonProperty ? (
                             <DatabaseSelectCell
+                              allowCreate={!isPersonProperty}
                               databaseId={payload.database.id}
                               defaultOptions={
                                 workspaceProperty.type === "status"
                                   ? defaultStatusOptions
+                                  : isPersonProperty
+                                    ? personOptions
                                   : undefined
                               }
                               multiple={isMultiSelectProperty}
@@ -833,6 +865,7 @@ function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
                               propertyName={workspaceProperty.name}
                               showStatusDot={workspaceProperty.type === "status"}
                               value={value}
+                              valueKey={isPersonProperty ? "id" : "name"}
                             />
                           ) : (
                             <DatabaseInputCell

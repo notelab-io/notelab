@@ -86,6 +86,10 @@ export type WorkspaceAccessTargetsPayload = {
   teams: WorkspaceAccessTargetTeam[]
 }
 
+export type WorkspacePersonAccessTargetsPayload = {
+  members: WorkspaceAccessTargetMember[]
+}
+
 export const workspacesQueryKey = (organizationId: string | null | undefined) =>
   ["workspaces", organizationId ?? "none"] as const
 
@@ -103,6 +107,10 @@ export const workspaceAccessQueryKey = (
 export const workspaceAccessTargetsQueryKey = (
   organizationId: string | null | undefined,
 ) => ["workspace-access-targets", organizationId ?? "none"] as const
+
+export const workspacePersonAccessTargetsQueryKey = (
+  workspaceId: string | null | undefined,
+) => ["workspace-person-access-targets", workspaceId ?? "none"] as const
 
 export const workspacesQueryOptions = (
   organizationId: string | null | undefined,
@@ -205,6 +213,24 @@ export const workspaceAccessTargetsQueryOptions = (
 
       return apiFetch<WorkspaceAccessTargetsPayload>(
         `/organizations/${organizationId}/access-targets`,
+        { method: "GET" },
+      )
+    },
+  })
+
+export const workspacePersonAccessTargetsQueryOptions = (
+  workspaceId: string | null | undefined,
+) =>
+  queryOptions({
+    queryKey: workspacePersonAccessTargetsQueryKey(workspaceId),
+    enabled: Boolean(workspaceId),
+    queryFn: async () => {
+      if (!workspaceId) {
+        return { members: [] }
+      }
+
+      return apiFetch<WorkspacePersonAccessTargetsPayload>(
+        `/workspaces/${workspaceId}/access-targets`,
         { method: "GET" },
       )
     },

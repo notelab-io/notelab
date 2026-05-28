@@ -16,6 +16,7 @@ import {
   databaseRow,
   member,
   team,
+  user,
   workspace,
   workspaceAccess,
   workspaceProperty,
@@ -246,6 +247,57 @@ workspaceRoutes.get("/:id/access", async (c) => {
     .orderBy(asc(workspaceAccess.createdAt));
 
   return c.json({ access: rules });
+});
+
+workspaceRoutes.get("/:id/access-targets", async (c) => {
+  const requestUser = requireUser(c);
+
+  if (!requestUser) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const record = await getWorkspace(c.req.param("id"));
+
+  if (!record) {
+    return c.json({ error: "Workspace not found" }, 404);
+  }
+
+  const requestUserAccess = await getEffectiveWorkspaceAccess(
+    record.id,
+    requestUser.id,
+  );
+
+  if (!hasAccess(requestUserAccess, "view")) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  const members = await db
+    .select({
+      email: user.email,
+      id: user.id,
+      memberId: member.id,
+      name: user.name,
+      role: member.role,
+    })
+    .from(member)
+    .innerJoin(user, eq(member.userId, user.id))
+    .where(eq(member.organizationId, record.organizationId))
+    .orderBy(asc(user.name), asc(user.email));
+
+  const accessibleMembers = [];
+
+  for (const targetMember of members) {
+    const accessLevel = await getEffectiveWorkspaceAccess(
+      record.id,
+      targetMember.id,
+    );
+
+    if (hasAccess(accessLevel, "view")) {
+      accessibleMembers.push(targetMember);
+    }
+  }
+
+  return c.json({ members: accessibleMembers });
 });
 
 workspaceRoutes.put("/:id/access", async (c) => {

@@ -87,6 +87,10 @@ export function serializePropertyValue(
     return Array.isArray(value) ? value : value ? [value] : []
   }
 
+  if (propertyType === "person") {
+    return value
+  }
+
   if (propertyType === "number") {
     const nextValue = Array.isArray(value) ? value[0] : value
     const trimmedValue = nextValue.trim()

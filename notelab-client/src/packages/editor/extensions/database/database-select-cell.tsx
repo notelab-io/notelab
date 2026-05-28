@@ -21,6 +21,7 @@ type DatabaseSelectOption = {
   color?: string
   id: string
   name: string
+  suffix?: string
 }
 
 type DatabasePropertyConfig = {
@@ -31,10 +32,12 @@ function DatabaseSelectBadge({
   children,
   color,
   showDot = false,
+  suffix,
 }: {
   children: string
   color?: string
   showDot?: boolean
+  suffix?: string
 }) {
   return (
     <span className={getColorTokenBadgeClassName(color)}>
@@ -45,6 +48,7 @@ function DatabaseSelectBadge({
         />
       ) : null}
       {children}
+      {suffix ? <span className="ml-1 opacity-70">{suffix}</span> : null}
     </span>
   )
 }
@@ -84,6 +88,7 @@ function getNextOptionColor(options: DatabaseSelectOption[]) {
 }
 
 export function DatabaseSelectCell({
+  allowCreate = true,
   databaseId,
   propertyConfig,
   defaultOptions = [],
@@ -93,7 +98,9 @@ export function DatabaseSelectCell({
   multiple = false,
   onSelect,
   showStatusDot = false,
+  valueKey = "name",
 }: {
+  allowCreate?: boolean
   databaseId: string
   defaultOptions?: DatabaseSelectOption[]
   multiple?: boolean
@@ -103,6 +110,7 @@ export function DatabaseSelectCell({
   value: string | string[]
   onSelect: (value: string | string[]) => void
   showStatusDot?: boolean
+  valueKey?: "id" | "name"
 }) {
   const isMobile = useIsMobile()
   const updateProperty = useUpdateDatabaseProperty()
@@ -118,19 +126,24 @@ export function DatabaseSelectCell({
   const selectOptions =
     configuredOptions.length > 0 ? configuredOptions : defaultOptions
   const selectedValues = Array.isArray(value) ? value : value ? [value] : []
-  const getOptionColor = (optionName: string) =>
-    selectOptions.find((option) => option.name === optionName)?.color
+  const getOptionValue = (option: DatabaseSelectOption) => option[valueKey]
+  const getSelectedOption = (optionValue: string) =>
+    selectOptions.find((option) => getOptionValue(option) === optionValue)
+  const getOptionColor = (optionValue: string) =>
+    getSelectedOption(optionValue)?.color
   const normalizedQuery = query.trim().toLowerCase()
   const filteredSelectOptions = normalizedQuery
     ? selectOptions.filter((option) =>
-        option.name.toLowerCase().includes(normalizedQuery)
+        `${option.name} ${option.suffix ?? ""}`
+          .toLowerCase()
+          .includes(normalizedQuery)
       )
     : selectOptions
   const matchingSelectOption = selectOptions.find(
     (option) => option.name.toLowerCase() === normalizedQuery
   )
   const canCreateSelectOption =
-    query.trim().length > 0 && !matchingSelectOption
+    allowCreate && query.trim().length > 0 && !matchingSelectOption
 
   useEffect(() => {
     if (!isOpen || isMobile) {
@@ -181,16 +194,16 @@ export function DatabaseSelectCell({
     setQuery("")
   }
 
-  const selectOption = (optionName: string) => {
+  const selectOption = (optionValue: string) => {
     if (!multiple) {
-      onSelect(optionName)
+      onSelect(optionValue)
       closePanel()
       return
     }
 
-    const nextValues = selectedValues.includes(optionName)
-      ? selectedValues.filter((selectedValue) => selectedValue !== optionName)
-      : [...selectedValues, optionName]
+    const nextValues = selectedValues.includes(optionValue)
+      ? selectedValues.filter((selectedValue) => selectedValue !== optionValue)
+      : [...selectedValues, optionValue]
 
     onSelect(nextValues)
   }
@@ -219,13 +232,20 @@ export function DatabaseSelectCell({
       },
       {
         onSuccess: () => {
+          const createdOption = nextOptions[nextOptions.length - 1]
+          const optionValue = valueKey === "id" ? createdOption?.id : optionName
+
           if (multiple) {
-            onSelect([...selectedValues, optionName])
+            onSelect(
+              optionValue ? [...selectedValues, optionValue] : selectedValues
+            )
             setQuery("")
             return
           }
 
-          selectOption(optionName)
+          if (optionValue) {
+            selectOption(optionValue)
+          }
         },
       }
     )
@@ -239,15 +259,20 @@ export function DatabaseSelectCell({
       ref={triggerRef}
       type="button"
     >
-      {selectedValues.map((selectedValue) => (
-        <DatabaseSelectBadge
-          color={getOptionColor(selectedValue)}
-          key={selectedValue}
-          showDot={showStatusDot}
-        >
-          {selectedValue}
-        </DatabaseSelectBadge>
-      ))}
+      {selectedValues.map((selectedValue) => {
+        const selectedOption = getSelectedOption(selectedValue)
+
+        return (
+          <DatabaseSelectBadge
+            color={getOptionColor(selectedValue)}
+            key={selectedValue}
+            showDot={showStatusDot}
+            suffix={selectedOption?.suffix}
+          >
+            {selectedOption?.name ?? selectedValue}
+          </DatabaseSelectBadge>
+        )
+      })}
     </button>
   )
   const panel = (
@@ -263,7 +288,7 @@ export function DatabaseSelectCell({
             if (canCreateSelectOption) {
               createSelectOption()
             } else if (filteredSelectOptions[0]) {
-              selectOption(filteredSelectOptions[0].name)
+              selectOption(getOptionValue(filteredSelectOptions[0]))
             }
           }
 
@@ -275,24 +300,33 @@ export function DatabaseSelectCell({
         value={query}
       />
       <div className="database-select-popover-label">
-        {multiple
-          ? "Select options or create one"
-          : "Select an option or create one"}
+        {allowCreate
+          ? multiple
+            ? "Select options or create one"
+            : "Select an option or create one"
+          : multiple
+            ? "Select options"
+            : "Select an option"}
       </div>
       <div className="database-select-options">
         {filteredSelectOptions.map((option) => {
-          const isSelected = selectedValues.includes(option.name)
+          const optionValue = getOptionValue(option)
+          const isSelected = selectedValues.includes(optionValue)
 
           return (
             <button
               className="database-select-option"
               data-selected={isSelected ? "true" : undefined}
               key={option.id}
-              onClick={() => selectOption(option.name)}
+              onClick={() => selectOption(optionValue)}
               type="button"
             >
               <GripVertical />
-              <DatabaseSelectBadge color={option.color} showDot={showStatusDot}>
+              <DatabaseSelectBadge
+                color={option.color}
+                showDot={showStatusDot}
+                suffix={option.suffix}
+              >
                 {option.name}
               </DatabaseSelectBadge>
               {isSelected ? (

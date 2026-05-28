@@ -7,6 +7,7 @@ import {
   workspaceAccessQueryOptions,
   workspaceAccessLevelQueryOptions,
   workspaceAccessTargetsQueryOptions,
+  workspacePersonAccessTargetsQueryOptions,
   workspacePropertiesQueryKey,
   workspacePropertiesQueryOptions,
   workspacesQueryKey,
@@ -70,6 +71,12 @@ export function useWorkspaceAccessTargets(
   organizationId: string | null | undefined,
 ) {
   return useQuery(workspaceAccessTargetsQueryOptions(organizationId))
+}
+
+export function useWorkspacePersonAccessTargets(
+  workspaceId: string | null | undefined,
+) {
+  return useQuery(workspacePersonAccessTargetsQueryOptions(workspaceId))
 }
 
 export function useWorkspaceProperties(workspaceId: string | null | undefined) {
