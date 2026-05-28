@@ -37,12 +37,16 @@ import type { WorkspaceNavItem } from "@/components/nav-workspaces"
 
 export function NavFavorites({
   favorites,
+  onRemoveDatabaseFavorite,
   onRemoveFavorite,
 }: {
   favorites: WorkspaceNavItem[]
+  onRemoveDatabaseFavorite: (databaseId: string) => void
   onRemoveFavorite: (workspaceId: string) => void
 }) {
-  const activeWorkspaceId = getActiveWorkspaceId(useLocation().pathname)
+  const location = useLocation()
+  const activeWorkspaceId = getActiveWorkspaceId(location.pathname)
+  const activeDatabaseId = getActiveDatabaseId(location.pathname)
 
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
@@ -50,10 +54,12 @@ export function NavFavorites({
       <SidebarMenu>
         {favorites.map((item) => (
           <FavoriteTreeItem
+            activeDatabaseId={activeDatabaseId}
             activeWorkspaceId={activeWorkspaceId}
             isRoot
             item={item}
             key={item.id}
+            onRemoveDatabaseFavorite={onRemoveDatabaseFavorite}
             onRemoveFavorite={onRemoveFavorite}
           />
         ))}
@@ -70,19 +76,26 @@ export function NavFavorites({
 }
 
 function FavoriteTreeItem({
+  activeDatabaseId,
   activeWorkspaceId,
   isRoot = false,
   item,
+  onRemoveDatabaseFavorite,
   onRemoveFavorite,
 }: {
+  activeDatabaseId: string | null
   activeWorkspaceId: string | null
   isRoot?: boolean
   item: WorkspaceNavItem
+  onRemoveDatabaseFavorite: (databaseId: string) => void
   onRemoveFavorite: (workspaceId: string) => void
 }) {
-  const isActive = activeWorkspaceId === item.id
+  const isActive = item.isDatabase
+    ? activeDatabaseId === item.databaseId
+    : activeWorkspaceId === item.id
   const hasPages = item.pages.length > 0
-  const isOpen = isActive || hasActiveDescendant(item, activeWorkspaceId)
+  const isOpen =
+    isActive || hasActiveDescendant(item, activeDatabaseId, activeWorkspaceId)
   const displayName = item.name.trim() || "Untitled"
   const linkWorkspaceId = item.workspaceId
 
@@ -90,34 +103,52 @@ function FavoriteTreeItem({
     return (
       <SidebarMenuSubItem>
         <SidebarMenuSubButton asChild isActive={isActive}>
-          <Link
-            params={{ workspaceId: linkWorkspaceId }}
-            title={displayName}
-            to="/workspace/$workspaceId"
-          >
-            <span>{item.emoji}</span>
-            <span>{displayName}</span>
-            {item.isLinked ? (
-              <ArrowUpRightIcon
-                aria-label="Linked from another parent"
-                className="ml-auto size-3 text-sidebar-foreground/45"
-              />
-            ) : null}
-          </Link>
+          {item.isDatabase && item.databaseId ? (
+            <Link
+              params={{ databaseId: item.databaseId }}
+              title={displayName}
+              to="/database/$databaseId"
+            >
+              <span>{item.emoji}</span>
+              <span>{displayName}</span>
+              {item.isLinked ? (
+                <ArrowUpRightIcon
+                  aria-label="Linked from another parent"
+                  className="ml-auto size-3 text-sidebar-foreground/45"
+                />
+              ) : null}
+            </Link>
+          ) : (
+            <Link
+              params={{ workspaceId: linkWorkspaceId }}
+              title={displayName}
+              to="/workspace/$workspaceId"
+            >
+              <span>{item.emoji}</span>
+              <span>{displayName}</span>
+              {item.isLinked ? (
+                <ArrowUpRightIcon
+                  aria-label="Linked from another parent"
+                  className="ml-auto size-3 text-sidebar-foreground/45"
+                />
+              ) : null}
+            </Link>
+          )}
         </SidebarMenuSubButton>
-        {!item.isDatabase ? (
-          <FavoriteItemMenu
-            item={item}
-            onRemoveFavorite={onRemoveFavorite}
-          />
-        ) : null}
+        <FavoriteItemMenu
+          item={item}
+          onRemoveDatabaseFavorite={onRemoveDatabaseFavorite}
+          onRemoveFavorite={onRemoveFavorite}
+        />
         {hasPages ? (
           <SidebarMenuSub>
             {item.pages.map((page) => (
               <FavoriteTreeItem
+                activeDatabaseId={activeDatabaseId}
                 activeWorkspaceId={activeWorkspaceId}
                 item={page}
                 key={page.id}
+                onRemoveDatabaseFavorite={onRemoveDatabaseFavorite}
                 onRemoveFavorite={onRemoveFavorite}
               />
             ))}
@@ -131,20 +162,37 @@ function FavoriteTreeItem({
     <Collapsible defaultOpen={isOpen}>
       <SidebarMenuItem>
         <SidebarMenuButton asChild isActive={isActive}>
-          <Link
-            params={{ workspaceId: linkWorkspaceId }}
-            title={displayName}
-            to="/workspace/$workspaceId"
-          >
-            <span>{item.emoji}</span>
-            <span>{displayName}</span>
-            {item.isLinked ? (
-              <ArrowUpRightIcon
-                aria-label="Linked from another parent"
-                className="ml-auto size-3 text-sidebar-foreground/45"
-              />
-            ) : null}
-          </Link>
+          {item.isDatabase && item.databaseId ? (
+            <Link
+              params={{ databaseId: item.databaseId }}
+              title={displayName}
+              to="/database/$databaseId"
+            >
+              <span>{item.emoji}</span>
+              <span>{displayName}</span>
+              {item.isLinked ? (
+                <ArrowUpRightIcon
+                  aria-label="Linked from another parent"
+                  className="ml-auto size-3 text-sidebar-foreground/45"
+                />
+              ) : null}
+            </Link>
+          ) : (
+            <Link
+              params={{ workspaceId: linkWorkspaceId }}
+              title={displayName}
+              to="/workspace/$workspaceId"
+            >
+              <span>{item.emoji}</span>
+              <span>{displayName}</span>
+              {item.isLinked ? (
+                <ArrowUpRightIcon
+                  aria-label="Linked from another parent"
+                  className="ml-auto size-3 text-sidebar-foreground/45"
+                />
+              ) : null}
+            </Link>
+          )}
         </SidebarMenuButton>
         {hasPages ? (
           <CollapsibleTrigger asChild>
@@ -156,19 +204,20 @@ function FavoriteTreeItem({
             </SidebarMenuAction>
           </CollapsibleTrigger>
         ) : null}
-        {!item.isDatabase ? (
-          <FavoriteItemMenu
-            item={item}
-            onRemoveFavorite={onRemoveFavorite}
-          />
-        ) : null}
+        <FavoriteItemMenu
+          item={item}
+          onRemoveDatabaseFavorite={onRemoveDatabaseFavorite}
+          onRemoveFavorite={onRemoveFavorite}
+        />
         <CollapsibleContent>
           <SidebarMenuSub>
             {item.pages.map((page) => (
               <FavoriteTreeItem
+                activeDatabaseId={activeDatabaseId}
                 activeWorkspaceId={activeWorkspaceId}
                 item={page}
                 key={page.id}
+                onRemoveDatabaseFavorite={onRemoveDatabaseFavorite}
                 onRemoveFavorite={onRemoveFavorite}
               />
             ))}
@@ -181,12 +230,18 @@ function FavoriteTreeItem({
 
 function FavoriteItemMenu({
   item,
+  onRemoveDatabaseFavorite,
   onRemoveFavorite,
 }: {
   item: WorkspaceNavItem
+  onRemoveDatabaseFavorite: (databaseId: string) => void
   onRemoveFavorite: (workspaceId: string) => void
 }) {
   const { isMobile } = useSidebar()
+  const linkPath =
+    item.isDatabase && item.databaseId
+      ? `/database/${item.databaseId}`
+      : `/workspace/${item.workspaceId}`
 
   return (
     <DropDrawer>
@@ -201,7 +256,16 @@ function FavoriteItemMenu({
         className="w-56 rounded-lg"
         side={isMobile ? "bottom" : "right"}
       >
-        <DropDrawerItem onSelect={() => onRemoveFavorite(item.workspaceId)}>
+        <DropDrawerItem
+          onSelect={() => {
+            if (item.isDatabase && item.databaseId) {
+              onRemoveDatabaseFavorite(item.databaseId)
+              return
+            }
+
+            onRemoveFavorite(item.workspaceId)
+          }}
+        >
           <StarOffIcon className="text-muted-foreground" />
           <span>Remove from Favorites</span>
         </DropDrawerItem>
@@ -209,7 +273,7 @@ function FavoriteItemMenu({
         <DropDrawerItem
           onSelect={() => {
             void navigator.clipboard?.writeText(
-              `${window.location.origin}/workspace/${item.workspaceId}`,
+              `${window.location.origin}${linkPath}`,
             )
           }}
         >
@@ -218,7 +282,7 @@ function FavoriteItemMenu({
         </DropDrawerItem>
         <DropDrawerItem
           onSelect={() => {
-            window.open(`/workspace/${item.workspaceId}`, "_blank", "noopener")
+            window.open(linkPath, "_blank", "noopener")
           }}
         >
           <ArrowUpRightIcon className="text-muted-foreground" />
@@ -231,17 +295,30 @@ function FavoriteItemMenu({
 
 function hasActiveDescendant(
   item: WorkspaceNavItem,
+  activeDatabaseId: string | null,
   activeWorkspaceId: string | null,
 ): boolean {
   return item.pages.some(
     (page) =>
-      activeWorkspaceId === page.id ||
-      hasActiveDescendant(page, activeWorkspaceId),
+      (page.isDatabase
+        ? activeDatabaseId === page.databaseId
+        : activeWorkspaceId === page.id) ||
+      hasActiveDescendant(page, activeDatabaseId, activeWorkspaceId),
   )
 }
 
 function getActiveWorkspaceId(pathname: string) {
   const match = pathname.match(/^\/workspace\/([^/?#]+)/)
+
+  if (!match) {
+    return null
+  }
+
+  return decodeURIComponent(match[1])
+}
+
+function getActiveDatabaseId(pathname: string) {
+  const match = pathname.match(/^\/database\/([^/?#]+)/)
 
   if (!match) {
     return null

@@ -59,6 +59,7 @@ export function NavWorkspaces({
 }) {
   const location = useLocation()
   const activeWorkspaceId = getActiveWorkspaceId(location.pathname)
+  const activeDatabaseId = getActiveDatabaseId(location.pathname)
   const [databaseDropTargetId, setDatabaseDropTargetId] = useState<
     string | null
   >(null)
@@ -66,6 +67,7 @@ export function NavWorkspaces({
   return (
     <>
       <WorkspaceSection
+        activeDatabaseId={activeDatabaseId}
         activeWorkspaceId={activeWorkspaceId}
         databaseDropTargetId={databaseDropTargetId}
         label="Private"
@@ -76,6 +78,7 @@ export function NavWorkspaces({
         workspaces={privateWorkspaces}
       />
       <WorkspaceSection
+        activeDatabaseId={activeDatabaseId}
         activeWorkspaceId={activeWorkspaceId}
         databaseDropTargetId={databaseDropTargetId}
         label="Team"
@@ -88,6 +91,7 @@ export function NavWorkspaces({
 }
 
 function WorkspaceSection({
+  activeDatabaseId,
   activeWorkspaceId,
   databaseDropTargetId,
   label,
@@ -97,6 +101,7 @@ function WorkspaceSection({
   showCreateAction = false,
   workspaces,
 }: {
+  activeDatabaseId: string | null
   activeWorkspaceId: string | null
   databaseDropTargetId: string | null
   label: string
@@ -122,6 +127,7 @@ function WorkspaceSection({
         <SidebarMenu>
           {workspaces.map((workspace) => (
             <WorkspaceTreeItem
+              activeDatabaseId={activeDatabaseId}
               activeWorkspaceId={activeWorkspaceId}
               databaseDropTargetId={databaseDropTargetId}
               isRoot
@@ -154,16 +160,20 @@ function WorkspaceSection({
 
 function hasActiveDescendant(
   item: WorkspaceNavItem,
+  activeDatabaseId: string | null,
   activeWorkspaceId: string | null,
 ): boolean {
   return item.pages.some(
     (page) =>
-      activeWorkspaceId === page.id ||
-      hasActiveDescendant(page, activeWorkspaceId),
+      (page.isDatabase
+        ? activeDatabaseId === page.databaseId
+        : activeWorkspaceId === page.id) ||
+      hasActiveDescendant(page, activeDatabaseId, activeWorkspaceId),
   )
 }
 
 function WorkspaceTreeItem({
+  activeDatabaseId,
   activeWorkspaceId,
   databaseDropTargetId,
   isRoot = false,
@@ -171,6 +181,7 @@ function WorkspaceTreeItem({
   onDatabaseDropTargetChange,
   onDropPageOnDatabase,
 }: {
+  activeDatabaseId: string | null
   activeWorkspaceId: string | null
   databaseDropTargetId: string | null
   isRoot?: boolean
@@ -178,9 +189,12 @@ function WorkspaceTreeItem({
   onDatabaseDropTargetChange: (workspaceId: string | null) => void
   onDropPageOnDatabase?: (input: DatabaseDropInput) => void
 }) {
-  const isActive = activeWorkspaceId === item.id
+  const isActive = item.isDatabase
+    ? activeDatabaseId === item.databaseId
+    : activeWorkspaceId === item.id
   const hasPages = item.pages.length > 0
-  const isOpen = isActive || hasActiveDescendant(item, activeWorkspaceId)
+  const isOpen =
+    isActive || hasActiveDescendant(item, activeDatabaseId, activeWorkspaceId)
   const displayName = item.name.trim() || "Untitled"
   const isDatabaseDropTarget = databaseDropTargetId === item.id
   const canDropOnDatabase = Boolean(item.databaseId && onDropPageOnDatabase)
@@ -249,27 +263,46 @@ function WorkspaceTreeItem({
     return (
       <SidebarMenuSubItem>
         <SidebarMenuSubButton asChild isActive={isActive}>
-          <Link
-            draggable={!item.isDatabase}
-            onDragStart={startPageDrag}
-            to="/workspace/$workspaceId"
-            params={{ workspaceId: linkWorkspaceId }}
-            {...databaseDropProps}
-          >
-            <span>{item.emoji}</span>
-            <span>{displayName}</span>
-            {item.isLinked ? (
-              <ArrowUpRightIcon
-                aria-label="Linked from another parent"
-                className="ml-auto size-3 text-sidebar-foreground/45"
-              />
-            ) : null}
-          </Link>
+          {item.isDatabase && item.databaseId ? (
+            <Link
+              draggable={false}
+              to="/database/$databaseId"
+              params={{ databaseId: item.databaseId }}
+              {...databaseDropProps}
+            >
+              <span>{item.emoji}</span>
+              <span>{displayName}</span>
+              {item.isLinked ? (
+                <ArrowUpRightIcon
+                  aria-label="Linked from another parent"
+                  className="ml-auto size-3 text-sidebar-foreground/45"
+                />
+              ) : null}
+            </Link>
+          ) : (
+            <Link
+              draggable
+              onDragStart={startPageDrag}
+              to="/workspace/$workspaceId"
+              params={{ workspaceId: linkWorkspaceId }}
+              {...databaseDropProps}
+            >
+              <span>{item.emoji}</span>
+              <span>{displayName}</span>
+              {item.isLinked ? (
+                <ArrowUpRightIcon
+                  aria-label="Linked from another parent"
+                  className="ml-auto size-3 text-sidebar-foreground/45"
+                />
+              ) : null}
+            </Link>
+          )}
         </SidebarMenuSubButton>
         {hasPages ? (
           <SidebarMenuSub>
             {item.pages.map((page) => (
               <WorkspaceTreeItem
+                activeDatabaseId={activeDatabaseId}
                 activeWorkspaceId={activeWorkspaceId}
                 databaseDropTargetId={databaseDropTargetId}
                 item={page}
@@ -288,22 +321,40 @@ function WorkspaceTreeItem({
     <Collapsible defaultOpen={isOpen}>
       <SidebarMenuItem>
         <SidebarMenuButton asChild isActive={isActive}>
-          <Link
-            draggable={!item.isDatabase}
-            onDragStart={startPageDrag}
-            to="/workspace/$workspaceId"
-            params={{ workspaceId: linkWorkspaceId }}
-            {...databaseDropProps}
-          >
-            <span>{item.emoji}</span>
-            <span>{displayName}</span>
-            {item.isLinked ? (
-              <ArrowUpRightIcon
-                aria-label="Linked from another parent"
-                className="ml-auto size-3 text-sidebar-foreground/45"
-              />
-            ) : null}
-          </Link>
+          {item.isDatabase && item.databaseId ? (
+            <Link
+              draggable={false}
+              to="/database/$databaseId"
+              params={{ databaseId: item.databaseId }}
+              {...databaseDropProps}
+            >
+              <span>{item.emoji}</span>
+              <span>{displayName}</span>
+              {item.isLinked ? (
+                <ArrowUpRightIcon
+                  aria-label="Linked from another parent"
+                  className="ml-auto size-3 text-sidebar-foreground/45"
+                />
+              ) : null}
+            </Link>
+          ) : (
+            <Link
+              draggable
+              onDragStart={startPageDrag}
+              to="/workspace/$workspaceId"
+              params={{ workspaceId: linkWorkspaceId }}
+              {...databaseDropProps}
+            >
+              <span>{item.emoji}</span>
+              <span>{displayName}</span>
+              {item.isLinked ? (
+                <ArrowUpRightIcon
+                  aria-label="Linked from another parent"
+                  className="ml-auto size-3 text-sidebar-foreground/45"
+                />
+              ) : null}
+            </Link>
+          )}
         </SidebarMenuButton>
         {hasPages ? (
           <CollapsibleTrigger asChild>
@@ -319,6 +370,7 @@ function WorkspaceTreeItem({
           <SidebarMenuSub>
             {item.pages.map((page) => (
               <WorkspaceTreeItem
+                activeDatabaseId={activeDatabaseId}
                 activeWorkspaceId={activeWorkspaceId}
                 databaseDropTargetId={databaseDropTargetId}
                 item={page}
@@ -336,6 +388,16 @@ function WorkspaceTreeItem({
 
 function getActiveWorkspaceId(pathname: string) {
   const match = pathname.match(/^\/workspace\/([^/?#]+)/)
+
+  if (!match) {
+    return null
+  }
+
+  return decodeURIComponent(match[1])
+}
+
+function getActiveDatabaseId(pathname: string) {
+  const match = pathname.match(/^\/database\/([^/?#]+)/)
 
   if (!match) {
     return null

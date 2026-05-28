@@ -27,6 +27,7 @@ export type WorkspaceDatabase = {
   pageId: string
   name: string
   config?: unknown
+  isFavorite?: boolean
   rows: WorkspaceDatabaseRow[]
   deletedById?: string | null
   deletedAt?: string | null

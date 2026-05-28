@@ -228,7 +228,10 @@ export function useSetWorkspaceFavorite() {
     },
     onSuccess: async (workspace) => {
       queryClient.setQueryData(workspaceQueryKey(workspace.id), workspace)
-      await queryClient.invalidateQueries({ queryKey: ["workspaces"] })
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["database"] }),
+        queryClient.invalidateQueries({ queryKey: ["workspaces"] }),
+      ])
     },
   })
 }

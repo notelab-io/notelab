@@ -22,7 +22,10 @@ import {
 } from "@/components/ui/sidebar"
 import { useSession } from "@/features/auth/hooks"
 import { useOrganizations } from "@/features/organizations/hooks"
-import { useAddDatabaseRow } from "@/features/databases/hooks"
+import {
+  useAddDatabaseRow,
+  useSetDatabaseFavorite,
+} from "@/features/databases/hooks"
 import {
   getWorkspaceEmoji,
   type Workspace,
@@ -131,6 +134,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const createWorkspace = useCreateWorkspace()
   const setFavorite = useSetWorkspaceFavorite()
   const addDatabaseRow = useAddDatabaseRow(organizationId)
+  const setDatabaseFavorite = useSetDatabaseFavorite()
   const workspaceSections = buildWorkspaceTreeSections(workspaceRecords)
   const favorites = buildFavoriteTreeItems([
     ...workspaceSections.privateWorkspaces,
@@ -205,6 +209,25 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     )
   }
 
+  const handleRemoveDatabaseFavorite = (databaseId: string) => {
+    if (setDatabaseFavorite.isPending) {
+      return
+    }
+
+    setDatabaseFavorite.mutate(
+      { databaseId, isFavorite: false },
+      {
+        onError: (error) => {
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "Could not update favorite.",
+          )
+        },
+      },
+    )
+  }
+
   return (
     <Sidebar className="border-r-0" {...props}>
       <SidebarHeader>
@@ -214,6 +237,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <NavFavorites
           favorites={favorites}
+          onRemoveDatabaseFavorite={handleRemoveDatabaseFavorite}
           onRemoveFavorite={handleRemoveFavorite}
         />
         <NavWorkspaces
@@ -274,10 +298,11 @@ function buildWorkspaceTreeSections(workspaces: Workspace[]) {
         databaseId: database.id,
         id: `database:${database.id}`,
         isDatabase: true,
+        isFavorite: Boolean(database.isFavorite),
         isTeamspace: Boolean(workspace.isTeamspace),
         name: database.name,
         emoji: <DatabaseIcon className="size-4" />,
-        workspaceId: workspace.id,
+        workspaceId: database.pageId,
         pages: [],
       }
 
@@ -361,7 +386,14 @@ function buildWorkspaceTreeSections(workspaces: Workspace[]) {
 }
 
 function buildFavoriteTreeItems(items: WorkspaceNavItem[]) {
-  return items.flatMap((item) => cloneFavoriteTreeItems(item, false))
+  const favoriteItems = items.flatMap((item) => cloneFavoriteTreeItems(item, false))
+  const nestedFavoriteIds = new Set<string>()
+
+  for (const item of favoriteItems) {
+    collectFavoriteDescendantIds(item, nestedFavoriteIds)
+  }
+
+  return favoriteItems.filter((item) => !nestedFavoriteIds.has(item.id))
 }
 
 function cloneFavoriteTreeItems(
@@ -376,7 +408,13 @@ function cloneFavoriteTreeItems(
   )
 
   if (item.isDatabase) {
-    return favoritePages.length > 0 ? [{ ...item, pages: favoritePages }] : []
+    if (hasFavoriteAncestor) {
+      return []
+    }
+
+    return item.isFavorite || favoritePages.length > 0
+      ? [{ ...item, pages: item.isFavorite ? item.pages : favoritePages }]
+      : []
   }
 
   if (item.isFavorite && !hasFavoriteAncestor) {
@@ -384,6 +422,16 @@ function cloneFavoriteTreeItems(
   }
 
   return favoritePages
+}
+
+function collectFavoriteDescendantIds(
+  item: WorkspaceNavItem,
+  ids: Set<string>,
+) {
+  for (const page of item.pages) {
+    ids.add(page.id)
+    collectFavoriteDescendantIds(page, ids)
+  }
 }
 
 function getWorkspaceCreatedTime(workspace: Workspace) {
