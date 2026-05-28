@@ -34,6 +34,7 @@ import {
   type Workspace,
 } from "@/features/workspaces/queries"
 import { useWorkspace, useWorkspaces } from "@/features/workspaces/hooks"
+import { useDatabase } from "@/features/databases/hooks"
 
 type WorkspaceSidePaneContextValue = {
   closeSidePane: () => void
@@ -171,11 +172,18 @@ function PaneHeaderContent({
       </div>
       {showActions ? (
         <div className="ml-auto px-3">
-          <NavActions workspaceId={getWorkspaceId(pathname)} />
+          <PaneNavActions pathname={pathname} />
         </div>
       ) : null}
     </div>
   )
+}
+
+function PaneNavActions({ pathname }: { pathname: string }) {
+  const workspaceId = getWorkspaceId(pathname)
+  const databaseId = getDatabaseId(pathname)
+
+  return <NavActions databaseId={databaseId} workspaceId={workspaceId} />
 }
 
 function WorkspaceBreadcrumb({ workspaceId }: { workspaceId: string }) {
@@ -278,9 +286,14 @@ function getWorkspaceBreadcrumbLabel(workspace: Workspace) {
 
 function AppBreadcrumbs({ pathname }: { pathname: string }) {
   const workspaceId = getWorkspaceId(pathname)
+  const databaseId = getDatabaseId(pathname)
 
   if (workspaceId) {
     return <WorkspaceBreadcrumb workspaceId={workspaceId} />
+  }
+
+  if (databaseId) {
+    return <DatabaseBreadcrumb databaseId={databaseId} />
   }
 
   if (pathname.startsWith("/settings")) {
@@ -324,6 +337,34 @@ function getWorkspaceId(pathname: string) {
   const match = pathname.match(/^\/workspace\/([^/]+)/)
 
   return match?.[1] ? decodeURIComponent(match[1]) : null
+}
+
+function getDatabaseId(pathname: string) {
+  const match = pathname.match(/^\/database\/([^/]+)/)
+
+  return match?.[1] ? decodeURIComponent(match[1]) : null
+}
+
+function DatabaseBreadcrumb({ databaseId }: { databaseId: string }) {
+  const { data: payload } = useDatabase(databaseId)
+
+  return (
+    <Breadcrumb>
+      <BreadcrumbList>
+        <BreadcrumbItem className="hidden sm:inline-flex">
+          <BreadcrumbLink asChild>
+            <Link to="/dashboard">Dashboard</Link>
+          </BreadcrumbLink>
+        </BreadcrumbItem>
+        <BreadcrumbSeparator className="hidden sm:inline-flex" />
+        <BreadcrumbItem>
+          <BreadcrumbPage className="line-clamp-1">
+            {payload?.database.name.trim() || "Database"}
+          </BreadcrumbPage>
+        </BreadcrumbItem>
+      </BreadcrumbList>
+    </Breadcrumb>
+  )
 }
 
 function getSettingsPageTitle(pathname: string) {

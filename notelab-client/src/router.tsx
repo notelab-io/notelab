@@ -9,6 +9,7 @@ import {
 import { AppLayout } from "@/components/app-layout"
 import AcceptInvitationPage from "@/pages/accept-invitation"
 import DashboardPage from "@/pages/dashboard"
+import DatabasePage from "@/pages/database"
 import LoginPage from "@/pages/login"
 import OnboardingPage from "@/pages/onboarding"
 import OtpPage from "@/pages/otp"
@@ -133,6 +134,12 @@ const workspaceRoute = createRoute({
   component: WorkspacePage,
 })
 
+const databaseRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/database/$databaseId",
+  component: DatabasePage,
+})
+
 const settingsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/settings",
@@ -169,6 +176,7 @@ const routeTree = rootRoute.addChildren([
   appRoute.addChildren([
     dashboardRoute,
     workspaceRoute,
+    databaseRoute,
     settingsRoute,
     profileSettingsRoute,
     organizationSettingsRoute,

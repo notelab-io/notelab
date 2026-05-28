@@ -4,7 +4,8 @@ import {
   ReactNodeViewRenderer,
   type ReactNodeViewProps,
 } from "@tiptap/react"
-import { FileText, GripVertical, Loader2, Plus } from "lucide-react"
+import { Link } from "@tanstack/react-router"
+import { FileText, GripVertical, Loader2, Maximize2, Plus } from "lucide-react"
 import {
   useCallback,
   useEffect,
@@ -150,14 +151,28 @@ function hideNativeDragPreview(dataTransfer: DataTransfer) {
   window.requestAnimationFrame(() => dragImage.remove())
 }
 
-function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
-  const options = extension.options as DatabaseBlockOptions
-  const databaseId = node.attrs.databaseId as string | null
+type DatabaseTableViewProps = {
+  databaseId: string | null | undefined
+  fullPage?: boolean
+  onOpenPage?: (pageId: string) => void
+  organizationId?: string | null
+  showExpandButton?: boolean
+  showTitle?: boolean
+}
+
+export function DatabaseTableView({
+  databaseId,
+  fullPage = false,
+  onOpenPage,
+  organizationId,
+  showExpandButton = false,
+  showTitle = true,
+}: DatabaseTableViewProps) {
   const [draftCells, setDraftCells] = useState<Record<string, string>>({})
   const updateDatabase = useUpdateDatabase()
   const addProperty = useAddDatabaseProperty()
   const updateProperty = useUpdateDatabaseProperty()
-  const addRow = useAddDatabaseRow(options.organizationId)
+  const addRow = useAddDatabaseRow(organizationId)
   const reorderRows = useReorderDatabaseRows()
   const updateValue = useUpdateDatabasePropertyValue()
   const { data: payload, isLoading } = useDatabase(databaseId)
@@ -526,13 +541,12 @@ function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
   const activeDragRow =
     activeDragRowIndex === -1 ? null : rows[activeDragRowIndex]
   return (
-    <NodeViewWrapper
-      className="database-block"
-      data-database-id={databaseId ?? undefined}
-      data-type="databaseBlock"
-    >
       <div
-        className="database-block-shell"
+        className={
+          fullPage
+            ? "database-block-shell database-block-shell-full"
+            : "database-block-shell"
+        }
         contentEditable={false}
         onDragLeave={(event) => {
           if (
@@ -547,24 +561,31 @@ function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
         onDrop={handleDatabaseBlockDrop}
       >
         <div className="database-toolbar">
-          <Input
-            aria-label="Database title"
-            className="database-title-input h-auto min-w-0 flex-1 rounded-none border-0 bg-transparent px-0 py-0 text-2xl font-semibold leading-tight text-foreground shadow-none placeholder:text-muted-foreground/40 focus-visible:border-transparent focus-visible:ring-0 md:text-2xl dark:bg-transparent"
-            disabled={!databaseId}
-            onBlur={(event) => {
-              if (databaseId && event.target.value !== payload?.database.name) {
-                updateDatabase.mutate({
-                  databaseId,
-                  name: event.target.value,
-                })
-              }
-            }}
-            onChange={(event) => {
-              setDraftTitle(event.target.value)
-            }}
-            placeholder="New database"
-            value={draftTitle}
-          />
+          {showTitle ? (
+            <Input
+              aria-label="Database title"
+              className="database-title-input h-auto min-w-0 flex-1 rounded-none border-0 bg-transparent px-0 py-0 text-2xl font-semibold leading-tight text-foreground shadow-none placeholder:text-muted-foreground/40 focus-visible:border-transparent focus-visible:ring-0 md:text-2xl dark:bg-transparent"
+              disabled={!databaseId}
+              onBlur={(event) => {
+                if (
+                  databaseId &&
+                  event.target.value !== payload?.database.name
+                ) {
+                  updateDatabase.mutate({
+                    databaseId,
+                    name: event.target.value,
+                  })
+                }
+              }}
+              onChange={(event) => {
+                setDraftTitle(event.target.value)
+              }}
+              placeholder="New database"
+              value={draftTitle}
+            />
+          ) : (
+            <div className="min-w-0 flex-1" />
+          )}
           <Button
             className="database-new-button"
             disabled={!databaseId || addRow.isPending}
@@ -574,6 +595,24 @@ function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
             {addRow.isPending ? <Loader2 className="animate-spin" /> : <Plus />}
             <span>New</span>
           </Button>
+          {showExpandButton && databaseId ? (
+            <Button
+              aria-label="Expand database"
+              asChild
+              className="database-expand-button"
+              size="icon"
+              type="button"
+              variant="ghost"
+            >
+              <Link
+                params={{ databaseId }}
+                title="Expand database"
+                to="/database/$databaseId"
+              >
+                <Maximize2 />
+              </Link>
+            </Button>
+          ) : null}
         </div>
         {!databaseId ? (
           <div className="database-empty-state">
@@ -815,7 +854,7 @@ function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
                   >
                     <td className="database-page-cell">
                       <DatabasePageCell
-                        onOpen={options.onOpenPage}
+                        onOpen={onOpenPage}
                         pageId={row.pageId}
                       />
                     </td>
@@ -938,6 +977,25 @@ function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
           </div>
         )}
       </div>
+  )
+}
+
+function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
+  const options = extension.options as DatabaseBlockOptions
+  const databaseId = node.attrs.databaseId as string | null
+
+  return (
+    <NodeViewWrapper
+      className="database-block"
+      data-database-id={databaseId ?? undefined}
+      data-type="databaseBlock"
+    >
+      <DatabaseTableView
+        databaseId={databaseId}
+        onOpenPage={options.onOpenPage}
+        organizationId={options.organizationId}
+        showExpandButton
+      />
     </NodeViewWrapper>
   )
 }

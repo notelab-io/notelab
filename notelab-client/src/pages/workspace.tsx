@@ -67,7 +67,7 @@ export default function WorkspacePage() {
   )
 }
 
-function WorkspaceEditorPane({
+export function WorkspaceEditorPane({
   className,
   onOpenPage,
   workspaceId,

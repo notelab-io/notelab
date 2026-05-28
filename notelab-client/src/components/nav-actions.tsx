@@ -62,6 +62,10 @@ import {
   useWorkspaceAccessTargets,
   useWorkspaces,
 } from "@/features/workspaces/hooks"
+import {
+  useDatabase,
+  useSetDatabaseFavorite,
+} from "@/features/databases/hooks"
 import { cn } from "@/lib/utils"
 import type {
   AccessLevel,
@@ -86,16 +90,48 @@ const accessLabels: Record<AccessLevel, string> = {
 
 type ShareTargetValue = `${AccessTargetType}:${string}`
 
-export function NavActions({ workspaceId }: { workspaceId?: string | null }) {
+export function NavActions({
+  databaseId,
+  workspaceId,
+}: {
+  databaseId?: string | null
+  workspaceId?: string | null
+}) {
   const navigate = useNavigate()
   const [isOpen, setIsOpen] = React.useState(false)
-  const { data: workspace } = useWorkspace(workspaceId)
+  const { data: databasePayload } = useDatabase(databaseId)
+  const actionWorkspaceId = workspaceId ?? databasePayload?.database.pageId
+  const { data: workspace } = useWorkspace(actionWorkspaceId)
   const { data: workspaces = [] } = useWorkspaces(workspace?.organizationId)
   const createWorkspace = useCreateWorkspace()
   const setFavorite = useSetWorkspaceFavorite()
-  const listWorkspace = workspaces.find((item) => item.id === workspaceId)
-  const isFavorite = Boolean(workspace?.isFavorite ?? listWorkspace?.isFavorite)
+  const setDatabaseFavorite = useSetDatabaseFavorite()
+  const listWorkspace = workspaces.find((item) => item.id === actionWorkspaceId)
+  const isDatabasePage = Boolean(databaseId)
+  const isFavorite = isDatabasePage
+    ? Boolean(databasePayload?.database.isFavorite)
+    : Boolean(workspace?.isFavorite ?? listWorkspace?.isFavorite)
   const toggleFavorite = () => {
+    if (databaseId) {
+      if (setDatabaseFavorite.isPending) {
+        return
+      }
+
+      setDatabaseFavorite.mutate(
+        { databaseId, isFavorite: !isFavorite },
+        {
+          onError: (error) => {
+            toast.error(
+              error instanceof Error
+                ? error.message
+                : "Could not update favorite.",
+            )
+          },
+        },
+      )
+      return
+    }
+
     if (!workspaceId || setFavorite.isPending) {
       return
     }
@@ -114,15 +150,17 @@ export function NavActions({ workspaceId }: { workspaceId?: string | null }) {
     )
   }
   const copyLink = async () => {
-    if (!workspaceId) {
+    if (!workspaceId && !databaseId) {
       return
     }
 
     await navigator.clipboard.writeText(
-      `${window.location.origin}/workspace/${workspaceId}`,
+      databaseId
+        ? `${window.location.origin}/database/${databaseId}`
+        : `${window.location.origin}/workspace/${workspaceId}`,
     )
     setIsOpen(false)
-    toast.success("Workspace link copied.")
+    toast.success(`${databaseId ? "Database" : "Workspace"} link copied.`)
   }
   const duplicateWorkspace = async () => {
     if (!workspace || createWorkspace.isPending) {
@@ -170,11 +208,17 @@ export function NavActions({ workspaceId }: { workspaceId?: string | null }) {
       <div className="hidden font-medium text-muted-foreground md:inline-block">
         Edited recently
       </div>
-      {workspaceId ? <WorkspaceShareDialog workspaceId={workspaceId} /> : null}
+      {actionWorkspaceId ? (
+        <WorkspaceShareDialog workspaceId={actionWorkspaceId} />
+      ) : null}
       <Button
         aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
         className={cn("h-7 w-7", isFavorite && "text-yellow-500")}
-        disabled={!workspaceId || setFavorite.isPending}
+        disabled={
+          databaseId
+            ? !databasePayload || setDatabaseFavorite.isPending
+            : !workspaceId || setFavorite.isPending
+        }
         onClick={toggleFavorite}
         size="icon"
         title={isFavorite ? "Remove from favorites" : "Add to favorites"}
@@ -206,9 +250,13 @@ export function NavActions({ workspaceId }: { workspaceId?: string | null }) {
                       <SidebarMenuItem key={label}>
                         <SidebarMenuButton
                           disabled={
-                            (label === "Copy Link" && !workspaceId) ||
+                            (label === "Copy Link" &&
+                              !workspaceId &&
+                              !databaseId) ||
                             (label === "Duplicate" &&
-                              (!workspace || createWorkspace.isPending))
+                              (isDatabasePage ||
+                                !workspace ||
+                                createWorkspace.isPending))
                           }
                           onClick={() => runMoreAction(label)}
                           type="button"

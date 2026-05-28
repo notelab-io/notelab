@@ -58,6 +58,11 @@ type UpdatePropertyValueInput = {
   value: unknown
 }
 
+type SetDatabaseFavoriteInput = {
+  databaseId: string
+  isFavorite: boolean
+}
+
 function setDatabasePayload(payload: DatabasePayload | null) {
   if (!payload) {
     return
@@ -174,5 +179,23 @@ export function useUpdateDatabasePropertyValue() {
         }
       ),
     onSuccess: setDatabasePayload,
+  })
+}
+
+export function useSetDatabaseFavorite() {
+  return useMutation({
+    mutationFn: async ({
+      databaseId,
+      isFavorite,
+    }: SetDatabaseFavoriteInput) =>
+      apiFetch<DatabasePayload>(`/databases/${databaseId}/favorite`, {
+        method: isFavorite ? "PUT" : "DELETE",
+      }),
+    onSuccess: async (payload) => {
+      setDatabasePayload(payload)
+      await queryClient.invalidateQueries({
+        queryKey: workspacesQueryKey(payload.database.organizationId),
+      })
+    },
   })
 }

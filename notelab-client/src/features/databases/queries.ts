@@ -8,6 +8,7 @@ export type DatabaseRecord = {
   pageId: string
   name: string
   config?: unknown
+  isFavorite?: boolean
   deletedById?: string | null
   deletedAt?: string | null
   createdAt: string
