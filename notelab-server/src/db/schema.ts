@@ -189,6 +189,30 @@ export const workspaceAccess = pgTable(
   ],
 );
 
+export const favorite = pgTable(
+  "favorites",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("favorites_user_id_idx").on(table.userId),
+    index("favorites_workspace_id_idx").on(table.workspaceId),
+    uniqueIndex("favorites_user_workspace_unique").on(
+      table.userId,
+      table.workspaceId,
+    ),
+  ],
+);
+
 export const workspaceProperty = pgTable(
   "workspace_property",
   {

@@ -77,7 +77,12 @@ export function useCreateDatabase() {
         method: "POST",
         body: JSON.stringify(input),
       }),
-    onSuccess: setDatabasePayload,
+    onSuccess: async (payload) => {
+      setDatabasePayload(payload)
+      await queryClient.invalidateQueries({
+        queryKey: workspacesQueryKey(payload.database.organizationId),
+      })
+    },
   })
 }
 
@@ -88,7 +93,12 @@ export function useUpdateDatabase() {
         method: "PATCH",
         body: JSON.stringify(patch),
       }),
-    onSuccess: setDatabasePayload,
+    onSuccess: async (payload) => {
+      setDatabasePayload(payload)
+      await queryClient.invalidateQueries({
+        queryKey: workspacesQueryKey(payload.database.organizationId),
+      })
+    },
   })
 }
 

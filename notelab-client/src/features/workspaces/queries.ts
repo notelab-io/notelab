@@ -7,8 +7,37 @@ export type WorkspaceMetadata = {
   parentWorkspaceId?: string | null
 }
 
+export type WorkspaceDatabaseRow = {
+  id: string
+  databaseId: string
+  pageId: string
+  parentRowId?: string | null
+  position: number
+  createdById?: string | null
+  lastEditedById?: string | null
+  deletedById?: string | null
+  deletedAt?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type WorkspaceDatabase = {
+  id: string
+  organizationId: string
+  pageId: string
+  name: string
+  config?: unknown
+  rows: WorkspaceDatabaseRow[]
+  deletedById?: string | null
+  deletedAt?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
 export type Workspace = {
   id: string
+  databases?: WorkspaceDatabase[]
+  isFavorite?: boolean
   isTeamspace?: boolean
   organizationId: string
   createdById?: string | null

@@ -49,6 +49,11 @@ type UpsertWorkspaceAccessInput = {
   workspaceId: string
 }
 
+type SetWorkspaceFavoriteInput = {
+  isFavorite: boolean
+  workspaceId: string
+}
+
 export function useWorkspaces(organizationId: string | null | undefined) {
   return useQuery(workspacesQueryOptions(organizationId))
 }
@@ -117,7 +122,15 @@ export function useCreateWorkspace() {
       return result.workspace
     },
     onSuccess: async (workspace) => {
-      queryClient.setQueryData(workspaceQueryKey(workspace.id), workspace)
+      queryClient.setQueryData<Workspace | null>(
+        workspaceQueryKey(workspace.id),
+        (current) => ({
+          ...(current ?? {}),
+          ...workspace,
+          isFavorite: workspace.isFavorite ?? current?.isFavorite,
+          isTeamspace: workspace.isTeamspace ?? current?.isTeamspace,
+        }),
+      )
       await queryClient.invalidateQueries({
         queryKey: workspacesQueryKey(workspace.organizationId),
       })
@@ -196,6 +209,26 @@ export function useUpdateWorkspace() {
       await queryClient.invalidateQueries({
         queryKey: workspacesQueryKey(workspace.organizationId),
       })
+    },
+  })
+}
+
+export function useSetWorkspaceFavorite() {
+  return useMutation({
+    mutationFn: async ({
+      isFavorite,
+      workspaceId,
+    }: SetWorkspaceFavoriteInput) => {
+      const result = await apiFetch<{ workspace: Workspace }>(
+        `/workspaces/${workspaceId}/favorite`,
+        { method: isFavorite ? "PUT" : "DELETE" },
+      )
+
+      return result.workspace
+    },
+    onSuccess: async (workspace) => {
+      queryClient.setQueryData(workspaceQueryKey(workspace.id), workspace)
+      await queryClient.invalidateQueries({ queryKey: ["workspaces"] })
     },
   })
 }

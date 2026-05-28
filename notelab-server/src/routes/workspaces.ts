@@ -12,8 +12,10 @@ import {
 } from "../access";
 import { db } from "../db";
 import {
+  database,
   databaseProperty,
   databaseRow,
+  favorite,
   member,
   team,
   user,
@@ -108,15 +110,80 @@ workspaceRoutes.get("/", async (c) => {
     .select({ workspaceId: workspaceAccess.workspaceId })
     .from(workspaceAccess)
     .where(eq(workspaceAccess.organizationId, organizationId));
+  const favoriteRows = await db
+    .select({ workspaceId: favorite.workspaceId })
+    .from(favorite)
+    .where(eq(favorite.userId, user.id));
   const teamspaceIds = new Set(
     sharedWorkspaceRows.map((row) => row.workspaceId),
   );
+  const favoriteWorkspaceIds = new Set(
+    favoriteRows.map((row) => row.workspaceId),
+  );
+  const accessibleRecords = records.filter((record) =>
+    accessibleIds.has(record.id),
+  );
+  const accessibleRecordIds = new Set(
+    accessibleRecords.map((record) => record.id),
+  );
+  const databaseRecords = await db
+    .select()
+    .from(database)
+    .where(
+      and(
+        eq(database.organizationId, organizationId),
+        isNull(database.deletedAt),
+      ),
+    );
+  const activeDatabases = databaseRecords.filter((record) =>
+    accessibleRecordIds.has(record.pageId),
+  );
+  const activeDatabaseIds = new Set(activeDatabases.map((record) => record.id));
+  const databaseRows = await db
+    .select()
+    .from(databaseRow)
+    .where(isNull(databaseRow.deletedAt));
+  const rowsByDatabaseId = new Map<string, typeof databaseRows>();
+
+  for (const row of databaseRows) {
+    if (
+      !activeDatabaseIds.has(row.databaseId) ||
+      !accessibleRecordIds.has(row.pageId)
+    ) {
+      continue;
+    }
+
+    rowsByDatabaseId.set(row.databaseId, [
+      ...(rowsByDatabaseId.get(row.databaseId) ?? []),
+      row,
+    ]);
+  }
+  const databasesByPageId = new Map<
+    string,
+    Array<
+      (typeof activeDatabases)[number] & {
+        rows: typeof databaseRows;
+      }
+    >
+  >();
+
+  for (const record of activeDatabases) {
+    const rows = [...(rowsByDatabaseId.get(record.id) ?? [])].sort(
+      (first, second) => first.position - second.position,
+    );
+
+    databasesByPageId.set(record.pageId, [
+      ...(databasesByPageId.get(record.pageId) ?? []),
+      { ...record, rows },
+    ]);
+  }
 
   return c.json({
-    workspaces: records
-      .filter((record) => accessibleIds.has(record.id))
+    workspaces: accessibleRecords
       .map((record) => ({
         ...record,
+        databases: databasesByPageId.get(record.id) ?? [],
+        isFavorite: favoriteWorkspaceIds.has(record.id),
         isTeamspace: teamspaceIds.has(record.id),
       })),
   });
@@ -218,7 +285,81 @@ workspaceRoutes.get("/:id", async (c) => {
     return c.json({ error: "Forbidden" }, 403);
   }
 
-  return c.json({ accessLevel, workspace: record });
+  const [favoriteRecord] = await db
+    .select({ id: favorite.id })
+    .from(favorite)
+    .where(
+      and(
+        eq(favorite.userId, user.id),
+        eq(favorite.workspaceId, record.id),
+      ),
+    )
+    .limit(1);
+
+  return c.json({
+    accessLevel,
+    workspace: { ...record, isFavorite: Boolean(favoriteRecord) },
+  });
+});
+
+workspaceRoutes.put("/:id/favorite", async (c) => {
+  const user = requireUser(c);
+
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const record = await getWorkspace(c.req.param("id"));
+
+  if (!record) {
+    return c.json({ error: "Workspace not found" }, 404);
+  }
+
+  if (!(await canAccessWorkspace(record.id, user.id, "view"))) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  await db
+    .insert(favorite)
+    .values({
+      id: crypto.randomUUID(),
+      userId: user.id,
+      workspaceId: record.id,
+    })
+    .onConflictDoNothing({
+      target: [favorite.userId, favorite.workspaceId],
+    });
+
+  return c.json({ workspace: { ...record, isFavorite: true } });
+});
+
+workspaceRoutes.delete("/:id/favorite", async (c) => {
+  const user = requireUser(c);
+
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const record = await getWorkspace(c.req.param("id"));
+
+  if (!record) {
+    return c.json({ error: "Workspace not found" }, 404);
+  }
+
+  if (!(await canAccessWorkspace(record.id, user.id, "view"))) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  await db
+    .delete(favorite)
+    .where(
+      and(
+        eq(favorite.userId, user.id),
+        eq(favorite.workspaceId, record.id),
+      ),
+    );
+
+  return c.json({ workspace: { ...record, isFavorite: false } });
 });
 
 workspaceRoutes.get("/:id/access", async (c) => {
