@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Context } from "hono";
 import {
@@ -76,6 +76,113 @@ const getWorkspacePropertyPayload = async (
     .where(eq(workspacePropertyValue.workspaceId, workspaceId));
 
   return { properties, values };
+};
+
+const readParentWorkspaceId = (metadata: unknown) => {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return null;
+  }
+
+  const parentWorkspaceId = (metadata as { parentWorkspaceId?: unknown })
+    .parentWorkspaceId;
+
+  return typeof parentWorkspaceId === "string" && parentWorkspaceId.length > 0
+    ? parentWorkspaceId
+    : null;
+};
+
+const getNestedWorkspaceIds = async (
+  rootWorkspaceId: string,
+  organizationId: string,
+  accessibleIds: Set<string>,
+) => {
+  const [workspaceRecords, databaseRecords, databaseRows] = await Promise.all([
+    db
+      .select({
+        id: workspace.id,
+        metadata: workspace.metadata,
+      })
+      .from(workspace)
+      .where(
+        and(
+          eq(workspace.organizationId, organizationId),
+          isNull(workspace.deletedAt),
+        ),
+      ),
+    db
+      .select({
+        id: database.id,
+        pageId: database.pageId,
+      })
+      .from(database)
+      .where(
+        and(
+          eq(database.organizationId, organizationId),
+          isNull(database.deletedAt),
+        ),
+      ),
+    db
+      .select({
+        databaseId: databaseRow.databaseId,
+        pageId: databaseRow.pageId,
+      })
+      .from(databaseRow)
+      .where(isNull(databaseRow.deletedAt)),
+  ]);
+  const childIdsByParentId = new Map<string, Set<string>>();
+
+  for (const record of workspaceRecords) {
+    const parentWorkspaceId = readParentWorkspaceId(record.metadata);
+
+    if (!parentWorkspaceId) {
+      continue;
+    }
+
+    const childIds = childIdsByParentId.get(parentWorkspaceId) ?? new Set();
+
+    childIds.add(record.id);
+    childIdsByParentId.set(parentWorkspaceId, childIds);
+  }
+
+  const databasePageIdByDatabaseId = new Map(
+    databaseRecords.map((record) => [record.id, record.pageId]),
+  );
+
+  for (const row of databaseRows) {
+    const parentWorkspaceId = databasePageIdByDatabaseId.get(row.databaseId);
+
+    if (!parentWorkspaceId) {
+      continue;
+    }
+
+    const childIds = childIdsByParentId.get(parentWorkspaceId) ?? new Set();
+
+    childIds.add(row.pageId);
+    childIdsByParentId.set(parentWorkspaceId, childIds);
+  }
+
+  const nestedIds = new Set<string>();
+  const pendingIds = [rootWorkspaceId];
+
+  while (pendingIds.length > 0) {
+    const workspaceId = pendingIds.shift();
+
+    if (
+      !workspaceId ||
+      nestedIds.has(workspaceId) ||
+      !accessibleIds.has(workspaceId)
+    ) {
+      continue;
+    }
+
+    nestedIds.add(workspaceId);
+
+    for (const childId of childIdsByParentId.get(workspaceId) ?? []) {
+      pendingIds.push(childId);
+    }
+  }
+
+  return [...nestedIds];
 };
 
 workspaceRoutes.get("/", async (c) => {
@@ -319,13 +426,25 @@ workspaceRoutes.put("/:id/favorite", async (c) => {
     return c.json({ error: "Forbidden" }, 403);
   }
 
+  const accessibleIds = await getAccessibleWorkspaceIds(
+    record.organizationId,
+    user.id,
+  );
+  const nestedWorkspaceIds = await getNestedWorkspaceIds(
+    record.id,
+    record.organizationId,
+    accessibleIds,
+  );
+
   await db
     .insert(favorite)
-    .values({
-      id: crypto.randomUUID(),
-      userId: user.id,
-      workspaceId: record.id,
-    })
+    .values(
+      nestedWorkspaceIds.map((workspaceId) => ({
+        id: crypto.randomUUID(),
+        userId: user.id,
+        workspaceId,
+      })),
+    )
     .onConflictDoNothing({
       target: [favorite.userId, favorite.workspaceId],
     });
@@ -350,12 +469,22 @@ workspaceRoutes.delete("/:id/favorite", async (c) => {
     return c.json({ error: "Forbidden" }, 403);
   }
 
+  const accessibleIds = await getAccessibleWorkspaceIds(
+    record.organizationId,
+    user.id,
+  );
+  const nestedWorkspaceIds = await getNestedWorkspaceIds(
+    record.id,
+    record.organizationId,
+    accessibleIds,
+  );
+
   await db
     .delete(favorite)
     .where(
       and(
         eq(favorite.userId, user.id),
-        eq(favorite.workspaceId, record.id),
+        inArray(favorite.workspaceId, nestedWorkspaceIds),
       ),
     );
 

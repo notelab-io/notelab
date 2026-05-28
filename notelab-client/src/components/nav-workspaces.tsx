@@ -26,10 +26,11 @@ import {
 } from "lucide-react"
 import { DATABASE_PAGE_DRAG_MIME } from "@/packages/editor/extensions/database"
 
-type WorkspaceNavItem = {
+export type WorkspaceNavItem = {
   databaseId?: string | null
   id: string
   isDatabase?: boolean
+  isFavorite?: boolean
   isLinked?: boolean
   isTeamspace: boolean
   name: string

@@ -7,7 +7,10 @@ import { toast } from "sonner"
 import { NavFavorites } from "@/components/nav-favorites"
 import { NavMain } from "@/components/nav-main"
 import { NavSecondary } from "@/components/nav-secondary"
-import { NavWorkspaces } from "@/components/nav-workspaces"
+import {
+  NavWorkspaces,
+  type WorkspaceNavItem,
+} from "@/components/nav-workspaces"
 import { OrganizationSwitcher } from "@/components/organization-switcher"
 import { ThemeDropdown } from "@/components/theme-dropdown"
 import {
@@ -31,18 +34,6 @@ import {
 } from "@/features/workspaces/hooks"
 import { useAppStore } from "@/stores/app-store"
 import { SearchIcon, SparklesIcon, HomeIcon, InboxIcon, CalendarIcon, Settings2Icon, BlocksIcon, Trash2Icon, MessageCircleQuestionIcon, DatabaseIcon, FileIcon, FileTextIcon } from "lucide-react"
-
-type WorkspaceTreeNode = {
-  databaseId?: string | null
-  id: string
-  isTeamspace: boolean
-  isDatabase?: boolean
-  isLinked?: boolean
-  name: string
-  emoji: React.ReactNode
-  workspaceId: string
-  pages: WorkspaceTreeNode[]
-}
 
 // This is sample data.
 const data = {
@@ -141,7 +132,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const setFavorite = useSetWorkspaceFavorite()
   const addDatabaseRow = useAddDatabaseRow(organizationId)
   const workspaceSections = buildWorkspaceTreeSections(workspaceRecords)
-  const favorites = buildFavoriteItems(workspaceRecords)
+  const favorites = buildFavoriteTreeItems([
+    ...workspaceSections.privateWorkspaces,
+    ...workspaceSections.teamspaceWorkspaces,
+  ])
 
   const handleCreateWorkspace = async () => {
     if (!organizationId || createWorkspace.isPending) {
@@ -238,20 +232,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   )
 }
 
-function buildFavoriteItems(workspaces: Workspace[]) {
-  return [...workspaces]
-    .filter((workspace) => workspace.isFavorite)
-    .sort(
-      (first, second) =>
-        getWorkspaceCreatedTime(first) - getWorkspaceCreatedTime(second),
-    )
-    .map((workspace) => ({
-      id: workspace.id,
-      name: workspace.name.trim() || "Untitled",
-      emoji: getWorkspaceIcon(workspace),
-    }))
-}
-
 function buildWorkspaceTreeSections(workspaces: Workspace[]) {
   const orderedWorkspaces = [...workspaces].sort(
     (first, second) =>
@@ -266,13 +246,14 @@ function buildWorkspaceTreeSections(workspaces: Workspace[]) {
         isTeamspace: Boolean(workspace.isTeamspace),
         name: workspace.name,
         emoji: getWorkspaceIcon(workspace),
+        isFavorite: Boolean(workspace.isFavorite),
         workspaceId: workspace.id,
-        pages: [] as WorkspaceTreeNode[],
+        pages: [] as WorkspaceNavItem[],
       },
     ]),
   )
-  const roots: WorkspaceTreeNode[] = []
-  const databaseNodesById = new Map<string, WorkspaceTreeNode>()
+  const roots: WorkspaceNavItem[] = []
+  const databaseNodesById = new Map<string, WorkspaceNavItem>()
   const rowPageIds = new Set(
     orderedWorkspaces.flatMap((workspace) =>
       (workspace.databases ?? []).flatMap((database) =>
@@ -289,7 +270,7 @@ function buildWorkspaceTreeSections(workspaces: Workspace[]) {
     }
 
     for (const database of workspace.databases ?? []) {
-      const databaseNode: WorkspaceTreeNode = {
+      const databaseNode: WorkspaceNavItem = {
         databaseId: database.id,
         id: `database:${database.id}`,
         isDatabase: true,
@@ -379,6 +360,32 @@ function buildWorkspaceTreeSections(workspaces: Workspace[]) {
   }
 }
 
+function buildFavoriteTreeItems(items: WorkspaceNavItem[]) {
+  return items.flatMap((item) => cloneFavoriteTreeItems(item, false))
+}
+
+function cloneFavoriteTreeItems(
+  item: WorkspaceNavItem,
+  hasFavoriteAncestor: boolean,
+): WorkspaceNavItem[] {
+  const favoritePages = item.pages.flatMap((page) =>
+    cloneFavoriteTreeItems(
+      page,
+      hasFavoriteAncestor || Boolean(item.isFavorite),
+    ),
+  )
+
+  if (item.isDatabase) {
+    return favoritePages.length > 0 ? [{ ...item, pages: favoritePages }] : []
+  }
+
+  if (item.isFavorite && !hasFavoriteAncestor) {
+    return [{ ...item, pages: item.pages }]
+  }
+
+  return favoritePages
+}
+
 function getWorkspaceCreatedTime(workspace: Workspace) {
   const time = new Date(workspace.createdAt).getTime()
 
@@ -439,9 +446,9 @@ function hasWorkspaceContent(content: unknown): boolean {
 }
 
 function cloneLinkedTreeNode(
-  node: WorkspaceTreeNode,
+  node: WorkspaceNavItem,
   visitedIds: Set<string>,
-): WorkspaceTreeNode {
+): WorkspaceNavItem {
   if (visitedIds.has(node.id)) {
     return { ...node, isLinked: true, pages: [] }
   }
