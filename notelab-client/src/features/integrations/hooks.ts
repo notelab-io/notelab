@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
 
 import { useSession } from "@/features/auth/hooks"
+import { organizationsQueryOptions } from "@/features/organizations/queries"
 import { apiFetch } from "@/lib/api"
 import { queryClient } from "@/lib/query-client"
 import {
@@ -143,9 +144,23 @@ export type IntegrationEndpoint =
 
 export function useActiveOrganizationId() {
   const { data: sessionData } = useSession()
+  const { data: organizations = [] } = useQuery(organizationsQueryOptions)
   const storedActiveOrganizationId = useAppStore(
     (state) => state.activeOrganizationId,
   )
+  const sessionOrganizationId = sessionData?.session?.activeOrganizationId ?? null
+  const storedOrganization = organizations.find(
+    (organization) => organization.id === storedActiveOrganizationId,
+  )
+  const sessionOrganization = organizations.find(
+    (organization) => organization.id === sessionOrganizationId,
+  )
 
-  return sessionData?.session?.activeOrganizationId ?? storedActiveOrganizationId
+  return (
+    storedOrganization?.id ??
+    sessionOrganization?.id ??
+    organizations[0]?.id ??
+    sessionOrganizationId ??
+    storedActiveOrganizationId
+  )
 }
