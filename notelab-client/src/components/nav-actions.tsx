@@ -70,6 +70,7 @@ import {
   useUpdateUserSettings,
   useUserSettings,
 } from "@/features/user-settings/hooks"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
 import { Switch } from "@/components/ui/switch"
 import type {
@@ -113,6 +114,7 @@ export function NavActions({
   const setDatabaseFavorite = useSetDatabaseFavorite()
   const { data: userSettings } = useUserSettings()
   const updateUserSettings = useUpdateUserSettings()
+  const isMobile = useIsMobile()
   const listWorkspace = workspaces.find((item) => item.id === actionWorkspaceId)
   const isDatabasePage = Boolean(databaseId)
   const isFavorite = isDatabasePage
@@ -271,7 +273,7 @@ export function NavActions({
               <SidebarGroup>
                 <SidebarGroupContent className="gap-0">
                   <SidebarMenu>
-                    {!isDatabasePage ? (
+                    {!isDatabasePage && !isMobile ? (
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           aria-pressed={Boolean(userSettings?.workspaceFullWidth)}
