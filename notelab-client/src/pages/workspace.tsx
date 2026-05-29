@@ -17,6 +17,7 @@ import {
   useWorkspace,
   useWorkspaceAccessLevel,
 } from "@/features/workspaces/hooks"
+import { useUserSettings } from "@/features/user-settings/hooks"
 import { Editor } from "@/packages/editor"
 
 type WorkspaceEditorPaneProps = {
@@ -74,6 +75,7 @@ export function WorkspaceEditorPane({
 }: WorkspaceEditorPaneProps) {
   const { data: workspace, isLoading } = useWorkspace(workspaceId)
   const { data: accessLevel } = useWorkspaceAccessLevel(workspaceId)
+  const { data: userSettings } = useUserSettings()
   const createWorkspace = useCreateWorkspace()
   const updateWorkspace = useUpdateWorkspace()
   const contentSaveTimeoutRef = useRef<number | null>(null)
@@ -208,20 +210,27 @@ export function WorkspaceEditorPane({
 
   return (
     <section className={className}>
-      <Editor
-        key={workspace.id}
-        content={workspace.content ?? ""}
-        editable={accessLevel === "edit" || accessLevel === "full"}
-        emoji={emoji}
-        onContentChange={updateContent}
-        onCreatePage={createNestedPage}
-        onEmojiChange={updateEmoji}
-        onOpenPage={onOpenPage}
-        onTitleChange={setName}
-        organizationId={workspace.organizationId}
-        title={name}
-        workspaceId={workspace.id}
-      />
+      <div
+        className={cn(
+          "min-h-full",
+          !userSettings?.workspaceFullWidth && "mx-auto max-w-3xl",
+        )}
+      >
+        <Editor
+          key={workspace.id}
+          content={workspace.content ?? ""}
+          editable={accessLevel === "edit" || accessLevel === "full"}
+          emoji={emoji}
+          onContentChange={updateContent}
+          onCreatePage={createNestedPage}
+          onEmojiChange={updateEmoji}
+          onOpenPage={onOpenPage}
+          onTitleChange={setName}
+          organizationId={workspace.organizationId}
+          title={name}
+          workspaceId={workspace.id}
+        />
+      </div>
     </section>
   )
 }

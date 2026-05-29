@@ -10,6 +10,7 @@ import { healthRoutes } from "./routes/health";
 import { metadataRoutes } from "./routes/metadata";
 import { organizationRoutes } from "./routes/organizations";
 import { sessionRoutes } from "./routes/session";
+import { userSettingsRoutes } from "./routes/user-settings";
 import { workspaceRoutes } from "./routes/workspaces";
 import type { AppBindings } from "./types";
 
@@ -35,6 +36,7 @@ app.route("/", healthRoutes);
 app.route("/metadata", metadataRoutes);
 app.route("/organizations", organizationRoutes);
 app.route("/session", sessionRoutes);
+app.route("/user-settings", userSettingsRoutes);
 app.route("/workspaces", workspaceRoutes);
 
 serve({ fetch: app.fetch, port });

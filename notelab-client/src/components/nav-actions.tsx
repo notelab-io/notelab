@@ -66,7 +66,12 @@ import {
   useDatabase,
   useSetDatabaseFavorite,
 } from "@/features/databases/hooks"
+import {
+  useUpdateUserSettings,
+  useUserSettings,
+} from "@/features/user-settings/hooks"
 import { cn } from "@/lib/utils"
+import { Switch } from "@/components/ui/switch"
 import type {
   AccessLevel,
   AccessTargetType,
@@ -106,6 +111,8 @@ export function NavActions({
   const createWorkspace = useCreateWorkspace()
   const setFavorite = useSetWorkspaceFavorite()
   const setDatabaseFavorite = useSetDatabaseFavorite()
+  const { data: userSettings } = useUserSettings()
+  const updateUserSettings = useUpdateUserSettings()
   const listWorkspace = workspaces.find((item) => item.id === actionWorkspaceId)
   const isDatabasePage = Boolean(databaseId)
   const isFavorite = isDatabasePage
@@ -202,6 +209,24 @@ export function NavActions({
       return
     }
   }
+  const toggleWorkspaceFullWidth = () => {
+    if (isDatabasePage || updateUserSettings.isPending) {
+      return
+    }
+
+    updateUserSettings.mutate(
+      { workspaceFullWidth: !userSettings?.workspaceFullWidth },
+      {
+        onError: (error) => {
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "Could not update full width setting.",
+          )
+        },
+      },
+    )
+  }
 
   return (
     <div className="flex items-center gap-2 text-sm">
@@ -246,6 +271,24 @@ export function NavActions({
               <SidebarGroup>
                 <SidebarGroupContent className="gap-0">
                   <SidebarMenu>
+                    {!isDatabasePage ? (
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          aria-pressed={Boolean(userSettings?.workspaceFullWidth)}
+                          disabled={updateUserSettings.isPending}
+                          onClick={toggleWorkspaceFullWidth}
+                          type="button"
+                        >
+                          <span>Full Width</span>
+                          <Switch
+                            checked={Boolean(userSettings?.workspaceFullWidth)}
+                            className="ml-auto pointer-events-none"
+                            size="sm"
+                            tabIndex={-1}
+                          />
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ) : null}
                     {moreActions.map((label) => (
                       <SidebarMenuItem key={label}>
                         <SidebarMenuButton

@@ -19,6 +19,22 @@ export const user = pgTable("user", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+export const userSettings = pgTable("user_settings", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  workspaceFullWidth: boolean("workspace_full_width").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .$defaultFn(() => new Date())
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .$defaultFn(() => new Date())
+    .notNull(),
+}, (table) => [
+  uniqueIndex("user_settings_user_id_unique").on(table.userId),
+]);
+
 export const session = pgTable("session", {
   id: text("id").primaryKey(),
   expiresAt: timestamp("expires_at").notNull(),

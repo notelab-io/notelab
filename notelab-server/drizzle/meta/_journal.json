@@ -29,6 +29,13 @@
       "when": 1780011659253,
       "tag": "0003_sharp_cobalt_man",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1780019872662,
+      "tag": "0004_illegal_true_believers",
+      "breakpoints": true
     }
   ]
 }
