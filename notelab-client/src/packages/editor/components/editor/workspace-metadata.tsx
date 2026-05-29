@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import {
   ImagePlus,
   SmilePlus,
@@ -48,6 +48,7 @@ export function WorkspaceMetadata({
   const [localIcon, setLocalIcon] = useState("")
   const [localTitle, setLocalTitle] = useState("")
   const [draftValues, setDraftValues] = useState<Record<string, string>>({})
+  const titleRef = useRef<HTMLTextAreaElement | null>(null)
   const { data: propertyPayload } = useWorkspaceProperties(workspaceId)
   const updatePropertyValue = useUpdateWorkspacePropertyValue()
   const icon = iconProp ?? localIcon
@@ -92,6 +93,17 @@ export function WorkspaceMetadata({
       setLocalTitle(nextTitle)
     }
   }
+
+  useEffect(() => {
+    const titleElement = titleRef.current
+
+    if (!titleElement) {
+      return
+    }
+
+    titleElement.style.height = "0px"
+    titleElement.style.height = `${titleElement.scrollHeight}px`
+  }, [title])
 
   const iconPicker = icon ? (
     <div className="group/icon relative shrink-0">
@@ -205,14 +217,22 @@ export function WorkspaceMetadata({
           ) : null}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-start gap-3">
           {icon ? iconPicker : null}
-          <Input
+          <textarea
             aria-label="Workspace title"
-            className="h-auto min-w-0 border-0 bg-transparent px-0 py-0 text-3xl font-semibold leading-tight tracking-normal text-foreground shadow-none placeholder:text-muted-foreground/40 focus-visible:ring-0 md:text-3xl dark:bg-transparent"
+            className="min-h-10 min-w-0 flex-1 resize-none overflow-hidden border-0 bg-transparent px-0 py-0 text-3xl font-semibold leading-tight tracking-normal whitespace-pre-wrap text-foreground shadow-none outline-none placeholder:text-muted-foreground/40 focus-visible:ring-0 md:text-3xl dark:bg-transparent"
             onChange={(event) => updateTitle(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault()
+                event.currentTarget.blur()
+              }
+            }}
             placeholder="New workspace"
             readOnly={!editable}
+            ref={titleRef}
+            rows={1}
             value={title}
           />
         </div>

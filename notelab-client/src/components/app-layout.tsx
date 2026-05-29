@@ -194,8 +194,8 @@ function WorkspaceBreadcrumb({ workspaceId }: { workspaceId: string }) {
     : []
 
   return (
-    <Breadcrumb>
-      <BreadcrumbList>
+    <Breadcrumb className="min-w-0">
+      <BreadcrumbList className="flex-nowrap">
         <BreadcrumbItem className="hidden sm:inline-flex">
           <BreadcrumbLink asChild>
             <Link to="/dashboard">Dashboard</Link>
@@ -217,8 +217,10 @@ function WorkspaceBreadcrumb({ workspaceId }: { workspaceId: string }) {
             )
           })
         ) : (
-          <BreadcrumbItem>
-            <BreadcrumbPage className="line-clamp-1">Workspace</BreadcrumbPage>
+          <BreadcrumbItem className="min-w-0">
+            <BreadcrumbPage className="block max-w-64 truncate sm:max-w-80 md:max-w-96 lg:max-w-[42rem]">
+              Workspace
+            </BreadcrumbPage>
           </BreadcrumbItem>
         )}
       </BreadcrumbList>
@@ -239,9 +241,11 @@ function BreadcrumbFragment({
     <>
       <BreadcrumbItem className="min-w-0">
         {isCurrent ? (
-          <BreadcrumbPage className="line-clamp-1">{label}</BreadcrumbPage>
+          <BreadcrumbPage className="block max-w-64 truncate sm:max-w-80 md:max-w-96 lg:max-w-[42rem]">
+            {label}
+          </BreadcrumbPage>
         ) : (
-          <BreadcrumbLink asChild className="line-clamp-1 max-w-32 sm:max-w-48">
+          <BreadcrumbLink asChild className="block max-w-32 truncate sm:max-w-48">
             <Link to="/workspace/$workspaceId" params={{ workspaceId: item.id }}>
               {label}
             </Link>
