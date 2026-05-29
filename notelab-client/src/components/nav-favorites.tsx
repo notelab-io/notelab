@@ -112,61 +112,77 @@ function FavoriteTreeItem({
 
   if (!isRoot) {
     return (
-      <SidebarMenuSubItem>
-        <SidebarMenuSubButton asChild isActive={isActive}>
-          {item.isDatabase && item.databaseId ? (
-            <Link
-              params={{ databaseId: item.databaseId }}
-              title={displayName}
-              to="/database/$databaseId"
-            >
-              <span>{item.emoji}</span>
-              <span>{displayName}</span>
-              {item.isLinked ? (
-                <ArrowUpRightIcon
-                  aria-label="Linked from another parent"
-                  className="ml-auto size-3 text-sidebar-foreground/45"
+      <Collapsible defaultOpen={isOpen}>
+        <SidebarMenuSubItem>
+          <SidebarMenuSubButton
+            asChild
+            className={hasPages ? "pl-7" : undefined}
+            isActive={isActive}
+          >
+            {item.isDatabase && item.databaseId ? (
+              <Link
+                params={{ databaseId: item.databaseId }}
+                title={displayName}
+                to="/database/$databaseId"
+              >
+                <span>{item.emoji}</span>
+                <span>{displayName}</span>
+                {item.isLinked ? (
+                  <ArrowUpRightIcon
+                    aria-label="Linked from another parent"
+                    className="ml-auto size-3 text-sidebar-foreground/45"
+                  />
+                ) : null}
+              </Link>
+            ) : (
+              <Link
+                params={{ workspaceId: linkWorkspaceId }}
+                title={displayName}
+                to="/workspace/$workspaceId"
+              >
+                <span>{item.emoji}</span>
+                <span>{displayName}</span>
+                {item.isLinked ? (
+                  <ArrowUpRightIcon
+                    aria-label="Linked from another parent"
+                    className="ml-auto size-3 text-sidebar-foreground/45"
+                  />
+                ) : null}
+              </Link>
+            )}
+          </SidebarMenuSubButton>
+          {hasPages ? (
+            <CollapsibleTrigger asChild>
+              <SidebarMenuAction
+                className="top-1 left-1 bg-sidebar-accent text-sidebar-accent-foreground data-[state=open]:rotate-90 group-focus-within/menu-sub-item:opacity-100 group-hover/menu-sub-item:opacity-100"
+                showOnHover
+              >
+                <ChevronRightIcon />
+              </SidebarMenuAction>
+            </CollapsibleTrigger>
+          ) : null}
+          <FavoriteItemMenu
+            item={item}
+            onRemoveDatabaseFavorite={onRemoveDatabaseFavorite}
+            onRemoveFavorite={onRemoveFavorite}
+            requireNestedRemoveConfirmation
+          />
+          <CollapsibleContent>
+            <SidebarMenuSub>
+              {item.pages.map((page) => (
+                <FavoriteTreeItem
+                  activeDatabaseId={activeDatabaseId}
+                  activeWorkspaceId={activeWorkspaceId}
+                  item={page}
+                  key={page.id}
+                  onRemoveDatabaseFavorite={onRemoveDatabaseFavorite}
+                  onRemoveFavorite={onRemoveFavorite}
                 />
-              ) : null}
-            </Link>
-          ) : (
-            <Link
-              params={{ workspaceId: linkWorkspaceId }}
-              title={displayName}
-              to="/workspace/$workspaceId"
-            >
-              <span>{item.emoji}</span>
-              <span>{displayName}</span>
-              {item.isLinked ? (
-                <ArrowUpRightIcon
-                  aria-label="Linked from another parent"
-                  className="ml-auto size-3 text-sidebar-foreground/45"
-                />
-              ) : null}
-            </Link>
-          )}
-        </SidebarMenuSubButton>
-        <FavoriteItemMenu
-          item={item}
-          onRemoveDatabaseFavorite={onRemoveDatabaseFavorite}
-          onRemoveFavorite={onRemoveFavorite}
-          requireNestedRemoveConfirmation
-        />
-        {hasPages ? (
-          <SidebarMenuSub>
-            {item.pages.map((page) => (
-              <FavoriteTreeItem
-                activeDatabaseId={activeDatabaseId}
-                activeWorkspaceId={activeWorkspaceId}
-                item={page}
-                key={page.id}
-                onRemoveDatabaseFavorite={onRemoveDatabaseFavorite}
-                onRemoveFavorite={onRemoveFavorite}
-              />
-            ))}
-          </SidebarMenuSub>
-        ) : null}
-      </SidebarMenuSubItem>
+              ))}
+            </SidebarMenuSub>
+          </CollapsibleContent>
+        </SidebarMenuSubItem>
+      </Collapsible>
     )
   }
 

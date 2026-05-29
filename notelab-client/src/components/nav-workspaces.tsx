@@ -261,59 +261,75 @@ function WorkspaceTreeItem({
 
   if (!isRoot) {
     return (
-      <SidebarMenuSubItem>
-        <SidebarMenuSubButton asChild isActive={isActive}>
-          {item.isDatabase && item.databaseId ? (
-            <Link
-              draggable={false}
-              to="/database/$databaseId"
-              params={{ databaseId: item.databaseId }}
-              {...databaseDropProps}
-            >
-              <span>{item.emoji}</span>
-              <span>{displayName}</span>
-              {item.isLinked ? (
-                <ArrowUpRightIcon
-                  aria-label="Linked from another parent"
-                  className="ml-auto size-3 text-sidebar-foreground/45"
+      <Collapsible defaultOpen={isOpen}>
+        <SidebarMenuSubItem>
+          <SidebarMenuSubButton
+            asChild
+            className={hasPages ? "pl-7" : undefined}
+            isActive={isActive}
+          >
+            {item.isDatabase && item.databaseId ? (
+              <Link
+                draggable={false}
+                to="/database/$databaseId"
+                params={{ databaseId: item.databaseId }}
+                {...databaseDropProps}
+              >
+                <span>{item.emoji}</span>
+                <span>{displayName}</span>
+                {item.isLinked ? (
+                  <ArrowUpRightIcon
+                    aria-label="Linked from another parent"
+                    className="ml-auto size-3 text-sidebar-foreground/45"
+                  />
+                ) : null}
+              </Link>
+            ) : (
+              <Link
+                draggable
+                onDragStart={startPageDrag}
+                to="/workspace/$workspaceId"
+                params={{ workspaceId: linkWorkspaceId }}
+                {...databaseDropProps}
+              >
+                <span>{item.emoji}</span>
+                <span>{displayName}</span>
+                {item.isLinked ? (
+                  <ArrowUpRightIcon
+                    aria-label="Linked from another parent"
+                    className="ml-auto size-3 text-sidebar-foreground/45"
+                  />
+                ) : null}
+              </Link>
+            )}
+          </SidebarMenuSubButton>
+          {hasPages ? (
+            <CollapsibleTrigger asChild>
+              <SidebarMenuAction
+                className="top-1 left-1 bg-sidebar-accent text-sidebar-accent-foreground data-[state=open]:rotate-90 group-focus-within/menu-sub-item:opacity-100 group-hover/menu-sub-item:opacity-100"
+                showOnHover
+              >
+                <ChevronRightIcon />
+              </SidebarMenuAction>
+            </CollapsibleTrigger>
+          ) : null}
+          <CollapsibleContent>
+            <SidebarMenuSub>
+              {item.pages.map((page) => (
+                <WorkspaceTreeItem
+                  activeDatabaseId={activeDatabaseId}
+                  activeWorkspaceId={activeWorkspaceId}
+                  databaseDropTargetId={databaseDropTargetId}
+                  item={page}
+                  key={page.id}
+                  onDatabaseDropTargetChange={onDatabaseDropTargetChange}
+                  onDropPageOnDatabase={onDropPageOnDatabase}
                 />
-              ) : null}
-            </Link>
-          ) : (
-            <Link
-              draggable
-              onDragStart={startPageDrag}
-              to="/workspace/$workspaceId"
-              params={{ workspaceId: linkWorkspaceId }}
-              {...databaseDropProps}
-            >
-              <span>{item.emoji}</span>
-              <span>{displayName}</span>
-              {item.isLinked ? (
-                <ArrowUpRightIcon
-                  aria-label="Linked from another parent"
-                  className="ml-auto size-3 text-sidebar-foreground/45"
-                />
-              ) : null}
-            </Link>
-          )}
-        </SidebarMenuSubButton>
-        {hasPages ? (
-          <SidebarMenuSub>
-            {item.pages.map((page) => (
-              <WorkspaceTreeItem
-                activeDatabaseId={activeDatabaseId}
-                activeWorkspaceId={activeWorkspaceId}
-                databaseDropTargetId={databaseDropTargetId}
-                item={page}
-                key={page.id}
-                onDatabaseDropTargetChange={onDatabaseDropTargetChange}
-                onDropPageOnDatabase={onDropPageOnDatabase}
-              />
-            ))}
-          </SidebarMenuSub>
-        ) : null}
-      </SidebarMenuSubItem>
+              ))}
+            </SidebarMenuSub>
+          </CollapsibleContent>
+        </SidebarMenuSubItem>
+      </Collapsible>
     )
   }
 
