@@ -28,6 +28,34 @@ type DatabasePropertyConfig = {
   options?: DatabaseSelectOption[]
 }
 
+const SELECT_POPOVER_WIDTH = 288
+const SELECT_POPOVER_HEIGHT = 320
+const SELECT_POPOVER_OFFSET = 6
+const SELECT_POPOVER_PADDING = 16
+
+function getSelectPopoverPosition(rect: DOMRect) {
+  const spaceBelow =
+    window.innerHeight - rect.bottom - SELECT_POPOVER_PADDING
+  const spaceAbove = rect.top - SELECT_POPOVER_PADDING
+  const shouldOpenAbove =
+    spaceBelow < SELECT_POPOVER_HEIGHT + SELECT_POPOVER_OFFSET &&
+    spaceAbove > spaceBelow
+  const maxLeft = Math.max(
+    SELECT_POPOVER_PADDING,
+    window.innerWidth - SELECT_POPOVER_WIDTH - SELECT_POPOVER_PADDING
+  )
+  const left = Math.min(Math.max(rect.left, SELECT_POPOVER_PADDING), maxLeft)
+  const preferredTop = shouldOpenAbove
+    ? rect.top - SELECT_POPOVER_HEIGHT - SELECT_POPOVER_OFFSET
+    : rect.bottom + SELECT_POPOVER_OFFSET
+  const top = Math.max(SELECT_POPOVER_PADDING, preferredTop)
+
+  return {
+    left,
+    top,
+  }
+}
+
 function DatabaseSelectBadge({
   children,
   color,
@@ -174,17 +202,34 @@ export function DatabaseSelectCell({
     }
   }, [isMobile, isOpen])
 
-  const openPanel = () => {
+  const updatePanelPosition = () => {
     const rect = triggerRef.current?.getBoundingClientRect()
 
     if (!rect) {
       return
     }
 
-    setPanelPosition({
-      left: rect.left,
-      top: rect.top,
-    })
+    setPanelPosition(getSelectPopoverPosition(rect))
+  }
+
+  useEffect(() => {
+    if (!isOpen || isMobile) {
+      return
+    }
+
+    const handlePositionUpdate = () => updatePanelPosition()
+
+    window.addEventListener("resize", handlePositionUpdate)
+    window.addEventListener("scroll", handlePositionUpdate, true)
+
+    return () => {
+      window.removeEventListener("resize", handlePositionUpdate)
+      window.removeEventListener("scroll", handlePositionUpdate, true)
+    }
+  }, [isMobile, isOpen])
+
+  const openPanel = () => {
+    updatePanelPosition()
     setIsOpen(true)
   }
 

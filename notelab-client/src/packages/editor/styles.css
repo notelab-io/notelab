@@ -575,6 +575,7 @@
 
   .database-select-popover {
     @apply fixed z-100 w-72 max-w-[calc(100vw-3rem)] overflow-hidden rounded-lg bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10;
+    max-height: 20rem;
   }
 
   .database-select-drawer {
@@ -590,7 +591,8 @@
   }
 
   .database-select-options {
-    @apply flex flex-col gap-0.5 pt-1;
+    @apply flex flex-col gap-0.5 overflow-y-auto pt-1;
+    max-height: 15.5rem;
   }
 
   .database-select-option,
@@ -904,7 +906,7 @@
 
   .slash-menu-shell {
     @apply fixed z-50 w-72 overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-lg;
-    max-height: min(18rem, var(--radix-popover-content-available-height));
+    max-height: 18rem;
   }
 
   .slash-menu-shell [data-slot="command-list"] {

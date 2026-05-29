@@ -444,6 +444,25 @@ export function createSlashCommandItems(
 
 export const slashCommandItems = createSlashCommandItems()
 
+const SLASH_MENU_HEIGHT = 288
+const SLASH_MENU_OFFSET = 6
+const SLASH_MENU_COLLISION_PADDING = 16
+
+function getSlashCommandMenuSide(anchorRect: DOMRect | null) {
+  if (!anchorRect || typeof window === "undefined") {
+    return "bottom"
+  }
+
+  const spaceBelow =
+    window.innerHeight - anchorRect.bottom - SLASH_MENU_COLLISION_PADDING
+  const spaceAbove = anchorRect.top - SLASH_MENU_COLLISION_PADDING
+
+  return spaceBelow < SLASH_MENU_HEIGHT + SLASH_MENU_OFFSET &&
+    spaceAbove > spaceBelow
+    ? "top"
+    : "bottom"
+}
+
 export function SlashCommandMenu({
   items,
   selectedIndex,
@@ -530,6 +549,7 @@ function SlashCommandPopover({
   const virtualRef = useRef({
     getBoundingClientRect: () => anchorRectRef.current ?? new DOMRect(),
   })
+  const side = getSlashCommandMenuSide(anchorRect)
 
   return (
     <Popover modal={false} open>
@@ -542,11 +562,11 @@ function SlashCommandPopover({
         align="start"
         avoidCollisions
         className="slash-menu-shell w-72 gap-0 p-0"
-        collisionPadding={16}
+        collisionPadding={SLASH_MENU_COLLISION_PADDING}
         onOpenAutoFocus={(event) => event.preventDefault()}
         onPointerDownOutside={(event) => event.preventDefault()}
-        side="bottom"
-        sideOffset={6}
+        side={side}
+        sideOffset={SLASH_MENU_OFFSET}
       >
         <SlashCommandMenu
           items={items}
