@@ -51,6 +51,16 @@ export function OrganizationSwitcher() {
     organizations.find((organization) => organization.id === activeOrganizationId) ??
     organizations[0]
 
+  React.useEffect(() => {
+    if (
+      storedActiveOrganizationId &&
+      organizations.length > 0 &&
+      !organizations.some((organization) => organization.id === storedActiveOrganizationId)
+    ) {
+      useAppStore.getState().setActiveOrganizationId(null)
+    }
+  }, [organizations, storedActiveOrganizationId])
+
   async function handleCreateOrganization(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
 

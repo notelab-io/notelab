@@ -125,9 +125,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const activeOrganizationId = useAppStore((state) => state.activeOrganizationId)
   const { data: session } = useSession()
   const { data: organizations = [] } = useOrganizations()
+  const sessionOrganizationId = session?.session?.activeOrganizationId ?? null
+  const storedOrganization =
+    organizations.find((organization) => organization.id === activeOrganizationId) ??
+    null
+  const sessionOrganization =
+    organizations.find((organization) => organization.id === sessionOrganizationId) ??
+    null
   const organizationId =
-    activeOrganizationId ??
-    session?.session?.activeOrganizationId ??
+    storedOrganization?.id ??
+    sessionOrganization?.id ??
     organizations[0]?.id ??
     null
   const { data: workspaceRecords = [] } = useWorkspaces(organizationId)
