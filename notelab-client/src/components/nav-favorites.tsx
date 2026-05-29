@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { Link, useLocation } from "@tanstack/react-router"
 import {
   ArrowUpRightIcon,
@@ -16,6 +17,16 @@ import {
   DropDrawerSeparator,
   DropDrawerTrigger,
 } from "@/components/ui/dropdrawer"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -139,6 +150,7 @@ function FavoriteTreeItem({
           item={item}
           onRemoveDatabaseFavorite={onRemoveDatabaseFavorite}
           onRemoveFavorite={onRemoveFavorite}
+          requireNestedRemoveConfirmation
         />
         {hasPages ? (
           <SidebarMenuSub>
@@ -208,6 +220,7 @@ function FavoriteTreeItem({
           item={item}
           onRemoveDatabaseFavorite={onRemoveDatabaseFavorite}
           onRemoveFavorite={onRemoveFavorite}
+          requireNestedRemoveConfirmation={false}
         />
         <CollapsibleContent>
           <SidebarMenuSub>
@@ -232,64 +245,95 @@ function FavoriteItemMenu({
   item,
   onRemoveDatabaseFavorite,
   onRemoveFavorite,
+  requireNestedRemoveConfirmation,
 }: {
   item: WorkspaceNavItem
   onRemoveDatabaseFavorite: (databaseId: string) => void
   onRemoveFavorite: (workspaceId: string) => void
+  requireNestedRemoveConfirmation: boolean
 }) {
   const { isMobile } = useSidebar()
+  const [confirmOpen, setConfirmOpen] = useState(false)
   const linkPath =
     item.isDatabase && item.databaseId
       ? `/database/${item.databaseId}`
       : `/workspace/${item.workspaceId}`
+  const displayName = item.name.trim() || "Untitled"
+  const removeFavorite = () => {
+    if (item.isDatabase && item.databaseId) {
+      onRemoveDatabaseFavorite(item.databaseId)
+      return
+    }
+
+    onRemoveFavorite(item.workspaceId)
+  }
 
   return (
-    <DropDrawer>
-      <DropDrawerTrigger asChild>
-        <SidebarMenuAction showOnHover className="aria-expanded:bg-muted">
-          <MoreHorizontalIcon />
-          <span className="sr-only">More</span>
-        </SidebarMenuAction>
-      </DropDrawerTrigger>
-      <DropDrawerContent
-        align={isMobile ? "end" : "start"}
-        className="w-56 rounded-lg"
-        side={isMobile ? "bottom" : "right"}
-      >
-        <DropDrawerItem
-          onSelect={() => {
-            if (item.isDatabase && item.databaseId) {
-              onRemoveDatabaseFavorite(item.databaseId)
-              return
-            }
+    <>
+      <DropDrawer>
+        <DropDrawerTrigger asChild>
+          <SidebarMenuAction showOnHover className="aria-expanded:bg-muted">
+            <MoreHorizontalIcon />
+            <span className="sr-only">More</span>
+          </SidebarMenuAction>
+        </DropDrawerTrigger>
+        <DropDrawerContent
+          align={isMobile ? "end" : "start"}
+          className="w-56 rounded-lg"
+          side={isMobile ? "bottom" : "right"}
+        >
+          <DropDrawerItem
+            onSelect={() => {
+              if (requireNestedRemoveConfirmation) {
+                setConfirmOpen(true)
+                return
+              }
 
-            onRemoveFavorite(item.workspaceId)
-          }}
-        >
-          <StarOffIcon className="text-muted-foreground" />
-          <span>Remove from Favorites</span>
-        </DropDrawerItem>
-        <DropDrawerSeparator />
-        <DropDrawerItem
-          onSelect={() => {
-            void navigator.clipboard?.writeText(
-              `${window.location.origin}${linkPath}`,
-            )
-          }}
-        >
-          <LinkIcon className="text-muted-foreground" />
-          <span>Copy Link</span>
-        </DropDrawerItem>
-        <DropDrawerItem
-          onSelect={() => {
-            window.open(linkPath, "_blank", "noopener")
-          }}
-        >
-          <ArrowUpRightIcon className="text-muted-foreground" />
-          <span>Open in New Tab</span>
-        </DropDrawerItem>
-      </DropDrawerContent>
-    </DropDrawer>
+              removeFavorite()
+            }}
+          >
+            <StarOffIcon className="text-muted-foreground" />
+            <span>Remove from Favorites</span>
+          </DropDrawerItem>
+          <DropDrawerSeparator />
+          <DropDrawerItem
+            onSelect={() => {
+              void navigator.clipboard?.writeText(
+                `${window.location.origin}${linkPath}`,
+              )
+            }}
+          >
+            <LinkIcon className="text-muted-foreground" />
+            <span>Copy Link</span>
+          </DropDrawerItem>
+          <DropDrawerItem
+            onSelect={() => {
+              window.open(linkPath, "_blank", "noopener")
+            }}
+          >
+            <ArrowUpRightIcon className="text-muted-foreground" />
+            <span>Open in New Tab</span>
+          </DropDrawerItem>
+        </DropDrawerContent>
+      </DropDrawer>
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Parent is favorited</AlertDialogTitle>
+            <AlertDialogDescription>
+              {displayName} is inside a favorited parent. Unfavorite it anyway?
+              This will also remove its nested items from Favorites.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={removeFavorite}>
+              Unfavorite anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }
 

@@ -401,12 +401,7 @@ function cloneFavoriteTreeItems(
   item: WorkspaceNavItem,
   hasFavoriteAncestor: boolean,
 ): WorkspaceNavItem[] {
-  const favoritePages = item.pages.flatMap((page) =>
-    cloneFavoriteTreeItems(
-      page,
-      hasFavoriteAncestor || Boolean(item.isFavorite),
-    ),
-  )
+  const favoritePages = getFavoriteDescendantPages(item)
 
   if (item.isDatabase) {
     if (hasFavoriteAncestor) {
@@ -414,15 +409,27 @@ function cloneFavoriteTreeItems(
     }
 
     return item.isFavorite || favoritePages.length > 0
-      ? [{ ...item, pages: item.isFavorite ? item.pages : favoritePages }]
+      ? [{ ...item, pages: favoritePages }]
       : []
   }
 
   if (item.isFavorite && !hasFavoriteAncestor) {
-    return [{ ...item, pages: item.pages }]
+    return [{ ...item, pages: favoritePages }]
   }
 
   return favoritePages
+}
+
+function getFavoriteDescendantPages(item: WorkspaceNavItem): WorkspaceNavItem[] {
+  return item.pages.flatMap((page) => {
+    const pages = getFavoriteDescendantPages(page)
+
+    if (page.isFavorite) {
+      return [{ ...page, pages }]
+    }
+
+    return pages
+  })
 }
 
 function collectFavoriteDescendantIds(
