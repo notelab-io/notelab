@@ -14,6 +14,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { apiFetch } from "@/lib/api"
+
+export type BookmarkMetadata = {
+  description: string | null
+  favicon: string | null
+  image: string | null
+  title: string
+}
 
 function BookmarkBlockView({ node, updateAttributes }: ReactNodeViewProps) {
   const [faviconFailed, setFaviconFailed] = useState(false)
@@ -34,7 +42,7 @@ function BookmarkBlockView({ node, updateAttributes }: ReactNodeViewProps) {
       return
     }
 
-    const fallbackMetadata = getFallbackMetadata(nextUrl)
+    const fallbackMetadata = getFallbackBookmarkMetadata(nextUrl)
 
     updateAttributes({
       ...fallbackMetadata,
@@ -135,12 +143,17 @@ function BookmarkBlockView({ node, updateAttributes }: ReactNodeViewProps) {
         <a
           className="bookmark-block-preview"
           contentEditable={false}
+          data-image={image ? "true" : "false"}
           href={href}
           rel="noreferrer"
           target="_blank"
         >
           <span className="bookmark-block-content">
-            <span className="bookmark-block-title-row">
+            <span className="bookmark-block-title">{title}</span>
+            {description ? (
+              <span className="bookmark-block-description">{description}</span>
+            ) : null}
+            <span className="bookmark-block-url">
               {favicon && !faviconFailed ? (
                 <img
                   alt=""
@@ -153,16 +166,14 @@ function BookmarkBlockView({ node, updateAttributes }: ReactNodeViewProps) {
                   <Globe2 />
                 </span>
               )}
-              <span className="bookmark-block-title">{title}</span>
+              <span>{host ?? href}</span>
             </span>
-            {description ? (
-              <span className="bookmark-block-description">{description}</span>
-            ) : null}
-            <span className="bookmark-block-url">{host ?? href}</span>
           </span>
-          <span className="bookmark-block-thumbnail">
-            {image ? <img alt="" src={image} /> : <Bookmark />}
-          </span>
+          {image ? (
+            <span className="bookmark-block-thumbnail">
+              <img alt="" src={image} />
+            </span>
+          ) : null}
         </a>
       ) : null}
     </NodeViewWrapper>
@@ -205,88 +216,26 @@ function getUrlTitle(value: string) {
     .join(" ")
 }
 
-function getFallbackMetadata(value: string) {
+export function getFallbackBookmarkMetadata(value: string): BookmarkMetadata {
   const host = getUrlHost(value)
 
   return {
-    description: `Create a visual bookmark from ${host ?? "a link"}.`,
+    description: host ?? null,
     favicon: getFallbackFavicon(value),
     image: null,
     title: getUrlTitle(value),
   }
 }
 
-async function fetchBookmarkMetadata(value: string) {
-  const response = await fetch(value)
-
-  if (!response.ok) {
-    throw new Error("Unable to fetch bookmark metadata")
-  }
-
-  const html = await response.text()
-  const document = new DOMParser().parseFromString(html, "text/html")
-
-  return {
-    description:
-      getMetaContent(document, "og:description") ??
-      getMetaContent(document, "twitter:description") ??
-      getMetaContent(document, "description"),
-    favicon:
-      resolveUrl(
-        getLinkHref(document, "icon") ??
-          getLinkHref(document, "shortcut icon") ??
-          getLinkHref(document, "apple-touch-icon"),
-        value
-      ) ?? getFallbackFavicon(value),
-    image:
-      resolveUrl(
-        getMetaContent(document, "og:image") ??
-          getMetaContent(document, "twitter:image"),
-        value
-      ) ?? null,
-    title:
-      getMetaContent(document, "og:title") ??
-      getMetaContent(document, "twitter:title") ??
-      document.querySelector("title")?.textContent?.trim() ??
-      getUrlTitle(value),
-  }
-}
-
-function getMetaContent(document: Document, name: string) {
-  return (
-    document
-      .querySelector(`meta[property="${name}"]`)
-      ?.getAttribute("content")
-      ?.trim() ??
-    document.querySelector(`meta[name="${name}"]`)?.getAttribute("content")?.trim() ??
-    null
+export async function fetchBookmarkMetadata(value: string) {
+  return apiFetch<BookmarkMetadata>(
+    `/metadata/bookmark?url=${encodeURIComponent(value)}`
   )
-}
-
-function getLinkHref(document: Document, rel: string) {
-  const links = Array.from(document.querySelectorAll<HTMLLinkElement>("link[rel]"))
-  const match = links.find(
-    (link) => link.rel.toLowerCase() === rel.toLowerCase()
-  )
-
-  return match?.getAttribute("href")?.trim() || null
 }
 
 function getFallbackFavicon(value: string) {
   try {
     return new URL("/favicon.ico", value).toString()
-  } catch {
-    return null
-  }
-}
-
-function resolveUrl(value: string | null | undefined, baseUrl: string) {
-  if (!value) {
-    return null
-  }
-
-  try {
-    return new URL(value, baseUrl).toString()
   } catch {
     return null
   }
