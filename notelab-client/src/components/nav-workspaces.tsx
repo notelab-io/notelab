@@ -1,10 +1,19 @@
-import { useState, type DragEvent, type ReactNode } from "react"
-import { Link, useLocation } from "@tanstack/react-router"
+import { useState, type DragEvent } from "react"
+import { useLocation } from "@tanstack/react-router"
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible"
+  ArrowUpRightIcon,
+  LinkIcon,
+  MoreHorizontalIcon,
+  PlusIcon,
+} from "lucide-react"
+
+import {
+  DropDrawer,
+  DropDrawerContent,
+  DropDrawerItem,
+  DropDrawerSeparator,
+  DropDrawerTrigger,
+} from "@/components/ui/dropdrawer"
 import {
   SidebarGroup,
   SidebarGroupAction,
@@ -14,30 +23,17 @@ import {
   SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
+  useSidebar,
 } from "@/components/ui/sidebar"
 import {
-  ArrowUpRightIcon,
-  ChevronRightIcon,
-  MoreHorizontalIcon,
-  PlusIcon,
-} from "lucide-react"
+  getActiveDatabaseId,
+  getActiveWorkspaceId,
+  NavTree,
+  type WorkspaceNavItem,
+} from "@/components/nav-tree"
 import { DATABASE_PAGE_DRAG_MIME } from "@/packages/editor/extensions/database"
 
-export type WorkspaceNavItem = {
-  databaseId?: string | null
-  id: string
-  isDatabase?: boolean
-  isFavorite?: boolean
-  isLinked?: boolean
-  isTeamspace: boolean
-  name: string
-  emoji: ReactNode
-  workspaceId: string
-  pages: WorkspaceNavItem[]
-}
+export type { WorkspaceNavItem } from "@/components/nav-tree"
 
 type DatabaseDropInput = {
   databaseId: string
@@ -111,6 +107,79 @@ function WorkspaceSection({
   showCreateAction?: boolean
   workspaces: WorkspaceNavItem[]
 }) {
+  const getLinkProps = ({
+    displayName,
+    item,
+  }: {
+    displayName: string
+    item: WorkspaceNavItem
+  }) => {
+    const canDropOnDatabase = Boolean(item.databaseId && onDropPageOnDatabase)
+    const handleDatabaseDragOver = (event: DragEvent<HTMLAnchorElement>) => {
+      if (!canDropOnDatabase || !hasDraggedPagePayload(event)) {
+        return
+      }
+
+      event.preventDefault()
+      event.dataTransfer.dropEffect = "move"
+      onDatabaseDropTargetChange(item.id)
+    }
+    const handleDatabaseDragLeave = (event: DragEvent<HTMLAnchorElement>) => {
+      if (
+        !event.currentTarget.contains(
+          event.relatedTarget as globalThis.Node | null,
+        )
+      ) {
+        onDatabaseDropTargetChange(null)
+      }
+    }
+    const handleDatabaseDrop = (event: DragEvent<HTMLAnchorElement>) => {
+      const dragPayload = getDraggedPagePayload(event)
+
+      if (!canDropOnDatabase || !item.databaseId || !dragPayload) {
+        return
+      }
+
+      event.preventDefault()
+      event.stopPropagation()
+      onDatabaseDropTargetChange(null)
+      onDropPageOnDatabase?.({
+        databaseId: item.databaseId,
+        pageId: dragPayload.pageId,
+        targetPageId: item.workspaceId,
+        title: dragPayload.title,
+      })
+    }
+    const handlePageDragStart = (event: DragEvent<HTMLAnchorElement>) => {
+      if (item.isDatabase) {
+        return
+      }
+
+      event.dataTransfer.effectAllowed = "copyMove"
+      event.dataTransfer.setData(
+        DATABASE_PAGE_DRAG_MIME,
+        JSON.stringify({
+          pageId: item.id,
+          title: displayName,
+        }),
+      )
+      event.dataTransfer.setData("text/plain", displayName)
+    }
+
+    return {
+      className:
+        databaseDropTargetId === item.id
+          ? "bg-sidebar-accent text-sidebar-accent-foreground ring-1 ring-sidebar-ring"
+          : undefined,
+      draggable: !item.isDatabase,
+      onDragEnter: handleDatabaseDragOver,
+      onDragLeave: handleDatabaseDragLeave,
+      onDragOver: handleDatabaseDragOver,
+      onDragStart: handlePageDragStart,
+      onDrop: handleDatabaseDrop,
+    }
+  }
+
   return (
     <SidebarGroup>
       <SidebarGroupLabel>{label}</SidebarGroupLabel>
@@ -125,18 +194,15 @@ function WorkspaceSection({
       ) : null}
       <SidebarGroupContent>
         <SidebarMenu>
-          {workspaces.map((workspace) => (
-            <WorkspaceTreeItem
-              activeDatabaseId={activeDatabaseId}
-              activeWorkspaceId={activeWorkspaceId}
-              databaseDropTargetId={databaseDropTargetId}
-              isRoot
-              item={workspace}
-              key={workspace.id}
-              onDatabaseDropTargetChange={onDatabaseDropTargetChange}
-              onDropPageOnDatabase={onDropPageOnDatabase}
-            />
-          ))}
+          <NavTree
+            activeDatabaseId={activeDatabaseId}
+            activeWorkspaceId={activeWorkspaceId}
+            getLinkProps={getLinkProps}
+            items={workspaces}
+            renderItemMenu={({ item, nested }) => (
+              <WorkspaceItemMenu item={item} nested={nested} />
+            )}
+          />
           {workspaces.length === 0 ? (
             <SidebarMenuItem>
               <SidebarMenuButton className="text-sidebar-foreground/50">
@@ -158,264 +224,60 @@ function WorkspaceSection({
   )
 }
 
-function hasActiveDescendant(
-  item: WorkspaceNavItem,
-  activeDatabaseId: string | null,
-  activeWorkspaceId: string | null,
-): boolean {
-  return item.pages.some(
-    (page) =>
-      (page.isDatabase
-        ? activeDatabaseId === page.databaseId
-        : activeWorkspaceId === page.id) ||
-      hasActiveDescendant(page, activeDatabaseId, activeWorkspaceId),
-  )
-}
-
-function WorkspaceTreeItem({
-  activeDatabaseId,
-  activeWorkspaceId,
-  databaseDropTargetId,
-  isRoot = false,
+function WorkspaceItemMenu({
   item,
-  onDatabaseDropTargetChange,
-  onDropPageOnDatabase,
+  nested,
 }: {
-  activeDatabaseId: string | null
-  activeWorkspaceId: string | null
-  databaseDropTargetId: string | null
-  isRoot?: boolean
   item: WorkspaceNavItem
-  onDatabaseDropTargetChange: (workspaceId: string | null) => void
-  onDropPageOnDatabase?: (input: DatabaseDropInput) => void
+  nested: boolean
 }) {
-  const isActive = item.isDatabase
-    ? activeDatabaseId === item.databaseId
-    : activeWorkspaceId === item.id
-  const hasPages = item.pages.length > 0
-  const isOpen =
-    isActive || hasActiveDescendant(item, activeDatabaseId, activeWorkspaceId)
-  const displayName = item.name.trim() || "Untitled"
-  const isDatabaseDropTarget = databaseDropTargetId === item.id
-  const canDropOnDatabase = Boolean(item.databaseId && onDropPageOnDatabase)
-  const linkWorkspaceId = item.workspaceId
-  const startPageDrag = (event: DragEvent<HTMLAnchorElement>) => {
-    if (item.isDatabase) {
-      return
-    }
-
-    event.dataTransfer.effectAllowed = "copyMove"
-    event.dataTransfer.setData(
-      DATABASE_PAGE_DRAG_MIME,
-      JSON.stringify({
-        pageId: item.id,
-        title: displayName,
-      })
-    )
-    event.dataTransfer.setData("text/plain", displayName)
-  }
-  const handleDatabaseDragOver = (event: DragEvent<HTMLAnchorElement>) => {
-    if (!canDropOnDatabase || !hasDraggedPagePayload(event)) {
-      return
-    }
-
-    event.preventDefault()
-    event.dataTransfer.dropEffect = "move"
-    onDatabaseDropTargetChange(item.id)
-  }
-  const handleDatabaseDragLeave = (event: DragEvent<HTMLAnchorElement>) => {
-    if (
-      !event.currentTarget.contains(
-        event.relatedTarget as globalThis.Node | null
-      )
-    ) {
-      onDatabaseDropTargetChange(null)
-    }
-  }
-  const handleDatabaseDrop = (event: DragEvent<HTMLAnchorElement>) => {
-    const dragPayload = getDraggedPagePayload(event)
-
-    if (!canDropOnDatabase || !item.databaseId || !dragPayload) {
-      return
-    }
-
-    event.preventDefault()
-    event.stopPropagation()
-    onDatabaseDropTargetChange(null)
-    onDropPageOnDatabase?.({
-      databaseId: item.databaseId,
-      pageId: dragPayload.pageId,
-      targetPageId: linkWorkspaceId,
-      title: dragPayload.title,
-    })
-  }
-  const databaseDropProps = {
-    className: isDatabaseDropTarget
-      ? "bg-sidebar-accent text-sidebar-accent-foreground ring-1 ring-sidebar-ring"
-      : undefined,
-    onDragEnter: handleDatabaseDragOver,
-    onDragLeave: handleDatabaseDragLeave,
-    onDragOver: handleDatabaseDragOver,
-    onDrop: handleDatabaseDrop,
-  }
-
-  if (!isRoot) {
-    return (
-      <Collapsible defaultOpen={isOpen}>
-        <SidebarMenuSubItem>
-          <SidebarMenuSubButton asChild isActive={isActive}>
-            {item.isDatabase && item.databaseId ? (
-              <Link
-                draggable={false}
-                to="/database/$databaseId"
-                params={{ databaseId: item.databaseId }}
-                {...databaseDropProps}
-              >
-                <span>{item.emoji}</span>
-                <span>{displayName}</span>
-                {item.isLinked ? (
-                  <ArrowUpRightIcon
-                    aria-label="Linked from another parent"
-                    className="ml-auto size-3 text-sidebar-foreground/45"
-                  />
-                ) : null}
-              </Link>
-            ) : (
-              <Link
-                draggable
-                onDragStart={startPageDrag}
-                to="/workspace/$workspaceId"
-                params={{ workspaceId: linkWorkspaceId }}
-                {...databaseDropProps}
-              >
-                <span>{item.emoji}</span>
-                <span>{displayName}</span>
-                {item.isLinked ? (
-                  <ArrowUpRightIcon
-                    aria-label="Linked from another parent"
-                    className="ml-auto size-3 text-sidebar-foreground/45"
-                  />
-                ) : null}
-              </Link>
-            )}
-          </SidebarMenuSubButton>
-          {hasPages ? (
-            <CollapsibleTrigger asChild>
-              <SidebarMenuAction
-                className="top-1 left-1 bg-sidebar-accent text-sidebar-accent-foreground data-[state=open]:rotate-90 group-focus-within/menu-sub-item:opacity-100 group-hover/menu-sub-item:opacity-100"
-                showOnHover
-              >
-                <ChevronRightIcon />
-              </SidebarMenuAction>
-            </CollapsibleTrigger>
-          ) : null}
-          <CollapsibleContent>
-            <SidebarMenuSub className="mr-0 pr-0">
-              {item.pages.map((page) => (
-                <WorkspaceTreeItem
-                  activeDatabaseId={activeDatabaseId}
-                  activeWorkspaceId={activeWorkspaceId}
-                  databaseDropTargetId={databaseDropTargetId}
-                  item={page}
-                  key={page.id}
-                  onDatabaseDropTargetChange={onDatabaseDropTargetChange}
-                  onDropPageOnDatabase={onDropPageOnDatabase}
-                />
-              ))}
-            </SidebarMenuSub>
-          </CollapsibleContent>
-        </SidebarMenuSubItem>
-      </Collapsible>
-    )
-  }
+  const { isMobile } = useSidebar()
+  const linkPath =
+    item.isDatabase && item.databaseId
+      ? `/database/${item.databaseId}`
+      : `/workspace/${item.workspaceId}`
+  const hoverClassName = nested
+    ? "top-1 opacity-0 group-hover/nav-row:opacity-100 focus-visible:opacity-100"
+    : "top-1.5 opacity-0 group-hover/nav-row:opacity-100 focus-visible:opacity-100"
 
   return (
-    <Collapsible defaultOpen={isOpen}>
-      <SidebarMenuItem>
-        <SidebarMenuButton asChild isActive={isActive}>
-          {item.isDatabase && item.databaseId ? (
-            <Link
-              draggable={false}
-              to="/database/$databaseId"
-              params={{ databaseId: item.databaseId }}
-              {...databaseDropProps}
-            >
-              <span>{item.emoji}</span>
-              <span>{displayName}</span>
-              {item.isLinked ? (
-                <ArrowUpRightIcon
-                  aria-label="Linked from another parent"
-                  className="ml-auto size-3 text-sidebar-foreground/45"
-                />
-              ) : null}
-            </Link>
-          ) : (
-            <Link
-              draggable
-              onDragStart={startPageDrag}
-              to="/workspace/$workspaceId"
-              params={{ workspaceId: linkWorkspaceId }}
-              {...databaseDropProps}
-            >
-              <span>{item.emoji}</span>
-              <span>{displayName}</span>
-              {item.isLinked ? (
-                <ArrowUpRightIcon
-                  aria-label="Linked from another parent"
-                  className="ml-auto size-3 text-sidebar-foreground/45"
-                />
-              ) : null}
-            </Link>
-          )}
-        </SidebarMenuButton>
-        {hasPages ? (
-          <CollapsibleTrigger asChild>
-            <SidebarMenuAction
-              className="left-2 bg-sidebar-accent text-sidebar-accent-foreground data-[state=open]:rotate-90"
-              showOnHover
-            >
-              <ChevronRightIcon />
-            </SidebarMenuAction>
-          </CollapsibleTrigger>
-        ) : null}
-        <CollapsibleContent>
-          <SidebarMenuSub className="mr-0 pr-0">
-            {item.pages.map((page) => (
-              <WorkspaceTreeItem
-                activeDatabaseId={activeDatabaseId}
-                activeWorkspaceId={activeWorkspaceId}
-                databaseDropTargetId={databaseDropTargetId}
-                item={page}
-                key={page.id}
-                onDatabaseDropTargetChange={onDatabaseDropTargetChange}
-                onDropPageOnDatabase={onDropPageOnDatabase}
-              />
-            ))}
-          </SidebarMenuSub>
-        </CollapsibleContent>
-      </SidebarMenuItem>
-    </Collapsible>
+    <DropDrawer>
+      <DropDrawerTrigger asChild>
+        <SidebarMenuAction
+          className={`${hoverClassName} aria-expanded:bg-sidebar-accent aria-expanded:text-sidebar-accent-foreground`}
+          data-nav-menu-action="more"
+        >
+          <MoreHorizontalIcon />
+          <span className="sr-only">More</span>
+        </SidebarMenuAction>
+      </DropDrawerTrigger>
+      <DropDrawerContent
+        align={isMobile ? "end" : "start"}
+        className="w-56 rounded-lg"
+        side={isMobile ? "bottom" : "right"}
+      >
+        <DropDrawerItem
+          onSelect={() => {
+            void navigator.clipboard?.writeText(
+              `${window.location.origin}${linkPath}`,
+            )
+          }}
+        >
+          <LinkIcon className="text-muted-foreground" />
+          <span>Copy Link</span>
+        </DropDrawerItem>
+        <DropDrawerSeparator />
+        <DropDrawerItem
+          onSelect={() => {
+            window.open(linkPath, "_blank", "noopener")
+          }}
+        >
+          <ArrowUpRightIcon className="text-muted-foreground" />
+          <span>Open in New Tab</span>
+        </DropDrawerItem>
+      </DropDrawerContent>
+    </DropDrawer>
   )
-}
-
-function getActiveWorkspaceId(pathname: string) {
-  const match = pathname.match(/^\/workspace\/([^/?#]+)/)
-
-  if (!match) {
-    return null
-  }
-
-  return decodeURIComponent(match[1])
-}
-
-function getActiveDatabaseId(pathname: string) {
-  const match = pathname.match(/^\/database\/([^/?#]+)/)
-
-  if (!match) {
-    return null
-  }
-
-  return decodeURIComponent(match[1])
 }
 
 function getDraggedPagePayload(event: DragEvent) {
