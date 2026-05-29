@@ -19,7 +19,7 @@ export const user = pgTable("user", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-export const userSettings = pgTable("user_settings", {
+export const workspaceSettings = pgTable("workspace_settings", {
   id: text("id").primaryKey(),
   userId: text("user_id")
     .notNull()
@@ -32,7 +32,7 @@ export const userSettings = pgTable("user_settings", {
     .$defaultFn(() => new Date())
     .notNull(),
 }, (table) => [
-  uniqueIndex("user_settings_user_id_unique").on(table.userId),
+  uniqueIndex("workspace_settings_user_id_unique").on(table.userId),
 ]);
 
 export const session = pgTable("session", {

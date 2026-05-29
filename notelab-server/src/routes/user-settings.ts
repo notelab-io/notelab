@@ -1,16 +1,16 @@
 import { Hono } from "hono";
 import { eq } from "drizzle-orm";
 import { db } from "../db";
-import { userSettings } from "../db/schema";
+import { workspaceSettings } from "../db/schema";
 import type { AppBindings } from "../types";
 
-export const userSettingsRoutes = new Hono<AppBindings>();
+export const workspaceSettingsRoutes = new Hono<AppBindings>();
 
 type UserSettingsPayload = {
   workspaceFullWidth: boolean;
 };
 
-userSettingsRoutes.get("/", async (c) => {
+workspaceSettingsRoutes.get("/", async (c) => {
   const user = c.get("user");
 
   if (!user) {
@@ -20,7 +20,7 @@ userSettingsRoutes.get("/", async (c) => {
   return c.json({ settings: await getOrCreateUserSettings(user.id) });
 });
 
-userSettingsRoutes.patch("/", async (c) => {
+workspaceSettingsRoutes.patch("/", async (c) => {
   const user = c.get("user");
 
   if (!user) {
@@ -34,7 +34,7 @@ userSettingsRoutes.patch("/", async (c) => {
   }
 
   const patch = body as { workspaceFullWidth?: unknown };
-  const values: Partial<typeof userSettings.$inferInsert> = {
+  const values: Partial<typeof workspaceSettings.$inferInsert> = {
     updatedAt: new Date(),
   };
 
@@ -47,14 +47,14 @@ userSettingsRoutes.patch("/", async (c) => {
   }
 
   const [settings] = await db
-    .insert(userSettings)
+    .insert(workspaceSettings)
     .values({
       id: crypto.randomUUID(),
       userId: user.id,
       workspaceFullWidth: values.workspaceFullWidth ?? false,
     })
     .onConflictDoUpdate({
-      target: userSettings.userId,
+      target: workspaceSettings.userId,
       set: values,
     })
     .returning();
@@ -65,8 +65,8 @@ userSettingsRoutes.patch("/", async (c) => {
 async function getOrCreateUserSettings(userId: string) {
   const [existing] = await db
     .select()
-    .from(userSettings)
-    .where(eq(userSettings.userId, userId))
+    .from(workspaceSettings)
+    .where(eq(workspaceSettings.userId, userId))
     .limit(1);
 
   if (existing) {
@@ -74,7 +74,7 @@ async function getOrCreateUserSettings(userId: string) {
   }
 
   const [created] = await db
-    .insert(userSettings)
+    .insert(workspaceSettings)
     .values({
       id: crypto.randomUUID(),
       userId,
@@ -85,7 +85,7 @@ async function getOrCreateUserSettings(userId: string) {
 }
 
 function toUserSettingsPayload(
-  settings: typeof userSettings.$inferSelect,
+  settings: typeof workspaceSettings.$inferSelect,
 ): UserSettingsPayload {
   return {
     workspaceFullWidth: settings.workspaceFullWidth,
