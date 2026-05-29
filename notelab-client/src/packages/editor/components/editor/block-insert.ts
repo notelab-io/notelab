@@ -43,6 +43,16 @@ export function blockContentForItem(
       return { type: "imageBlock" }
     case "Video":
       return { type: "videoBlock" }
+    case "Embed":
+      return { type: "embedBlock" }
+    case "YouTube":
+      return { type: "embedBlock", attrs: { provider: "youtube" } }
+    case "Figma":
+      return { type: "embedBlock", attrs: { provider: "figma" } }
+    case "Excalidraw":
+      return { type: "embedBlock", attrs: { provider: "excalidraw" } }
+    case "Miro":
+      return { type: "embedBlock", attrs: { provider: "miro" } }
     case "File":
       return { type: "fileBlock" }
     case "Bookmark":

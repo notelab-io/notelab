@@ -7,6 +7,7 @@ import {
   Bookmark,
   CheckSquare,
   Code2,
+  CodeXml,
   Database,
   File,
   Heading1,
@@ -23,9 +24,14 @@ import {
   SmilePlus,
   Table2,
   Video,
-  type LucideIcon,
 } from "lucide-react"
-import { useEffect, useRef } from "react"
+import {
+  useEffect,
+  useRef,
+  type ComponentType,
+  type RefObject,
+  type SVGProps,
+} from "react"
 import { createRoot, type Root } from "react-dom/client"
 
 import {
@@ -41,7 +47,18 @@ import {
   EmojiPickerFooter,
   EmojiPickerSearch,
 } from "@/components/ui/emoji-picker"
+import {
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+} from "@/components/ui/popover"
 import { createDatabaseBlockContent } from "@/packages/editor/extensions/database"
+import {
+  ExcalidrawIcon,
+  FigmaIcon,
+  MiroIcon,
+  YouTubeIcon,
+} from "@/packages/editor/extensions/embed-block"
 import type { CreatedPage } from "@/packages/editor/extensions/page-block"
 
 export type SlashCommandOptions = {
@@ -53,7 +70,7 @@ export type SlashCommandOptions = {
 export type SlashCommandItem = {
   title: string
   description: string
-  icon: LucideIcon
+  icon: ComponentType<SVGProps<SVGSVGElement>>
   command: (props: {
     editor: Editor
     range: Range
@@ -223,6 +240,80 @@ export function createSlashCommandItems(
         .focus()
         .deleteRange(range)
         .insertContent({ type: "videoBlock" })
+        .run()
+    },
+  },
+  {
+    title: "Embed",
+    description: "Embed a URL or iframe",
+    icon: CodeXml,
+    command: ({ editor, range }) => {
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({ type: "embedBlock" })
+        .run()
+    },
+  },
+  {
+    title: "YouTube",
+    description: "Embed a YouTube video",
+    icon: YouTubeIcon,
+    command: ({ editor, range }) => {
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({
+          type: "embedBlock",
+          attrs: { provider: "youtube" },
+        })
+        .run()
+    },
+  },
+  {
+    title: "Figma",
+    description: "Embed a Figma file or prototype",
+    icon: FigmaIcon,
+    command: ({ editor, range }) => {
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({ type: "embedBlock", attrs: { provider: "figma" } })
+        .run()
+    },
+  },
+  {
+    title: "Excalidraw",
+    description: "Embed an Excalidraw drawing",
+    icon: ExcalidrawIcon,
+    command: ({ editor, range }) => {
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({
+          type: "embedBlock",
+          attrs: { provider: "excalidraw" },
+        })
+        .run()
+    },
+  },
+  {
+    title: "Miro",
+    description: "Embed a Miro board",
+    icon: MiroIcon,
+    command: ({ editor, range }) => {
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({
+          type: "embedBlock",
+          attrs: { provider: "miro" },
+        })
         .run()
     },
   },
@@ -421,20 +512,51 @@ export function SlashCommandMenu({
   )
 }
 
-function updateMenuPosition(
-  element: HTMLElement,
-  props: SuggestionProps<SlashCommandItem, SlashCommandItem>
-) {
-  const rect = props.clientRect?.()
-
-  if (!rect) {
-    return
-  }
-
-  Object.assign(element.style, {
-    left: `${rect.left}px`,
-    top: `${rect.bottom + 8}px`,
+function SlashCommandPopover({
+  anchorRect,
+  items,
+  selectedIndex,
+  selectItem,
+  setSelectedIndex,
+}: {
+  anchorRect: DOMRect | null
+  items: SlashCommandItem[]
+  selectedIndex: number
+  selectItem: (index: number) => void
+  setSelectedIndex: (index: number) => void
+}) {
+  const anchorRectRef = useRef<DOMRect | null>(anchorRect)
+  anchorRectRef.current = anchorRect
+  const virtualRef = useRef({
+    getBoundingClientRect: () => anchorRectRef.current ?? new DOMRect(),
   })
+
+  return (
+    <Popover modal={false} open>
+      <PopoverAnchor
+        virtualRef={
+          virtualRef as RefObject<{ getBoundingClientRect: () => DOMRect }>
+        }
+      />
+      <PopoverContent
+        align="start"
+        avoidCollisions
+        className="slash-menu-shell w-72 gap-0 p-0"
+        collisionPadding={12}
+        onOpenAutoFocus={(event) => event.preventDefault()}
+        onPointerDownOutside={(event) => event.preventDefault()}
+        side="bottom"
+        sideOffset={8}
+      >
+        <SlashCommandMenu
+          items={items}
+          setSelectedIndex={setSelectedIndex}
+          selectedIndex={selectedIndex}
+          selectItem={selectItem}
+        />
+      </PopoverContent>
+    </Popover>
+  )
 }
 
 export const SlashCommand = Extension.create<SlashCommandOptions>({
@@ -466,7 +588,6 @@ export const SlashCommand = Extension.create<SlashCommandOptions>({
 
               return search.includes(query.toLowerCase())
             })
-            .slice(0, 8)
         },
         render: () => {
           let element: HTMLDivElement
@@ -484,8 +605,11 @@ export const SlashCommand = Extension.create<SlashCommandOptions>({
           }
 
           const renderMenu = () => {
+            const rect = props.clientRect?.() ?? null
+
             root.render(
-              <SlashCommandMenu
+              <SlashCommandPopover
+                anchorRect={rect}
                 items={props.items}
                 setSelectedIndex={(index) => {
                   selectedIndex = index
@@ -495,7 +619,6 @@ export const SlashCommand = Extension.create<SlashCommandOptions>({
                 selectItem={selectItem}
               />
             )
-            updateMenuPosition(element, props)
           }
 
           const moveSelection = (direction: 1 | -1) => {

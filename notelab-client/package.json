@@ -20,6 +20,7 @@
     "@tiptap/extension-character-count": "^3.23.6",
     "@tiptap/extension-details": "^3.23.6",
     "@tiptap/extension-drag-handle-react": "^3.23.6",
+    "@tiptap/extension-link": "^3.23.6",
     "@tiptap/extension-placeholder": "^3.23.6",
     "@tiptap/extension-table": "^3.23.6",
     "@tiptap/extension-table-cell": "^3.23.6",

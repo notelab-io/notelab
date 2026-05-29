@@ -13,6 +13,7 @@ import {
 import DragHandle from "@tiptap/extension-drag-handle-react"
 import type { NestedOptions } from "@tiptap/extension-drag-handle"
 import Placeholder from "@tiptap/extension-placeholder"
+import Link from "@tiptap/extension-link"
 import { Table } from "@tiptap/extension-table"
 import { TableCell } from "@tiptap/extension-table-cell"
 import { TableHeader } from "@tiptap/extension-table-header"
@@ -21,6 +22,7 @@ import TaskList from "@tiptap/extension-task-list"
 import TextAlign from "@tiptap/extension-text-align"
 import { BackgroundColor, Color, TextStyle } from "@tiptap/extension-text-style"
 import Typography from "@tiptap/extension-typography"
+import type { Content } from "@tiptap/core"
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model"
 import type { EditorView } from "@tiptap/pm/view"
 import StarterKit from "@tiptap/starter-kit"
@@ -47,15 +49,25 @@ import type {
   ToolbarAttrs,
 } from "@/packages/editor/components/editor/types"
 import { useAddDatabaseRow, useCreateDatabase } from "@/features/databases/hooks"
-import { BookmarkBlock } from "@/packages/editor/extensions/bookmark-block"
+import {
+  BookmarkBlock,
+  fetchBookmarkMetadata,
+  getFallbackBookmarkMetadata,
+} from "@/packages/editor/extensions/bookmark-block"
 import { CodeBlockShiki } from "@/packages/editor/extensions/code-block-shiki"
 import {
   DATABASE_PAGE_DRAG_MIME,
   DatabaseBlock,
 } from "@/packages/editor/extensions/database"
+import {
+  EmbedBlock,
+  normalizeEmbedUrl,
+  type EmbedProvider,
+} from "@/packages/editor/extensions/embed-block"
 import { EmojiExtension } from "@/packages/editor/extensions/emoji"
 import { FileBlock } from "@/packages/editor/extensions/file-block"
 import { ImageBlock } from "@/packages/editor/extensions/image-block"
+import { LinkMention } from "@/packages/editor/extensions/link-mention"
 import {
   PageBlock,
   type CreatedPage,
@@ -64,6 +76,13 @@ import { ShadcnTaskItem } from "@/packages/editor/extensions/shadcn-task-item"
 import { SlashCommand } from "@/packages/editor/extensions/slash-command"
 import { VideoBlock } from "@/packages/editor/extensions/video-block"
 import { toast } from "sonner"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 const starterContent = `
   <h1>Draft your next workspace doc</h1>
@@ -79,6 +98,15 @@ const starterContent = `
 `
 
 const emptyContent = "<p></p>"
+
+type PasteChoiceState = {
+  anchor: { getBoundingClientRect: () => DOMRect }
+  embedAttrs: Record<string, unknown>
+  from: number
+  provider: EmbedProvider
+  to: number
+  url: string
+}
 
 const dragHandleNestedOptions: NestedOptions = {
   edgeDetection: "none",
@@ -322,6 +350,7 @@ export function Editor({
   const [mobileNodeTarget, setMobileNodeTarget] =
     useState<DragHandleTarget | null>(null)
   const [plusMenuOpen, setPlusMenuOpen] = useState(false)
+  const [pasteChoice, setPasteChoice] = useState<PasteChoiceState | null>(null)
   const createDatabase = useCreateDatabase()
   const addDatabaseRow = useAddDatabaseRow(organizationId)
   const createEditorDatabase = useCallback(async () => {
@@ -384,6 +413,52 @@ export function Editor({
     },
     [addDatabaseRow]
   )
+  const handleProviderLinkPaste = useCallback(
+    (view: EditorView, event: ClipboardEvent) => {
+      if (!editable) {
+        return false
+      }
+
+      const pastedText = event.clipboardData?.getData("text/plain").trim()
+
+      if (!pastedText || /\s/.test(pastedText) || !looksLikeUrl(pastedText)) {
+        return false
+      }
+
+      const embedAttrs = normalizeEmbedUrl(pastedText)
+
+      if (!embedAttrs) {
+        return false
+      }
+
+      event.preventDefault()
+
+      const { from, to } = view.state.selection
+      const transaction = view.state.tr.insertText(pastedText, from, to)
+      const insertedTo = from + pastedText.length
+
+      view.dispatch(transaction)
+
+      const coords = view.coordsAtPos(insertedTo)
+      setPasteChoice({
+        anchor: {
+          getBoundingClientRect: () =>
+            new DOMRect(coords.left, coords.bottom, 0, 0),
+        },
+        embedAttrs,
+        from,
+        provider:
+          "provider" in embedAttrs
+            ? (embedAttrs.provider as EmbedProvider)
+            : null,
+        to: insertedTo,
+        url: normalizePastedUrl(pastedText) ?? pastedText,
+      })
+
+      return true
+    },
+    [editable]
+  )
 
   const editor = useEditor({
     extensions: [
@@ -404,6 +479,16 @@ export function Editor({
         nested: true,
       }),
       TextStyle,
+      Link.configure({
+        autolink: true,
+        defaultProtocol: "https",
+        HTMLAttributes: {
+          rel: "noopener noreferrer",
+          target: "_blank",
+        },
+        linkOnPaste: true,
+        openOnClick: false,
+      }),
       Color,
       BackgroundColor,
       TextAlign.configure({
@@ -427,8 +512,10 @@ export function Editor({
       }),
       ImageBlock,
       VideoBlock,
+      EmbedBlock,
       FileBlock,
       BookmarkBlock,
+      LinkMention,
       DatabaseBlock.configure({
         currentPageId: workspaceId,
         onOpenPage,
@@ -485,6 +572,7 @@ export function Editor({
         dropPageOnDatabase(event) ||
         insertDraggedEditorBlock({ editorId, event, targetView: view }) ||
         insertDraggedDatabasePage(view, event),
+      handlePaste: handleProviderLinkPaste,
       handleDOMEvents: {
         dragover: (_view, event) => {
           const hasDraggedBlock = hasDraggedEditorBlock(event)
@@ -522,6 +610,107 @@ export function Editor({
       },
     },
   })
+
+  const replacePastedUrl = useCallback(
+    (content: Content) => {
+      if (!editor || !pasteChoice) {
+        return
+      }
+
+      editor
+        .chain()
+        .focus()
+        .deleteRange({ from: pasteChoice.from, to: pasteChoice.to })
+        .insertContentAt(pasteChoice.from, content)
+        .run()
+      setPasteChoice(null)
+    },
+    [editor, pasteChoice]
+  )
+
+  const pasteAsEmbed = useCallback(() => {
+    if (!pasteChoice) {
+      return
+    }
+
+    replacePastedUrl({
+      attrs: pasteChoice.embedAttrs,
+      type: "embedBlock",
+    })
+  }, [pasteChoice, replacePastedUrl])
+
+  const pasteAsBookmark = useCallback(async () => {
+    if (!pasteChoice) {
+      return
+    }
+
+    const fallbackMetadata = getFallbackBookmarkMetadata(pasteChoice.url)
+    let metadata = fallbackMetadata
+
+    try {
+      metadata = {
+        ...fallbackMetadata,
+        ...(await fetchBookmarkMetadata(pasteChoice.url)),
+      }
+    } catch {
+      metadata = fallbackMetadata
+    }
+
+    replacePastedUrl({
+      attrs: {
+        ...metadata,
+        href: pasteChoice.url,
+      },
+      type: "bookmarkBlock",
+    })
+  }, [pasteChoice, replacePastedUrl])
+
+  const pasteAsMention = useCallback(async () => {
+    if (!pasteChoice) {
+      return
+    }
+
+    const fallbackMetadata = getFallbackBookmarkMetadata(pasteChoice.url)
+    let metadata = fallbackMetadata
+
+    try {
+      metadata = {
+        ...fallbackMetadata,
+        ...(await fetchBookmarkMetadata(pasteChoice.url)),
+      }
+    } catch {
+      metadata = fallbackMetadata
+    }
+
+    replacePastedUrl([
+      {
+        attrs: {
+          ...metadata,
+          href: pasteChoice.url,
+        },
+        type: "linkMention",
+      },
+      {
+        text: " ",
+        type: "text",
+      },
+    ])
+  }, [pasteChoice, replacePastedUrl])
+
+  const pasteAsUrl = useCallback(() => {
+    if (!editor || !pasteChoice) {
+      return
+    }
+
+    editor
+      .chain()
+      .focus()
+      .setTextSelection({ from: pasteChoice.from, to: pasteChoice.to })
+      .setLink({ href: pasteChoice.url })
+      .setTextSelection(pasteChoice.to)
+      .run()
+    setPasteChoice(null)
+  }, [editor, pasteChoice])
 
   useEffect(() => {
     if (!editor) {
@@ -928,6 +1117,57 @@ export function Editor({
         ) : null}
         <SelectionBubbleMenu editor={editor} runCommand={runCommand} />
         <TableControls editor={editor} />
+        {pasteChoice
+          ? (() => {
+              const pasteChoiceRect =
+                pasteChoice.anchor.getBoundingClientRect()
+
+              return (
+                <DropdownMenu
+                  modal={false}
+                  onOpenChange={(open) => {
+                    if (!open) {
+                      setPasteChoice(null)
+                    }
+                  }}
+                  open
+                >
+                  <DropdownMenuTrigger asChild>
+                    <span
+                      aria-hidden="true"
+                      className="fixed size-px opacity-0"
+                      style={{
+                        left: pasteChoiceRect.left,
+                        top: pasteChoiceRect.bottom,
+                      }}
+                    />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="start"
+                    className="w-48"
+                    collisionPadding={12}
+                    onCloseAutoFocus={(event) => event.preventDefault()}
+                    side="bottom"
+                    sideOffset={8}
+                  >
+                    <DropdownMenuLabel>Paste as</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={pasteAsMention}>
+                      Mention
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={pasteAsBookmark}>
+                      Bookmark
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={pasteAsEmbed}>
+                      Embed
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={pasteAsUrl}>
+                      URL
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )
+            })()
+          : null}
         <WorkspaceMetadata
           editable={editable}
           icon={emoji}
@@ -962,4 +1202,20 @@ function normalizeEditorContent(content: unknown) {
   }
 
   return emptyContent
+}
+
+function looksLikeUrl(value: string) {
+  return /^(https?:\/\/|www\.|[^\s]+\.[^\s]{2,})/i.test(value.trim())
+}
+
+function normalizePastedUrl(value: string) {
+  const trimmed = value.trim()
+
+  try {
+    return new URL(
+      /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`
+    ).toString()
+  } catch {
+    return null
+  }
 }
