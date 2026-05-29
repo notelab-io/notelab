@@ -439,11 +439,28 @@ export function createSlashCommandItems(
 export const slashCommandItems = createSlashCommandItems()
 
 const SLASH_MENU_HEIGHT = 288
+const SLASH_MENU_EMPTY_HEIGHT = 72
+const SLASH_MENU_ITEM_HEIGHT = 58
+const SLASH_MENU_VERTICAL_PADDING = 8
 const SLASH_MENU_WIDTH = 288
 const SLASH_MENU_OFFSET = 6
 const SLASH_MENU_COLLISION_PADDING = 16
 
-function getSlashCommandMenuPosition(anchorRect: DOMRect | null) {
+function getSlashCommandMenuHeight(itemCount: number) {
+  if (itemCount === 0) {
+    return SLASH_MENU_EMPTY_HEIGHT
+  }
+
+  return Math.min(
+    SLASH_MENU_HEIGHT,
+    itemCount * SLASH_MENU_ITEM_HEIGHT + SLASH_MENU_VERTICAL_PADDING
+  )
+}
+
+function getSlashCommandMenuPosition(
+  anchorRect: DOMRect | null,
+  itemCount: number
+) {
   if (!anchorRect || typeof window === "undefined") {
     return {
       left: SLASH_MENU_COLLISION_PADDING,
@@ -451,11 +468,12 @@ function getSlashCommandMenuPosition(anchorRect: DOMRect | null) {
     }
   }
 
+  const menuHeight = getSlashCommandMenuHeight(itemCount)
   const spaceBelow =
     window.innerHeight - anchorRect.bottom - SLASH_MENU_COLLISION_PADDING
   const spaceAbove = anchorRect.top - SLASH_MENU_COLLISION_PADDING
   const shouldOpenAbove =
-    spaceBelow < SLASH_MENU_HEIGHT + SLASH_MENU_OFFSET &&
+    spaceBelow < menuHeight + SLASH_MENU_OFFSET &&
     spaceAbove > spaceBelow
   const maxLeft = Math.max(
     SLASH_MENU_COLLISION_PADDING,
@@ -466,11 +484,11 @@ function getSlashCommandMenuPosition(anchorRect: DOMRect | null) {
     maxLeft
   )
   const preferredTop = shouldOpenAbove
-    ? anchorRect.top - SLASH_MENU_HEIGHT - SLASH_MENU_OFFSET
+    ? anchorRect.top - menuHeight - SLASH_MENU_OFFSET
     : anchorRect.bottom + SLASH_MENU_OFFSET
   const maxTop = Math.max(
     SLASH_MENU_COLLISION_PADDING,
-    window.innerHeight - SLASH_MENU_HEIGHT - SLASH_MENU_COLLISION_PADDING
+    window.innerHeight - menuHeight - SLASH_MENU_COLLISION_PADDING
   )
   const top = Math.min(
     Math.max(preferredTop, SLASH_MENU_COLLISION_PADDING),
@@ -564,7 +582,7 @@ function SlashCommandPopover({
   selectItem: (index: number) => void
   setSelectedIndex: (index: number) => void
 }) {
-  const position = getSlashCommandMenuPosition(anchorRect)
+  const position = getSlashCommandMenuPosition(anchorRect, items.length)
 
   return (
     <div
