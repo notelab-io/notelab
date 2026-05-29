@@ -351,18 +351,32 @@ function getDatabaseId(pathname: string) {
 
 function DatabaseBreadcrumb({ databaseId }: { databaseId: string }) {
   const { data: payload } = useDatabase(databaseId)
+  const databasePageId = payload?.database.pageId
+  const { data: workspace } = useWorkspace(databasePageId)
+  const { data: workspaces = [] } = useWorkspaces(workspace?.organizationId)
+  const breadcrumbs = workspace
+    ? buildWorkspaceBreadcrumbs(workspace, workspaces)
+    : []
 
   return (
-    <Breadcrumb>
-      <BreadcrumbList>
+    <Breadcrumb className="min-w-0">
+      <BreadcrumbList className="flex-nowrap">
         <BreadcrumbItem className="hidden sm:inline-flex">
           <BreadcrumbLink asChild>
             <Link to="/dashboard">Dashboard</Link>
           </BreadcrumbLink>
         </BreadcrumbItem>
         <BreadcrumbSeparator className="hidden sm:inline-flex" />
-        <BreadcrumbItem>
-          <BreadcrumbPage className="line-clamp-1">
+        {breadcrumbs.map((item) => (
+          <BreadcrumbFragment
+            isCurrent={false}
+            item={item}
+            key={item.id}
+            label={getWorkspaceBreadcrumbLabel(item)}
+          />
+        ))}
+        <BreadcrumbItem className="min-w-0">
+          <BreadcrumbPage className="block max-w-64 truncate sm:max-w-80 md:max-w-96 lg:max-w-[42rem]">
             {payload?.database.name.trim() || "Database"}
           </BreadcrumbPage>
         </BreadcrumbItem>
