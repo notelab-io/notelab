@@ -542,11 +542,11 @@ function SlashCommandPopover({
         align="start"
         avoidCollisions
         className="slash-menu-shell w-72 gap-0 p-0"
-        collisionPadding={12}
+        collisionPadding={16}
         onOpenAutoFocus={(event) => event.preventDefault()}
         onPointerDownOutside={(event) => event.preventDefault()}
         side="bottom"
-        sideOffset={8}
+        sideOffset={6}
       >
         <SlashCommandMenu
           items={items}

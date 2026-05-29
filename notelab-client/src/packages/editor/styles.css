@@ -904,6 +904,11 @@
 
   .slash-menu-shell {
     @apply fixed z-50 w-72 overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-lg;
+    max-height: min(18rem, var(--radix-popover-content-available-height));
+  }
+
+  .slash-menu-shell [data-slot="command-list"] {
+    max-height: inherit;
   }
 
   .slash-menu-icon {
