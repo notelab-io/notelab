@@ -12,6 +12,7 @@ import {
   File,
   Heading1,
   Heading2,
+  Heading3,
   Image,
   LinkIcon,
   ListCollapse,
@@ -168,6 +169,19 @@ export function createSlashCommandItems(
         .focus()
         .deleteRange(range)
         .setNode("heading", { level: 2 })
+        .run()
+    },
+  },
+  {
+    title: "Heading 3",
+    description: "Small section heading",
+    icon: Heading3,
+    command: ({ editor, range }) => {
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .setNode("heading", { level: 3 })
         .run()
     },
   },

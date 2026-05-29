@@ -23,6 +23,10 @@
     @apply text-2xl font-semibold leading-tight;
   }
 
+  .tiptap-editor h3 {
+    @apply text-xl font-semibold leading-snug;
+  }
+
   .tiptap-editor p {
     @apply text-foreground;
   }

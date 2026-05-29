@@ -104,7 +104,6 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card"
-import { Separator } from "@/components/ui/separator"
 
 const starterContent = `
   <h1>Draft your next workspace doc</h1>
@@ -604,6 +603,7 @@ export function Editor({
         insertDraggedEditorBlock({ editorId, event, targetView: view }) ||
         insertDraggedDatabasePage(view, event),
       handlePaste: handleProviderLinkPaste,
+      transformPastedHTML: restoreEmojiTextFromPastedHTML,
       handleDOMEvents: {
         dragover: (_view, event) => {
           const hasDraggedBlock = hasDraggedEditorBlock(event)
@@ -1148,7 +1148,11 @@ export function Editor({
         ) : null}
         <SelectionBubbleMenu editor={editor} runCommand={runCommand} />
         <TableControls editor={editor} />
-        <EditorTableOfContents editor={editor} items={tocItems} />
+        <EditorTableOfContents
+          containerClassName={pageContentClassName}
+          editor={editor}
+          items={tocItems}
+        />
         {pasteChoice
           ? (() => {
               const pasteChoiceRect =
@@ -1226,9 +1230,11 @@ export function Editor({
 }
 
 function EditorTableOfContents({
+  containerClassName,
   editor,
   items,
 }: {
+  containerClassName?: string
   editor: TiptapEditor | null
   items: TableOfContentDataItem[]
 }) {
@@ -1254,22 +1260,31 @@ function EditorTableOfContents({
   }
 
   return (
-    <HoverCard openDelay={100}>
+    <div
+      className={cn(
+        "pointer-events-none sticky top-1/2 z-40 hidden h-0 -translate-y-1/2 md:block",
+        containerClassName
+      )}
+    >
+      <div className="flex justify-end pr-6">
+        <HoverCard openDelay={100}>
       <HoverCardTrigger asChild>
         <Button
           aria-label="Table of contents"
-          className="fixed right-6 top-1/2 z-40 hidden h-auto min-h-9 w-9 -translate-y-1/2 flex-col gap-2 bg-transparent px-1.5 py-2 md:flex"
+          className="pointer-events-auto h-auto min-h-9 w-9 flex-col gap-2 bg-transparent px-1.5 py-2"
           size="icon-lg"
           type="button"
           variant="ghost"
         >
           {visibleItems.slice(0, 7).map((item) => (
-            <Separator
+            <span
+              aria-hidden="true"
               className={cn(
-                "h-0.5 rounded-full bg-muted-foreground/40",
-                item.originalLevel <= 1 && "w-8",
+                "block h-0.5 rounded-full bg-muted-foreground/40",
+                item.originalLevel === 1 && "w-8",
                 item.originalLevel === 2 && "w-6",
-                item.originalLevel >= 3 && "w-4",
+                item.originalLevel === 3 && "w-4",
+                item.originalLevel > 3 && "w-3",
                 item.isActive && "bg-foreground"
               )}
               key={item.id}
@@ -1300,7 +1315,9 @@ function EditorTableOfContents({
           </CommandList>
         </Command>
       </HoverCardContent>
-    </HoverCard>
+        </HoverCard>
+      </div>
+    </div>
   )
 }
 
@@ -1316,6 +1333,52 @@ function normalizeEditorContent(content: unknown) {
   }
 
   return emptyContent
+}
+
+function restoreEmojiTextFromPastedHTML(html: string) {
+  const parser = new DOMParser()
+  const document = parser.parseFromString(html, "text/html")
+  let replaced = false
+
+  for (const emojiElement of Array.from(
+    document.querySelectorAll('[data-type="emoji"]')
+  )) {
+    const image = emojiElement.querySelector("img")
+    const emoji = image ? getEmojiFromImageSource(image) : null
+
+    if (!emoji) {
+      continue
+    }
+
+    emojiElement.replaceWith(document.createTextNode(emoji))
+    replaced = true
+  }
+
+  return replaced ? document.body.innerHTML : html
+}
+
+function getEmojiFromImageSource(image: HTMLImageElement) {
+  const source = image.getAttribute("src")
+
+  if (!source) {
+    return null
+  }
+
+  const match = source.match(/\/([0-9a-f-]+)\.(?:png|svg|webp)(?:[?#].*)?$/i)
+
+  if (!match) {
+    return null
+  }
+
+  try {
+    return String.fromCodePoint(
+      ...match[1]
+        .split("-")
+        .map((codepoint) => Number.parseInt(codepoint, 16))
+    )
+  } catch {
+    return null
+  }
 }
 
 function looksLikeUrl(value: string) {
