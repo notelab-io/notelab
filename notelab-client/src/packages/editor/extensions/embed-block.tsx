@@ -541,37 +541,38 @@ function EmbedBlockView({ editor, node, updateAttributes }: ReactNodeViewProps) 
   return (
     <NodeViewWrapper className="embed-block" data-src={src ? "true" : "false"}>
       <Popover onOpenChange={setOpen} open={open}>
-        <PopoverTrigger asChild>
-          <button
-            className="media-block-placeholder"
-            contentEditable={false}
-            disabled={Boolean(src)}
-            type="button"
-          >
-            {isFigma ? (
-              <FigmaIcon />
-            ) : isExcalidraw ? (
-              <ExcalidrawIcon />
-            ) : isYouTube ? (
-              <YouTubeIcon />
-            ) : isMiro ? (
-              <MiroIcon />
-            ) : (
-              <CodeXml />
-            )}
-            <span>
-              {isFigma
-                ? "Add a Figma embed"
-                : isExcalidraw
-                  ? "Add an Excalidraw embed"
-                  : isYouTube
-                    ? "Add a YouTube embed"
-                    : isMiro
-                      ? "Add a Miro embed"
-                  : "Embed a URL or iframe"}
-            </span>
-          </button>
-        </PopoverTrigger>
+        {!src ? (
+          <PopoverTrigger asChild>
+            <button
+              className="media-block-placeholder"
+              contentEditable={false}
+              type="button"
+            >
+              {isFigma ? (
+                <FigmaIcon />
+              ) : isExcalidraw ? (
+                <ExcalidrawIcon />
+              ) : isYouTube ? (
+                <YouTubeIcon />
+              ) : isMiro ? (
+                <MiroIcon />
+              ) : (
+                <CodeXml />
+              )}
+              <span>
+                {isFigma
+                  ? "Add a Figma embed"
+                  : isExcalidraw
+                    ? "Add an Excalidraw embed"
+                    : isYouTube
+                      ? "Add a YouTube embed"
+                      : isMiro
+                        ? "Add a Miro embed"
+                    : "Embed a URL or iframe"}
+              </span>
+            </button>
+          </PopoverTrigger>
+        ) : null}
         <PopoverContent
           align="start"
           className="w-[min(30rem,calc(100vw-2rem))] p-4"
@@ -629,65 +630,69 @@ function EmbedBlockView({ editor, node, updateAttributes }: ReactNodeViewProps) 
             <p className="mt-2 text-xs text-destructive">{error}</p>
           ) : null}
         </PopoverContent>
-      </Popover>
-      {src ? (
-        <div
-          className="embed-block-preview"
-          contentEditable={false}
-          style={width ? { width: `${width}px` } : undefined}
-        >
-          <span
-            aria-hidden="true"
-            className="image-block-resize-handle image-block-resize-handle-left"
-            onPointerDown={(event) => startResize(event, "left")}
-            onPointerMove={updateResize}
-            onPointerUp={stopResize}
-          />
-          {shouldShowFrame ? (
-            <iframe
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; fullscreen; gyroscope; picture-in-picture; web-share"
-              allowFullScreen
-              loading="lazy"
-              onError={() => setFrameFailed(true)}
-              onLoad={() => {
-                frameLoadedRef.current = true
-                setFrameFailed(false)
-              }}
-              sandbox="allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation allow-same-origin allow-scripts allow-storage-access-by-user-activation"
-              src={src}
-              title={title}
-            />
-          ) : (
-            <div className="embed-block-failed">
-              <FileWarning />
-              <span className="embed-block-failed-title">Failed to load embed</span>
-              <span className="embed-block-failed-description">
-                Some websites prohibit their content from being embedded elsewhere.
-              </span>
-              <a href={src} rel="noreferrer" target="_blank">
-                Open link
-              </a>
-            </div>
-          )}
-          <span
-            aria-hidden="true"
-            className="image-block-resize-handle image-block-resize-handle-right"
-            onPointerDown={(event) => startResize(event, "right")}
-            onPointerMove={updateResize}
-            onPointerUp={stopResize}
-          />
-          <Button
-            className="embed-block-edit"
-            onClick={() => setOpen(true)}
-            size="icon"
-            type="button"
-            variant="secondary"
+        {src ? (
+          <div
+            className="embed-block-preview"
+            contentEditable={false}
+            style={width ? { width: `${width}px` } : undefined}
           >
-            <RefreshCw />
-            <span className="sr-only">Change embed</span>
-          </Button>
-        </div>
-      ) : null}
+            <span
+              aria-hidden="true"
+              className="image-block-resize-handle image-block-resize-handle-left"
+              onPointerDown={(event) => startResize(event, "left")}
+              onPointerMove={updateResize}
+              onPointerUp={stopResize}
+            />
+            {shouldShowFrame ? (
+              <iframe
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; fullscreen; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                loading="lazy"
+                onError={() => setFrameFailed(true)}
+                onLoad={() => {
+                  frameLoadedRef.current = true
+                  setFrameFailed(false)
+                }}
+                sandbox="allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation allow-same-origin allow-scripts allow-storage-access-by-user-activation"
+                src={src}
+                title={title}
+              />
+            ) : (
+              <div className="embed-block-failed">
+                <FileWarning />
+                <span className="embed-block-failed-title">
+                  Failed to load embed
+                </span>
+                <span className="embed-block-failed-description">
+                  Some websites prohibit their content from being embedded
+                  elsewhere.
+                </span>
+                <a href={src} rel="noreferrer" target="_blank">
+                  Open link
+                </a>
+              </div>
+            )}
+            <span
+              aria-hidden="true"
+              className="image-block-resize-handle image-block-resize-handle-right"
+              onPointerDown={(event) => startResize(event, "right")}
+              onPointerMove={updateResize}
+              onPointerUp={stopResize}
+            />
+            <PopoverTrigger asChild>
+              <Button
+                className="embed-block-edit"
+                size="icon"
+                type="button"
+                variant="secondary"
+              >
+                <RefreshCw />
+                <span className="sr-only">Change embed</span>
+              </Button>
+            </PopoverTrigger>
+          </div>
+        ) : null}
+      </Popover>
     </NodeViewWrapper>
   )
 }
