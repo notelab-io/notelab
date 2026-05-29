@@ -3,7 +3,11 @@ import type {
   MouseEvent as ReactMouseEvent,
   PointerEvent as ReactPointerEvent,
 } from "react"
-import { EditorContent, useEditor } from "@tiptap/react"
+import {
+  EditorContent,
+  useEditor,
+  type Editor as TiptapEditor,
+} from "@tiptap/react"
 import CharacterCount from "@tiptap/extension-character-count"
 import {
   Details,
@@ -14,6 +18,10 @@ import DragHandle from "@tiptap/extension-drag-handle-react"
 import type { NestedOptions } from "@tiptap/extension-drag-handle"
 import Placeholder from "@tiptap/extension-placeholder"
 import Link from "@tiptap/extension-link"
+import {
+  TableOfContents,
+  type TableOfContentDataItem,
+} from "@tiptap/extension-table-of-contents"
 import { Table } from "@tiptap/extension-table"
 import { TableCell } from "@tiptap/extension-table-cell"
 import { TableHeader } from "@tiptap/extension-table-header"
@@ -27,6 +35,7 @@ import type { Node as ProseMirrorNode } from "@tiptap/pm/model"
 import type { EditorView } from "@tiptap/pm/view"
 import StarterKit from "@tiptap/starter-kit"
 
+import { cn } from "@/lib/utils"
 import {
   DragBlockMenu,
   dragHandleComputePositionConfig,
@@ -83,6 +92,19 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Button } from "@/components/ui/button"
+import {
+  Command,
+  CommandGroup,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card"
+import { Separator } from "@/components/ui/separator"
 
 const starterContent = `
   <h1>Draft your next workspace doc</h1>
@@ -353,6 +375,7 @@ export function Editor({
     useState<DragHandleTarget | null>(null)
   const [plusMenuOpen, setPlusMenuOpen] = useState(false)
   const [pasteChoice, setPasteChoice] = useState<PasteChoiceState | null>(null)
+  const [tocItems, setTocItems] = useState<TableOfContentDataItem[]>([])
   const pageContentClassName = fullWidth ? "" : "mx-auto max-w-5xl"
   const createDatabase = useCreateDatabase()
   const addDatabaseRow = useAddDatabaseRow(organizationId)
@@ -496,6 +519,11 @@ export function Editor({
       BackgroundColor,
       TextAlign.configure({
         types: ["heading", "paragraph"],
+      }),
+      TableOfContents.configure({
+        onUpdate: (items) => {
+          setTocItems(items)
+        },
       }),
       Details.configure({
         HTMLAttributes: {
@@ -1120,6 +1148,7 @@ export function Editor({
         ) : null}
         <SelectionBubbleMenu editor={editor} runCommand={runCommand} />
         <TableControls editor={editor} />
+        <EditorTableOfContents editor={editor} items={tocItems} />
         {pasteChoice
           ? (() => {
               const pasteChoiceRect =
@@ -1193,6 +1222,85 @@ export function Editor({
         ) : null}
       </section>
     </div>
+  )
+}
+
+function EditorTableOfContents({
+  editor,
+  items,
+}: {
+  editor: TiptapEditor | null
+  items: TableOfContentDataItem[]
+}) {
+  const visibleItems = items.filter((item) => item.textContent.trim())
+
+  if (!editor || visibleItems.length === 0) {
+    return null
+  }
+
+  const jumpToItem = (item: TableOfContentDataItem) => {
+    const selectionPosition = Math.min(
+      item.pos + 1,
+      editor.state.doc.content.size
+    )
+
+    editor
+      .chain()
+      .focus()
+      .setTextSelection(selectionPosition)
+      .scrollIntoView()
+      .run()
+    item.dom.scrollIntoView({ block: "start", behavior: "smooth" })
+  }
+
+  return (
+    <HoverCard openDelay={100}>
+      <HoverCardTrigger asChild>
+        <Button
+          aria-label="Table of contents"
+          className="fixed right-6 top-1/2 z-40 hidden h-auto min-h-9 w-9 -translate-y-1/2 flex-col gap-2 bg-transparent px-1.5 py-2 md:flex"
+          size="icon-lg"
+          type="button"
+          variant="ghost"
+        >
+          {visibleItems.slice(0, 7).map((item) => (
+            <Separator
+              className={cn(
+                "h-0.5 rounded-full bg-muted-foreground/40",
+                item.originalLevel <= 1 && "w-8",
+                item.originalLevel === 2 && "w-6",
+                item.originalLevel >= 3 && "w-4",
+                item.isActive && "bg-foreground"
+              )}
+              key={item.id}
+            />
+          ))}
+        </Button>
+      </HoverCardTrigger>
+      <HoverCardContent align="end" className="w-80 p-0" side="left">
+        <Command>
+          <CommandList>
+            <CommandGroup>
+              {visibleItems.map((item) => (
+                <CommandItem
+                  className={cn(
+                    "truncate",
+                    item.level === 2 && "pl-6",
+                    item.level >= 3 && "pl-10",
+                    item.isActive && "bg-muted text-foreground"
+                  )}
+                  key={item.id}
+                  onSelect={() => jumpToItem(item)}
+                  value={item.id}
+                >
+                  <span className="truncate">{item.textContent}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </HoverCardContent>
+    </HoverCard>
   )
 }
 
