@@ -1,8 +1,7 @@
 import "dotenv/config";
 import { Pool } from "pg";
 
-const connectionString =
-  process.env.DATABASE_URL ?? "postgres://localhost:5432/notelab";
+const connectionString = getRequiredEnv("DATABASE_URL");
 
 const pool = new Pool({ connectionString });
 
@@ -14,4 +13,14 @@ try {
   console.info("Database schema reset.");
 } finally {
   await pool.end();
+}
+
+function getRequiredEnv(key: string) {
+  const value = process.env[key];
+
+  if (!value) {
+    throw new Error(`${key} is required`);
+  }
+
+  return value;
 }

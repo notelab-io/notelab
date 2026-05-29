@@ -1,11 +1,19 @@
 import "dotenv/config";
 import { desc, eq, like } from "drizzle-orm";
-import { auth } from "../auth";
-import { db, pool } from "../db";
+import { createAuth } from "../auth";
+import { createDbClientForUrl, runWithDb } from "../db";
 import { verification } from "../db/schema";
 
-const apiBase = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
-const clientUrl = process.env.CLIENT_URL ?? "http://localhost:1420";
+const apiBase = getRequiredEnv("BETTER_AUTH_URL");
+const clientUrl = getRequiredEnv("CLIENT_URL");
+const databaseUrl = getRequiredEnv("DATABASE_URL");
+const authEnv = {
+  BETTER_AUTH_SECRET: getRequiredEnv("BETTER_AUTH_SECRET"),
+  BETTER_AUTH_URL: apiBase,
+  CLIENT_URL: clientUrl,
+};
+const dbClient = createDbClientForUrl(databaseUrl);
+const db = dbClient.db;
 
 type FlowResponse<T = unknown> = {
   status: number;
@@ -50,6 +58,16 @@ function splitSetCookie(value: string | null) {
   return value.split(/,(?=\s*[^;,]+=)/g).map((cookie) => cookie.trim());
 }
 
+function getRequiredEnv(key: string) {
+  const value = process.env[key];
+
+  if (!value) {
+    throw new Error(`${key} is required`);
+  }
+
+  return value;
+}
+
 async function authRequest<T>(
   path: string,
   options: RequestInit & { body?: string | null } = {},
@@ -73,7 +91,9 @@ async function authRequest<T>(
     ...options,
     headers,
   });
-  const response = await auth.handler(request);
+  const response = await runWithDb(db, () =>
+    createAuth(authEnv, request, db).handler(request),
+  );
 
   jar?.store(response.headers);
 
@@ -137,6 +157,8 @@ async function getMagicLinkToken(email: string) {
 }
 
 async function main() {
+  await dbClient.client.connect();
+
   const stamp = Date.now();
   const email = `flow-${stamp}@notelab.local`;
   const invitedEmail = `invite-${stamp}@notelab.local`;
@@ -282,5 +304,5 @@ main()
     process.exitCode = 1;
   })
   .finally(async () => {
-    await pool.end();
+    await dbClient.client.end();
   });
