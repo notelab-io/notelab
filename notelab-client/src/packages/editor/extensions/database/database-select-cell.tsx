@@ -1,5 +1,5 @@
 import { Check, GripVertical } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 
 import {
@@ -33,7 +33,10 @@ const SELECT_POPOVER_HEIGHT = 320
 const SELECT_POPOVER_OFFSET = 6
 const SELECT_POPOVER_PADDING = 16
 
-function getSelectPopoverPosition(rect: DOMRect) {
+function getSelectPopoverPosition(
+  rect: DOMRect,
+  panelHeight = SELECT_POPOVER_HEIGHT
+) {
   const spaceBelow =
     window.innerHeight - rect.bottom - SELECT_POPOVER_PADDING
   const spaceAbove = rect.top - SELECT_POPOVER_PADDING
@@ -46,9 +49,13 @@ function getSelectPopoverPosition(rect: DOMRect) {
   )
   const left = Math.min(Math.max(rect.left, SELECT_POPOVER_PADDING), maxLeft)
   const preferredTop = shouldOpenAbove
-    ? rect.top - SELECT_POPOVER_HEIGHT - SELECT_POPOVER_OFFSET
+    ? rect.top - panelHeight - SELECT_POPOVER_OFFSET
     : rect.bottom + SELECT_POPOVER_OFFSET
-  const top = Math.max(SELECT_POPOVER_PADDING, preferredTop)
+  const maxTop = Math.max(
+    SELECT_POPOVER_PADDING,
+    window.innerHeight - panelHeight - SELECT_POPOVER_PADDING
+  )
+  const top = Math.min(Math.max(preferredTop, SELECT_POPOVER_PADDING), maxTop)
 
   return {
     left,
@@ -209,8 +216,21 @@ export function DatabaseSelectCell({
       return
     }
 
-    setPanelPosition(getSelectPopoverPosition(rect))
+    setPanelPosition(
+      getSelectPopoverPosition(
+        rect,
+        panelRef.current?.getBoundingClientRect().height
+      )
+    )
   }
+
+  useLayoutEffect(() => {
+    if (!isOpen || isMobile || !panelRef.current) {
+      return
+    }
+
+    updatePanelPosition()
+  }, [isMobile, isOpen, filteredSelectOptions.length, canCreateSelectOption])
 
   useEffect(() => {
     if (!isOpen || isMobile) {
