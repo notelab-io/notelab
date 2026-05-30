@@ -7,7 +7,9 @@ import {
   moveTableColumn,
   moveTableRow,
   selectedRect,
+  TableMap,
 } from "@tiptap/pm/tables"
+import type { Node as ProseMirrorNode } from "@tiptap/pm/model"
 import { MoreHorizontal, MoreVertical, Plus } from "lucide-react"
 
 type TableAxisRect = {
@@ -19,8 +21,10 @@ type TableAxisRect = {
 }
 
 type TableControlRect = {
+  bottom: number
   columns: TableAxisRect[]
   left: number
+  right: number
   rows: TableAxisRect[]
   selectedBottom: number
   selectedColumn: number
@@ -31,6 +35,11 @@ type TableControlRect = {
   top: number
   width: number
   height: number
+  hasSelection: boolean
+  map: TableMap
+  table: ProseMirrorNode
+  tablePos: number
+  tableStart: number
   cellSize: number
 }
 
@@ -104,10 +113,45 @@ function findActiveTable(editor: Editor) {
   return editor.view.dom.contains(table) ? table : null
 }
 
-function getTableControlRect(editor: Editor): TableControlRect | null {
-  const table = findActiveTable(editor)
+function findTableByDOM(editor: Editor, table: HTMLTableElement) {
+  let match: { node: ProseMirrorNode; pos: number } | null = null
 
-  if (!table) {
+  editor.state.doc.descendants((node, pos) => {
+    if (node.type.name !== "table") {
+      return
+    }
+
+    const dom = editor.view.nodeDOM(pos)
+
+    if (dom === table || (dom instanceof HTMLElement && dom.contains(table))) {
+      match = { node, pos }
+      return false
+    }
+  })
+
+  return match as { node: ProseMirrorNode; pos: number } | null
+}
+
+function findHoveredTable(editor: Editor, target: EventTarget | null) {
+  if (!(target instanceof Element)) {
+    return null
+  }
+
+  const table = target.closest("table")
+
+  return table instanceof HTMLTableElement && editor.view.dom.contains(table)
+    ? table
+    : null
+}
+
+function createTableControlRect(
+  editor: Editor,
+  table: HTMLTableElement,
+  useSelection: boolean,
+): TableControlRect | null {
+  const tableMatch = findTableByDOM(editor, table)
+
+  if (!tableMatch) {
     return null
   }
 
@@ -115,7 +159,8 @@ function getTableControlRect(editor: Editor): TableControlRect | null {
   const firstCell = table.querySelector("th, td")
   const firstCellRect = firstCell?.getBoundingClientRect()
   const cellSize = Math.max(10, (firstCellRect?.height ?? 40) / 4)
-  const currentRect = selectedRect(editor.state)
+  const currentRect = useSelection ? selectedRect(editor.state) : null
+  const map = TableMap.get(tableMatch.node)
   const firstRow = table.rows[0]
   const columns = Array.from(firstRow?.cells ?? [], (cell, index) => {
     const rect = cell.getBoundingClientRect()
@@ -141,20 +186,64 @@ function getTableControlRect(editor: Editor): TableControlRect | null {
   })
 
   return {
+    bottom: tableRect.bottom,
     columns,
+    hasSelection: Boolean(currentRect),
     left: tableRect.left,
+    map,
+    right: tableRect.right,
     rows,
-    selectedBottom: currentRect.bottom,
-    selectedColumn: Math.min(currentRect.left, Math.max(columns.length - 1, 0)),
-    selectedLeft: currentRect.left,
-    selectedRight: currentRect.right,
-    selectedRow: Math.min(currentRect.top, Math.max(rows.length - 1, 0)),
-    selectedTop: currentRect.top,
+    selectedBottom: currentRect?.bottom ?? 0,
+    selectedColumn: Math.min(currentRect?.left ?? 0, Math.max(columns.length - 1, 0)),
+    selectedLeft: currentRect?.left ?? 0,
+    selectedRight: currentRect?.right ?? 0,
+    selectedRow: Math.min(currentRect?.top ?? 0, Math.max(rows.length - 1, 0)),
+    selectedTop: currentRect?.top ?? 0,
+    table: tableMatch.node,
+    tablePos: tableMatch.pos,
+    tableStart: tableMatch.pos + 1,
     top: tableRect.top,
     width: tableRect.width,
     height: tableRect.height,
     cellSize,
   }
+}
+
+function getTableControlRect(editor: Editor): TableControlRect | null {
+  const table = findActiveTable(editor)
+
+  if (!table) {
+    return null
+  }
+
+  return createTableControlRect(editor, table, true)
+}
+
+function getTableControlRectByDOM(
+  editor: Editor,
+  table: HTMLTableElement,
+): TableControlRect | null {
+  return createTableControlRect(editor, table, findActiveTable(editor) === table)
+}
+
+function isTableControlElement(target: EventTarget | null) {
+  return (
+    target instanceof Element &&
+    Boolean(
+      target.closest(
+        ".table-reorder-control, .table-add-control, .table-drag-drop-line, .table-drag-source-outline",
+      ),
+    )
+  )
+}
+
+function isInsideTableControls(rect: TableControlRect, clientX: number, clientY: number) {
+  return (
+    clientX >= rect.left - tableReorderHandleSize - tableControlGap &&
+    clientX <= rect.left + rect.width + tableControlGap + rect.cellSize &&
+    clientY >= rect.top - tableReorderHandleSize - tableControlGap &&
+    clientY <= rect.top + rect.height + tableControlGap + rect.cellSize
+  )
 }
 
 function getAddControlVisibility(
@@ -235,9 +324,20 @@ export function TableControls({ editor }: { editor: Editor | null }) {
     null
   )
   const dragState = useRef<TableDragState | null>(null)
+  const hoveredTableRef = useRef<HTMLTableElement | null>(null)
+  const rectRef = useRef<TableControlRect | null>(null)
 
   const updateRect = useCallback(() => {
-    setRect(editor ? getTableControlRect(editor) : null)
+    if (!editor) {
+      setRect(null)
+      return
+    }
+
+    const hoveredRect = hoveredTableRef.current
+      ? getTableControlRectByDOM(editor, hoveredTableRef.current)
+      : null
+
+    setRect(hoveredRect ?? getTableControlRect(editor))
   }, [editor])
 
   const setDrag = (nextDrag: TableDragState | null) => {
@@ -259,21 +359,50 @@ export function TableControls({ editor }: { editor: Editor | null }) {
       updateTableMinWidths(editor)
       updateOnNextFrame()
     }
+    const handlePointerMove = (event: globalThis.PointerEvent) => {
+      const currentRect = rectRef.current
+
+      if (
+        dragState.current ||
+        isTableControlElement(event.target) ||
+        (currentRect &&
+          isInsideTableControls(currentRect, event.clientX, event.clientY))
+      ) {
+        return
+      }
+
+      const hoveredTable = findHoveredTable(editor, event.target)
+
+      hoveredTableRef.current = hoveredTable
+
+      if (!hoveredTable) {
+        setRect(getTableControlRect(editor))
+        return
+      }
+
+      setRect(getTableControlRectByDOM(editor, hoveredTable))
+    }
 
     updateTableMinWidths(editor)
     updateRect()
     editor.on("selectionUpdate", updateOnNextFrame)
     editor.on("transaction", handleTransaction)
+    window.addEventListener("pointermove", handlePointerMove, true)
     window.addEventListener("resize", updateRect)
     window.addEventListener("scroll", updateRect, true)
 
     return () => {
       editor.off("selectionUpdate", updateOnNextFrame)
       editor.off("transaction", handleTransaction)
+      window.removeEventListener("pointermove", handlePointerMove, true)
       window.removeEventListener("resize", updateRect)
       window.removeEventListener("scroll", updateRect, true)
     }
   }, [editor, updateRect])
+
+  useEffect(() => {
+    rectRef.current = rect
+  }, [rect])
 
   useEffect(() => {
     if (!rect) {
@@ -336,8 +465,7 @@ export function TableControls({ editor }: { editor: Editor | null }) {
   }
 
   const appendRow = () => {
-    const tableRect = selectedRect(editor.state)
-    const tr = addRow(editor.state.tr, tableRect, tableRect.map.height)
+    const tr = addRow(editor.state.tr, rect, rect.map.height)
 
     editor.view.dispatch(tr.scrollIntoView())
     updateTableMinWidths(editor)
@@ -346,8 +474,7 @@ export function TableControls({ editor }: { editor: Editor | null }) {
   }
 
   const appendColumn = () => {
-    const tableRect = selectedRect(editor.state)
-    const tr = addColumn(editor.state.tr, tableRect, tableRect.map.width)
+    const tr = addColumn(editor.state.tr, rect, rect.map.width)
 
     editor.view.dispatch(tr.scrollIntoView())
     updateTableMinWidths(editor)
@@ -391,10 +518,12 @@ export function TableControls({ editor }: { editor: Editor | null }) {
       currentDrag.axis === "column"
         ? moveTableColumn({
             from: currentDrag.from,
+            pos: rect.tableStart,
             to: currentDrag.target,
           })
         : moveTableRow({
             from: currentDrag.from,
+            pos: rect.tableStart,
             to: currentDrag.target,
           })
 
@@ -535,7 +664,8 @@ export function TableControls({ editor }: { editor: Editor | null }) {
 
   return (
     <>
-      {selectionLeft !== undefined &&
+      {rect.hasSelection &&
+      selectionLeft !== undefined &&
       selectionRight &&
       selectionTop !== undefined &&
       selectionBottom ? (

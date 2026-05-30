@@ -68,6 +68,7 @@ export function SelectionBubbleMenu({
 
   return (
     <BubbleMenu
+      className="selection-toolbar-layer"
       editor={editor}
       pluginKey={SELECTION_BUBBLE_MENU_PLUGIN_KEY}
       resizeDelay={0}

@@ -917,10 +917,6 @@
     @apply bg-primary;
   }
 
-  .column-drag-source-outline {
-    @apply pointer-events-none fixed z-30 border border-primary;
-  }
-
   .column-drag-drop-line {
     @apply pointer-events-none fixed z-40 bg-primary;
   }
@@ -932,6 +928,11 @@
 
   .column-drag-drop-line-horizontal {
     @apply h-0.5;
+    transform: translateY(-1px);
+  }
+
+  .block-drag-drop-line {
+    @apply pointer-events-none fixed z-40 h-0.5 bg-primary;
     transform: translateY(-1px);
   }
 
@@ -971,8 +972,12 @@
     @apply !absolute left-0 top-8;
   }
 
+  .selection-toolbar-layer {
+    z-index: 70;
+  }
+
   .selection-toolbar {
-    @apply z-50 flex items-center gap-1 rounded-md border bg-popover p-1 text-popover-foreground shadow-lg;
+    @apply flex items-center gap-1 rounded-md border bg-popover p-1 text-popover-foreground shadow-lg;
   }
 
   .suggestion {

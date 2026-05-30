@@ -21,6 +21,15 @@ export type BlockDragPayload = {
   typeName: string
 }
 
+export type ColumnBlockDragDropTarget = {
+  line: {
+    left: number
+    right: number
+    top: number
+  }
+  pos: number
+}
+
 const dragSourceEditors = new Map<string, Editor>()
 let activeBlockDragPayload: BlockDragPayload | null = null
 
@@ -313,6 +322,151 @@ export function preparePlaneBlockDrop(view: EditorView, event: DragEvent) {
   return false
 }
 
+export function getColumnBlockDragDropTarget(
+  view: EditorView,
+  event: DragEvent,
+): ColumnBlockDragDropTarget | null {
+  const columnElement = columnElementAtPoint(view, event.clientX, event.clientY)
+
+  if (!columnElement) {
+    return null
+  }
+
+  const columnMatch = findColumnNodeByDOM(view, columnElement)
+
+  if (!columnMatch) {
+    return null
+  }
+
+  const children: Array<{
+    bottom: number
+    pos: number
+    top: number
+  }> = []
+
+  columnMatch.node.forEach((_child, offset) => {
+    const childPos = columnMatch.pos + offset + 1
+    const dom = view.nodeDOM(childPos)
+
+    if (!(dom instanceof HTMLElement)) {
+      return
+    }
+
+    const rect = dom.getBoundingClientRect()
+
+    children.push({
+      bottom: rect.bottom,
+      pos: childPos,
+      top: rect.top,
+    })
+  })
+
+  let insertIndex = children.length
+
+  for (let index = 0; index < children.length; index += 1) {
+    const child = children[index]
+
+    if (event.clientY < child.top + (child.bottom - child.top) / 2) {
+      insertIndex = index
+      break
+    }
+  }
+
+  let pos = columnMatch.pos + 1 + columnMatch.node.content.size
+
+  if (insertIndex < children.length) {
+    pos = children[insertIndex].pos
+  }
+
+  const columnRect = columnElement.getBoundingClientRect()
+  const columnStyle = window.getComputedStyle(columnElement)
+  const paddingLeft = Number.parseFloat(columnStyle.paddingLeft) || 0
+  const paddingRight = Number.parseFloat(columnStyle.paddingRight) || 0
+  const paddingTop = Number.parseFloat(columnStyle.paddingTop) || 0
+  let top = columnRect.top + paddingTop
+
+  if (children.length > 0) {
+    if (insertIndex === 0) {
+      top = children[0].top
+    } else if (insertIndex >= children.length) {
+      top = children[children.length - 1].bottom
+    } else {
+      top = (children[insertIndex - 1].bottom + children[insertIndex].top) / 2
+    }
+  }
+
+  return {
+    line: {
+      left: columnRect.left + paddingLeft,
+      right: columnRect.right - paddingRight,
+      top,
+    },
+    pos,
+  }
+}
+
+export function dropDraggedEditorBlockAt(
+  view: EditorView,
+  event: DragEvent,
+  pos: number,
+) {
+  const payload = parseDraggedBlockPayload(event.dataTransfer)
+
+  if (!payload) {
+    return false
+  }
+
+  let node: ProseMirrorNode
+
+  try {
+    node = view.state.schema.nodeFromJSON(payload.node)
+  } catch {
+    return false
+  }
+
+  if (!canInsertNodeAt(view.state.doc, pos, node)) {
+    return false
+  }
+
+  const sourceEditor = dragSourceEditors.get(payload.editorId)
+  let insertPos = pos
+  let tr = view.state.tr
+
+  if (sourceEditor?.view === view) {
+    const sourceNode = getValidatedSourceNode(view, payload)
+
+    if (!sourceNode) {
+      return false
+    }
+
+    const sourceFrom = payload.pos
+    const sourceTo = sourceFrom + sourceNode.nodeSize
+
+    if (insertPos >= sourceFrom && insertPos <= sourceTo) {
+      event.preventDefault()
+      return true
+    }
+
+    tr = tr.delete(sourceFrom, sourceTo)
+
+    if (sourceFrom < insertPos) {
+      insertPos -= sourceNode.nodeSize
+    }
+  }
+
+  view.dispatch(tr.insert(insertPos, node).scrollIntoView())
+  view.focus()
+
+  if (sourceEditor && sourceEditor.view !== view) {
+    deleteDraggedSourceNode(sourceEditor.view, payload)
+  }
+
+  event.preventDefault()
+  clearActiveBlockDrag()
+
+  return true
+}
+
 export function getDraggedEditorBlockPayload(dataTransfer: DataTransfer | null) {
   return parseDraggedBlockPayload(dataTransfer)
 }
@@ -405,6 +559,63 @@ function nodeDOMAtCoords({
   }
 
   return null
+}
+
+function columnElementAtPoint(
+  view: EditorView,
+  clientX: number,
+  clientY: number,
+) {
+  const elements = view.root.elementsFromPoint(clientX, clientY)
+
+  for (const element of elements) {
+    if (!(element instanceof HTMLElement)) {
+      continue
+    }
+
+    const columnElement = element.closest<HTMLElement>(".column[data-type='column']")
+
+    if (columnElement && view.dom.contains(columnElement)) {
+      return columnElement
+    }
+  }
+
+  return null
+}
+
+function findColumnNodeByDOM(view: EditorView, columnElement: HTMLElement) {
+  let match: { node: ProseMirrorNode; pos: number } | null = null
+
+  view.state.doc.descendants((node, pos) => {
+    if (node.type.name !== "column") {
+      return
+    }
+
+    if (view.nodeDOM(pos) === columnElement) {
+      match = { node, pos }
+      return false
+    }
+  })
+
+  return match as { node: ProseMirrorNode; pos: number } | null
+}
+
+function canInsertNodeAt(
+  doc: ProseMirrorNode,
+  pos: number,
+  node: ProseMirrorNode,
+) {
+  const $pos = doc.resolve(pos)
+
+  for (let depth = $pos.depth; depth >= 0; depth -= 1) {
+    const index = $pos.index(depth)
+
+    if ($pos.node(depth).canReplaceWith(index, index, node.type, node.marks)) {
+      return true
+    }
+  }
+
+  return false
 }
 
 function targetFromDOMNode(view: EditorView, domNode: HTMLElement) {

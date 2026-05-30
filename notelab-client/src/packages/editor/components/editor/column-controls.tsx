@@ -46,6 +46,38 @@ const columnHandleHeight = 14
 const minColumnWidth = 12
 const columnMenuOffset = 8
 
+function createColumnBlockRect(
+  node: ProseMirrorNode,
+  pos: number,
+  dom: HTMLElement,
+): ColumnBlockRect {
+  const rect = dom.getBoundingClientRect()
+  const columns = Array.from(
+    dom.querySelectorAll<HTMLElement>(':scope > [data-type="column"]'),
+    (column, index) => {
+      const columnRect = column.getBoundingClientRect()
+
+      return {
+        height: columnRect.height,
+        index,
+        left: columnRect.left,
+        top: columnRect.top,
+        width: columnRect.width,
+      }
+    },
+  )
+
+  return {
+    columns,
+    height: rect.height,
+    left: rect.left,
+    node,
+    pos,
+    top: rect.top,
+    width: rect.width,
+  }
+}
+
 function getColumnWidths(node: ProseMirrorNode) {
   const widths = node.attrs.widths
   const count = node.childCount
@@ -61,51 +93,132 @@ function getColumnWidths(node: ProseMirrorNode) {
   return Array.from({ length: count }, () => 100 / count)
 }
 
-function findActiveColumnBlock(editor: Editor): ColumnBlockRect | null {
-  const { selection } = editor.state
+function findColumnBlockByDOM(editor: Editor, dom: HTMLElement) {
+  let match: ColumnBlockRect | null = null
 
-  for (let depth = selection.$from.depth; depth > 0; depth -= 1) {
-    const node = selection.$from.node(depth)
-
+  editor.state.doc.descendants((node, pos) => {
     if (node.type.name !== "columnBlock") {
-      continue
+      return
     }
 
-    const pos = selection.$from.before(depth)
-    const dom = editor.view.nodeDOM(pos)
-
-    if (!(dom instanceof HTMLElement)) {
-      return null
+    if (editor.view.nodeDOM(pos) === dom) {
+      match = createColumnBlockRect(node, pos, dom)
+      return false
     }
+  })
 
-    const rect = dom.getBoundingClientRect()
-    const columns = Array.from(
-      dom.querySelectorAll<HTMLElement>(':scope > [data-type="column"]'),
-      (column, index) => {
-        const columnRect = column.getBoundingClientRect()
+  return match
+}
 
-        return {
-          height: columnRect.height,
-          index,
-          left: columnRect.left,
-          top: columnRect.top,
-          width: columnRect.width,
-        }
-      },
-    )
+function findColumnBlockByPos(editor: Editor, pos: number) {
+  const node = editor.state.doc.nodeAt(pos)
+  const dom = editor.view.nodeDOM(pos)
 
-    return {
-      columns,
-      height: rect.height,
-      left: rect.left,
-      node,
-      pos,
-      top: rect.top,
-      width: rect.width,
-    }
+  if (node?.type.name !== "columnBlock" || !(dom instanceof HTMLElement)) {
+    return null
   }
 
-  return null
+  return {
+    dom,
+    rect: createColumnBlockRect(node, pos, dom),
+  }
+}
+
+function findHoveredColumnBlock(
+  editor: Editor,
+  target: EventTarget | null,
+) {
+  if (!(target instanceof Element)) {
+    return null
+  }
+
+  const dom = target.closest<HTMLElement>('[data-type="columnBlock"]')
+
+  if (!dom || !editor.view.dom.contains(dom)) {
+    return null
+  }
+
+  const columnDom = target.closest<HTMLElement>('[data-type="column"]')
+  const columns = Array.from(
+    dom.querySelectorAll<HTMLElement>(':scope > [data-type="column"]'),
+  )
+  const columnIndex =
+    columnDom && dom.contains(columnDom) ? columns.indexOf(columnDom) : null
+
+  return {
+    columnIndex: columnIndex === -1 ? null : columnIndex,
+    dom,
+    rect: findColumnBlockByDOM(editor, dom),
+  }
+}
+
+function isColumnControlElement(target: EventTarget | null) {
+  return (
+    target instanceof Element &&
+    Boolean(
+      target.closest(
+        ".column-reorder-control, .column-resize-control, .column-actions-menu",
+      ),
+    )
+  )
+}
+
+function getColumnControlIndex(target: EventTarget | null) {
+  if (!(target instanceof Element)) {
+    return null
+  }
+
+  const control = target.closest<HTMLElement>("[data-column-control-index]")
+  const rawIndex = control?.dataset.columnControlIndex
+
+  if (!rawIndex) {
+    return null
+  }
+
+  const index = Number.parseInt(rawIndex, 10)
+
+  return Number.isInteger(index) ? index : null
+}
+
+function getColumnIndexAtPoint(
+  rect: ColumnBlockRect,
+  clientX: number,
+  clientY: number,
+) {
+  const isInsideColumnControlZone =
+    clientX >= rect.left &&
+    clientX <= rect.left + rect.width &&
+    clientY >= rect.top - columnHandleHeight - columnHandleGap &&
+    clientY <= rect.top + rect.height
+
+  if (!isInsideColumnControlZone) {
+    return null
+  }
+
+  const directColumn = rect.columns.find(
+    (column) =>
+      clientX >= column.left && clientX <= column.left + column.width,
+  )
+
+  if (directColumn) {
+    return directColumn.index
+  }
+
+  const closestColumn = rect.columns.reduce<ColumnAxisRect | null>(
+    (closest, column) => {
+      const center = column.left + column.width / 2
+      const closestCenter = closest
+        ? closest.left + closest.width / 2
+        : Number.POSITIVE_INFINITY
+
+      return Math.abs(clientX - center) < Math.abs(clientX - closestCenter)
+        ? column
+        : closest
+    },
+    null,
+  )
+
+  return closestColumn?.index ?? null
 }
 
 function getTargetIndex(rect: ColumnBlockRect, clientX: number) {
@@ -364,8 +477,14 @@ function deleteColumn(editor: Editor, rect: ColumnBlockRect, index: number) {
 export function ColumnControls({ editor }: { editor: Editor | null }) {
   const [rect, setRect] = useState<ColumnBlockRect | null>(null)
   const [dragPreview, setDragPreview] = useState<ColumnDragState | null>(null)
+  const [hoveredColumnIndex, setHoveredColumnIndex] = useState<number | null>(
+    null,
+  )
   const [menu, setMenu] = useState<ColumnMenuState | null>(null)
   const dragState = useRef<ColumnDragState | null>(null)
+  const hoveredColumnBlockRef = useRef<HTMLElement | null>(null)
+  const menuRef = useRef<ColumnMenuState | null>(null)
+  const rectRef = useRef<ColumnBlockRect | null>(null)
   const pointerState = useRef<{
     moved: boolean
     x: number
@@ -373,8 +492,43 @@ export function ColumnControls({ editor }: { editor: Editor | null }) {
   } | null>(null)
 
   const updateRect = useCallback(() => {
-    setRect(editor ? findActiveColumnBlock(editor) : null)
+    if (!editor) {
+      setRect(null)
+      setHoveredColumnIndex(null)
+      return
+    }
+
+    const hoveredColumnBlock = hoveredColumnBlockRef.current
+      ? findColumnBlockByDOM(editor, hoveredColumnBlockRef.current)
+      : null
+    const fallbackColumnBlock =
+      !hoveredColumnBlock && rectRef.current
+        ? findColumnBlockByPos(editor, rectRef.current.pos)
+        : null
+    const nextRect = hoveredColumnBlock ?? fallbackColumnBlock?.rect ?? null
+
+    if (fallbackColumnBlock) {
+      hoveredColumnBlockRef.current = fallbackColumnBlock.dom
+    }
+
+    setRect(nextRect)
+    if (!nextRect) {
+      setHoveredColumnIndex(null)
+      return
+    }
+
+    setHoveredColumnIndex((index) =>
+      index === null ? null : Math.min(index, nextRect.columns.length - 1),
+    )
   }, [editor])
+
+  useEffect(() => {
+    menuRef.current = menu
+  }, [menu])
+
+  useEffect(() => {
+    rectRef.current = rect
+  }, [rect])
 
   useEffect(() => {
     if (!editor) {
@@ -383,16 +537,56 @@ export function ColumnControls({ editor }: { editor: Editor | null }) {
     }
 
     const updateOnNextFrame = () => requestAnimationFrame(updateRect)
+    const updateHoveredColumnBlock = (event: globalThis.PointerEvent) => {
+      if (
+        dragState.current ||
+        pointerState.current ||
+        menuRef.current
+      ) {
+        return
+      }
+
+      const currentRect = rectRef.current
+      const controlIndex = getColumnControlIndex(event.target)
+
+      if (currentRect && controlIndex !== null) {
+        setRect(currentRect)
+        setHoveredColumnIndex(controlIndex)
+        return
+      }
+
+      const controlZoneIndex = currentRect
+        ? getColumnIndexAtPoint(currentRect, event.clientX, event.clientY)
+        : null
+
+      if (currentRect && controlZoneIndex !== null) {
+        setRect(currentRect)
+        setHoveredColumnIndex(controlZoneIndex)
+        return
+      }
+
+      if (isColumnControlElement(event.target)) {
+        return
+      }
+
+      const hoveredColumnBlock = findHoveredColumnBlock(editor, event.target)
+
+      hoveredColumnBlockRef.current = hoveredColumnBlock?.dom ?? null
+      setRect(hoveredColumnBlock?.rect ?? null)
+      setHoveredColumnIndex(hoveredColumnBlock?.columnIndex ?? null)
+    }
 
     updateRect()
     editor.on("selectionUpdate", updateOnNextFrame)
     editor.on("transaction", updateOnNextFrame)
+    window.addEventListener("pointermove", updateHoveredColumnBlock, true)
     window.addEventListener("resize", updateRect)
     window.addEventListener("scroll", updateRect, true)
 
     return () => {
       editor.off("selectionUpdate", updateOnNextFrame)
       editor.off("transaction", updateOnNextFrame)
+      window.removeEventListener("pointermove", updateHoveredColumnBlock, true)
       window.removeEventListener("resize", updateRect)
       window.removeEventListener("scroll", updateRect, true)
     }
@@ -453,6 +647,10 @@ export function ColumnControls({ editor }: { editor: Editor | null }) {
     }
 
     const children = getChildNodes(rect.node)
+    const nextHoveredIndex = Math.min(
+      currentDrag.target,
+      rect.columns.length - 1,
+    )
 
     updateColumnBlock(
       editor,
@@ -460,7 +658,18 @@ export function ColumnControls({ editor }: { editor: Editor | null }) {
       reorder(children, currentDrag.from, currentDrag.target),
       reorder(getColumnWidths(rect.node), currentDrag.from, currentDrag.target),
     )
-    requestAnimationFrame(updateRect)
+    setHoveredColumnIndex(nextHoveredIndex)
+    requestAnimationFrame(() => {
+      const nextColumnBlock = findColumnBlockByPos(editor, rect.pos)
+
+      if (!nextColumnBlock) {
+        updateRect()
+        return
+      }
+
+      hoveredColumnBlockRef.current = nextColumnBlock.dom
+      setRect(nextColumnBlock.rect)
+    })
   }
 
   const runColumnCommand = (command: () => void) => {
@@ -535,6 +744,7 @@ export function ColumnControls({ editor }: { editor: Editor | null }) {
 
     const handlePointerUp = () => {
       removeListeners()
+      pointerState.current = null
       finishDrag()
     }
 
@@ -613,7 +823,6 @@ export function ColumnControls({ editor }: { editor: Editor | null }) {
     window.addEventListener("pointercancel", handlePointerUp)
   }
 
-  const dragSource = dragPreview ? rect.columns[dragPreview.from] : null
   const dragTarget = dragPreview ? rect.columns[dragPreview.target] : null
   const extractionDropTop =
     dragPreview?.dropPosition === "before"
@@ -627,21 +836,21 @@ export function ColumnControls({ editor }: { editor: Editor | null }) {
         ? dragTarget.left + dragTarget.width
         : dragTarget.left
       : null
+  const visibleColumnIndex =
+    dragPreview?.from ?? menu?.index ?? hoveredColumnIndex
+  const resizeHandleColumns =
+    visibleColumnIndex === null
+      ? []
+      : rect.columns
+          .slice(0, -1)
+          .filter(
+            (column) =>
+              column.index === visibleColumnIndex ||
+              column.index + 1 === visibleColumnIndex,
+          )
 
   return (
     <>
-      {dragPreview && dragSource ? (
-        <div
-          aria-hidden="true"
-          className="column-drag-source-outline"
-          style={{
-            height: rect.height,
-            left: dragSource.left,
-            top: rect.top,
-            width: dragSource.width,
-          }}
-        />
-      ) : null}
       {dropLinePosition !== null ? (
         <div
           aria-hidden="true"
@@ -664,10 +873,13 @@ export function ColumnControls({ editor }: { editor: Editor | null }) {
           }}
         />
       ) : null}
-      {rect.columns.map((column) => (
+      {rect.columns
+        .filter((column) => column.index === visibleColumnIndex)
+        .map((column) => (
         <button
           aria-label="Open column actions"
           className="column-reorder-control"
+          data-column-control-index={column.index}
           data-dragging={
             dragPreview?.from === column.index ? "true" : undefined
           }
@@ -689,6 +901,7 @@ export function ColumnControls({ editor }: { editor: Editor | null }) {
       {menu ? (
         <div
           className="column-actions-menu"
+          data-column-control-index={menu.index}
           onMouseDown={(event) => event.stopPropagation()}
           style={{
             left: menu.left,
@@ -751,10 +964,11 @@ export function ColumnControls({ editor }: { editor: Editor | null }) {
           </button>
         </div>
       ) : null}
-      {rect.columns.slice(0, -1).map((column) => (
+      {resizeHandleColumns.map((column) => (
         <div
           aria-label="Resize column"
           className="column-resize-control"
+          data-column-control-index={visibleColumnIndex}
           key={column.index}
           onPointerDown={(event) => startResize(column.index, event)}
           role="separator"
