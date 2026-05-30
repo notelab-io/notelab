@@ -1148,11 +1148,7 @@ export function Editor({
         ) : null}
         <SelectionBubbleMenu editor={editor} runCommand={runCommand} />
         <TableControls editor={editor} />
-        <EditorTableOfContents
-          containerClassName={pageContentClassName}
-          editor={editor}
-          items={tocItems}
-        />
+        <EditorTableOfContents editor={editor} items={tocItems} />
         {pasteChoice
           ? (() => {
               const pasteChoiceRect =
@@ -1230,11 +1226,9 @@ export function Editor({
 }
 
 function EditorTableOfContents({
-  containerClassName,
   editor,
   items,
 }: {
-  containerClassName?: string
   editor: TiptapEditor | null
   items: TableOfContentDataItem[]
 }) {
@@ -1250,21 +1244,17 @@ function EditorTableOfContents({
       editor.state.doc.content.size
     )
 
-    editor
-      .chain()
-      .focus()
-      .setTextSelection(selectionPosition)
-      .scrollIntoView()
-      .run()
-    item.dom.scrollIntoView({ block: "start", behavior: "smooth" })
+    editor.commands.setTextSelection(selectionPosition)
+    editor.view.dom.focus({ preventScroll: true })
+
+    requestAnimationFrame(() => {
+      item.dom.scrollIntoView({ block: "start", behavior: "smooth" })
+    })
   }
 
   return (
     <div
-      className={cn(
-        "pointer-events-none sticky top-1/2 z-40 hidden h-0 -translate-y-1/2 md:block",
-        containerClassName
-      )}
+      className="pointer-events-none sticky top-1/2 z-40 hidden h-0 -translate-y-1/2 md:block"
     >
       <div className="flex justify-end pr-6">
         <HoverCard openDelay={100}>

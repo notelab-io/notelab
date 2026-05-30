@@ -236,7 +236,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   }
 
   return (
-    <Sidebar className="border-r-0" {...props}>
+    <Sidebar variant="floating" className="border-r-0" {...props}>
       <SidebarHeader>
         <OrganizationSwitcher />
         <NavMain items={data.navMain} />

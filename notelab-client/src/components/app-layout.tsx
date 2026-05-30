@@ -72,7 +72,13 @@ export function AppLayout() {
   }, [closeSidePane, workspaceId])
 
   return (
-    <SidebarProvider>
+       <SidebarProvider
+      style={
+        {
+          "--sidebar-width": "18rem",
+        } as React.CSSProperties
+      }
+    >
       {isSettingsPage ? <SettingsSidebar /> : <AppSidebar />}
       <SidebarInset className="h-svh overflow-hidden">
         <AppHeader
@@ -117,7 +123,7 @@ function AppHeader({
   sidePaneWorkspaceId: string | null
 }) {
   return (
-    <header className="relative z-20 flex h-12 shrink-0 border-b bg-background">
+    <header className="relative z-20 flex h-12 shrink-0 bg-background">
       <PaneHeaderContent
         className="min-w-0 flex-1"
         leadingControl={<SidebarTrigger />}
@@ -127,7 +133,7 @@ function AppHeader({
       {sidePaneWorkspaceId ? (
         <PaneHeaderContent
           className={cn(
-            "animate-in slide-in-from-right-8 absolute inset-0 z-10 border-b bg-background duration-200 md:static md:z-auto md:border-b-0 md:border-l",
+            "animate-in slide-in-from-right-8 absolute inset-0 z-10 bg-background duration-200 md:static md:z-auto md:border-l",
             sidePaneWidthClass,
           )}
           leadingControl={
