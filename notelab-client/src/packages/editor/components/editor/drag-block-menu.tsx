@@ -20,8 +20,8 @@ import {
 import { blockContentForItem, insertBlockFromPlus } from "./block-insert"
 import {
   beginActiveBlockDrag,
-  clearActiveBlockDrag,
-  setDraggedBlockData,
+  endPlaneBlockDrag,
+  startPlaneBlockDrag,
 } from "./block-drag"
 import { colorTokens, colorWithAlpha } from "./toolbar-data"
 import type { DragHandleTarget } from "./types"
@@ -339,11 +339,17 @@ export function DragBlockMenu({
 
           event.stopPropagation()
           event.nativeEvent.stopImmediatePropagation()
-          setDraggedBlockData({
-            dataTransfer: event.dataTransfer,
+          const didStartDrag = startPlaneBlockDrag({
             editorId,
+            event: event.nativeEvent,
             target,
+            view: editor.view,
           })
+
+          if (!didStartDrag) {
+            event.preventDefault()
+            return
+          }
 
           const pageId = target.node.attrs.pageId
 
@@ -357,11 +363,11 @@ export function DragBlockMenu({
             )
           }
         }}
-        onDragEnd={clearActiveBlockDrag}
+        onDragEnd={() => endPlaneBlockDrag(editor.view)}
         onPointerUp={() => {
           window.setTimeout(() => {
             if (!gripPointerRef.current?.moved) {
-              clearActiveBlockDrag()
+              endPlaneBlockDrag(editor.view)
             }
 
             gripPointerRef.current = null

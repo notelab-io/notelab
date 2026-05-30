@@ -132,6 +132,18 @@
     @apply border-l-2 pl-4 text-muted-foreground;
   }
 
+  .tiptap-editor .column-block {
+    @apply mt-6 grid w-full gap-4 py-2;
+  }
+
+  .tiptap-editor .column {
+    @apply min-w-0 rounded-md p-3;
+  }
+
+  .tiptap-editor .column > * + * {
+    @apply mt-4;
+  }
+
   .tiptap-editor .editor-details {
     @apply relative py-1;
   }
@@ -864,8 +876,67 @@
     transform: translateY(-1px);
   }
 
+  .column-reorder-control {
+    @apply fixed z-40 flex cursor-grab items-center justify-center rounded-sm border border-border bg-muted text-muted-foreground shadow-sm transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none active:cursor-grabbing;
+    touch-action: none;
+    user-select: none;
+  }
+
+  .column-reorder-control svg {
+    @apply size-3;
+  }
+
+  .column-reorder-control[data-dragging="true"] {
+    @apply bg-primary text-primary-foreground;
+  }
+
+  .column-actions-menu {
+    @apply fixed z-50 w-56 rounded-lg bg-popover p-2 text-popover-foreground shadow-md ring-1 ring-foreground/10;
+  }
+
+  .column-actions-menu-item {
+    @apply flex h-8 w-full items-center gap-2 rounded-md px-1.5 text-left text-sm outline-none hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent;
+  }
+
+  .column-actions-menu-item svg {
+    @apply size-4;
+  }
+
+  .column-resize-control {
+    @apply fixed z-40 w-3 -translate-x-1/2 cursor-col-resize;
+    touch-action: none;
+    user-select: none;
+  }
+
+  .column-resize-control::after {
+    @apply absolute left-1/2 top-0 h-full w-0.5 -translate-x-1/2 rounded-full bg-border transition-colors content-[''];
+  }
+
+  .column-resize-control:hover::after,
+  .column-resize-control:active::after {
+    @apply bg-primary;
+  }
+
+  .column-drag-source-outline {
+    @apply pointer-events-none fixed z-30 border border-primary;
+  }
+
+  .column-drag-drop-line {
+    @apply pointer-events-none fixed z-40 bg-primary;
+  }
+
+  .column-drag-drop-line-vertical {
+    @apply w-0.5;
+    transform: translateX(-1px);
+  }
+
+  .column-drag-drop-line-horizontal {
+    @apply h-0.5;
+    transform: translateY(-1px);
+  }
+
   .drag-handle {
-    @apply z-40 hidden h-7 w-14 cursor-grab items-center justify-between bg-transparent text-muted-foreground opacity-100 active:cursor-grabbing md:flex;
+    @apply fixed z-40 hidden h-7 w-14 cursor-grab items-center justify-between bg-transparent text-muted-foreground opacity-100 active:cursor-grabbing md:flex;
     transform: translate3d(0, 0, 0);
     transition-duration: 160ms;
     transition-property: top, left, transform, color;

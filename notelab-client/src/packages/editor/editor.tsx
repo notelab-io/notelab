@@ -14,8 +14,6 @@ import {
   DetailsContent,
   DetailsSummary,
 } from "@tiptap/extension-details"
-import DragHandle from "@tiptap/extension-drag-handle-react"
-import type { NestedOptions } from "@tiptap/extension-drag-handle"
 import Placeholder from "@tiptap/extension-placeholder"
 import Link from "@tiptap/extension-link"
 import {
@@ -36,16 +34,16 @@ import type { EditorView } from "@tiptap/pm/view"
 import StarterKit from "@tiptap/starter-kit"
 
 import { cn } from "@/lib/utils"
-import {
-  DragBlockMenu,
-  dragHandleComputePositionConfig,
-} from "@/packages/editor/components/editor/drag-block-menu"
+import { ColumnControls } from "@/packages/editor/components/editor/column-controls"
+import { DragBlockMenu } from "@/packages/editor/components/editor/drag-block-menu"
 import {
   hasDraggedEditorBlock,
   deleteDraggedEditorBlockSource,
+  getPlaneDragHandleRect,
   getDraggedEditorBlockPayload,
-  insertDraggedEditorBlock,
+  preparePlaneBlockDrop,
   registerBlockDragSource,
+  resolvePlaneDragTargetFromPoint,
   type BlockDragPayload,
 } from "@/packages/editor/components/editor/block-drag"
 import { MobileActionBar } from "@/packages/editor/components/editor/mobile-action-bar"
@@ -64,6 +62,7 @@ import {
   getFallbackBookmarkMetadata,
 } from "@/packages/editor/extensions/bookmark-block"
 import { CodeBlockShiki } from "@/packages/editor/extensions/code-block-shiki"
+import { ColumnsExtension } from "@/packages/editor/extensions/columns"
 import {
   DATABASE_PAGE_DRAG_MIME,
   DatabaseBlock,
@@ -127,53 +126,6 @@ type PasteChoiceState = {
   provider: EmbedProvider
   to: number
   url: string
-}
-
-const dragHandleNestedOptions: NestedOptions = {
-  edgeDetection: "none",
-  rules: [
-    {
-      id: "preferNestedChildren",
-      evaluate: ({ node, pos, $pos }) => {
-        const parentContainerTypes = [
-          "blockquote",
-          "details",
-          "detailsContent",
-          "bulletList",
-          "orderedList",
-          "taskList",
-        ]
-
-        if (parentContainerTypes.includes(node.type.name)) {
-          return 1000
-        }
-
-        if (node.type.name !== "taskItem") {
-          return 0
-        }
-
-        let childPos = pos + 1
-
-        for (let index = 0; index < node.childCount; index += 1) {
-          const child = node.child(index)
-          const childStart = childPos
-          const childEnd = childStart + child.nodeSize
-
-          if (
-            child.type.name === "taskList" &&
-            $pos.pos >= childStart &&
-            $pos.pos <= childEnd
-          ) {
-            return 1000
-          }
-
-          childPos = childEnd
-        }
-
-        return 0
-      },
-    },
-  ],
 }
 
 type EditorProps = {
@@ -370,6 +322,8 @@ export function Editor({
   const pointerDragTargetRef = useRef<DragHandleTarget | null>(null)
   const [dragHandleTarget, setDragHandleTarget] =
     useState<DragHandleTarget | null>(null)
+  const [dragHandlePosition, setDragHandlePosition] =
+    useState<{ left: number; top: number } | null>(null)
   const [mobileNodeTarget, setMobileNodeTarget] =
     useState<DragHandleTarget | null>(null)
   const [plusMenuOpen, setPlusMenuOpen] = useState(false)
@@ -566,6 +520,7 @@ export function Editor({
           dark: "github-dark",
         },
       }),
+      ColumnsExtension,
       Table.configure({
         cellMinWidth: 180,
         HTMLAttributes: {
@@ -600,8 +555,8 @@ export function Editor({
       },
       handleDrop: (view, event) =>
         dropPageOnDatabase(event) ||
-        insertDraggedEditorBlock({ editorId, event, targetView: view }) ||
-        insertDraggedDatabasePage(view, event),
+        insertDraggedDatabasePage(view, event) ||
+        preparePlaneBlockDrop(view, event),
       handlePaste: handleProviderLinkPaste,
       transformPastedHTML: restoreEmojiTextFromPastedHTML,
       handleDOMEvents: {
@@ -791,112 +746,18 @@ export function Editor({
     }
   }, [plusMenuOpen])
 
-  const getDragHandleVirtualElement = useCallback(() => {
-    if (!editor || dragHandlePosRef.current === null) {
-      return null
-    }
-
-    const domNode = editor.view.nodeDOM(dragHandlePosRef.current)
-
-    if (!(domNode instanceof HTMLElement)) {
-      return null
-    }
-
-    const nodeRect = domNode.getBoundingClientRect()
-    const editorRect = editor.view.dom.getBoundingClientRect()
-    const editorStyle = window.getComputedStyle(editor.view.dom)
-    const paddingLeft = Number.parseFloat(editorStyle.paddingLeft) || 0
-    const railLeft = editorRect.left + Math.max(16, paddingLeft - 64)
-
-    return {
-      getBoundingClientRect: () =>
-        new DOMRect(railLeft, nodeRect.top, 0, nodeRect.height),
-    }
-  }, [editor])
-
   const resolveDragTargetFromPoint = useCallback(
     (clientX: number, clientY: number) => {
       if (!editor) {
         return null
       }
 
-      const view = editor.view
-      const editorElement = view.dom
-      const elements = view.root.elementsFromPoint(
+      return resolvePlaneDragTargetFromPoint({
         clientX,
-        clientY
-      )
-      const isInsideEditor = elements.some(
-        (element) =>
-          element instanceof HTMLElement &&
-          editorElement.contains(element)
-      )
-
-      if (!isInsideEditor) {
-        const currentTarget = pointerDragTargetRef.current
-        const currentDom =
-          currentTarget && view.nodeDOM(currentTarget.pos)
-
-        if (currentDom instanceof HTMLElement) {
-          const rect = currentDom.getBoundingClientRect()
-
-          if (clientY >= rect.top && clientY <= rect.bottom) {
-            return currentTarget
-          }
-        }
-
-        return null
-      }
-
-      const coords = view.posAtCoords({
-        left: clientX,
-        top: clientY,
+        clientY,
+        currentTarget: pointerDragTargetRef.current,
+        view: editor.view,
       })
-
-      if (!coords) {
-        return null
-      }
-
-      const $pos = view.state.doc.resolve(coords.pos)
-      const parentContainerTypes = new Set([
-        "blockquote",
-        "details",
-        "detailsContent",
-        "bulletList",
-        "orderedList",
-        "taskList",
-        "tableRow",
-        "tableCell",
-        "tableHeader",
-      ])
-
-      for (let depth = $pos.depth; depth > 0; depth -= 1) {
-        const node = $pos.node(depth)
-        const parent = depth > 0 ? $pos.node(depth - 1) : null
-        const index = depth > 0 ? $pos.index(depth - 1) : 0
-
-        if (node.isInline || node.isText) {
-          continue
-        }
-
-        if (parentContainerTypes.has(node.type.name)) {
-          continue
-        }
-
-        if (
-          index === 0 &&
-          (parent?.type.name === "taskItem" ||
-            parent?.type.name === "listItem")
-        ) {
-          continue
-        }
-
-        const pos = $pos.before(depth)
-
-        return { node, pos }
-      }
-
-      return null
     },
     [editor]
   )
@@ -914,34 +775,21 @@ export function Editor({
       pointerDragTargetRef.current = nextTarget
 
       if (!nextTarget || nextTarget.pos === dragHandlePosRef.current) {
+        if (nextTarget && editor) {
+          setDragHandlePosition(
+            getPlaneDragHandleRect(editor.view, nextTarget)
+          )
+        }
         return
       }
 
       dragHandlePosRef.current = nextTarget.pos
       setDragHandleTarget(nextTarget)
+      if (editor) {
+        setDragHandlePosition(getPlaneDragHandleRect(editor.view, nextTarget))
+      }
     },
-    [resolveDragTargetFromPointer]
-  )
-
-  const handleDragNodeChange = useCallback(
-    ({ node, pos }: { node: ProseMirrorNode | null; pos: number }) => {
-      const pointerTarget = pointerDragTargetRef.current
-      const nextTarget =
-        pointerTarget ??
-        (node && pos >= 0
-          ? {
-              node,
-              pos,
-            }
-          : null)
-
-      dragHandlePosRef.current = nextTarget?.pos ?? null
-      setDragHandleTarget(
-        nextTarget
-      )
-      setPlusMenuOpen(false)
-    },
-    []
+    [editor, resolveDragTargetFromPointer]
   )
 
   const getTargetPlacement = useCallback(
@@ -1029,6 +877,9 @@ export function Editor({
       setMobileNodeTarget({ node: source, pos: nextPos })
       dragHandlePosRef.current = nextPos
       setDragHandleTarget({ node: source, pos: nextPos })
+      setDragHandlePosition(
+        getPlaneDragHandleRect(editor.view, { node: source, pos: nextPos })
+      )
     },
     [editor, getTargetPlacement, mobileNodeTarget]
   )
@@ -1123,18 +974,20 @@ export function Editor({
         className="min-h-0 flex-1"
         onPointerLeave={() => {
           pointerDragTargetRef.current = null
+          dragHandlePosRef.current = null
+          setDragHandleTarget(null)
+          setDragHandlePosition(null)
         }}
         onClickCapture={handleMobileNodeClick}
         onPointerMoveCapture={updateDragTargetFromPointer}
       >
-        {editor ? (
-          <DragHandle
-            nested={dragHandleNestedOptions}
+        {editor && dragHandleTarget && dragHandlePosition ? (
+          <div
             className="drag-handle"
-            computePositionConfig={dragHandleComputePositionConfig}
-            editor={editor}
-            getReferencedVirtualElement={getDragHandleVirtualElement}
-            onNodeChange={handleDragNodeChange}
+            style={{
+              left: dragHandlePosition.left,
+              top: dragHandlePosition.top,
+            }}
           >
             <DragBlockMenu
               editor={editor}
@@ -1144,9 +997,10 @@ export function Editor({
               onOpenChange={setPlusMenuOpen}
               target={dragHandleTarget}
             />
-          </DragHandle>
+          </div>
         ) : null}
         <SelectionBubbleMenu editor={editor} runCommand={runCommand} />
+        <ColumnControls editor={editor} />
         <TableControls editor={editor} />
         <EditorTableOfContents editor={editor} items={tocItems} />
         {pasteChoice
