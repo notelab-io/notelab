@@ -5,99 +5,158 @@ import { apiFetch } from "@/lib/api"
 export type GmailIntegrationStatus = {
   configured: boolean
   connected: boolean
-  connectedAt?: string
-  email?: string
-  hostedDomain?: string
   integration: "gmail"
   needsMigration?: boolean
-  providerAccountId?: string
-  scopes?: string[]
-  status?: string
-  updatedAt?: string
+  personal: {
+    connected: boolean
+    connectedAt?: string
+    email?: string
+    hostedDomain?: string
+    providerAccountId?: string
+    providerOrganizationId?: string
+    updatedAt?: string
+  }
+  workspace: {
+    connected: boolean
+    connectedAt?: string
+    email?: string
+    enforceEmailMatch: boolean
+    hostedDomain?: string
+    providerAccountId?: string
+    updatedAt?: string
+  }
 }
 
 export type GithubIntegrationStatus = {
   configured: boolean
   connected: boolean
-  connectedAt?: string
-  connectedUserEmail?: string | null
-  connectedUserId?: number
-  connectedUserLogin?: string
-  connectedUserName?: string | null
-  displayName?: string
   integration: "github"
   needsMigration?: boolean
-  providerAccountId?: string
-  scopes?: string[]
-  status?: string
-  updatedAt?: string
+  personal: {
+    connected: boolean
+    connectedAt?: string
+    email?: string
+    login?: string
+    name?: string
+    providerAccountId?: string
+    providerOrganizationId?: string
+    updatedAt?: string
+  }
+  workspace: {
+    connected: boolean
+    connectedAt?: string
+    enforceEmailMatch: boolean
+    organizationId?: string
+    organizationLogin?: string
+    organizationName?: string
+    updatedAt?: string
+  }
 }
 
 export type GoogleCalendarIntegrationStatus = {
   configured: boolean
   connected: boolean
-  connectedAt?: string
-  coworkerCalendarAccessEnabled: boolean
-  coworkerCalendarAccessGranted?: boolean
-  email?: string
-  hostedDomain?: string
   integration: "google-calendar"
   needsMigration?: boolean
-  providerAccountId?: string
-  scopes?: string[]
-  status?: string
-  updatedAt?: string
+  personal: {
+    connected: boolean
+    connectedAt?: string
+    email?: string
+    hostedDomain?: string
+    providerAccountId?: string
+    providerOrganizationId?: string
+    updatedAt?: string
+  }
+  workspace: {
+    connected: boolean
+    connectedAt?: string
+    coworkerCalendarAccessEnabled: boolean
+    coworkerCalendarAccessGranted: boolean
+    email?: string
+    enforceEmailMatch: boolean
+    hostedDomain?: string
+    providerAccountId?: string
+    updatedAt?: string
+  }
 }
 
 export type GoogleDriveIntegrationStatus = {
   configured: boolean
   connected: boolean
-  connectedAt?: string
-  email?: string
-  hostedDomain?: string
   integration: "google-drive"
   needsMigration?: boolean
-  providerAccountId?: string
-  scopes?: string[]
-  status?: string
-  updatedAt?: string
+  personal: {
+    connected: boolean
+    connectedAt?: string
+    email?: string
+    hostedDomain?: string
+    providerAccountId?: string
+    providerOrganizationId?: string
+    updatedAt?: string
+  }
+  workspace: {
+    connected: boolean
+    connectedAt?: string
+    email?: string
+    enforceEmailMatch: boolean
+    hostedDomain?: string
+    providerAccountId?: string
+    updatedAt?: string
+  }
 }
 
 export type SlackIntegrationStatus = {
   configured: boolean
   connected: boolean
-  connectedAt?: string
-  displayName?: string
-  enterpriseId?: string
-  enterpriseName?: string
   integration: "slack"
-  isEnterpriseInstall?: boolean
   needsMigration?: boolean
-  providerAccountId?: string
-  scopes?: string[]
-  status?: string
-  teamId?: string
-  teamName?: string
-  updatedAt?: string
+  personal: {
+    connected: boolean
+    connectedAt?: string
+    email?: string
+    name?: string
+    providerAccountId?: string
+    providerOrganizationId?: string
+    updatedAt?: string
+  }
+  workspace: {
+    connected: boolean
+    connectedAt?: string
+    enforceEmailMatch: boolean
+    enterpriseId?: string
+    enterpriseName?: string
+    isEnterpriseInstall?: boolean
+    organizationId?: string
+    organizationName?: string
+    teamId?: string
+    teamName?: string
+    updatedAt?: string
+  }
 }
 
 export type LinearIntegrationStatus = {
   configured: boolean
   connected: boolean
-  connectedAt?: string
-  connectedUserEmail?: string
-  connectedUserId?: string
-  connectedUserName?: string
-  displayName?: string
   integration: "linear"
   needsMigration?: boolean
-  organizationId?: string
-  organizationName?: string
-  organizationUrlKey?: string
-  providerAccountId?: string
-  scopes?: string[]
-  status?: string
-  updatedAt?: string
+  personal: {
+    connected: boolean
+    connectedAt?: string
+    email?: string
+    name?: string
+    providerAccountId?: string
+    providerOrganizationId?: string
+    updatedAt?: string
+  }
+  workspace: {
+    connected: boolean
+    connectedAt?: string
+    enforceEmailMatch: boolean
+    organizationId?: string
+    organizationName?: string
+    organizationUrlKey?: string
+    updatedAt?: string
+  }
 }
 
 export type IntegrationStatuses = {
