@@ -50,6 +50,13 @@
       "when": 1780032353987,
       "tag": "0006_organization_integrations_ai",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1780107641665,
+      "tag": "0007_cuddly_spitfire",
+      "breakpoints": true
     }
   ]
 }

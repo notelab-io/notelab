@@ -178,6 +178,55 @@ export const organizationIntegration = pgTable(
   ],
 );
 
+export const userIntegration = pgTable(
+  "user_integration",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    integrationKey: text("integration_key").notNull(),
+    providerAccountId: text("provider_account_id").notNull(),
+    providerOrganizationId: text("provider_organization_id"),
+    displayName: text("display_name"),
+    email: text("email"),
+    status: text("status").notNull().default("connected"),
+    accessToken: text("access_token").notNull(),
+    refreshToken: text("refresh_token"),
+    tokenType: text("token_type"),
+    scopes: text("scopes"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("user_integration_user_key_idx").on(
+      table.organizationId,
+      table.userId,
+      table.integrationKey,
+    ),
+    index("user_integration_organization_idx").on(table.organizationId),
+    index("user_integration_user_idx").on(table.userId),
+    index("user_integration_key_idx").on(
+      table.organizationId,
+      table.integrationKey,
+    ),
+    index("user_integration_provider_org_idx").on(
+      table.organizationId,
+      table.integrationKey,
+      table.providerOrganizationId,
+    ),
+  ],
+);
+
 export const organizationAiProviderConfig = pgTable(
   "organization_ai_provider_config",
   {

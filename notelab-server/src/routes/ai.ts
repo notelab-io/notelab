@@ -20,7 +20,7 @@ import { buildLinearTools } from "../ai/ask-ai-linear-tools";
 import { buildSlackTools } from "../ai/ask-ai-slack-tools";
 import { getMembership } from "../access";
 import { db } from "../db";
-import { organizationIntegration } from "../db/schema";
+import { organizationIntegration, userIntegration } from "../db/schema";
 import type { AppBindings } from "../types";
 
 type SourceId =
@@ -75,7 +75,7 @@ aiRoutes.post("/ask", async (c) => {
     return body.response;
   }
 
-  const connections = await getIntegrationConnections(auth.organizationId);
+  const connections = await getIntegrationConnections(auth.organizationId, auth.user.id);
 
   if (
     !connections.gmail &&
@@ -214,7 +214,7 @@ async function requireActiveOrganization(c: Context<AppBindings>) {
   return { organizationId, user };
 }
 
-async function getIntegrationConnections(organizationId: string) {
+async function getIntegrationConnections(organizationId: string, userId: string) {
   const rows = await db
     .select()
     .from(organizationIntegration)
@@ -226,20 +226,33 @@ async function getIntegrationConnections(organizationId: string) {
     );
   const byKey = new Map(rows.map((row) => [row.integrationKey, row]));
   const googleCalendar = byKey.get("google-calendar");
+  const personalRows = await db
+    .select()
+    .from(userIntegration)
+    .where(
+      and(
+        eq(userIntegration.organizationId, organizationId),
+        eq(userIntegration.userId, userId),
+        eq(userIntegration.status, "connected"),
+      ),
+    );
+  const personalByKey = new Map(
+    personalRows.map((row) => [row.integrationKey, row]),
+  );
 
   return {
-    gmail: byKey.get("gmail")?.accessToken,
-    github: byKey.get("github")?.accessToken,
-    googleCalendar: googleCalendar
+    gmail: personalByKey.get("gmail")?.accessToken,
+    github: personalByKey.get("github")?.accessToken,
+    googleCalendar: personalByKey.get("google-calendar")
       ? ({
-          accessToken: googleCalendar.accessToken,
+          accessToken: personalByKey.get("google-calendar")!.accessToken,
           coworkerCalendarAccessEnabled: Boolean(
-            readObject(googleCalendar.metadata).coworkerCalendarAccessEnabled,
+            readObject(googleCalendar?.metadata).coworkerCalendarAccessEnabled,
           ),
         } satisfies CalendarAccess)
       : undefined,
-    googleDrive: byKey.get("google-drive")?.accessToken,
-    linear: byKey.get("linear")?.accessToken,
+    googleDrive: personalByKey.get("google-drive")?.accessToken,
+    linear: personalByKey.get("linear")?.accessToken,
     slack: byKey.get("slack")?.accessToken,
   };
 }

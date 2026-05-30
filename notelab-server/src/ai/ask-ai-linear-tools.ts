@@ -73,7 +73,7 @@ export function buildLinearTools(accessToken: string): ToolSet {
   return {
     getLinearProfile: tool({
       description:
-        "Read the connected Linear workspace and user profile for the organization integration.",
+        "Read the connected Linear workspace and user profile for the current user's Linear account.",
       inputSchema: z.object({}),
       execute: async () => {
         const [organization, viewer] = await Promise.all([
@@ -86,7 +86,7 @@ export function buildLinearTools(accessToken: string): ToolSet {
     }),
     listLinearTeams: tool({
       description:
-        "List Linear teams visible to the connected organization integration. Use this to find team ids or keys before narrowing issue searches.",
+        "List Linear teams visible to the current user's Linear account. Use this to find team ids or keys before narrowing issue searches.",
       inputSchema: z.object({
         cursor: z.string().trim().optional(),
         limit: z.number().int().min(1).max(50).default(20),
