@@ -6,10 +6,28 @@ import { createDatabaseBlockContent } from "@/packages/editor/extensions/databas
 
 import type { DragHandleTarget } from "./types"
 
+function getColumnCount(title: string) {
+  const match = title.match(/^([2-4]) Columns$/)
+
+  return match ? Number(match[1]) : null
+}
+
 export function blockContentForItem(
   item: SlashCommandItem,
   attrs?: { databaseId?: string }
 ): Content | null {
+  const columnCount = getColumnCount(item.title)
+
+  if (columnCount) {
+    return {
+      type: "columnBlock",
+      content: Array.from({ length: columnCount }, () => ({
+        type: "column",
+        content: [{ type: "paragraph" }],
+      })),
+    }
+  }
+
   switch (item.title) {
     case "Text":
       return { type: "paragraph" }

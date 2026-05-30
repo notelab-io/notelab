@@ -8,6 +8,7 @@ import {
   CheckSquare,
   Code2,
   CodeXml,
+  Columns2,
   Database,
   File,
   Heading1,
@@ -207,6 +208,30 @@ export function createSlashCommandItems(
     icon: CheckSquare,
     command: ({ editor, range }) => {
       editor.chain().focus().deleteRange(range).toggleTaskList().run()
+    },
+  },
+  {
+    title: "2 Columns",
+    description: "Two side-by-side sections",
+    icon: Columns2,
+    command: ({ editor, range }) => {
+      editor.chain().focus().deleteRange(range).setColumns(2).run()
+    },
+  },
+  {
+    title: "3 Columns",
+    description: "Three side-by-side sections",
+    icon: Columns2,
+    command: ({ editor, range }) => {
+      editor.chain().focus().deleteRange(range).setColumns(3).run()
+    },
+  },
+  {
+    title: "4 Columns",
+    description: "Four side-by-side sections",
+    icon: Columns2,
+    command: ({ editor, range }) => {
+      editor.chain().focus().deleteRange(range).setColumns(4).run()
     },
   },
   {
