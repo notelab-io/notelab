@@ -11,6 +11,7 @@ import { Link, Outlet, useLocation } from "@tanstack/react-router"
 import { ArrowRight } from "lucide-react"
 
 import { AppSidebar } from "@/components/app-sidebar"
+import { ChatSidebar } from "@/components/chat-sidebar"
 import { NavActions } from "@/components/nav-actions"
 import { SettingsSidebar } from "@/components/settings-sidebar"
 import { Button } from "@/components/ui/button"
@@ -26,6 +27,7 @@ import { Separator } from "@/components/ui/separator"
 import {
   SidebarInset,
   SidebarProvider,
+  useSidebar,
 } from "@/components/ui/sidebar"
 import { cn } from "@/lib/utils"
 import {
@@ -44,32 +46,9 @@ type WorkspaceSidePaneContextValue = {
 const WorkspaceSidePaneContext =
   createContext<WorkspaceSidePaneContextValue | null>(null)
 
-const sidePaneWidthClass =
-  "w-full min-w-0 md:w-[min(48rem,48vw)] md:min-w-[24rem] md:shrink-0"
+const sidePaneWidthClass = "w-full min-w-0 md:basis-0 md:flex-1"
 
 export function AppLayout() {
-  const location = useLocation()
-  const isSettingsPage = location.pathname.startsWith("/settings")
-  const workspaceId = getWorkspaceId(location.pathname)
-  const [sidePaneWorkspaceId, setSidePaneWorkspaceId] = useState<string | null>(
-    null,
-  )
-  const closeSidePane = useCallback(() => {
-    setSidePaneWorkspaceId(null)
-  }, [])
-  const sidePaneContext = useMemo<WorkspaceSidePaneContextValue>(
-    () => ({
-      closeSidePane,
-      openSidePane: setSidePaneWorkspaceId,
-      sidePaneWorkspaceId,
-    }),
-    [closeSidePane, sidePaneWorkspaceId],
-  )
-
-  useEffect(() => {
-    closeSidePane()
-  }, [closeSidePane, workspaceId])
-
   return (
     <SidebarProvider
       style={
@@ -81,6 +60,58 @@ export function AppLayout() {
         } as React.CSSProperties
       }
     >
+      <AppLayoutContent />
+    </SidebarProvider>
+  )
+}
+
+function AppLayoutContent() {
+  const location = useLocation()
+  const { open: appSidebarOpen } = useSidebar()
+  const isSettingsPage = location.pathname.startsWith("/settings")
+  const workspaceId = getWorkspaceId(location.pathname)
+  const [sidePaneWorkspaceId, setSidePaneWorkspaceId] = useState<string | null>(
+    null,
+  )
+  const [chatSidebarOpen, setChatSidebarOpen] = useState(false)
+  const closeSidePane = useCallback(() => {
+    setSidePaneWorkspaceId(null)
+  }, [])
+  const openSidePane = useCallback((nextWorkspaceId: string) => {
+    if (appSidebarOpen) {
+      setChatSidebarOpen(false)
+    }
+
+    setSidePaneWorkspaceId(nextWorkspaceId)
+  }, [appSidebarOpen])
+  const openChatSidebar = useCallback(() => {
+    if (appSidebarOpen) {
+      closeSidePane()
+    }
+
+    setChatSidebarOpen(true)
+  }, [appSidebarOpen, closeSidePane])
+  const sidePaneContext = useMemo<WorkspaceSidePaneContextValue>(
+    () => ({
+      closeSidePane,
+      openSidePane,
+      sidePaneWorkspaceId,
+    }),
+    [closeSidePane, openSidePane, sidePaneWorkspaceId],
+  )
+
+  useEffect(() => {
+    closeSidePane()
+  }, [closeSidePane, workspaceId])
+
+  useEffect(() => {
+    if (appSidebarOpen && sidePaneWorkspaceId && chatSidebarOpen) {
+      setChatSidebarOpen(false)
+    }
+  }, [appSidebarOpen, chatSidebarOpen, sidePaneWorkspaceId])
+
+  return (
+    <>
       {isSettingsPage ? <SettingsSidebar /> : <AppSidebar />}
       <SidebarInset className="h-svh overflow-hidden md:peer-data-[variant=floating]:ml-0! md:peer-data-[variant=floating]:h-[calc(100svh-1rem)] md:peer-data-[variant=floating]:rounded-l-none md:peer-data-[variant=floating]:rounded-r-xl md:peer-data-[variant=floating]:border-l-0">
         <AppHeader
@@ -95,7 +126,12 @@ export function AppLayout() {
           </WorkspaceSidePaneContext.Provider>
         </div>
       </SidebarInset>
-    </SidebarProvider>
+      <ChatSidebar
+        onClose={() => setChatSidebarOpen(false)}
+        onOpen={openChatSidebar}
+        open={chatSidebarOpen}
+      />
+    </>
   )
 }
 

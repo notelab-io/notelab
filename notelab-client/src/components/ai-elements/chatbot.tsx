@@ -1184,7 +1184,7 @@ const EmptyState = () => (
   </div>
 );
 
-const Chatbot = () => {
+const Chatbot = ({ isSidebar = false }: { isSidebar?: boolean }) => {
   const rootRef = useRef<HTMLDivElement>(null);
   const previousMessageCountRef = useRef(0);
   const showGenerativeToolUi = useGenerativeToolUiEnabled();
@@ -1357,16 +1357,24 @@ const Chatbot = () => {
   return (
     <div
       className={
-        hasMessages
+        hasMessages || isSidebar
           ? "relative flex h-full min-h-0 flex-col"
           : "relative flex h-full min-h-0 flex-col justify-center"
       }
       ref={rootRef}
     >
       <Conversation
-        className={hasMessages ? "min-h-0" : "flex-none overflow-visible"}
+        className={
+          hasMessages || isSidebar ? "min-h-0" : "flex-none overflow-visible"
+        }
       >
-        <ConversationContent className={hasMessages ? "px-0 pb-10 md:px-4" : "px-0 pb-0 md:px-4"}>
+        <ConversationContent
+          className={
+            hasMessages || isSidebar
+              ? "px-0 pb-10 md:px-4"
+              : "px-0 pb-0 md:px-4"
+          }
+        >
           {!hasMessages ? (
             <EmptyState />
           ) : (
@@ -1384,7 +1392,7 @@ const Chatbot = () => {
       </Conversation>
       <div
         className={
-          hasMessages
+          hasMessages || isSidebar
             ? "sticky bottom-0 z-10 -mx-4 mt-auto grid shrink-0 gap-3 bg-gradient-to-t from-background via-background/95 to-transparent px-4 pb-4 pt-16 md:mx-0 md:px-4 md:pb-6 md:pt-20"
             : "z-10 -mx-4 grid shrink-0 gap-3 px-4 pb-4 md:mx-0 md:px-4"
         }
