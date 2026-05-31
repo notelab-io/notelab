@@ -26,7 +26,6 @@ import { Separator } from "@/components/ui/separator"
 import {
   SidebarInset,
   SidebarProvider,
-  SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { cn } from "@/lib/utils"
 import {
@@ -72,15 +71,18 @@ export function AppLayout() {
   }, [closeSidePane, workspaceId])
 
   return (
-       <SidebarProvider
+    <SidebarProvider
       style={
         {
-          "--sidebar-width": "18rem",
+          "--app-sidebar-panel-width": "18rem",
+          "--app-sidebar-rail-gap": "0.5rem",
+          "--sidebar-width":
+            "calc(var(--sidebar-width-icon) + var(--app-sidebar-rail-gap) + var(--app-sidebar-panel-width))",
         } as React.CSSProperties
       }
     >
       {isSettingsPage ? <SettingsSidebar /> : <AppSidebar />}
-      <SidebarInset className="h-svh overflow-hidden md:peer-data-[variant=floating]:h-[calc(100svh-1rem)]">
+      <SidebarInset className="h-svh overflow-hidden md:peer-data-[variant=floating]:ml-0! md:peer-data-[variant=floating]:h-[calc(100svh-1rem)] md:peer-data-[variant=floating]:rounded-l-none md:peer-data-[variant=floating]:rounded-r-xl md:peer-data-[variant=floating]:border-l-0">
         <AppHeader
           isSettingsPage={isSettingsPage}
           pathname={location.pathname}
@@ -126,7 +128,7 @@ function AppHeader({
     <header className="relative z-20 flex h-12 shrink-0 bg-background">
       <PaneHeaderContent
         className="min-w-0 flex-1"
-        leadingControl={<SidebarTrigger />}
+        leadingControl={null}
         pathname={pathname}
         showActions={!isSettingsPage}
       />
@@ -162,18 +164,22 @@ function PaneHeaderContent({
   showActions,
 }: {
   className?: string
-  leadingControl: ReactNode
+  leadingControl: ReactNode | null
   pathname: string
   showActions: boolean
 }) {
   return (
     <div className={`${className ?? ""} flex items-center gap-2`}>
       <div className="flex min-w-0 flex-1 items-center gap-2 px-3">
-        {leadingControl}
-        <Separator
-          orientation="vertical"
-          className="mr-2 data-[orientation=vertical]:h-4"
-        />
+        {leadingControl ? (
+          <>
+            {leadingControl}
+            <Separator
+              orientation="vertical"
+              className="mr-2 data-[orientation=vertical]:h-4"
+            />
+          </>
+        ) : null}
         <AppBreadcrumbs pathname={pathname} />
       </div>
       {showActions ? (

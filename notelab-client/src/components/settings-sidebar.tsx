@@ -1,14 +1,14 @@
 import { Link } from "@tanstack/react-router"
 import { useRouterState } from "@tanstack/react-router"
 import {
-  ArrowLeftIcon,
   Building2Icon,
   PlugIcon,
   UserIcon,
   UsersIcon,
 } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
+import { AppSidebarShell } from "@/components/app-sidebar-shell"
+import { ThemeDropdown } from "@/components/theme-dropdown"
 import {
   Sidebar,
   SidebarContent,
@@ -21,8 +21,8 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  SidebarTrigger,
 } from "@/components/ui/sidebar"
-import { ThemeDropdown } from "@/components/theme-dropdown"
 
 const settingsItems = [
   {
@@ -55,19 +55,11 @@ export function SettingsSidebar({
   })
 
   return (
-    <Sidebar variant="floating" className="border-r-0" {...props}>
+    <AppSidebarShell {...props}>
       <SidebarHeader>
-        <Button
-          asChild
-          variant="ghost"
-          size="sm"
-          className="w-full justify-start text-xs font-normal text-muted-foreground"
-        >
-          <Link to="/dashboard">
-            <ArrowLeftIcon />
-            <span>Back to dashboard</span>
-          </Link>
-        </Button>
+        <div className="flex justify-end">
+          <SidebarTrigger className="shrink-0 group-data-[collapsible=icon]:hidden" />
+        </div>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
@@ -92,6 +84,6 @@ export function SettingsSidebar({
         <ThemeDropdown />
       </SidebarFooter>
       <SidebarRail />
-    </Sidebar>
+    </AppSidebarShell>
   )
 }

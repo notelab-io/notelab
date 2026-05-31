@@ -4,8 +4,8 @@ import * as React from "react"
 import { useNavigate } from "@tanstack/react-router"
 import { toast } from "sonner"
 
+import { AppSidebarShell } from "@/components/app-sidebar-shell"
 import { NavFavorites } from "@/components/nav-favorites"
-import { NavMain } from "@/components/nav-main"
 import { NavSecondary } from "@/components/nav-secondary"
 import {
   NavWorkspaces,
@@ -19,6 +19,7 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
+  SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { useSession } from "@/features/auth/hooks"
 import { useOrganizations } from "@/features/organizations/hooks"
@@ -37,59 +38,23 @@ import {
   useWorkspaces,
 } from "@/features/workspaces/hooks"
 import { useAppStore } from "@/stores/app-store"
-import { SearchIcon, SparklesIcon, HomeIcon, InboxIcon, CalendarIcon, Settings2Icon, BlocksIcon, Trash2Icon, MessageCircleQuestionIcon, DatabaseIcon, FileIcon, FileTextIcon } from "lucide-react"
+import {
+  BlocksIcon,
+  CalendarIcon,
+  DatabaseIcon,
+  FileIcon,
+  FileTextIcon,
+  MessageCircleQuestionIcon,
+  Trash2Icon,
+} from "lucide-react"
 
-// This is sample data.
 const data = {
-  navMain: [
-    {
-      title: "Search",
-      url: "#",
-      icon: (
-        <SearchIcon
-        />
-      ),
-    },
-    {
-      title: "Ask AI",
-      url: "/ai",
-      icon: (
-        <SparklesIcon
-        />
-      ),
-    },
-    {
-      title: "Home",
-      url: "/dashboard",
-      icon: (
-        <HomeIcon
-        />
-      ),
-    },
-    {
-      title: "Inbox",
-      url: "#",
-      icon: (
-        <InboxIcon
-        />
-      ),
-      badge: "10",
-    },
-  ],
   navSecondary: [
     {
       title: "Calendar",
       url: "#",
       icon: (
         <CalendarIcon
-        />
-      ),
-    },
-    {
-      title: "Settings",
-      url: "/settings/profile",
-      icon: (
-        <Settings2Icon
         />
       ),
     },
@@ -236,10 +201,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   }
 
   return (
-    <Sidebar variant="floating" className="border-r-0" {...props}>
+    <AppSidebarShell {...props}>
       <SidebarHeader>
-        <OrganizationSwitcher />
-        <NavMain items={data.navMain} />
+        <div className="flex items-center gap-1">
+          <div className="min-w-0 flex-1">
+            <OrganizationSwitcher />
+          </div>
+          <SidebarTrigger className="shrink-0 group-data-[collapsible=icon]:hidden" />
+        </div>
       </SidebarHeader>
       <SidebarContent>
         <NavFavorites
@@ -259,7 +228,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <ThemeDropdown />
       </SidebarFooter>
       <SidebarRail />
-    </Sidebar>
+    </AppSidebarShell>
   )
 }
 
