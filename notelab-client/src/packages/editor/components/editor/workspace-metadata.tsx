@@ -105,7 +105,7 @@ export function WorkspaceMetadata({
     titleElement.style.height = `${titleElement.scrollHeight}px`
   }, [title])
 
-  const iconPicker = icon ? (
+  const iconPicker = icon && editable ? (
     <div className="group/icon relative shrink-0">
       <Popover open={iconOpen} onOpenChange={setIconOpen}>
         <PopoverTrigger asChild>
@@ -150,7 +150,7 @@ export function WorkspaceMetadata({
         <X />
       </button>
     </div>
-  ) : (
+  ) : !icon && editable ? (
     <Popover open={iconOpen} onOpenChange={setIconOpen}>
       <PopoverTrigger asChild>
         <button
@@ -181,7 +181,7 @@ export function WorkspaceMetadata({
         </EmojiPicker>
       </PopoverContent>
     </Popover>
-  )
+  ) : null
 
   return (
     <section contentEditable={false}>
@@ -204,7 +204,7 @@ export function WorkspaceMetadata({
       >
         <div className="mb-3 flex flex-wrap items-center gap-2">
           {!icon ? iconPicker : null}
-          {!coverVisible ? (
+          {!coverVisible && editable ? (
             <button
               className="inline-flex h-7 items-center gap-1 rounded-md px-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none [&_svg]:size-4"
               onClick={() => setCoverVisible(true)}
@@ -218,7 +218,15 @@ export function WorkspaceMetadata({
         </div>
 
         <div className="flex items-start gap-3">
-          {icon ? iconPicker : null}
+          {icon ? (
+            editable ? (
+              iconPicker
+            ) : (
+              <div className="flex size-11 shrink-0 items-center justify-center rounded-md text-3xl">
+                {icon}
+              </div>
+            )
+          ) : null}
           <textarea
             aria-label="Workspace title"
             className="min-h-10 min-w-0 flex-1 resize-none overflow-hidden border-0 bg-transparent px-0 py-0 text-4xl font-semibold leading-tight tracking-normal whitespace-pre-wrap text-balance text-foreground shadow-none outline-none placeholder:text-muted-foreground/40 focus-visible:ring-0 dark:bg-transparent"

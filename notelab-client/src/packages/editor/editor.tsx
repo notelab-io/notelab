@@ -1021,7 +1021,7 @@ export function Editor({
         onClickCapture={handleMobileNodeClick}
         onPointerMoveCapture={updateDragTargetFromPointer}
       >
-        {editor && dragHandleTarget && dragHandlePosition ? (
+        {editable && editor && dragHandleTarget && dragHandlePosition ? (
           <div
             className="drag-handle"
             style={{
@@ -1049,9 +1049,13 @@ export function Editor({
             }}
           />
         ) : null}
-        <SelectionBubbleMenu editor={editor} runCommand={runCommand} />
-        <ColumnControls editor={editor} />
-        <TableControls editor={editor} />
+        {editable ? (
+          <>
+            <SelectionBubbleMenu editor={editor} runCommand={runCommand} />
+            <ColumnControls editor={editor} />
+            <TableControls editor={editor} />
+          </>
+        ) : null}
         <EditorTableOfContents editor={editor} items={tocItems} />
         {pasteChoice
           ? (() => {
@@ -1116,7 +1120,7 @@ export function Editor({
         <div className={pageContentClassName}>
           <EditorContent editor={editor} />
         </div>
-        {mobileNodeTarget ? (
+        {editable && mobileNodeTarget ? (
           <MobileActionBar
             canMoveDown={canMoveMobileTarget("down")}
             canMoveUp={canMoveMobileTarget("up")}
