@@ -52,7 +52,11 @@ export async function runWithDbClient<T>(
 ) {
   await databaseClient.client.connect();
 
-  return runWithDb(databaseClient.db, callback);
+  try {
+    return await runWithDb(databaseClient.db, callback);
+  } finally {
+    await databaseClient.client.end();
+  }
 }
 
 function getConnectionString(env: DbEnv) {
