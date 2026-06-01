@@ -4,6 +4,7 @@
   "scripts": {
     "dev": "wrangler dev --port 3000",
     "build": "tsc --noEmit",
+    "test:api-keys": "tsx src/scripts/test-api-key-flow.ts",
     "test:flow": "tsx src/scripts/simulate-user-flow.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
@@ -14,6 +15,7 @@
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^2.0.48",
+    "@better-auth/api-key": "^1.6.11",
     "@better-auth/drizzle-adapter": "^1.6.11",
     "ai": "^6.0.193",
     "better-auth": "^1.6.11",

@@ -10,6 +10,7 @@ import {
   hasAccess,
   normalizeAccessLevel,
 } from "../access";
+import { rejectMismatchedApiKeyOrganization } from "../api-keys";
 import { db } from "../db";
 import {
   database,
@@ -233,6 +234,12 @@ workspaceRoutes.get("/", async (c) => {
     return c.json({ error: "organizationId is required" }, 400);
   }
 
+  const mismatch = rejectMismatchedApiKeyOrganization(c, organizationId);
+
+  if (mismatch) {
+    return mismatch;
+  }
+
   if (!(await getMembership(organizationId, user.id))) {
     return c.json({ error: "Forbidden" }, 403);
   }
@@ -373,6 +380,12 @@ workspaceRoutes.post("/", async (c) => {
 
   if (typeof organizationId !== "string" || organizationId.length === 0) {
     return c.json({ error: "organizationId is required" }, 400);
+  }
+
+  const mismatch = rejectMismatchedApiKeyOrganization(c, organizationId);
+
+  if (mismatch) {
+    return mismatch;
   }
 
   if (typeof name !== "string") {

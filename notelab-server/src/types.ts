@@ -10,6 +10,13 @@ export type HyperdriveBinding = {
 
 type AuthSession = Auth["$Infer"]["Session"]["session"] & {
   activeOrganizationId?: string | null;
+  activeTeamId?: string | null;
+};
+
+type ApiKeyContext = {
+  id: string;
+  organizationId: string;
+  referenceId: string;
 };
 
 export type AppBindings = {
@@ -30,6 +37,8 @@ export type AppBindings = {
     LINEAR_OAUTH_CLIENT_SECRET?: string;
   };
   Variables: {
+    apiKey: ApiKeyContext | null;
+    authMethod: "apiKey" | "session" | null;
     user: Auth["$Infer"]["Session"]["user"] | null;
     session: AuthSession | null;
   };

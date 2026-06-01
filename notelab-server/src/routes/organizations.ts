@@ -2,6 +2,7 @@ import { asc, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { getMembership } from "../access";
+import { rejectMismatchedApiKeyOrganization } from "../api-keys";
 import { db } from "../db";
 import { member, team, user } from "../db/schema";
 import type { AppBindings } from "../types";
@@ -18,6 +19,11 @@ organizationRoutes.get("/:organizationId/access-targets", async (c) => {
   }
 
   const organizationId = c.req.param("organizationId");
+  const mismatch = rejectMismatchedApiKeyOrganization(c, organizationId);
+
+  if (mismatch) {
+    return mismatch;
+  }
 
   if (!(await getMembership(organizationId, requestUser.id))) {
     return c.json({ error: "Forbidden" }, 403);

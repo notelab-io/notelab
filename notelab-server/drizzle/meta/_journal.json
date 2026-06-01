@@ -57,6 +57,13 @@
       "when": 1780107641665,
       "tag": "0007_cuddly_spitfire",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1780199097640,
+      "tag": "0008_material_pyro",
+      "breakpoints": true
     }
   ]
 }

@@ -4,6 +4,7 @@ import { cors } from "hono/cors";
 import { getClientOrigins } from "./config";
 import { sessionMiddleware } from "./middleware/session";
 import { aiRoutes } from "./routes/ai";
+import { apiKeyRoutes } from "./routes/api-keys";
 import { authRoutes } from "./routes/auth";
 import { databaseRoutes } from "./routes/databases";
 import { healthRoutes } from "./routes/health";
@@ -26,6 +27,7 @@ export function createApp() {
       allowHeaders: [
         "Content-Type",
         "Authorization",
+        "x-api-key",
         "x-notelab-organization-id",
       ],
       allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -41,10 +43,11 @@ export function createApp() {
       return;
     }
 
-    await sessionMiddleware(c, next);
+    return await sessionMiddleware(c, next);
   });
 
   app.route("/api/ai", aiRoutes);
+  app.route("/api/keys", apiKeyRoutes);
   app.route("/", authRoutes);
   app.route("/databases", databaseRoutes);
   app.route("/", healthRoutes);

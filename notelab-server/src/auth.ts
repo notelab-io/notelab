@@ -1,6 +1,8 @@
+import { apiKey } from "@better-auth/api-key";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { emailOTP, magicLink, organization } from "better-auth/plugins";
+import { API_KEY_PREFIX } from "./api-keys";
 import { db, type Database } from "./db";
 import * as schema from "./db/schema";
 import { sendConsoleEmail } from "./email";
@@ -63,6 +65,22 @@ function sharedAuthOptions(env: AuthEnv) {
       autoSignInAfterVerification: true,
     },
     plugins: [
+      apiKey({
+        defaultPrefix: API_KEY_PREFIX,
+        enableMetadata: true,
+        keyExpiration: {
+          defaultExpiresIn: null,
+          maxExpiresIn: 3650,
+          minExpiresIn: 1,
+        },
+        maximumNameLength: 80,
+        rateLimit: {
+          enabled: true,
+          maxRequests: 1000,
+          timeWindow: 60 * 60 * 1000,
+        },
+        requireName: true,
+      }),
       emailOTP({
         async sendVerificationOTP({ email, otp, type }) {
           await sendConsoleEmail({

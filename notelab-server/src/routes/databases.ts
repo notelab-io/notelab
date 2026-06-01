@@ -2,6 +2,7 @@ import { and, asc, eq, gte, inArray, isNull, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { canAccessWorkspace, getAccessibleWorkspaceIds } from "../access";
+import { rejectMismatchedApiKeyOrganization } from "../api-keys";
 import { db } from "../db";
 import {
   database,
@@ -324,6 +325,12 @@ databaseRoutes.post("/", async (c) => {
 
   if (typeof organizationId !== "string" || organizationId.length === 0) {
     return c.json({ error: "organizationId is required" }, 400);
+  }
+
+  const mismatch = rejectMismatchedApiKeyOrganization(c, organizationId);
+
+  if (mismatch) {
+    return mismatch;
   }
 
   if (typeof pageId !== "string" || pageId.length === 0) {
