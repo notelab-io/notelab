@@ -556,6 +556,10 @@
     @apply relative h-8 min-h-8 w-full;
   }
 
+  .database-checkbox-cell {
+    @apply flex h-8 min-h-8 items-center px-3 py-1;
+  }
+
   .database-value-cell[data-active="true"] .database-input-cell-wrap {
     @apply fixed z-50 h-auto min-h-14 w-72 max-w-[calc(100vw-3rem)] overflow-hidden rounded-md border border-border bg-muted text-foreground shadow-sm;
     max-height: min(24rem, calc(100vh - var(--database-input-cell-top, 0px) - 1rem));

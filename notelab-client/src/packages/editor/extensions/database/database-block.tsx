@@ -22,6 +22,7 @@ import {
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { useSession } from "@/features/auth/hooks"
 import {
@@ -889,6 +890,8 @@ export function DatabaseTableView({
                         workspaceProperty.type === "select" ||
                         workspaceProperty.type === "multi_select" ||
                         workspaceProperty.type === "status"
+                      const isCheckboxProperty =
+                        workspaceProperty.type === "checkbox"
                       const isPersonProperty = workspaceProperty.type === "person"
                       const isMultiSelectProperty =
                         workspaceProperty.type === "multi_select" ||
@@ -902,7 +905,23 @@ export function DatabaseTableView({
                           data-active={activeCellKey === key ? "true" : undefined}
                           key={property.id}
                         >
-                          {isSelectProperty || isPersonProperty ? (
+                          {isCheckboxProperty ? (
+                            <div className="database-checkbox-cell">
+                              <Checkbox
+                                aria-label={`${workspaceProperty.name} value`}
+                                checked={value === "true"}
+                                disabled={!editable}
+                                onCheckedChange={(nextChecked) =>
+                                  saveCell(
+                                    row.id,
+                                    workspaceProperty.id,
+                                    workspaceProperty.type,
+                                    nextChecked === true ? "true" : "false"
+                                  )
+                                }
+                              />
+                            </div>
+                          ) : isSelectProperty || isPersonProperty ? (
                             <DatabaseSelectCell
                               allowCreate={!isPersonProperty}
                               databaseId={payload.database.id}
