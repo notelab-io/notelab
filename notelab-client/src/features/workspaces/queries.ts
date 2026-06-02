@@ -4,7 +4,9 @@ import { ApiError, apiFetch } from "@/lib/api"
 
 export type WorkspaceMetadata = {
   emoji?: string | null
+  fullWidth?: boolean | null
   parentWorkspaceId?: string | null
+  useUserFullWidthPreference?: boolean | null
 }
 
 export type WorkspaceDatabaseRow = {
@@ -51,6 +53,25 @@ export type Workspace = {
   deletedAt?: string | null
   createdAt: string
   updatedAt: string
+}
+
+export function usesUserFullWidthPreference(
+  metadata: WorkspaceMetadata | null | undefined,
+) {
+  return metadata?.useUserFullWidthPreference !== false
+}
+
+export function resolveWorkspaceFullWidth(
+  workspace: { metadata?: WorkspaceMetadata | null } | null | undefined,
+  userFullWidthPreference: boolean | null | undefined,
+) {
+  const metadata = workspace?.metadata ?? null
+
+  if (usesUserFullWidthPreference(metadata)) {
+    return Boolean(userFullWidthPreference)
+  }
+
+  return Boolean(metadata?.fullWidth)
 }
 
 export type WorkspaceProperty = {

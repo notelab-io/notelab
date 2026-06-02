@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import {
   getWorkspaceEmoji,
+  resolveWorkspaceFullWidth,
   type WorkspaceMetadata,
 } from "@/features/workspaces/queries"
 import {
@@ -264,6 +265,10 @@ export function WorkspaceEditorPane({
   const pendingContentRef = useRef<unknown>(null)
   const [name, setName] = useState("")
   const [emoji, setEmoji] = useState("")
+  const fullWidth = resolveWorkspaceFullWidth(
+    workspace,
+    userSettings?.workspaceFullWidth,
+  )
 
   const flushContentSaveTimeout = useCallback(() => {
     if (contentSaveTimeoutRef.current === null) {
@@ -411,7 +416,7 @@ export function WorkspaceEditorPane({
         content={workspace.content ?? ""}
         editable={!readOnly && (accessLevel === "edit" || accessLevel === "full")}
         emoji={emoji}
-        fullWidth={Boolean(userSettings?.workspaceFullWidth)}
+        fullWidth={fullWidth}
         onContentChange={updateContent}
         onCreatePage={createNestedPage}
         onEmojiChange={updateEmoji}

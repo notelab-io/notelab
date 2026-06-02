@@ -1,6 +1,11 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
 
 import {
+  defaultUserSettings,
+  userSettingsQueryKey,
+  type UserSettings,
+} from "@/features/user-settings/queries"
+import {
   workspaceQueryKey,
   workspaceQueryOptions,
   workspaceAccessQueryKey,
@@ -23,6 +28,7 @@ import { queryClient } from "@/lib/query-client"
 
 type CreateWorkspaceInput = {
   content?: unknown
+  metadata?: WorkspaceMetadata
   organizationId: string
   name?: string
   emoji?: string
@@ -100,9 +106,17 @@ export function useCreateWorkspace() {
       organizationId,
       name = "",
       emoji,
+      metadata: inputMetadata,
       parentWorkspaceId,
     }: CreateWorkspaceInput) => {
-      const metadata: WorkspaceMetadata = {}
+      const userSettings =
+        queryClient.getQueryData<UserSettings>(userSettingsQueryKey) ??
+        defaultUserSettings
+      const metadata: WorkspaceMetadata = {
+        fullWidth: Boolean(userSettings.workspaceFullWidth),
+        useUserFullWidthPreference: true,
+        ...(inputMetadata ?? {}),
+      }
 
       if (emoji) {
         metadata.emoji = emoji
@@ -120,7 +134,7 @@ export function useCreateWorkspace() {
           type: "pageblock",
           url: "#",
           content,
-          metadata: Object.keys(metadata).length > 0 ? metadata : null,
+          metadata,
         }),
       })
 
