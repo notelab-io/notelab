@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useRef, useState } from "react"
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import type {
   MouseEvent as ReactMouseEvent,
   PointerEvent as ReactPointerEvent,
@@ -68,6 +68,7 @@ import { ColumnsExtension } from "@/packages/editor/extensions/columns"
 import {
   DATABASE_PAGE_DRAG_MIME,
   DatabaseBlock,
+  type DatabaseBlockEditorRuntime,
 } from "@/packages/editor/extensions/database"
 import {
   EmbedBlock,
@@ -339,6 +340,25 @@ export function Editor({
   const [pasteChoice, setPasteChoice] = useState<PasteChoiceState | null>(null)
   const [tocItems, setTocItems] = useState<TableOfContentDataItem[]>([])
   const pageContentClassName = fullWidth ? "" : "mx-auto max-w-5xl"
+  // Node views do not re-render just because extension options mutate.
+  // Keep editability in a tiny external store so database cells follow editor mode changes.
+  const editorRuntimeRef = useRef({
+    editable,
+    listeners: new Set<() => void>(),
+  })
+  const databaseEditorRuntime = useMemo<DatabaseBlockEditorRuntime>(
+    () => ({
+      getEditable: () => editorRuntimeRef.current.editable,
+      subscribe: (listener: () => void) => {
+        editorRuntimeRef.current.listeners.add(listener)
+
+        return () => {
+          editorRuntimeRef.current.listeners.delete(listener)
+        }
+      },
+    }),
+    []
+  )
   const createDatabase = useCreateDatabase()
   const addDatabaseRow = useAddDatabaseRow(organizationId)
   const createEditorDatabase = useCallback(async () => {
@@ -513,6 +533,7 @@ export function Editor({
       DatabaseBlock.configure({
         currentPageId: workspaceId,
         editable,
+        editorRuntime: databaseEditorRuntime,
         onOpenPage,
         organizationId,
       }),
@@ -749,6 +770,7 @@ export function Editor({
       if (extension.name === "databaseBlock") {
         extension.options.currentPageId = workspaceId
         extension.options.editable = editable
+        extension.options.editorRuntime = databaseEditorRuntime
         extension.options.onOpenPage = onOpenPage
       }
 
@@ -761,11 +783,10 @@ export function Editor({
       }
     }
 
-  }, [editable, editor, onOpenPage, workspaceId])
-
-  useEffect(() => {
-    editor?.setEditable(editable)
-  }, [editable, editor])
+    editor.setEditable(editable)
+    editorRuntimeRef.current.editable = editable
+    editorRuntimeRef.current.listeners.forEach((listener) => listener())
+  }, [databaseEditorRuntime, editable, editor, onOpenPage, workspaceId])
 
   useEffect(() => {
     if (!editor) {

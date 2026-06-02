@@ -13,6 +13,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type CSSProperties,
   type DragEvent as ReactDragEvent,
   type FormEvent,
@@ -1006,9 +1007,17 @@ export function DatabaseTableView({
   )
 }
 
-function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
+function DatabaseBlockView({ editor, extension, node }: ReactNodeViewProps) {
   const options = extension.options as DatabaseBlockOptions
   const databaseId = node.attrs.databaseId as string | null
+  // Subscribe through the editor-owned runtime so this node view updates when read-only mode changes.
+  const isEditable = useSyncExternalStore(
+    options.editorRuntime?.subscribe ?? (() => () => {}),
+    options.editorRuntime?.getEditable ??
+      (() => options.editable !== false && editor.isEditable),
+    options.editorRuntime?.getEditable ??
+      (() => options.editable !== false && editor.isEditable)
+  )
 
   return (
     <NodeViewWrapper
@@ -1018,7 +1027,7 @@ function DatabaseBlockView({ extension, node }: ReactNodeViewProps) {
     >
       <DatabaseTableView
         databaseId={databaseId}
-        editable={options.editable}
+        editable={isEditable}
         onOpenPage={options.onOpenPage}
         organizationId={options.organizationId}
         showExpandButton
