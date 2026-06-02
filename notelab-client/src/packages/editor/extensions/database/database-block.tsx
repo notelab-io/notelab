@@ -45,6 +45,7 @@ import {
   defaultStatusOptions,
 } from "./constants"
 import { DatabaseInputCell } from "./database-input-cell"
+import { DatabaseDateCell } from "./database-date-cell"
 import { DatabasePageCell } from "./database-page-cell"
 import { DatabasePropertyMenu } from "./database-property-menu"
 import { DatabaseSelectCell } from "./database-select-cell"
@@ -892,6 +893,7 @@ export function DatabaseTableView({
                         workspaceProperty.type === "status"
                       const isCheckboxProperty =
                         workspaceProperty.type === "checkbox"
+                      const isDateProperty = workspaceProperty.type === "date"
                       const isPersonProperty = workspaceProperty.type === "person"
                       const isMultiSelectProperty =
                         workspaceProperty.type === "multi_select" ||
@@ -948,6 +950,26 @@ export function DatabaseTableView({
                               showStatusDot={workspaceProperty.type === "status"}
                               value={value}
                               valueKey={isPersonProperty ? "id" : "name"}
+                            />
+                          ) : isDateProperty ? (
+                            <DatabaseDateCell
+                              databaseId={payload.database.id}
+                              editable={editable}
+                              label={workspaceProperty.name}
+                              onOpenChange={(open) =>
+                                setActiveCellKey(open ? key : null)
+                              }
+                              onSelect={(nextValue) =>
+                                saveCell(
+                                  row.id,
+                                  workspaceProperty.id,
+                                  workspaceProperty.type,
+                                  nextValue
+                                )
+                              }
+                              propertyConfig={workspaceProperty.config}
+                              propertyId={property.id}
+                              value={value}
                             />
                           ) : (
                             <DatabaseInputCell

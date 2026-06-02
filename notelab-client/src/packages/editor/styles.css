@@ -613,21 +613,16 @@
     @apply size-1.5 shrink-0 rounded-full bg-current;
   }
 
-  .database-select-popover {
-    @apply fixed z-100 w-72 max-w-[calc(100vw-3rem)] overflow-hidden rounded-lg bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10;
-    max-height: 20rem;
-  }
-
-  .database-select-drawer {
-    @apply max-h-[70vh] w-full max-w-none overflow-y-auto px-1 pb-2 pt-1 text-sm;
-  }
-
   .database-select-search {
     @apply h-8 w-full border-0 bg-transparent px-1.5 py-1 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-0;
   }
 
   .database-select-popover-label {
     @apply -mx-1 border-t border-border px-2.5 py-1 text-xs font-medium text-muted-foreground;
+  }
+
+  .database-date-cell-trigger {
+    @apply flex min-h-8 w-full min-w-0 items-center truncate px-3 py-1 text-left text-sm leading-6 text-foreground outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/40;
   }
 
   .database-select-options {

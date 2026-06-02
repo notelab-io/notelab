@@ -68,6 +68,22 @@ export function parsePropertyValue(
     }
   }
 
+  if (value && typeof value === "object" && propertyType === "date") {
+    const date = (value as { date?: unknown; end?: unknown; start?: unknown })
+      .date
+    const end = (value as { date?: unknown; end?: unknown; start?: unknown }).end
+    const start = (value as { date?: unknown; end?: unknown; start?: unknown })
+      .start
+
+    if (typeof date === "string") {
+      return date
+    }
+
+    if (typeof start === "string") {
+      return typeof end === "string" && end ? [start, end] : start
+    }
+  }
+
   if (value && typeof value === "object" && "options" in value) {
     const options = (value as { options?: unknown }).options
 
@@ -119,6 +135,19 @@ export function serializePropertyValue(
 
   if (propertyType === "select" || propertyType === "status") {
     return Array.isArray(value) ? (value[0] ?? "") : value
+  }
+
+  if (propertyType === "date") {
+    if (Array.isArray(value)) {
+      const start = value[0]?.trim() ?? ""
+      const end = value[1]?.trim() ?? ""
+
+      return start && end ? { end, start } : start || null
+    }
+
+    const nextValue = value
+
+    return nextValue.trim() || null
   }
 
   return Array.isArray(value) ? value.join(", ") : value

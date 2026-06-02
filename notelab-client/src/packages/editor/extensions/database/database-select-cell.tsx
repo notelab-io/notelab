@@ -1,16 +1,12 @@
 import { Check, GripVertical } from "lucide-react"
-import { useEffect, useLayoutEffect, useRef, useState } from "react"
-import { createPortal } from "react-dom"
+import { useState } from "react"
 
 import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer"
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { useUpdateDatabaseProperty } from "@/features/databases/hooks"
-import { useIsMobile } from "@/hooks/use-mobile"
 import {
   cyclingColorTokens,
   getColorTokenBadgeClassName,
@@ -26,41 +22,6 @@ type DatabaseSelectOption = {
 
 type DatabasePropertyConfig = {
   options?: DatabaseSelectOption[]
-}
-
-const SELECT_POPOVER_WIDTH = 288
-const SELECT_POPOVER_HEIGHT = 320
-const SELECT_POPOVER_OFFSET = 6
-const SELECT_POPOVER_PADDING = 16
-
-function getSelectPopoverPosition(
-  rect: DOMRect,
-  panelHeight = SELECT_POPOVER_HEIGHT
-) {
-  const spaceBelow =
-    window.innerHeight - rect.bottom - SELECT_POPOVER_PADDING
-  const spaceAbove = rect.top - SELECT_POPOVER_PADDING
-  const shouldOpenAbove =
-    spaceBelow < SELECT_POPOVER_HEIGHT + SELECT_POPOVER_OFFSET &&
-    spaceAbove > spaceBelow
-  const maxLeft = Math.max(
-    SELECT_POPOVER_PADDING,
-    window.innerWidth - SELECT_POPOVER_WIDTH - SELECT_POPOVER_PADDING
-  )
-  const left = Math.min(Math.max(rect.left, SELECT_POPOVER_PADDING), maxLeft)
-  const preferredTop = shouldOpenAbove
-    ? rect.top - panelHeight - SELECT_POPOVER_OFFSET
-    : rect.bottom + SELECT_POPOVER_OFFSET
-  const maxTop = Math.max(
-    SELECT_POPOVER_PADDING,
-    window.innerHeight - panelHeight - SELECT_POPOVER_PADDING
-  )
-  const top = Math.min(Math.max(preferredTop, SELECT_POPOVER_PADDING), maxTop)
-
-  return {
-    left,
-    top,
-  }
 }
 
 function DatabaseSelectBadge({
@@ -149,15 +110,8 @@ export function DatabaseSelectCell({
   showStatusDot?: boolean
   valueKey?: "id" | "name"
 }) {
-  const isMobile = useIsMobile()
   const updateProperty = useUpdateDatabaseProperty()
-  const triggerRef = useRef<HTMLButtonElement>(null)
-  const panelRef = useRef<HTMLDivElement>(null)
   const [isOpen, setIsOpen] = useState(false)
-  const [panelPosition, setPanelPosition] = useState<{
-    left: number
-    top: number
-  } | null>(null)
   const [query, setQuery] = useState("")
   const configuredOptions = getSelectOptions(propertyConfig)
   const selectOptions =
@@ -203,83 +157,18 @@ export function DatabaseSelectCell({
     )
   }
 
-  useEffect(() => {
-    if (!isOpen || isMobile) {
-      return
-    }
-
-    const handlePointerDown = (event: globalThis.PointerEvent) => {
-      const target = event.target
-
-      if (!(target instanceof globalThis.Node)) {
-        return
-      }
-
-      if (
-        panelRef.current?.contains(target) ||
-        triggerRef.current?.contains(target)
-      ) {
-        return
-      }
-
-      closePanel()
-    }
-
-    document.addEventListener("pointerdown", handlePointerDown)
-
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown)
-    }
-  }, [isMobile, isOpen])
-
-  const updatePanelPosition = () => {
-    const rect = triggerRef.current?.getBoundingClientRect()
-
-    if (!rect) {
-      return
-    }
-
-    setPanelPosition(
-      getSelectPopoverPosition(
-        rect,
-        panelRef.current?.getBoundingClientRect().height
-      )
-    )
-  }
-
-  useLayoutEffect(() => {
-    if (!isOpen || isMobile || !panelRef.current) {
-      return
-    }
-
-    updatePanelPosition()
-  }, [isMobile, isOpen, filteredSelectOptions.length, canCreateSelectOption])
-
-  useEffect(() => {
-    if (!isOpen || isMobile) {
-      return
-    }
-
-    const handlePositionUpdate = () => updatePanelPosition()
-
-    window.addEventListener("resize", handlePositionUpdate)
-    window.addEventListener("scroll", handlePositionUpdate, true)
-
-    return () => {
-      window.removeEventListener("resize", handlePositionUpdate)
-      window.removeEventListener("scroll", handlePositionUpdate, true)
-    }
-  }, [isMobile, isOpen])
-
-  const openPanel = () => {
-    updatePanelPosition()
-    setIsOpen(true)
-  }
-
   const closePanel = () => {
     setIsOpen(false)
-    setPanelPosition(null)
     setQuery("")
+  }
+
+  const setOpen = (open: boolean) => {
+    if (open) {
+      setIsOpen(true)
+      return
+    }
+
+    closePanel()
   }
 
   const selectOption = (optionValue: string) => {
@@ -343,8 +232,6 @@ export function DatabaseSelectCell({
     <button
       aria-label={`${propertyName} value`}
       className="database-select-cell-trigger"
-      onClick={isMobile ? undefined : openPanel}
-      ref={triggerRef}
       type="button"
     >
       {selectedValues.map((selectedValue) => {
@@ -439,35 +326,12 @@ export function DatabaseSelectCell({
     </>
   )
 
-  if (isMobile) {
-    return (
-      <Drawer open={isOpen} onOpenChange={(open) => (open ? setIsOpen(true) : closePanel())}>
-        <DrawerTrigger asChild>{trigger}</DrawerTrigger>
-        <DrawerContent className="max-h-[85vh] bg-popover px-1 pb-2 text-popover-foreground">
-          <DrawerHeader className="sr-only">
-            <DrawerTitle>{propertyName}</DrawerTitle>
-          </DrawerHeader>
-          <div className="database-select-drawer">{panel}</div>
-        </DrawerContent>
-      </Drawer>
-    )
-  }
-
   return (
-    <>
-      {trigger}
-      {isOpen && panelPosition && typeof document !== "undefined"
-        ? createPortal(
-            <div
-              className="database-select-popover"
-              ref={panelRef}
-              style={panelPosition}
-            >
-              {panel}
-            </div>,
-            document.body
-          )
-        : null}
-    </>
+    <Popover open={isOpen} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>{trigger}</PopoverTrigger>
+      <PopoverContent align="start" className="w-72 gap-1 p-1" sideOffset={0}>
+        {panel}
+      </PopoverContent>
+    </Popover>
   )
 }

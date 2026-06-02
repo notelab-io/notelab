@@ -4,6 +4,7 @@ import {
   ArrowLeftToLine,
   ArrowRightToLine,
   Bell,
+  Calendar,
   Check,
   ChevronsUpDown,
   ChevronDown,
@@ -47,6 +48,14 @@ import {
 } from "@/packages/editor/components/editor/toolbar-data"
 
 import { defaultStatusOptions, getDatabasePropertyType } from "./constants"
+import {
+  dateFormatOptions,
+  getDateFormatConfig,
+  getTimeFormatConfig,
+  type DateFormatValue,
+  timeFormatOptions,
+  type TimeFormatValue,
+} from "./database-date-cell"
 
 type StatusOption = {
   color?: string
@@ -62,6 +71,7 @@ type SelectOption = {
 }
 
 type DatabasePropertyConfig = {
+  dateFormat?: DateFormatValue
   defaultOptionId?: string
   filesLimit?: FilesLimitValue
   personDefault?: PersonDefaultValue
@@ -69,6 +79,7 @@ type DatabasePropertyConfig = {
   personNotifications?: PersonNotificationsValue
   selectOptionSort?: SelectOptionSortValue
   showFullUrl?: boolean
+  timeFormat?: TimeFormatValue
   options?: SelectOption[]
 }
 
@@ -101,6 +112,7 @@ export function DatabasePropertyMenu({
   const isPersonProperty = type === "person"
   const isFilesProperty = type === "files"
   const isUrlProperty = type === "url"
+  const isDateProperty = type === "date"
   const showFullUrl = getShowFullUrl(config)
   const statusDefaultOptionId = getStatusDefaultOptionId(config)
   const statusOptions = getStatusOptions(config)
@@ -179,7 +191,8 @@ export function DatabasePropertyMenu({
                 isStatusProperty ||
                 isSelectProperty ||
                 isPersonProperty ||
-                isFilesProperty
+                isFilesProperty ||
+                isDateProperty
                   ? "w-72"
                   : undefined
               }
@@ -204,6 +217,12 @@ export function DatabasePropertyMenu({
               ) : isFilesProperty ? (
                 <FilesPropertyOptions
                   config={getFilesConfig(config)}
+                  onUpdateConfig={updatePropertyConfig}
+                />
+              ) : isDateProperty ? (
+                <DatePropertyOptions
+                  dateFormat={getDateFormatConfig(config)}
+                  timeFormat={getTimeFormatConfig(config)}
                   onUpdateConfig={updatePropertyConfig}
                 />
               ) : (
@@ -275,6 +294,35 @@ export function DatabasePropertyMenu({
         </DropDrawerItem>
       </DropDrawerContent>
     </DropDrawer>
+  )
+}
+
+function DatePropertyOptions({
+  dateFormat,
+  onUpdateConfig,
+  timeFormat,
+}: {
+  dateFormat: DateFormatValue
+  onUpdateConfig: (config: DatabasePropertyConfig) => void
+  timeFormat: TimeFormatValue
+}) {
+  return (
+    <>
+      <PropertySettingSubmenu
+        icon={<Calendar />}
+        label="Date format"
+        options={dateFormatOptions}
+        selectedValue={dateFormat}
+        onSelect={(dateFormat) => onUpdateConfig({ dateFormat })}
+      />
+      <PropertySettingSubmenu
+        icon={<Calendar />}
+        label="Time format"
+        options={timeFormatOptions}
+        selectedValue={timeFormat}
+        onSelect={(timeFormat) => onUpdateConfig({ timeFormat })}
+      />
+    </>
   )
 }
 
