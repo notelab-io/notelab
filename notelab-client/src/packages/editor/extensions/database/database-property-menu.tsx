@@ -19,6 +19,7 @@ import {
   Plus,
   Settings2,
   Sparkles,
+  TextWrap,
   Trash2,
   UserRound,
 } from "lucide-react"
@@ -80,6 +81,7 @@ type DatabasePropertyConfig = {
   selectOptionSort?: SelectOptionSortValue
   showFullUrl?: boolean
   timeFormat?: TimeFormatValue
+  wrapContent?: boolean
   options?: SelectOption[]
 }
 
@@ -114,6 +116,7 @@ export function DatabasePropertyMenu({
   const isUrlProperty = type === "url"
   const isDateProperty = type === "date"
   const showFullUrl = getShowFullUrl(config)
+  const wrapContent = getWrapContent(config)
   const statusDefaultOptionId = getStatusDefaultOptionId(config)
   const statusOptions = getStatusOptions(config)
   const selectOptions = getSelectOptions(config)
@@ -231,6 +234,16 @@ export function DatabasePropertyMenu({
             </DropDrawerSubContent>
           </DropDrawerSub>
         )}
+        <DropDrawerItem
+          aria-pressed={wrapContent}
+          onSelect={(event) => {
+            event.preventDefault()
+            updatePropertyConfig({ wrapContent: !wrapContent })
+          }}
+        >
+          <TextWrap />
+          <span>{wrapContent ? "Unwrap content" : "Wrap content"}</span>
+        </DropDrawerItem>
         <DropDrawerSub>
           <DropDrawerSubTrigger>
             <ChevronsUpDown />
@@ -945,6 +958,14 @@ function getShowFullUrl(config: unknown) {
   }
 
   return (config as DatabasePropertyConfig).showFullUrl === true
+}
+
+function getWrapContent(config: unknown) {
+  if (!config || typeof config !== "object" || !("wrapContent" in config)) {
+    return false
+  }
+
+  return (config as DatabasePropertyConfig).wrapContent === true
 }
 
 function getMergedPropertyConfig(

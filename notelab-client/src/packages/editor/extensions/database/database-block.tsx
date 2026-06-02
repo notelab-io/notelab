@@ -18,6 +18,8 @@ import {
   type DragEvent as ReactDragEvent,
   type FormEvent,
   type PointerEvent,
+  type ReactNode,
+  type WheelEvent as ReactWheelEvent,
 } from "react"
 import { toast } from "sonner"
 
@@ -154,6 +156,95 @@ function hideNativeDragPreview(dataTransfer: DataTransfer) {
   window.requestAnimationFrame(() => dragImage.remove())
 }
 
+function handleDatabaseCellWheel(event: ReactWheelEvent<HTMLDivElement>) {
+  const horizontalDelta =
+    Math.abs(event.deltaX) > 0 ? event.deltaX : event.shiftKey ? event.deltaY : 0
+
+  if (!horizontalDelta) {
+    return
+  }
+
+  const scrollElement = event.currentTarget
+  const maxScrollLeft = scrollElement.scrollWidth - scrollElement.clientWidth
+  const tableScrollElement = scrollElement.closest<HTMLDivElement>(
+    ".database-table-scroll"
+  )
+
+  const scrollTable = (delta: number) => {
+    if (!tableScrollElement) {
+      return false
+    }
+
+    const tableMaxScrollLeft =
+      tableScrollElement.scrollWidth - tableScrollElement.clientWidth
+    const nextScrollLeft = Math.min(
+      tableMaxScrollLeft,
+      Math.max(0, tableScrollElement.scrollLeft + delta)
+    )
+
+    if (nextScrollLeft === tableScrollElement.scrollLeft) {
+      return false
+    }
+
+    tableScrollElement.scrollLeft = nextScrollLeft
+    return true
+  }
+
+  if (maxScrollLeft <= 1) {
+    if (scrollTable(horizontalDelta)) {
+      event.preventDefault()
+      event.stopPropagation()
+    }
+
+    return
+  }
+
+  const previousScrollLeft = scrollElement.scrollLeft
+  const nextScrollLeft = Math.min(
+    maxScrollLeft,
+    Math.max(0, previousScrollLeft + horizontalDelta)
+  )
+  const consumedDelta = nextScrollLeft - previousScrollLeft
+  const remainingDelta = horizontalDelta - consumedDelta
+
+  scrollElement.scrollLeft = nextScrollLeft
+
+  if (remainingDelta) {
+    scrollTable(remainingDelta)
+  }
+
+  event.preventDefault()
+  event.stopPropagation()
+}
+
+function DatabaseCellContent({
+  children,
+  wrapContent = false,
+}: {
+  children: ReactNode
+  wrapContent?: boolean
+}) {
+  return (
+    <div
+      className="database-cell-scroll"
+      data-database-cell-scroll
+      data-wrap-content={wrapContent ? "true" : "false"}
+      onWheel={handleDatabaseCellWheel}
+    >
+      {children}
+    </div>
+  )
+}
+
+function getWrapContent(config: unknown) {
+  return (
+    Boolean(config) &&
+    typeof config === "object" &&
+    !Array.isArray(config) &&
+    (config as { wrapContent?: unknown }).wrapContent === true
+  )
+}
+
 type DatabaseTableViewProps = {
   databaseId: string | null | undefined
   editable?: boolean
@@ -283,7 +374,7 @@ export function DatabaseTableView({
 
   useLayoutEffect(() => {
     measureRows()
-  }, [activeCellKey, measureRows, properties.length, rows.length])
+  }, [activeCellKey, measureRows, properties, rows.length])
 
   useEffect(() => {
     window.addEventListener("resize", measureRows)
@@ -878,15 +969,18 @@ export function DatabaseTableView({
                     }}
                   >
                     <td className="database-page-cell">
-                      <DatabasePageCell
-                        onOpen={onOpenPage}
-                        pageId={row.pageId}
-                      />
+                      <DatabaseCellContent wrapContent>
+                        <DatabasePageCell
+                          onOpen={onOpenPage}
+                          pageId={row.pageId}
+                        />
+                      </DatabaseCellContent>
                     </td>
                     {properties.map((property) => {
                       const workspaceProperty = property.property
                       const key = `${row.pageId}:${workspaceProperty.id}`
                       const value = draftCells[key] ?? cellValues[key] ?? ""
+                      const wrapContent = getWrapContent(workspaceProperty.config)
                       const isSelectProperty =
                         workspaceProperty.type === "select" ||
                         workspaceProperty.type === "multi_select" ||
@@ -905,111 +999,123 @@ export function DatabaseTableView({
                         <td
                           className="database-value-cell"
                           data-active={activeCellKey === key ? "true" : undefined}
+                          data-wrap-content={wrapContent ? "true" : undefined}
                           key={property.id}
                         >
                           {isCheckboxProperty ? (
-                            <div className="database-checkbox-cell">
-                              <Checkbox
-                                aria-label={`${workspaceProperty.name} value`}
-                                checked={value === "true"}
-                                disabled={!editable}
-                                onCheckedChange={(nextChecked) =>
+                            <DatabaseCellContent wrapContent={wrapContent}>
+                              <div className="database-checkbox-cell">
+                                <Checkbox
+                                  aria-label={`${workspaceProperty.name} value`}
+                                  checked={value === "true"}
+                                  disabled={!editable}
+                                  onCheckedChange={(nextChecked) =>
+                                    saveCell(
+                                      row.id,
+                                      workspaceProperty.id,
+                                      workspaceProperty.type,
+                                      nextChecked === true ? "true" : "false"
+                                    )
+                                  }
+                                />
+                              </div>
+                            </DatabaseCellContent>
+                          ) : isSelectProperty || isPersonProperty ? (
+                            <DatabaseCellContent wrapContent={wrapContent}>
+                              <DatabaseSelectCell
+                                allowCreate={!isPersonProperty}
+                                databaseId={payload.database.id}
+                                editable={editable}
+                                defaultOptions={
+                                  workspaceProperty.type === "status"
+                                    ? defaultStatusOptions
+                                    : isPersonProperty
+                                      ? personOptions
+                                    : undefined
+                                }
+                                multiple={isMultiSelectProperty}
+                                onSelect={(optionValue) =>
                                   saveCell(
                                     row.id,
                                     workspaceProperty.id,
                                     workspaceProperty.type,
-                                    nextChecked === true ? "true" : "false"
+                                    optionValue
                                   )
                                 }
+                                propertyConfig={workspaceProperty.config}
+                                propertyId={property.id}
+                                propertyName={workspaceProperty.name}
+                                showStatusDot={workspaceProperty.type === "status"}
+                                value={value}
+                                valueKey={isPersonProperty ? "id" : "name"}
                               />
-                            </div>
-                          ) : isSelectProperty || isPersonProperty ? (
-                            <DatabaseSelectCell
-                              allowCreate={!isPersonProperty}
-                              databaseId={payload.database.id}
-                              editable={editable}
-                              defaultOptions={
-                                workspaceProperty.type === "status"
-                                  ? defaultStatusOptions
-                                  : isPersonProperty
-                                    ? personOptions
-                                  : undefined
-                              }
-                              multiple={isMultiSelectProperty}
-                              onSelect={(optionValue) =>
-                                saveCell(
-                                  row.id,
-                                  workspaceProperty.id,
-                                  workspaceProperty.type,
-                                  optionValue
-                                )
-                              }
-                              propertyConfig={workspaceProperty.config}
-                              propertyId={property.id}
-                              propertyName={workspaceProperty.name}
-                              showStatusDot={workspaceProperty.type === "status"}
-                              value={value}
-                              valueKey={isPersonProperty ? "id" : "name"}
-                            />
+                            </DatabaseCellContent>
                           ) : isDateProperty ? (
-                            <DatabaseDateCell
-                              databaseId={payload.database.id}
-                              editable={editable}
-                              label={workspaceProperty.name}
-                              onOpenChange={(open) =>
-                                setActiveCellKey(open ? key : null)
-                              }
-                              onSelect={(nextValue) =>
-                                saveCell(
-                                  row.id,
-                                  workspaceProperty.id,
-                                  workspaceProperty.type,
-                                  nextValue
-                                )
-                              }
-                              propertyConfig={workspaceProperty.config}
-                              propertyId={property.id}
-                              value={value}
-                            />
+                            <DatabaseCellContent wrapContent={wrapContent}>
+                              <DatabaseDateCell
+                                databaseId={payload.database.id}
+                                editable={editable}
+                                label={workspaceProperty.name}
+                                onOpenChange={(open) =>
+                                  setActiveCellKey(open ? key : null)
+                                }
+                                onSelect={(nextValue) =>
+                                  saveCell(
+                                    row.id,
+                                    workspaceProperty.id,
+                                    workspaceProperty.type,
+                                    nextValue
+                                  )
+                                }
+                                propertyConfig={workspaceProperty.config}
+                                propertyId={property.id}
+                                value={value}
+                              />
+                            </DatabaseCellContent>
                           ) : (
-                            <DatabaseInputCell
-                              label={workspaceProperty.name}
-                              editable={editable}
-                              onActivate={(element) => {
-                                setActiveCellKey(key)
-                                resizeCellEditor(element)
-                              }}
-                              onChange={(nextValue) =>
-                                setDraftCells((drafts) => ({
-                                  ...drafts,
-                                  [key]: nextValue,
-                                }))
-                              }
-                              onCommit={() => {
-                                saveCell(
-                                  row.id,
-                                  workspaceProperty.id,
-                                  workspaceProperty.type,
-                                  value
-                                )
-                                setDraftCells((drafts) => {
-                                  const nextDrafts = { ...drafts }
+                            <DatabaseCellContent wrapContent={wrapContent}>
+                              <DatabaseInputCell
+                                label={workspaceProperty.name}
+                                editable={editable}
+                                onActivate={(element) => {
+                                  setActiveCellKey(key)
+                                  resizeCellEditor(element)
+                                }}
+                                onChange={(nextValue) =>
+                                  setDraftCells((drafts) => ({
+                                    ...drafts,
+                                    [key]: nextValue,
+                                  }))
+                                }
+                                onCommit={() => {
+                                  saveCell(
+                                    row.id,
+                                    workspaceProperty.id,
+                                    workspaceProperty.type,
+                                    value
+                                  )
+                                  setDraftCells((drafts) => {
+                                    const nextDrafts = { ...drafts }
 
-                                  delete nextDrafts[key]
+                                    delete nextDrafts[key]
 
-                                  return nextDrafts
-                                })
-                              }}
-                              onDeactivate={() =>
-                                setActiveCellKey((currentKey) =>
-                                  currentKey === key ? null : currentKey
-                                )
-                              }
-                              onInput={handleCellInput}
-                              propertyConfig={workspaceProperty.config}
-                              type={workspaceProperty.type}
-                              value={Array.isArray(value) ? value.join(", ") : value}
-                            />
+                                    return nextDrafts
+                                  })
+                                }}
+                                onDeactivate={() =>
+                                  setActiveCellKey((currentKey) =>
+                                    currentKey === key ? null : currentKey
+                                  )
+                                }
+                                onInput={handleCellInput}
+                                propertyConfig={workspaceProperty.config}
+                                type={workspaceProperty.type}
+                                value={
+                                  Array.isArray(value) ? value.join(", ") : value
+                                }
+                                wrapContent={wrapContent}
+                              />
+                            </DatabaseCellContent>
                           )}
                         </td>
                       )

@@ -1,20 +1,16 @@
 import {
   useId,
+  useLayoutEffect,
   useRef,
   useState,
-  type CSSProperties,
   type FormEvent,
 } from "react"
 
-import { Button } from "@/components/ui/button"
 import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer"
-import { useIsMobile } from "@/hooks/use-mobile"
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 
 export function DatabaseInputCell({
   editable = true,
@@ -38,15 +34,11 @@ export function DatabaseInputCell({
   propertyConfig?: unknown
   type: string
   value: string
+  wrapContent?: boolean
 }) {
-  const isMobile = useIsMobile()
   const errorId = useId()
   const [isOpen, setIsOpen] = useState(false)
-  const [popoverPosition, setPopoverPosition] = useState<CSSProperties | null>(
-    null
-  )
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
-  const wrapperRef = useRef<HTMLDivElement | null>(null)
   const skipNextBlurCommitRef = useRef(false)
   const isNumberCell = type === "number"
   const hasNumberError =
@@ -55,7 +47,16 @@ export function DatabaseInputCell({
   const actionHref = getActionHref(type, value)
   const actionLinkProps = getActionLinkProps(type)
   const displayValue = getDisplayValue(type, value, propertyConfig)
-  const shouldShowActionLink = !isMobile && !popoverPosition && actionHref
+
+  useLayoutEffect(() => {
+    const element = textareaRef.current
+
+    if (!element || !isOpen) {
+      return
+    }
+
+    resizeTextarea(element)
+  }, [isOpen, value])
 
   if (!editable) {
     return actionHref ? (
@@ -74,118 +75,25 @@ export function DatabaseInputCell({
     )
   }
 
-  const updatePopoverPosition = () => {
-    const rect = wrapperRef.current?.getBoundingClientRect()
-
-    if (!rect) {
-      return
-    }
-
-    setPopoverPosition({
-      "--database-input-cell-left": `${rect.left}px`,
-      "--database-input-cell-top": `${rect.top}px`,
-    } as CSSProperties)
-  }
-
   const resizeTextarea = (element: HTMLTextAreaElement) => {
     element.style.height = "auto"
     element.style.height = `${element.scrollHeight}px`
   }
 
   const resetTextareaView = (element: HTMLTextAreaElement) => {
-    element.style.height = ""
+    resizeTextarea(element)
     element.scrollTop = 0
+    element.scrollLeft = 0
   }
 
   const commitAndClose = () => {
     onCommit()
     onDeactivate()
-    setPopoverPosition(null)
     setIsOpen(false)
   }
 
-  const textarea = (
-    <div
-      className="database-input-cell-wrap"
-      ref={wrapperRef}
-      style={popoverPosition ?? undefined}
-    >
-      <textarea
-        aria-describedby={errorMessage ? errorId : undefined}
-        aria-invalid={hasNumberError ? "true" : undefined}
-        aria-label={`${label} value`}
-        className={
-          shouldShowActionLink
-            ? "database-input-cell database-input-cell-underlay"
-            : "database-input-cell"
-        }
-        data-database-cell-input
-        onBlur={
-          isMobile
-            ? undefined
-            : (event) => {
-                if (skipNextBlurCommitRef.current) {
-                  skipNextBlurCommitRef.current = false
-                } else {
-                  onCommit()
-                }
-
-                resetTextareaView(event.currentTarget)
-                setPopoverPosition(null)
-                onDeactivate()
-              }
-        }
-        onChange={(event) =>
-          onChange(stripActionScheme(type, event.target.value))
-        }
-        onFocus={(event) => {
-          const element = event.currentTarget
-
-          updatePopoverPosition()
-          onActivate(element)
-
-          requestAnimationFrame(() => resizeTextarea(element))
-        }}
-        onInput={onInput}
-        onKeyDown={(event) => {
-          if (event.key !== "Enter" || event.shiftKey) {
-            return
-          }
-
-          event.preventDefault()
-          resetTextareaView(event.currentTarget)
-          commitAndClose()
-          skipNextBlurCommitRef.current = true
-          event.currentTarget.blur()
-        }}
-        ref={textareaRef}
-        rows={1}
-        value={value}
-      />
-      {errorMessage ? (
-        <div className="database-input-cell-error" id={errorId}>
-          {errorMessage}
-        </div>
-      ) : null}
-      {shouldShowActionLink ? (
-        <a
-          className="database-input-cell-link"
-          href={actionHref}
-          onClick={(event) => event.stopPropagation()}
-        {...actionLinkProps}
-      >
-        {displayValue}
-      </a>
-      ) : null}
-    </div>
-  )
-
-  if (!isMobile) {
-    return textarea
-  }
-
   return (
-    <Drawer
+    <Popover
       open={isOpen}
       onOpenChange={(open) => {
         if (open) {
@@ -196,7 +104,7 @@ export function DatabaseInputCell({
         commitAndClose()
       }}
     >
-      <DrawerTrigger asChild>
+      <PopoverTrigger asChild>
         <button
           aria-label={`${label} value`}
           className="database-input-cell-trigger"
@@ -206,24 +114,75 @@ export function DatabaseInputCell({
             <span className="text-muted-foreground">Empty</span>
           )}
         </button>
-      </DrawerTrigger>
-      <DrawerContent className="max-h-[85vh] bg-popover px-1 pb-2 text-popover-foreground">
-        <DrawerHeader className="flex-row items-center justify-between px-2 py-2 text-left">
-          <DrawerTitle className="min-w-0 truncate text-sm font-medium">
-            {label}
-          </DrawerTitle>
-          <Button
-            className="h-8 px-2 text-xs"
-            onClick={commitAndClose}
-            type="button"
-            variant="ghost"
-          >
-            Done
-          </Button>
-        </DrawerHeader>
-        <div className="database-input-cell-drawer">{textarea}</div>
-      </DrawerContent>
-    </Drawer>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        className="database-input-cell-popover w-72 p-0"
+        onOpenAutoFocus={(event) => {
+          event.preventDefault()
+          requestAnimationFrame(() => {
+            const element = textareaRef.current
+
+            if (!element) {
+              return
+            }
+
+            element.focus()
+            element.setSelectionRange(element.value.length, element.value.length)
+            resizeTextarea(element)
+            onActivate(element)
+          })
+        }}
+        sideOffset={0}
+      >
+        <div className="database-input-cell-wrap" data-popover-open="true">
+          <textarea
+            aria-describedby={errorMessage ? errorId : undefined}
+            aria-invalid={hasNumberError ? "true" : undefined}
+            aria-label={`${label} value`}
+            className="database-input-cell"
+            data-database-cell-input
+            onBlur={() => {
+              if (skipNextBlurCommitRef.current) {
+                skipNextBlurCommitRef.current = false
+              }
+            }}
+            onChange={(event) =>
+              onChange(stripActionScheme(type, event.target.value))
+            }
+            onFocus={(event) => onActivate(event.currentTarget)}
+            onInput={(event) => {
+              onInput(event)
+              resizeTextarea(event.currentTarget)
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                commitAndClose()
+                return
+              }
+
+              if (event.key !== "Enter" || event.shiftKey) {
+                return
+              }
+
+              event.preventDefault()
+              resetTextareaView(event.currentTarget)
+              commitAndClose()
+              skipNextBlurCommitRef.current = true
+            }}
+            ref={textareaRef}
+            rows={1}
+            value={value}
+            wrap="soft"
+          />
+          {errorMessage ? (
+            <div className="database-input-cell-error" id={errorId}>
+              {errorMessage}
+            </div>
+          ) : null}
+        </div>
+      </PopoverContent>
+    </Popover>
   )
 }
 

@@ -498,6 +498,56 @@
     @apply z-20;
   }
 
+  .database-cell-scroll {
+    @apply min-h-8 w-full min-w-0 overflow-x-auto overflow-y-hidden;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+
+  .database-cell-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  .database-cell-scroll[data-wrap-content="false"]
+    > :is(
+      .database-checkbox-cell,
+      .database-date-cell-trigger,
+      .database-input-cell-trigger,
+      .database-page-link,
+      .database-select-cell-trigger
+    ) {
+    min-width: 100%;
+    width: max-content;
+  }
+
+  .database-cell-scroll[data-wrap-content="true"] {
+    @apply overflow-x-auto;
+  }
+
+  .database-cell-scroll[data-wrap-content="true"]
+    > :is(
+      .database-date-cell-trigger,
+      .database-input-cell-trigger,
+      .database-page-link,
+      .database-select-cell-trigger
+    ) {
+    @apply h-auto min-h-8 items-start whitespace-normal;
+    overflow-wrap: anywhere;
+  }
+
+  .database-cell-scroll[data-wrap-content="true"] .database-page-title,
+  .database-cell-scroll[data-wrap-content="true"] .database-date-cell-trigger {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .database-cell-scroll[data-wrap-content="true"] .database-select-badge {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
   .tiptap-editor .database-table th {
     @apply relative border-b bg-transparent text-sm font-medium text-muted-foreground;
   }
@@ -556,20 +606,57 @@
     @apply relative h-8 min-h-8 w-full;
   }
 
+  .database-cell-scroll[data-wrap-content="false"]
+    .database-input-cell-wrap:not([data-popover-open="true"]) {
+    width: max(100%, var(--database-input-cell-content-width, 100%));
+  }
+
+  .database-cell-scroll[data-wrap-content="false"] .database-input-cell {
+    @apply whitespace-pre;
+  }
+
+  .database-cell-scroll[data-wrap-content="true"]
+    .database-input-cell-wrap:not([data-popover-open="true"]) {
+    @apply h-auto;
+  }
+
+  .database-cell-scroll[data-wrap-content="true"]
+    .database-input-cell-wrap:not([data-popover-open="true"])
+    .database-input-cell {
+    @apply h-auto overflow-x-hidden whitespace-pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
   .database-checkbox-cell {
     @apply flex h-8 min-h-8 items-center px-3 py-1;
   }
 
   .database-value-cell[data-active="true"] .database-input-cell-wrap {
     @apply fixed z-50 h-auto min-h-14 w-72 max-w-[calc(100vw-3rem)] overflow-hidden rounded-md border border-border bg-muted text-foreground shadow-sm;
-    max-height: min(24rem, calc(100vh - var(--database-input-cell-top, 0px) - 1rem));
+    max-height: min(18rem, calc(100vh - var(--database-input-cell-top, 0px) - 1rem));
     top: var(--database-input-cell-top, 0px);
     left: var(--database-input-cell-left, 0px);
   }
 
   .database-value-cell[data-active="true"] .database-input-cell {
-    @apply h-auto min-h-14 overflow-y-auto px-3 py-2;
-    max-height: min(21rem, calc(100vh - var(--database-input-cell-top, 0px) - 4rem));
+    @apply h-auto min-h-14 overflow-y-auto overflow-x-hidden whitespace-pre-wrap px-3 py-2;
+    max-height: min(15rem, calc(100vh - var(--database-input-cell-top, 0px) - 4rem));
+    overflow-wrap: anywhere;
+  }
+
+  .database-input-cell-popover {
+    @apply overflow-hidden;
+  }
+
+  .database-input-cell-popover .database-input-cell-wrap {
+    @apply h-auto min-h-14;
+    max-height: min(18rem, 70vh);
+  }
+
+  .database-input-cell-popover .database-input-cell {
+    @apply h-auto min-h-14 overflow-y-auto overflow-x-hidden whitespace-pre-wrap px-3 py-2;
+    max-height: min(15rem, 60vh);
+    overflow-wrap: anywhere;
   }
 
   .database-input-cell[aria-invalid="true"] {
@@ -581,6 +668,7 @@
   }
 
   .database-value-cell[data-active="true"] .database-input-cell-error,
+  .database-input-cell-popover .database-input-cell-error,
   .database-input-cell-drawer .database-input-cell-error {
     @apply block;
   }
