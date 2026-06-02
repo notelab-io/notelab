@@ -1,5 +1,6 @@
 import {
   ArrowDownUp,
+  ArrowLeftRight,
   ArrowLeftToLine,
   ArrowRightToLine,
   Bell,
@@ -35,6 +36,7 @@ import {
   DropDrawerTrigger,
 } from "@/components/ui/dropdrawer"
 import { Input } from "@/components/ui/input"
+import { Switch } from "@/components/ui/switch"
 import { useUpdateDatabaseProperty } from "@/features/databases/hooks"
 import {
   colorTokens,
@@ -66,6 +68,7 @@ type DatabasePropertyConfig = {
   personLimit?: PersonLimitValue
   personNotifications?: PersonNotificationsValue
   selectOptionSort?: SelectOptionSortValue
+  showFullUrl?: boolean
   options?: SelectOption[]
 }
 
@@ -97,12 +100,14 @@ export function DatabasePropertyMenu({
   const isSelectProperty = type === "select" || type === "multi_select"
   const isPersonProperty = type === "person"
   const isFilesProperty = type === "files"
+  const isUrlProperty = type === "url"
+  const showFullUrl = getShowFullUrl(config)
   const statusDefaultOptionId = getStatusDefaultOptionId(config)
   const statusOptions = getStatusOptions(config)
   const selectOptions = getSelectOptions(config)
   const updatePropertyConfig = (nextConfig: DatabasePropertyConfig) => {
     updateProperty.mutate({
-      config: getStatusConfig(config, nextConfig),
+      config: getMergedPropertyConfig(config, nextConfig),
       databaseId,
       databasePropertyId,
     })
@@ -146,48 +151,67 @@ export function DatabasePropertyMenu({
           />
         </div>
         <DropDrawerSeparator />
-        <DropDrawerSub>
-          <DropDrawerSubTrigger>
-            <Settings2 />
-            <span>Edit property</span>
-          </DropDrawerSubTrigger>
-          <DropDrawerSubContent
-            className={
-              isStatusProperty ||
-              isSelectProperty ||
-              isPersonProperty ||
-              isFilesProperty
-                ? "w-72"
-                : undefined
-            }
+        {isUrlProperty ? (
+          <DropDrawerItem
+            aria-pressed={showFullUrl}
+            onSelect={(event) => {
+              event.preventDefault()
+              updatePropertyConfig({ showFullUrl: !showFullUrl })
+            }}
           >
-            {isStatusProperty ? (
-              <StatusPropertyOptions
-                defaultOptionId={statusDefaultOptionId}
-                onUpdateConfig={updatePropertyConfig}
-                options={statusOptions}
-              />
-            ) : isSelectProperty ? (
-              <SelectPropertyOptions
-                onUpdateConfig={updatePropertyConfig}
-                options={selectOptions}
-                sort={getSelectOptionSort(config)}
-              />
-            ) : isPersonProperty ? (
-              <PersonPropertyOptions
-                config={getPersonConfig(config)}
-                onUpdateConfig={updatePropertyConfig}
-              />
-            ) : isFilesProperty ? (
-              <FilesPropertyOptions
-                config={getFilesConfig(config)}
-                onUpdateConfig={updatePropertyConfig}
-              />
-            ) : (
-              <DropDrawerItem disabled>Property settings</DropDrawerItem>
-            )}
-          </DropDrawerSubContent>
-        </DropDrawerSub>
+            <ArrowLeftRight />
+            <span>Show full URL</span>
+            <Switch
+              checked={showFullUrl}
+              className="ml-auto pointer-events-none"
+              size="sm"
+              tabIndex={-1}
+            />
+          </DropDrawerItem>
+        ) : (
+          <DropDrawerSub>
+            <DropDrawerSubTrigger>
+              <Settings2 />
+              <span>Edit property</span>
+            </DropDrawerSubTrigger>
+            <DropDrawerSubContent
+              className={
+                isStatusProperty ||
+                isSelectProperty ||
+                isPersonProperty ||
+                isFilesProperty
+                  ? "w-72"
+                  : undefined
+              }
+            >
+              {isStatusProperty ? (
+                <StatusPropertyOptions
+                  defaultOptionId={statusDefaultOptionId}
+                  onUpdateConfig={updatePropertyConfig}
+                  options={statusOptions}
+                />
+              ) : isSelectProperty ? (
+                <SelectPropertyOptions
+                  onUpdateConfig={updatePropertyConfig}
+                  options={selectOptions}
+                  sort={getSelectOptionSort(config)}
+                />
+              ) : isPersonProperty ? (
+                <PersonPropertyOptions
+                  config={getPersonConfig(config)}
+                  onUpdateConfig={updatePropertyConfig}
+                />
+              ) : isFilesProperty ? (
+                <FilesPropertyOptions
+                  config={getFilesConfig(config)}
+                  onUpdateConfig={updatePropertyConfig}
+                />
+              ) : (
+                <DropDrawerItem disabled>Property settings</DropDrawerItem>
+              )}
+            </DropDrawerSubContent>
+          </DropDrawerSub>
+        )}
         <DropDrawerSub>
           <DropDrawerSubTrigger>
             <ChevronsUpDown />
@@ -867,7 +891,15 @@ function getStatusDefaultOptionId(config: unknown) {
     : defaultStatusOptions[0]?.id
 }
 
-function getStatusConfig(
+function getShowFullUrl(config: unknown) {
+  if (!config || typeof config !== "object" || !("showFullUrl" in config)) {
+    return false
+  }
+
+  return (config as DatabasePropertyConfig).showFullUrl === true
+}
+
+function getMergedPropertyConfig(
   config: unknown,
   nextConfig: DatabasePropertyConfig
 ) {

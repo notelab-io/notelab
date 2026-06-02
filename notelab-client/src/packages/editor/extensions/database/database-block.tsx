@@ -965,6 +965,7 @@ export function DatabaseTableView({
                                 )
                               }
                               onInput={handleCellInput}
+                              propertyConfig={workspaceProperty.config}
                               type={workspaceProperty.type}
                               value={Array.isArray(value) ? value.join(", ") : value}
                             />

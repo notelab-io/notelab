@@ -24,6 +24,7 @@ export function DatabaseInputCell({
   onCommit,
   onDeactivate,
   onInput,
+  propertyConfig,
   type,
   value,
 }: {
@@ -34,6 +35,7 @@ export function DatabaseInputCell({
   onCommit: () => void
   onDeactivate: () => void
   onInput: (event: FormEvent<HTMLTextAreaElement>) => void
+  propertyConfig?: unknown
   type: string
   value: string
 }) {
@@ -51,16 +53,17 @@ export function DatabaseInputCell({
     isNumberCell && value.trim() !== "" && !isValidNumber(value)
   const errorMessage = hasNumberError ? "Enter a valid number" : null
   const actionHref = getActionHref(type, value)
+  const actionLinkProps = getActionLinkProps(type)
+  const displayValue = getDisplayValue(type, value, propertyConfig)
   const shouldShowActionLink = !isMobile && !popoverPosition && actionHref
 
   if (!editable) {
-    const displayValue = stripActionScheme(type, value)
-
     return actionHref ? (
       <a
         className="database-input-cell-link"
         href={actionHref}
         onClick={(event) => event.stopPropagation()}
+        {...actionLinkProps}
       >
         {displayValue}
       </a>
@@ -169,9 +172,10 @@ export function DatabaseInputCell({
           className="database-input-cell-link"
           href={actionHref}
           onClick={(event) => event.stopPropagation()}
-        >
-          {stripActionScheme(type, value)}
-        </a>
+        {...actionLinkProps}
+      >
+        {displayValue}
+      </a>
       ) : null}
     </div>
   )
@@ -198,7 +202,7 @@ export function DatabaseInputCell({
           className="database-input-cell-trigger"
           type="button"
         >
-          {stripActionScheme(type, value) || (
+          {displayValue || (
             <span className="text-muted-foreground">Empty</span>
           )}
         </button>
@@ -242,7 +246,65 @@ function getActionHref(type: string, value: string) {
     return `tel:${displayValue}`
   }
 
+  if (type === "url") {
+    return getUrlHref(displayValue)
+  }
+
   return null
+}
+
+function getUrlHref(value: string) {
+  const hasProtocol = /^[a-z][a-z0-9+.-]*:/i.test(value)
+  const href = hasProtocol ? value : `https://${value}`
+
+  try {
+    const url = new URL(href)
+
+    return url.protocol === "http:" || url.protocol === "https:"
+      ? url.href
+      : null
+  } catch {
+    return null
+  }
+}
+
+function getActionLinkProps(type: string) {
+  if (type !== "url") {
+    return {}
+  }
+
+  return {
+    rel: "noreferrer",
+    target: "_blank",
+  }
+}
+
+function getDisplayValue(type: string, value: string, config: unknown) {
+  const displayValue = stripActionScheme(type, value)
+
+  if (type !== "url" || getShowFullUrl(config)) {
+    return displayValue
+  }
+
+  const href = getUrlHref(displayValue.trim())
+
+  if (!href) {
+    return displayValue
+  }
+
+  const url = new URL(href)
+  const pathname = url.pathname === "/" ? "" : url.pathname.replace(/\/$/, "")
+
+  return `${url.hostname}${pathname}`
+}
+
+function getShowFullUrl(config: unknown) {
+  return (
+    config !== null &&
+    typeof config === "object" &&
+    "showFullUrl" in config &&
+    (config as { showFullUrl?: unknown }).showFullUrl === true
+  )
 }
 
 function stripActionScheme(type: string, value: string) {
