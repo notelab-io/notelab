@@ -5,8 +5,7 @@ Standalone TypeScript markdown text splitters inspired by LangChain's `markdown.
 ## Exports
 
 - `MarkdownTextSplitter`
-- `MarkdownHeaderTextSplitter`
-- `ExperimentalMarkdownSyntaxTextSplitter`
+- `RecursiveMarkdownTextSplitter`
 - `RecursiveCharacterTextSplitter`
 - `TextSplitter`
 - `Language`
@@ -16,8 +15,8 @@ Standalone TypeScript markdown text splitters inspired by LangChain's `markdown.
 
 ```ts
 import {
-  MarkdownHeaderTextSplitter,
   MarkdownTextSplitter,
+  RecursiveMarkdownTextSplitter,
 } from "markdown-text-splitter";
 
 const markdown = `# Title
@@ -28,13 +27,9 @@ Hello world
 ## Details
 More text`;
 
-const recursive = new MarkdownTextSplitter({ chunkSize: 40 });
-const chunks = recursive.splitText(markdown);
+const structural = new MarkdownTextSplitter();
+const sectionDocs = structural.splitText(markdown);
 
-const byHeader = new MarkdownHeaderTextSplitter([
-  ["#", "h1"],
-  ["##", "h2"],
-]);
-
-const docs = byHeader.splitText(markdown);
+const recursive = new RecursiveMarkdownTextSplitter({ chunkSize: 40 });
+const chunks = recursive.splitText(sectionDocs[0].pageContent);
 ```

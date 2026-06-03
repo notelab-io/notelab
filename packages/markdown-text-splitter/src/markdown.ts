@@ -2,30 +2,13 @@ import { RecursiveCharacterTextSplitter } from "./character.js";
 import type { Document } from "./types.js";
 import { Language } from "./types.js";
 
-interface HeaderDefinition {
-  level: number;
-  name: string;
-  data: string;
-}
-
-interface LineWithMetadata {
-  content: string;
-  metadata: Record<string, string>;
-}
-
-export interface MarkdownHeaderTextSplitterOptions {
-  returnEachLine?: boolean;
-  stripHeaders?: boolean;
-  customHeaderPatterns?: Record<string, number>;
-}
-
-export interface ExperimentalMarkdownSyntaxTextSplitterOptions {
+export interface MarkdownTextSplitterOptions {
   headersToSplitOn?: Array<[string, string]>;
   returnEachLine?: boolean;
   stripHeaders?: boolean;
 }
 
-export class MarkdownTextSplitter extends RecursiveCharacterTextSplitter {
+export class RecursiveMarkdownTextSplitter extends RecursiveCharacterTextSplitter {
   public constructor(
     options: Omit<
       ConstructorParameters<typeof RecursiveCharacterTextSplitter>[0],
@@ -42,196 +25,7 @@ export class MarkdownTextSplitter extends RecursiveCharacterTextSplitter {
   }
 }
 
-export class MarkdownHeaderTextSplitter {
-  private readonly returnEachLine: boolean;
-  private readonly headersToSplitOn: Array<[string, string]>;
-  private readonly stripHeaders: boolean;
-  private readonly customHeaderPatterns: Record<string, number>;
-
-  public constructor(
-    headersToSplitOn: Array<[string, string]>,
-    options: MarkdownHeaderTextSplitterOptions = {},
-  ) {
-    const {
-      returnEachLine = false,
-      stripHeaders = true,
-      customHeaderPatterns = {},
-    } = options;
-
-    this.returnEachLine = returnEachLine;
-    this.headersToSplitOn = [...headersToSplitOn].sort(
-      (left, right) => right[0].length - left[0].length,
-    );
-    this.stripHeaders = stripHeaders;
-    this.customHeaderPatterns = customHeaderPatterns;
-  }
-
-  public splitText(text: string): Document<Record<string, string>>[] {
-    const lines = text.split("\n");
-    const linesWithMetadata: LineWithMetadata[] = [];
-    const currentContent: string[] = [];
-    let currentMetadata: Record<string, string> = {};
-    const headerStack: HeaderDefinition[] = [];
-    const initialMetadata: Record<string, string> = {};
-    let inCodeBlock = false;
-    let openingFence = "";
-
-    for (const rawLine of lines) {
-      const strippedLine = stripNonPrintable(rawLine.trim());
-
-      if (!inCodeBlock) {
-        if (strippedLine.startsWith("```") && countOccurrences(strippedLine, "```") === 1) {
-          inCodeBlock = true;
-          openingFence = "```";
-        } else if (strippedLine.startsWith("~~~")) {
-          inCodeBlock = true;
-          openingFence = "~~~";
-        }
-      } else if (strippedLine.startsWith(openingFence)) {
-        inCodeBlock = false;
-        openingFence = "";
-      }
-
-      if (inCodeBlock) {
-        currentContent.push(strippedLine);
-        continue;
-      }
-
-      let matchedHeader = false;
-
-      for (const [separator, name] of this.headersToSplitOn) {
-        const isStandardHeader =
-          strippedLine.startsWith(separator) &&
-          (strippedLine.length === separator.length ||
-            strippedLine[separator.length] === " ");
-        const isCustomHeader = this.isCustomHeader(strippedLine, separator);
-
-        if (!isStandardHeader && !isCustomHeader) {
-          continue;
-        }
-
-        matchedHeader = true;
-
-        const currentHeaderLevel =
-          separator in this.customHeaderPatterns
-            ? this.customHeaderPatterns[separator]
-            : countOccurrences(separator, "#");
-
-        while (
-          headerStack.length > 0 &&
-          headerStack[headerStack.length - 1].level >= currentHeaderLevel
-        ) {
-          const popped = headerStack.pop();
-          if (popped && popped.name in initialMetadata) {
-            delete initialMetadata[popped.name];
-          }
-        }
-
-        const headerText = isCustomHeader
-          ? strippedLine.slice(separator.length, strippedLine.length - separator.length).trim()
-          : strippedLine.slice(separator.length).trim();
-
-        headerStack.push({
-          level: currentHeaderLevel,
-          name,
-          data: headerText,
-        });
-        initialMetadata[name] = headerText;
-
-        if (currentContent.length > 0) {
-          linesWithMetadata.push({
-            content: currentContent.join("\n"),
-            metadata: { ...currentMetadata },
-          });
-          currentContent.length = 0;
-        }
-
-        if (!this.stripHeaders) {
-          currentContent.push(strippedLine);
-        }
-
-        break;
-      }
-
-      if (!matchedHeader) {
-        if (strippedLine) {
-          currentContent.push(strippedLine);
-        } else if (currentContent.length > 0) {
-          linesWithMetadata.push({
-            content: currentContent.join("\n"),
-            metadata: { ...currentMetadata },
-          });
-          currentContent.length = 0;
-        }
-      }
-
-      currentMetadata = { ...initialMetadata };
-    }
-
-    if (currentContent.length > 0) {
-      linesWithMetadata.push({
-        content: currentContent.join("\n"),
-        metadata: currentMetadata,
-      });
-    }
-
-    return this.returnEachLine
-      ? linesWithMetadata.map((chunk) => toDocument(chunk.content, chunk.metadata))
-      : this.aggregateLinesToChunks(linesWithMetadata);
-  }
-
-  public aggregateLinesToChunks(
-    lines: LineWithMetadata[],
-  ): Document<Record<string, string>>[] {
-    const aggregated: LineWithMetadata[] = [];
-
-    for (const line of lines) {
-      const previous = aggregated[aggregated.length - 1];
-
-      if (previous && shallowEqual(previous.metadata, line.metadata)) {
-        previous.content += "  \n" + line.content;
-        continue;
-      }
-
-      if (
-        previous &&
-        !shallowEqual(previous.metadata, line.metadata) &&
-        Object.keys(previous.metadata).length < Object.keys(line.metadata).length &&
-        lastLine(previous.content)?.startsWith("#") &&
-        !this.stripHeaders
-      ) {
-        previous.content += "  \n" + line.content;
-        previous.metadata = line.metadata;
-        continue;
-      }
-
-      aggregated.push({ ...line, metadata: { ...line.metadata } });
-    }
-
-    return aggregated.map((chunk) => toDocument(chunk.content, chunk.metadata));
-  }
-
-  private isCustomHeader(line: string, separator: string): boolean {
-    if (!(separator in this.customHeaderPatterns)) {
-      return false;
-    }
-
-    const escapedSeparator = escapeRegExp(separator);
-    const pattern = new RegExp(
-      `^${escapedSeparator}(?!${escapedSeparator})(.+?)(?<!${escapedSeparator})${escapedSeparator}$`,
-    );
-    const match = line.match(pattern);
-
-    if (!match) {
-      return false;
-    }
-
-    const content = match[1].trim();
-    return Boolean(content) && !Array.from(removeSpaces(content)).every((char) => separator.includes(char));
-  }
-}
-
-export class ExperimentalMarkdownSyntaxTextSplitter {
+export class MarkdownTextSplitter {
   private chunks: Document<Record<string, string>>[] = [];
   private currentChunk: Document<Record<string, string>> = toDocument("", {});
   private currentHeaderStack: Array<[number, string]> = [];
@@ -239,7 +33,7 @@ export class ExperimentalMarkdownSyntaxTextSplitter {
   private readonly splittableHeaders: Record<string, string>;
   private readonly returnEachLine: boolean;
 
-  public constructor(options: ExperimentalMarkdownSyntaxTextSplitterOptions = {}) {
+  public constructor(options: MarkdownTextSplitterOptions = {}) {
     const {
       headersToSplitOn,
       returnEachLine = false,
@@ -377,45 +171,4 @@ function toDocument(
     pageContent,
     metadata,
   };
-}
-
-function stripNonPrintable(value: string): string {
-  return Array.from(value)
-    .filter((char) => /\P{C}/u.test(char))
-    .join("");
-}
-
-function countOccurrences(value: string, search: string): number {
-  if (!search) {
-    return 0;
-  }
-
-  return value.split(search).length - 1;
-}
-
-function shallowEqual(
-  left: Record<string, string>,
-  right: Record<string, string>,
-): boolean {
-  const leftKeys = Object.keys(left);
-  const rightKeys = Object.keys(right);
-
-  if (leftKeys.length !== rightKeys.length) {
-    return false;
-  }
-
-  return leftKeys.every((key) => left[key] === right[key]);
-}
-
-function lastLine(value: string): string | undefined {
-  const lines = value.split("\n");
-  return lines[lines.length - 1];
-}
-
-function removeSpaces(value: string): string {
-  return value.split(" ").join("");
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

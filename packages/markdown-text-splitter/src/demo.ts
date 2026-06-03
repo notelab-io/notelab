@@ -1,6 +1,6 @@
 import {
-  ExperimentalMarkdownSyntaxTextSplitter,
   MarkdownTextSplitter,
+  RecursiveMarkdownTextSplitter,
 } from "./index.js";
 
 const sampleMarkdown = `# NoteLab Markdown Splitter
@@ -34,9 +34,8 @@ carried forward while chunking. It also includes a list:
 
 | Splitter | Keeps metadata | Notes |
 | --- | --- | --- |
-| \`MarkdownTextSplitter\` | No | Recursive chunking by size and separators |
-| \`MarkdownHeaderTextSplitter\` | Yes | Groups content under headers |
-| \`ExperimentalMarkdownSyntaxTextSplitter\` | Yes | Tracks headers and code blocks |
+| \`MarkdownTextSplitter\` | Yes | Tracks headers and code blocks |
+| \`RecursiveMarkdownTextSplitter\` | No | Recursive chunking by size and separators |
 
 ### Deep Dive
 
@@ -77,7 +76,7 @@ function printDocuments(label: string, docs: ChunkDocument[]): void {
 
 function splitChunkPreservingTablesAndCode(
   content: string,
-  proseSplitter: MarkdownTextSplitter,
+  proseSplitter: RecursiveMarkdownTextSplitter,
 ): string[] {
   const blocks = extractBlocks(content);
   const chunks: string[] = [];
@@ -179,7 +178,7 @@ function isTableLine(line: string): boolean {
   return line.startsWith("|") && line.endsWith("|");
 }
 
-const stageOneSplitter = new ExperimentalMarkdownSyntaxTextSplitter({
+const stageOneSplitter = new MarkdownTextSplitter({
   headersToSplitOn: [
     ["#", "Header 1"],
     ["##", "Header 2"],
@@ -187,7 +186,7 @@ const stageOneSplitter = new ExperimentalMarkdownSyntaxTextSplitter({
   ],
 });
 
-const stageTwoSplitter = new MarkdownTextSplitter({
+const stageTwoSplitter = new RecursiveMarkdownTextSplitter({
   chunkSize: 120,
   chunkOverlap: 20,
 });
