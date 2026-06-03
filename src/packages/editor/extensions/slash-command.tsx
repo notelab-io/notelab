@@ -27,21 +27,9 @@ import {
   Table2,
   Video,
 } from "lucide-react"
-import {
-  useEffect,
-  useRef,
-  type ComponentType,
-  type SVGProps,
-} from "react"
+import { type ComponentType, type SVGProps } from "react"
 import { createRoot, type Root } from "react-dom/client"
 
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
 import {
   EmojiPicker,
   EmojiPickerContent,
@@ -56,6 +44,8 @@ import {
   YouTubeIcon,
 } from "@/packages/editor/extensions/embed-block"
 import type { CreatedPage } from "@/packages/editor/extensions/page-block"
+
+import { SlashCommandMenu } from "./slash-command-menu"
 
 export type SlashCommandOptions = {
   onCreateDatabase?: () => Promise<string | null>
@@ -538,74 +528,6 @@ function getSlashCommandMenuPosition(
     left,
     top,
   }
-}
-
-export function SlashCommandMenu({
-  items,
-  selectedIndex,
-  setSelectedIndex,
-  selectItem,
-}: {
-  items: SlashCommandItem[]
-  selectedIndex: number
-  setSelectedIndex: (index: number) => void
-  selectItem: (index: number) => void
-}) {
-  const selectedItemRef = useRef<HTMLDivElement | null>(null)
-  const selectedItem = items[selectedIndex]
-
-  useEffect(() => {
-    selectedItemRef.current?.scrollIntoView({
-      block: "nearest",
-    })
-  }, [selectedIndex])
-
-  return (
-    <Command
-      value={selectedItem?.title ?? ""}
-      onValueChange={(value) => {
-        const nextIndex = items.findIndex((item) => item.title === value)
-
-        if (nextIndex >= 0) {
-          setSelectedIndex(nextIndex)
-        }
-      }}
-    >
-      <CommandList>
-        <CommandEmpty>No blocks found</CommandEmpty>
-        <CommandGroup>
-          {items.map((item, index) => {
-            const Icon = item.icon
-
-            return (
-              <CommandItem
-                aria-selected={index === selectedIndex}
-                data-selected={index === selectedIndex ? true : undefined}
-                key={item.title}
-                onMouseDown={(event) => {
-                  event.preventDefault()
-                  selectItem(index)
-                }}
-                onSelect={() => selectItem(index)}
-                ref={index === selectedIndex ? selectedItemRef : undefined}
-                value={item.title}
-              >
-                <span className="slash-menu-icon">
-                  <Icon />
-                </span>
-                <span className="min-w-0">
-                  <span className="slash-menu-title">{item.title}</span>
-                  <span className="slash-menu-description">
-                    {item.description}
-                  </span>
-                </span>
-              </CommandItem>
-            )
-          })}
-        </CommandGroup>
-      </CommandList>
-    </Command>
-  )
 }
 
 function SlashCommandPopover({

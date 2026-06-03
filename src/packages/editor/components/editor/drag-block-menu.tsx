@@ -12,10 +12,10 @@ import {
 
 import { Input } from "@/components/ui/input"
 import {
-  SlashCommandMenu,
   slashCommandItems,
   type SlashCommandItem,
 } from "@/packages/editor/extensions/slash-command"
+import { SlashCommandMenu } from "@/packages/editor/extensions/slash-command-menu"
 
 import { blockContentForItem, insertBlockFromPlus } from "./block-insert"
 import {
@@ -45,11 +45,6 @@ const turnIntoItems = blockCommandItems.filter((item) =>
     "Toggle",
   ].includes(item.title)
 )
-
-export const dragHandleComputePositionConfig = {
-  placement: "right-start",
-  strategy: "absolute",
-} as const
 
 export function DragBlockMenu({
   editor,
