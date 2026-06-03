@@ -8,17 +8,34 @@ const host = process.env.TAURI_DEV_HOST;
 export default defineConfig(async () => ({
   plugins: [react(), tailwindcss()],
   resolve: {
-    alias: {
-      "@": "/src",
-      "@notelab/gmail-connector/ui": "/src/connectors/gmail/src/ui.tsx",
-      "@notelab/github-connector/ui": "/src/connectors/github/src/ui.tsx",
-      "@notelab/google-calendar-connector/ui":
-        "/src/connectors/google-calendar/src/ui.tsx",
-      "@notelab/google-drive-connector/ui":
-        "/src/connectors/google-drive/src/ui.tsx",
-      "@notelab/linear-connector/ui": "/src/connectors/linear/src/ui.tsx",
-      "@notelab/slack-connector/ui": "/src/connectors/slack/src/ui.tsx",
-    },
+    alias: [
+      { find: "@/packages/editor", replacement: "/src/editor" },
+      { find: "@", replacement: "/src" },
+      {
+        find: "@notelab/gmail-connector/ui",
+        replacement: "/src/connectors/gmail/src/ui.tsx",
+      },
+      {
+        find: "@notelab/github-connector/ui",
+        replacement: "/src/connectors/github/src/ui.tsx",
+      },
+      {
+        find: "@notelab/google-calendar-connector/ui",
+        replacement: "/src/connectors/google-calendar/src/ui.tsx",
+      },
+      {
+        find: "@notelab/google-drive-connector/ui",
+        replacement: "/src/connectors/google-drive/src/ui.tsx",
+      },
+      {
+        find: "@notelab/linear-connector/ui",
+        replacement: "/src/connectors/linear/src/ui.tsx",
+      },
+      {
+        find: "@notelab/slack-connector/ui",
+        replacement: "/src/connectors/slack/src/ui.tsx",
+      },
+    ],
   },
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`

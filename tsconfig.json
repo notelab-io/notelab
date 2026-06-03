@@ -13,10 +13,12 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "ignoreDeprecations": "6.0",
+    "ignoreDeprecations": "5.0",
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
+      "@/packages/editor": ["./src/editor/index.ts"],
+      "@/packages/editor/*": ["./src/editor/*"],
       "@notelab/gmail-connector/ui": ["./src/connectors/gmail/src/ui.tsx"],
       "@notelab/github-connector/ui": ["./src/connectors/github/src/ui.tsx"],
       "@notelab/google-calendar-connector/ui": [
