@@ -6,7 +6,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { useUpdateDatabaseProperty } from "@/features/databases/hooks"
+import { useUpdateDatabaseProperty } from "@notelab/features/databases"
 import {
   cyclingColorTokens,
   getColorTokenBadgeClassName,

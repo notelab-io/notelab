@@ -7,9 +7,9 @@ import { SettingsHeader } from "@/components/settings-header";
 import {
   useActiveOrganizationId,
   useIntegrations,
-} from "@/features/integrations/hooks";
-import { useSession } from "@/features/auth/hooks";
-import { useOrganizationAccessTargets } from "@/features/organizations/hooks";
+} from "@notelab/features/integrations";
+import { useSession } from "@notelab/features/auth";
+import { useOrganizationAccessTargets } from "@notelab/features/organizations";
 import { getApiErrorMessage } from "@/lib/api";
 import { toast } from "sonner";
 

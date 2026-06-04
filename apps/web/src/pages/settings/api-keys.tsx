@@ -75,10 +75,10 @@ import {
   useCreateApiKey,
   useDeleteApiKey,
   useUpdateApiKey,
-} from "@/features/api-keys/hooks"
-import type { ApiKeyRecord, CreatedApiKeyRecord } from "@/features/api-keys/queries"
-import { useActiveOrganizationId } from "@/features/integrations/hooks"
-import { useOrganizations } from "@/features/organizations/hooks"
+} from "@notelab/features/api-keys"
+import type { ApiKeyRecord, CreatedApiKeyRecord } from "@notelab/features/api-keys"
+import { useActiveOrganizationId } from "@notelab/features/integrations"
+import { useOrganizations } from "@notelab/features/organizations"
 import { getApiErrorMessage } from "@/lib/api"
 
 const expirationOptions = [

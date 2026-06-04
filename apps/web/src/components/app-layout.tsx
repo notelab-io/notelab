@@ -34,9 +34,9 @@ import { cn } from "@/lib/utils"
 import {
   getWorkspaceEmoji,
   type Workspace,
-} from "@/features/workspaces/queries"
-import { useWorkspace, useWorkspaces } from "@/features/workspaces/hooks"
-import { useDatabase } from "@/features/databases/hooks"
+} from "@notelab/features/workspaces"
+import { useWorkspace, useWorkspaces } from "@notelab/features/workspaces"
+import { useDatabase } from "@notelab/features/databases"
 
 type WorkspaceSidePaneContextValue = {
   closeSidePane: () => void

@@ -19,10 +19,10 @@ import {
   CommandList,
   CommandShortcut,
 } from "@/components/ui/command"
-import { useSession } from "@/features/auth/hooks"
-import { useOrganizations } from "@/features/organizations/hooks"
-import { useAppSearchResults } from "@/features/search/hooks"
-import type { AppSearchResult } from "@/features/search/queries"
+import { useSession } from "@notelab/features/auth"
+import { useOrganizations } from "@notelab/features/organizations"
+import { useAppSearchResults } from "@notelab/features/search"
+import type { AppSearchResult } from "@notelab/features/search"
 import { useAppStore } from "@/stores/app-store"
 
 type AppSearchContextValue = {

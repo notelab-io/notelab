@@ -1,4 +1,4 @@
-import type { IntegrationEndpoint } from "@/features/integrations/hooks";
+import type { IntegrationEndpoint } from "@notelab/features/integrations";
 
 import type { IntegrationId } from "../types";
 

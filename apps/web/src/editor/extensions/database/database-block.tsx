@@ -19,7 +19,7 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
-import { useSession } from "@/features/auth/hooks"
+import { useSession } from "@notelab/features/auth"
 import {
   useAddDatabaseProperty,
   useAddDatabaseRow,
@@ -28,8 +28,8 @@ import {
   useUpdateDatabase,
   useUpdateDatabaseProperty,
   useUpdateDatabasePropertyValue,
-} from "@/features/databases/hooks"
-import { useWorkspacePersonAccessTargets } from "@/features/workspaces/hooks"
+} from "@notelab/features/databases"
+import { useWorkspacePersonAccessTargets } from "@notelab/features/workspaces"
 
 import { AddDatabasePropertyMenu } from "./add-database-property-menu"
 import {

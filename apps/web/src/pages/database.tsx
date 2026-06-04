@@ -11,17 +11,17 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { getDatabaseEmoji } from "@/features/databases/queries"
+import { getDatabaseEmoji } from "@notelab/features/databases"
 import {
   useUpdateWorkspace,
   useWorkspace,
   useWorkspaceAccessLevel,
-} from "@/features/workspaces/hooks"
+} from "@notelab/features/workspaces"
 import {
   useDatabase,
   useUpdateDatabase,
-} from "@/features/databases/hooks"
-import { useSession } from "@/features/auth/hooks"
+} from "@notelab/features/databases"
+import { useSession } from "@notelab/features/auth"
 import { WorkspaceMetadata as WorkspaceMetadataView } from "@/packages/editor/components/editor/workspace-metadata"
 import { DatabaseTableView } from "@/packages/editor/extensions/database"
 import {

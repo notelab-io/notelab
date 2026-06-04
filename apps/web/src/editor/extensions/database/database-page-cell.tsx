@@ -1,8 +1,8 @@
 import { ExternalLink, FileText, X } from "lucide-react"
 
 import { useOptionalWorkspaceSidePane } from "@/components/app-layout"
-import { useWorkspace } from "@/features/workspaces/hooks"
-import { getWorkspaceEmoji } from "@/features/workspaces/queries"
+import { useWorkspace } from "@notelab/features/workspaces"
+import { getWorkspaceEmoji } from "@notelab/features/workspaces"
 
 export function DatabasePageCell({
   onOpen,

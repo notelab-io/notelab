@@ -4,8 +4,8 @@ import {
   useDisconnectIntegration,
   useStartIntegrationOAuth,
   useUpdateGmailIntegrationSettings,
-} from "@/features/integrations/hooks";
-import type { GmailIntegrationStatus } from "@/features/integrations/queries";
+} from "@notelab/features/integrations";
+import type { GmailIntegrationStatus } from "@notelab/features/integrations";
 import { getApiErrorMessage } from "@/lib/api";
 import { integrationIcons } from "@/lib/integration-icons";
 import { toast } from "sonner";

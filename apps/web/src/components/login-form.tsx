@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { getApiErrorMessage } from "@/lib/api"
-import { useRequestSignInOtp } from "@/features/auth/hooks"
+import { useRequestSignInOtp } from "@notelab/features/auth"
 import { useAuthFlowStore } from "@/stores/auth-flow-store"
 import { GalleryVerticalEndIcon } from "lucide-react"
 

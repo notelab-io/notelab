@@ -1,4 +1,4 @@
-import type { WorkspacePropertyValue } from "@/features/databases/queries"
+import type { WorkspacePropertyValue } from "@notelab/features/databases"
 
 export type DatabasePropertyValue = string | string[]
 

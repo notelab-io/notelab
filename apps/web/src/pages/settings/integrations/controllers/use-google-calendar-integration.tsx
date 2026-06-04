@@ -4,8 +4,8 @@ import {
   useDisconnectIntegration,
   useStartIntegrationOAuth,
   useUpdateGoogleCalendarIntegrationSettings,
-} from "@/features/integrations/hooks";
-import type { GoogleCalendarIntegrationStatus } from "@/features/integrations/queries";
+} from "@notelab/features/integrations";
+import type { GoogleCalendarIntegrationStatus } from "@notelab/features/integrations";
 import { getApiErrorMessage } from "@/lib/api";
 import { integrationIcons } from "@/lib/integration-icons";
 import { toast } from "sonner";

@@ -57,7 +57,7 @@ import type {
   ToolbarAction,
   ToolbarAttrs,
 } from "@/packages/editor/components/editor/types"
-import { useAddDatabaseRow, useCreateDatabase } from "@/features/databases/hooks"
+import { useAddDatabaseRow, useCreateDatabase } from "@notelab/features/databases"
 import {
   BookmarkBlock,
   fetchBookmarkMetadata,

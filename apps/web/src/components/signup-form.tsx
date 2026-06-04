@@ -15,7 +15,7 @@ import { getApiErrorMessage } from "@/lib/api"
 import {
   useRequestEmailVerificationOtp,
   useSignUp,
-} from "@/features/auth/hooks"
+} from "@notelab/features/auth"
 import { useAuthFlowStore } from "@/stores/auth-flow-store"
 
 export function SignupForm({

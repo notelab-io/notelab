@@ -14,7 +14,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { getApiErrorMessage } from "@/lib/api"
 import { cn } from "@/lib/utils"
-import { useCreateOrganization } from "@/features/organizations/hooks"
+import { useCreateOrganization } from "@notelab/features/organizations"
 
 export function OnboardingForm({
   className,

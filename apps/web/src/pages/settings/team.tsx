@@ -45,17 +45,17 @@ import {
 } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
-import { useSession } from "@/features/auth/hooks"
+import { useSession } from "@notelab/features/auth"
 import {
   useInviteOrganizationMember,
   useOrganizationAccessTargets,
   useOrganizationInvitations,
-} from "@/features/organizations/hooks"
+} from "@notelab/features/organizations"
 import type {
   OrganizationInvitation,
   OrganizationMember,
   OrganizationRole,
-} from "@/features/organizations/queries"
+} from "@notelab/features/organizations"
 import { useAppStore } from "@/stores/app-store"
 
 export default function TeamSettingsPage() {

@@ -51,8 +51,8 @@ import {
   useActiveOrganizationId,
   useIntegrations,
   useOrganizationAiModels,
-} from "@/features/integrations/hooks";
-import type { OrganizationAiChatModel } from "@/features/integrations/queries";
+} from "@notelab/features/integrations";
+import type { OrganizationAiChatModel } from "@notelab/features/integrations";
 import { integrationIcons } from "@/lib/integration-icons";
 import { useChat } from "@ai-sdk/react";
 import {

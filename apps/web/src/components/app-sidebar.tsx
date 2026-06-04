@@ -21,22 +21,22 @@ import {
   SidebarRail,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-import { useSession } from "@/features/auth/hooks"
-import { useOrganizations } from "@/features/organizations/hooks"
+import { useSession } from "@notelab/features/auth"
+import { useOrganizations } from "@notelab/features/organizations"
 import {
   useAddDatabaseRow,
   useSetDatabaseFavorite,
-} from "@/features/databases/hooks"
-import { getDatabaseEmoji } from "@/features/databases/queries"
+} from "@notelab/features/databases"
+import { getDatabaseEmoji } from "@notelab/features/databases"
 import {
   getWorkspaceEmoji,
   type Workspace,
-} from "@/features/workspaces/queries"
+} from "@notelab/features/workspaces"
 import {
   useCreateWorkspace,
   useSetWorkspaceFavorite,
   useWorkspaces,
-} from "@/features/workspaces/hooks"
+} from "@notelab/features/workspaces"
 import { useAppStore } from "@/stores/app-store"
 import {
   BlocksIcon,

@@ -5,7 +5,7 @@ import type {
   GoogleDriveIntegrationStatus,
   LinearIntegrationStatus,
   SlackIntegrationStatus,
-} from "@/features/integrations/queries";
+} from "@notelab/features/integrations";
 
 export type IntegrationId =
   | "gmail"

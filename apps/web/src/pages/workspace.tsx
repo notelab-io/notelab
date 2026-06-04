@@ -15,15 +15,15 @@ import {
   getWorkspaceEmoji,
   resolveWorkspaceFullWidth,
   type WorkspaceMetadata,
-} from "@/features/workspaces/queries"
+} from "@notelab/features/workspaces"
 import {
   useUpdateWorkspace,
   useCreateWorkspace,
   useWorkspace,
   useWorkspaceAccessLevel,
-} from "@/features/workspaces/hooks"
-import { useSession } from "@/features/auth/hooks"
-import { useUserSettings } from "@/features/user-settings/hooks"
+} from "@notelab/features/workspaces"
+import { useSession } from "@notelab/features/auth"
+import { useUserSettings } from "@notelab/features/user-settings"
 import { Editor } from "@/packages/editor"
 
 type WorkspaceEditorPaneProps = {

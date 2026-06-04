@@ -16,7 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import {
   useUpdateWorkspacePropertyValue,
   useWorkspaceProperties,
-} from "@/features/workspaces/hooks"
+} from "@notelab/features/workspaces"
 
 import { getDatabasePropertyType } from "../../extensions/database/constants"
 import {

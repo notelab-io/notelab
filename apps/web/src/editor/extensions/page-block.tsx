@@ -19,8 +19,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { useWorkspace, useWorkspaces } from "@/features/workspaces/hooks"
-import { getWorkspaceEmoji } from "@/features/workspaces/queries"
+import { useWorkspace, useWorkspaces } from "@notelab/features/workspaces"
+import { getWorkspaceEmoji } from "@notelab/features/workspaces"
 import { colorWithAlpha } from "@/packages/editor/components/editor/toolbar-data"
 import { DATABASE_PAGE_DRAG_MIME } from "@/packages/editor/extensions/database/constants"
 

@@ -27,12 +27,12 @@ import {
 } from "@/components/ui/sidebar"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { useSession } from "@/features/auth/hooks"
+import { useSession } from "@notelab/features/auth"
 import {
   useCreateOrganization,
   useOrganizations,
   useSetActiveOrganization,
-} from "@/features/organizations/hooks"
+} from "@notelab/features/organizations"
 import { getApiErrorMessage } from "@/lib/api"
 import { useAppStore } from "@/stores/app-store"
 import { Building2Icon, ChevronDownIcon, PlusIcon } from "lucide-react"

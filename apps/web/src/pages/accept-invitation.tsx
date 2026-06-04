@@ -21,8 +21,8 @@ import {
   FieldGroup,
 } from "@/components/ui/field"
 import { Spinner } from "@/components/ui/spinner"
-import { useSession } from "@/features/auth/hooks"
-import { useAcceptOrganizationInvitation } from "@/features/organizations/hooks"
+import { useSession } from "@notelab/features/auth"
+import { useAcceptOrganizationInvitation } from "@notelab/features/organizations"
 import { getApiErrorMessage } from "@/lib/api"
 
 export default function AcceptInvitationPage() {

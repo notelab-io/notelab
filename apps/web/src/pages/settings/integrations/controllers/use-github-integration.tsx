@@ -4,8 +4,8 @@ import {
   useDisconnectIntegration,
   useStartIntegrationOAuth,
   useUpdateGithubIntegrationSettings,
-} from "@/features/integrations/hooks";
-import type { GithubIntegrationStatus } from "@/features/integrations/queries";
+} from "@notelab/features/integrations";
+import type { GithubIntegrationStatus } from "@notelab/features/integrations";
 import { getApiErrorMessage } from "@/lib/api";
 import { integrationIcons } from "@/lib/integration-icons";
 import { toast } from "sonner";

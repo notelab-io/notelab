@@ -24,7 +24,7 @@ import {
   useRequestSignInOtp,
   useSignInWithOtp,
   useVerifyEmailOtp,
-} from "@/features/auth/hooks"
+} from "@notelab/features/auth"
 import { useAuthFlowStore } from "@/stores/auth-flow-store"
 
 export function OtpForm({

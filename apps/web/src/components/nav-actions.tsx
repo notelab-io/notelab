@@ -51,7 +51,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { useSession } from "@/features/auth/hooks"
+import { useSession } from "@notelab/features/auth"
 import {
   useCreateWorkspace,
   useDeleteWorkspaceAccess,
@@ -64,15 +64,15 @@ import {
   useWorkspaceAccessLevel,
   useWorkspaceAccessTargets,
   useWorkspaces,
-} from "@/features/workspaces/hooks"
+} from "@notelab/features/workspaces"
 import {
   useDatabase,
   useSetDatabaseFavorite,
-} from "@/features/databases/hooks"
+} from "@notelab/features/databases"
 import {
   useUpdateUserSettings,
   useUserSettings,
-} from "@/features/user-settings/hooks"
+} from "@notelab/features/user-settings"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
 import { Switch } from "@/components/ui/switch"
@@ -84,7 +84,7 @@ import {
   type AccessTargetType,
   type WorkspaceAccessRule,
   type WorkspaceMetadata,
-} from "@/features/workspaces/queries"
+} from "@notelab/features/workspaces"
 
 const moreActions = [
   "Customize Page",

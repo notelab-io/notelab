@@ -4,8 +4,8 @@ import {
   useDisconnectIntegration,
   useStartIntegrationOAuth,
   useUpdateGoogleDriveIntegrationSettings,
-} from "@/features/integrations/hooks";
-import type { GoogleDriveIntegrationStatus } from "@/features/integrations/queries";
+} from "@notelab/features/integrations";
+import type { GoogleDriveIntegrationStatus } from "@notelab/features/integrations";
 import { getApiErrorMessage } from "@/lib/api";
 import { integrationIcons } from "@/lib/integration-icons";
 import { toast } from "sonner";

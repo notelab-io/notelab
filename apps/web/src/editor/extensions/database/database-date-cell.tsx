@@ -11,7 +11,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { Switch } from "@/components/ui/switch"
-import { useUpdateDatabaseProperty } from "@/features/databases/hooks"
+import { useUpdateDatabaseProperty } from "@notelab/features/databases"
 
 export type DateFormatValue =
   | "full"

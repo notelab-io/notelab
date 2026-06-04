@@ -4,8 +4,8 @@ import {
   useDisconnectIntegration,
   useStartIntegrationOAuth,
   useUpdateLinearIntegrationSettings,
-} from "@/features/integrations/hooks";
-import type { LinearIntegrationStatus } from "@/features/integrations/queries";
+} from "@notelab/features/integrations";
+import type { LinearIntegrationStatus } from "@notelab/features/integrations";
 import { getApiErrorMessage } from "@/lib/api";
 import { integrationIcons } from "@/lib/integration-icons";
 import { toast } from "sonner";

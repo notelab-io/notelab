@@ -3,7 +3,7 @@ import * as React from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import type { LinearIntegrationStatus } from "@/features/integrations/queries";
+import type { LinearIntegrationStatus } from "@notelab/features/integrations";
 import { integrationIcons } from "@/lib/integration-icons";
 import { Loader2Icon, PlugIcon, UnplugIcon } from "lucide-react";
 
