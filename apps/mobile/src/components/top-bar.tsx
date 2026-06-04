@@ -327,7 +327,7 @@ function createStyles(palette: (typeof THEME)['light'] | (typeof THEME)['dark'],
     container: {
       minHeight: TopBarInset,
       paddingTop: 0,
-      paddingHorizontal: Spacing.four,
+      paddingHorizontal: Spacing.three,
       justifyContent: 'flex-start',
     },
     homeRow: {
@@ -377,7 +377,8 @@ function createStyles(palette: (typeof THEME)['light'] | (typeof THEME)['dark'],
       flexDirection: 'row',
       alignItems: 'center',
       gap: 10,
-      paddingHorizontal: 14,
+      paddingLeft: 12,
+      paddingRight: 12,
     },
     searchTapArea: {
       width: CONTROL_SIZE,
