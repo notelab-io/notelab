@@ -18,7 +18,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Fonts, Spacing } from '@/constants/theme';
+import { Fonts } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { THEME } from '@/lib/theme';
 import type { SessionResponse } from '@notelab/features/auth';
@@ -28,6 +28,7 @@ const BUTTON_OUTER_SIZE = CONTROL_SIZE + 4;
 const COLLAPSED_WIDTH = 95;
 const AVATAR_SIZE = 28;
 const CONTROL_GAP = 8;
+const HORIZONTAL_INSET = 12;
 
 export const TopBarInset = 84;
 
@@ -124,7 +125,7 @@ function HomeTopBarControl({ user }: { user: User }) {
 
   const expandedWidth = Math.max(
     220,
-    Math.min(width - Spacing.four * 2 - BUTTON_OUTER_SIZE - CONTROL_GAP, 420)
+    width - HORIZONTAL_INSET * 2 - BUTTON_OUTER_SIZE - CONTROL_GAP
   );
 
   React.useEffect(() => {
@@ -327,7 +328,7 @@ function createStyles(palette: (typeof THEME)['light'] | (typeof THEME)['dark'],
     container: {
       minHeight: TopBarInset,
       paddingTop: 0,
-      paddingHorizontal: Spacing.three,
+      paddingHorizontal: HORIZONTAL_INSET,
       justifyContent: 'flex-start',
     },
     homeRow: {
