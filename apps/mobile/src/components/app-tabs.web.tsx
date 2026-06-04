@@ -20,16 +20,42 @@ export default function AppTabs() {
       <TabList asChild>
         <CustomTabList>
           <TabTrigger name="home" href="/" asChild>
-            <TabButton icon={{ ios: 'house.fill', web: 'house' }} />
+            <TabButton
+              icon={
+                { ios: 'house.fill', web: 'house' } as unknown as React.ComponentProps<
+                  typeof SymbolView
+                >['name']
+              }
+            />
           </TabTrigger>
           <TabTrigger name="create" href="/create" asChild>
-            <TabButton icon={{ ios: 'plus.circle.fill', web: 'plus' }} />
+            <TabButton
+              icon={
+                {
+                  ios: 'plus.circle.fill',
+                  web: 'plus.circle.fill',
+                } as unknown as React.ComponentProps<typeof SymbolView>['name']
+              }
+            />
           </TabTrigger>
           <TabTrigger name="search" href="/search" asChild>
-            <TabButton icon={{ ios: 'magnifyingglass', web: 'search' }} />
+            <TabButton
+              icon={
+                {
+                  ios: 'magnifyingglass',
+                  web: 'search',
+                } as unknown as React.ComponentProps<typeof SymbolView>['name']
+              }
+            />
           </TabTrigger>
           <TabTrigger name="ai" href="/ai" asChild>
-            <TabButton icon={{ ios: 'sparkles', web: 'window' }} />
+            <TabButton
+              icon={
+                { ios: 'sparkles', web: 'window' } as unknown as React.ComponentProps<
+                  typeof SymbolView
+                >['name']
+              }
+            />
           </TabTrigger>
         </CustomTabList>
       </TabList>
@@ -42,7 +68,7 @@ function TabButton({
   isFocused,
   ...props
 }: TabTriggerSlotProps & {
-  icon: { ios: string; web: string };
+  icon: React.ComponentProps<typeof SymbolView>['name'];
 }) {
   return (
     <Pressable {...props} style={({ pressed }) => pressed && styles.pressed}>
