@@ -17,9 +17,8 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { GlassView, isGlassEffectAPIAvailable } from 'expo-glass-effect';
-import { SymbolView } from 'expo-symbols';
 
+import { TopBar, TopBarInset } from '@/components/top-bar';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { Fonts, Spacing } from '@/constants/theme';
@@ -215,27 +214,26 @@ export function AuthScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <TopBar
+        authBack={{
+          visible: step !== 'landing' || !!otpState,
+          onPress: () => {
+            setFormError(null);
+
+            if (otpState) {
+              resetOtpFlow();
+              return;
+            }
+
+            resetLoginForm();
+            resetSignupForm();
+            setStep('landing');
+          },
+        }}
+      />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.keyboardView}>
-        {(step !== 'landing' || otpState) && (
-          <View style={styles.floatingBackButton}>
-            <BackButton
-              onPress={() => {
-                setFormError(null);
-
-                if (otpState) {
-                  resetOtpFlow();
-                  return;
-                }
-
-                resetLoginForm();
-                resetSignupForm();
-                setStep('landing');
-              }}
-            />
-          </View>
-        )}
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <View style={styles.shell}>
             <View style={styles.header}>
@@ -532,38 +530,6 @@ function Input({
   );
 }
 
-function BackButton({ onPress }: { onPress: () => void }) {
-  const colorScheme = useColorScheme();
-  const palette = THEME[colorScheme === 'dark' ? 'dark' : 'light'];
-  const styles = React.useMemo(
-    () => createStyles(palette, colorScheme === 'dark'),
-    [colorScheme, palette]
-  );
-  const buttonContent = (
-    <View style={styles.backButtonContent}>
-      <SymbolView name="chevron.left" size={20} tintColor={palette.foreground} />
-    </View>
-  );
-
-  const useGlass = Platform.OS === 'ios' && isGlassEffectAPIAvailable();
-
-  return (
-    <Pressable onPress={onPress} style={styles.backButton}>
-      {useGlass ? (
-        <GlassView
-          glassEffectStyle="regular"
-          colorScheme={colorScheme === 'dark' ? 'dark' : 'light'}
-          isInteractive
-          style={styles.backButtonGlass}>
-          {buttonContent}
-        </GlassView>
-      ) : (
-        <View style={styles.backButtonFallback}>{buttonContent}</View>
-      )}
-    </Pressable>
-  );
-}
-
 function PrimaryButton({
   disabled,
   label,
@@ -616,17 +582,11 @@ function createStyles(
   keyboardView: {
     flex: 1,
   },
-  floatingBackButton: {
-    position: 'absolute',
-    top: Spacing.two,
-    left: Spacing.four,
-    zIndex: 10,
-  },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'flex-start',
     paddingHorizontal: Spacing.four,
-    paddingTop: 56,
+    paddingTop: TopBarInset,
     paddingBottom: Spacing.five,
     gap: Spacing.four,
   },
@@ -638,32 +598,6 @@ function createStyles(
   },
   header: {
     gap: 8,
-  },
-  backButton: {
-    alignSelf: 'flex-start',
-    marginLeft: -6,
-    paddingVertical: 2,
-    paddingHorizontal: 2,
-  },
-  backButtonGlass: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    overflow: 'hidden',
-  },
-  backButtonFallback: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: isDark ? 'rgba(24,24,27,0.92)' : 'rgba(255,255,255,0.88)',
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  backButtonContent: {
-    width: '100%',
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   title: {
     textAlign: 'left',

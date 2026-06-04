@@ -1,6 +1,7 @@
 import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { TopBarInset } from '@/components/top-bar';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
@@ -25,7 +26,8 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.six,
+    paddingTop: TopBarInset + Spacing.four,
+    paddingBottom: Spacing.six,
     gap: Spacing.two,
   },
 });

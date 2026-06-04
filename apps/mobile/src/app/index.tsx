@@ -3,6 +3,7 @@ import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AnimatedIcon } from '@/components/animated-icon';
+import { TopBarInset } from '@/components/top-bar';
 import { Button } from '@/components/ui/button';
 import { Text as UiText } from '@/components/ui/text';
 import { ThemedText } from '@/components/themed-text';
@@ -63,6 +64,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     paddingHorizontal: Spacing.four,
+    paddingTop: TopBarInset + Spacing.two,
     alignItems: 'center',
     gap: Spacing.three,
     paddingBottom: BottomTabInset + Spacing.three,
