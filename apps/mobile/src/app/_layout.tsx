@@ -11,10 +11,12 @@ import { AuthScreen } from '@/components/auth-screen';
 import AppTabs from '@/components/app-tabs';
 import { LoadingScreen } from '@/components/loading-screen';
 import { TopBar } from '@/components/top-bar';
+import { WorkspaceAuthScreen } from '@/components/workspace-auth-screen';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { NAV_THEME } from '@/lib/theme';
 import { MobileFeaturesProvider } from '@/providers/mobile-features-provider';
 import { useSession } from '@notelab/features/auth';
+import * as React from 'react';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -40,14 +42,32 @@ function AuthenticatedApp() {
     return <LoadingScreen />;
   }
 
-  if (!session.data?.user) {
+  const user = session.data?.user;
+
+  if (!user) {
     return <AuthScreen />;
+  }
+
+  return <WorkspaceResolvedApp key={user.id} />;
+}
+
+function WorkspaceResolvedApp() {
+  const session = useSession();
+  const [isWorkspaceReady, setIsWorkspaceReady] = React.useState(false);
+  const user = session.data?.user;
+
+  if (!user) {
+    return <LoadingScreen />;
+  }
+
+  if (!isWorkspaceReady) {
+    return <WorkspaceAuthScreen onComplete={() => setIsWorkspaceReady(true)} />;
   }
 
   return (
     <View style={{ flex: 1 }}>
       <AppTabs />
-      <TopBar user={session.data.user} />
+      <TopBar user={user} />
     </View>
   );
 }
