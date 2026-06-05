@@ -21,6 +21,10 @@ export default function AppTabs() {
         <NativeTabs.Trigger.Icon sf="sparkles" md="auto_awesome" />
       </NativeTabs.Trigger>
 
+      <NativeTabs.Trigger name="inbox">
+        <NativeTabs.Trigger.Icon sf="tray.fill" md="inbox" />
+      </NativeTabs.Trigger>
+
       <NativeTabs.Trigger name="create" role="search">
         <NativeTabs.Trigger.Icon sf="plus.circle.fill" md="add_circle" />
       </NativeTabs.Trigger>
