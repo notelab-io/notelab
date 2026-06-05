@@ -33,20 +33,35 @@ function resolveApiBaseUrl() {
 }
 
 function readExpoHostname() {
-  const hostUri = Constants.expoConfig?.hostUri;
-  const hostFromExpoConfig = parseHostname(hostUri);
+  for (const candidate of getExpoHostCandidates()) {
+    const hostname = parseHostname(candidate);
 
-  if (hostFromExpoConfig) {
-    return hostFromExpoConfig;
-  }
-
-  const hostFromLinkingUri = parseHostname(Constants.linkingUri);
-
-  if (hostFromLinkingUri) {
-    return hostFromLinkingUri;
+    if (hostname) {
+      return hostname;
+    }
   }
 
   return null;
+}
+
+function getExpoHostCandidates() {
+  const constants = Constants as typeof Constants & {
+    expoGoConfig?: { debuggerHost?: string | null };
+    manifest2?: {
+      extra?: {
+        expoClient?: { hostUri?: string | null };
+        expoGo?: { debuggerHost?: string | null };
+      };
+    };
+  };
+
+  return [
+    Constants.expoConfig?.hostUri,
+    Constants.linkingUri,
+    constants.expoGoConfig?.debuggerHost,
+    constants.manifest2?.extra?.expoClient?.hostUri,
+    constants.manifest2?.extra?.expoGo?.debuggerHost,
+  ];
 }
 
 function parseHostname(value: string | null | undefined) {
