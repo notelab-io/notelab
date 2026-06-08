@@ -578,6 +578,19 @@
     @apply min-w-0;
   }
 
+  .database-insert-property-cell {
+    @apply bg-muted/40;
+  }
+
+  .tiptap-editor .database-table tbody td.database-insert-property-placeholder {
+    @apply bg-muted/20 p-0;
+  }
+
+  .database-insert-property-placeholder::before {
+    @apply mx-2 block h-full min-h-8 rounded-sm border border-dashed border-border;
+    content: "";
+  }
+
   .database-add-property {
     @apply flex h-8 w-full items-center gap-2 rounded-sm px-3 py-1 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none;
   }

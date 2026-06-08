@@ -71,9 +71,11 @@ export type DatabaseRow = {
   parentRowId?: string | null
   position: number
   page: {
+    createdAt?: string
     id: string
     name: string
     metadata?: unknown
+    updatedAt?: string
   }
   createdById?: string | null
   lastEditedById?: string | null

@@ -24,6 +24,7 @@ type AddPropertyInput = {
   config?: unknown
   databaseId: string
   name?: string
+  position?: number
   type?: string
 }
 
@@ -55,6 +56,17 @@ type UpdatePropertyValueInput = {
   propertyId: string
   rowId: string
   value: unknown
+}
+
+type DeletePropertyInput = {
+  databaseId: string
+  databasePropertyId: string
+}
+
+type DuplicatePropertyInput = {
+  databaseId: string
+  databasePropertyId: string
+  includeValues?: boolean
 }
 
 type SetDatabaseFavoriteInput = {
@@ -142,6 +154,39 @@ export function useUpdateDatabaseProperty() {
         {
           method: "PATCH",
           body: JSON.stringify(patch),
+        }
+      ),
+    onSuccess: (payload) => setDatabasePayload(queryClient, payload),
+  })
+}
+
+export function useDeleteDatabaseProperty() {
+  const { apiFetch, queryClient } = useNotelabFeatures()
+
+  return useMutation({
+    mutationFn: async ({ databaseId, databasePropertyId }: DeletePropertyInput) =>
+      apiFetch<DatabasePayload>(
+        `/databases/${databaseId}/properties/${databasePropertyId}`,
+        { method: "DELETE" }
+      ),
+    onSuccess: (payload) => setDatabasePayload(queryClient, payload),
+  })
+}
+
+export function useDuplicateDatabaseProperty() {
+  const { apiFetch, queryClient } = useNotelabFeatures()
+
+  return useMutation({
+    mutationFn: async ({
+      databaseId,
+      databasePropertyId,
+      includeValues = false,
+    }: DuplicatePropertyInput) =>
+      apiFetch<DatabasePayload>(
+        `/databases/${databaseId}/properties/${databasePropertyId}/duplicate`,
+        {
+          method: "POST",
+          body: JSON.stringify({ includeValues }),
         }
       ),
     onSuccess: (payload) => setDatabasePayload(queryClient, payload),

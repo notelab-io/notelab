@@ -3,6 +3,7 @@ import { FileText, GripVertical, Loader2, Maximize2, Plus } from "lucide-react"
 import {
   useCallback,
   useEffect,
+  Fragment,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -58,6 +59,14 @@ type RowDragOverlay = {
   title: string
   top: number
   width: number
+}
+
+type InsertPropertySide = "left" | "right"
+
+type PendingInsertProperty = {
+  position: number
+  side: InsertPropertySide
+  sourceDatabasePropertyId: string
 }
 
 type DatabasePageDragPayload = {
@@ -218,6 +227,46 @@ function getWrapContent(config: unknown) {
   )
 }
 
+function isReadOnlyTimeProperty(type: string) {
+  return type === "created_time" || type === "last_edited_time"
+}
+
+function getReadOnlyTimePropertyValue(
+  row: {
+    createdAt: string
+    page: {
+      createdAt?: string
+      updatedAt?: string
+    }
+    updatedAt: string
+  },
+  type: string
+) {
+  const value =
+    type === "created_time"
+      ? row.page.createdAt ?? row.createdAt
+      : row.page.updatedAt ?? row.updatedAt
+
+  return formatTimestamp(value)
+}
+
+function formatTimestamp(value: string | null | undefined) {
+  if (!value) {
+    return ""
+  }
+
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) {
+    return ""
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date)
+}
+
 type DatabaseTableViewProps = {
   databaseId: string | null | undefined
   editable?: boolean
@@ -259,6 +308,8 @@ export function DatabaseTableView({
   const [rowDropTargetIndex, setRowDropTargetIndex] = useState<number | null>(
     null
   )
+  const [pendingInsertProperty, setPendingInsertProperty] =
+    useState<PendingInsertProperty | null>(null)
   const tableWrapRef = useRef<HTMLDivElement | null>(null)
   const [rowLayout, setRowLayout] = useState<{
     centers: Record<string, number>
@@ -277,21 +328,33 @@ export function DatabaseTableView({
       })),
     [accessTargets?.members, session?.user?.id]
   )
-  const columnKeys = useMemo(
-    () => [
-      "name",
-      ...properties.map((property) => property.id),
-      ...(editable ? ["add-property"] : []),
-    ],
-    [editable, properties]
-  )
+  const pendingInsertPropertyKey = pendingInsertProperty
+    ? `insert-property-${pendingInsertProperty.sourceDatabasePropertyId}-${pendingInsertProperty.side}`
+    : null
+  const columnKeys = useMemo(() => {
+    const propertyKeys = properties.flatMap((property) => {
+      if (property.id !== pendingInsertProperty?.sourceDatabasePropertyId) {
+        return [property.id]
+      }
+
+      const insertKey = `insert-property-${property.id}-${pendingInsertProperty.side}`
+
+      return pendingInsertProperty.side === "left"
+        ? [insertKey, property.id]
+        : [property.id, insertKey]
+    })
+
+    return ["name", ...propertyKeys, ...(editable ? ["add-property"] : [])]
+  }, [editable, pendingInsertProperty, properties])
   const getColumnWidth = (key: string) =>
     columnWidths[key] ??
     (key === "name"
       ? databaseNameColumnDefaultWidth
       : key === "add-property"
         ? databaseAddPropertyColumnDefaultWidth
-        : databaseColumnMinWidth)
+        : key.startsWith("insert-property-")
+          ? databaseAddPropertyColumnDefaultWidth
+          : databaseColumnMinWidth)
   const tableMinWidth = columnKeys.reduce(
     (width, key) => width + getColumnWidth(key),
     0
@@ -348,6 +411,17 @@ export function DatabaseTableView({
   useLayoutEffect(() => {
     measureRows()
   }, [activeCellKey, measureRows, properties, rows.length])
+
+  useEffect(() => {
+    if (
+      pendingInsertProperty &&
+      !properties.some(
+        (property) => property.id === pendingInsertProperty.sourceDatabasePropertyId
+      )
+    ) {
+      setPendingInsertProperty(null)
+    }
+  }, [pendingInsertProperty, properties])
 
   useEffect(() => {
     window.addEventListener("resize", measureRows)
@@ -407,7 +481,11 @@ export function DatabaseTableView({
     })
   }
 
-  const addDatabaseProperty = (type = "text", label = "Property") => {
+  const addDatabaseProperty = (
+    type = "text",
+    label = "Property",
+    position?: number
+  ) => {
     if (!editable || !databaseId || addProperty.isPending) {
       return
     }
@@ -422,8 +500,41 @@ export function DatabaseTableView({
           : undefined,
       databaseId,
       name: label,
+      position,
       type,
     })
+  }
+
+  const openInsertPropertyMenu = (
+    sourceDatabasePropertyId: string,
+    sourcePosition: number,
+    side: InsertPropertySide
+  ) => {
+    setPendingInsertProperty({
+      position: sourcePosition + (side === "right" ? 1 : 0),
+      side,
+      sourceDatabasePropertyId,
+    })
+  }
+
+  const clearPendingInsertProperty = (insertKey: string) => {
+    setPendingInsertProperty((current) => {
+      const currentKey = current
+        ? `insert-property-${current.sourceDatabasePropertyId}-${current.side}`
+        : null
+
+      return currentKey === insertKey ? null : current
+    })
+  }
+
+  const addInsertedDatabaseProperty = (
+    type: string,
+    label: string,
+    position: number,
+    insertKey: string
+  ) => {
+    addDatabaseProperty(type, label, position)
+    clearPendingInsertProperty(insertKey)
   }
 
   const saveCell = (
@@ -617,6 +728,43 @@ export function DatabaseTableView({
     : -1
   const activeDragRow =
     activeDragRowIndex === -1 ? null : rows[activeDragRowIndex]
+  const renderInsertPropertyHeader = (
+    insertKey: string,
+    position: number
+  ) => (
+    <th
+      className="database-add-property-cell database-insert-property-cell"
+      key={insertKey}
+    >
+      <AddDatabasePropertyMenu
+        disabled={addProperty.isPending}
+        isPending={addProperty.isPending}
+        onAdd={(type, label) =>
+          addInsertedDatabaseProperty(type, label, position, insertKey)
+        }
+        onOpenChange={(open) => {
+          if (!open) {
+            clearPendingInsertProperty(insertKey)
+          }
+        }}
+        open={pendingInsertPropertyKey === insertKey}
+        triggerLabel="Select type"
+      />
+      <span
+        aria-hidden="true"
+        className="database-column-resize-handle"
+        onPointerDown={(event) => startColumnResize(insertKey, event)}
+      />
+    </th>
+  )
+  const renderInsertPropertyCell = (insertKey: string) => (
+    <td
+      aria-hidden="true"
+      className="database-value-cell database-insert-property-placeholder"
+      key={insertKey}
+    />
+  )
+
   return (
       <div
         className={
@@ -882,37 +1030,68 @@ export function DatabaseTableView({
                       onPointerDown={(event) => startColumnResize("name", event)}
                     />
                   </th>
-                  {properties.map((property) => (
-                    <th key={property.id} className="database-property-header">
-                      {editable ? (
-                        <DatabasePropertyMenu
-                          config={property.property.config}
-                          databaseId={payload.database.id}
-                          databasePropertyId={property.id}
-                          name={property.property.name}
-                          type={property.property.type}
-                          onRename={(name) =>
-                            updateProperty.mutate({
-                              databaseId: payload.database.id,
-                              databasePropertyId: property.id,
-                              name,
-                            })
-                          }
-                        />
-                      ) : (
-                        <span className="database-property-header-label">
-                          {property.property.name}
-                        </span>
-                      )}
-                      <span
-                        aria-hidden="true"
-                        className="database-column-resize-handle"
-                        onPointerDown={(event) =>
-                          startColumnResize(property.id, event)
-                        }
-                      />
-                    </th>
-                  ))}
+                  {properties.map((property) => {
+                    const leftInsertKey = `insert-property-${property.id}-left`
+                    const rightInsertKey = `insert-property-${property.id}-right`
+                    const showLeftInsert =
+                      pendingInsertPropertyKey === leftInsertKey
+                    const showRightInsert =
+                      pendingInsertPropertyKey === rightInsertKey
+
+                    return (
+                      <Fragment key={property.id}>
+                        {showLeftInsert
+                          ? renderInsertPropertyHeader(
+                              leftInsertKey,
+                              pendingInsertProperty?.position ?? property.position
+                            )
+                          : null}
+                        <th className="database-property-header">
+                          {editable ? (
+                            <DatabasePropertyMenu
+                              config={property.property.config}
+                              databaseId={payload.database.id}
+                              databasePropertyId={property.id}
+                              name={property.property.name}
+                              type={property.property.type}
+                              onInsertProperty={(side) =>
+                                openInsertPropertyMenu(
+                                  property.id,
+                                  property.position,
+                                  side
+                                )
+                              }
+                              onRename={(name) =>
+                                updateProperty.mutate({
+                                  databaseId: payload.database.id,
+                                  databasePropertyId: property.id,
+                                  name,
+                                })
+                              }
+                            />
+                          ) : (
+                            <span className="database-property-header-label">
+                              {property.property.name}
+                            </span>
+                          )}
+                          <span
+                            aria-hidden="true"
+                            className="database-column-resize-handle"
+                            onPointerDown={(event) =>
+                              startColumnResize(property.id, event)
+                            }
+                          />
+                        </th>
+                        {showRightInsert
+                          ? renderInsertPropertyHeader(
+                              rightInsertKey,
+                              pendingInsertProperty?.position ??
+                                property.position + 1
+                            )
+                          : null}
+                      </Fragment>
+                    )
+                  })}
                   {editable ? (
                     <th className="database-add-property-cell">
                       <AddDatabasePropertyMenu
@@ -950,6 +1129,12 @@ export function DatabaseTableView({
                       </DatabaseCellContent>
                     </td>
                     {properties.map((property) => {
+                      const leftInsertKey = `insert-property-${property.id}-left`
+                      const rightInsertKey = `insert-property-${property.id}-right`
+                      const showLeftInsert =
+                        pendingInsertPropertyKey === leftInsertKey
+                      const showRightInsert =
+                        pendingInsertPropertyKey === rightInsertKey
                       const workspaceProperty = property.property
                       const key = `${row.pageId}:${workspaceProperty.id}`
                       const value = draftCells[key] ?? cellValues[key] ?? ""
@@ -961,6 +1146,9 @@ export function DatabaseTableView({
                       const isCheckboxProperty =
                         workspaceProperty.type === "checkbox"
                       const isDateProperty = workspaceProperty.type === "date"
+                      const isReadOnlyTimeCell = isReadOnlyTimeProperty(
+                        workspaceProperty.type
+                      )
                       const isPersonProperty = workspaceProperty.type === "person"
                       const isMultiSelectProperty =
                         workspaceProperty.type === "multi_select" ||
@@ -969,128 +1157,150 @@ export function DatabaseTableView({
                             "one_person")
 
                       return (
-                        <td
-                          className="database-value-cell"
-                          data-active={activeCellKey === key ? "true" : undefined}
-                          data-wrap-content={wrapContent ? "true" : undefined}
-                          key={property.id}
-                        >
-                          {isCheckboxProperty ? (
-                            <DatabaseCellContent wrapContent={wrapContent}>
-                              <div className="database-checkbox-cell">
-                                <Checkbox
-                                  aria-label={`${workspaceProperty.name} value`}
-                                  checked={value === "true"}
-                                  disabled={!editable}
-                                  onCheckedChange={(nextChecked) =>
+                        <Fragment key={property.id}>
+                          {showLeftInsert
+                            ? renderInsertPropertyCell(leftInsertKey)
+                            : null}
+                          <td
+                            className="database-value-cell"
+                            data-active={activeCellKey === key ? "true" : undefined}
+                            data-wrap-content={wrapContent ? "true" : undefined}
+                          >
+                            {isReadOnlyTimeCell ? (
+                              <DatabaseCellContent wrapContent={wrapContent}>
+                                <span className="database-input-cell-trigger">
+                                  {getReadOnlyTimePropertyValue(
+                                    row,
+                                    workspaceProperty.type
+                                  ) || (
+                                    <span className="text-muted-foreground">
+                                      Empty
+                                    </span>
+                                  )}
+                                </span>
+                              </DatabaseCellContent>
+                            ) : isCheckboxProperty ? (
+                              <DatabaseCellContent wrapContent={wrapContent}>
+                                <div className="database-checkbox-cell">
+                                  <Checkbox
+                                    aria-label={`${workspaceProperty.name} value`}
+                                    checked={value === "true"}
+                                    disabled={!editable}
+                                    onCheckedChange={(nextChecked) =>
+                                      saveCell(
+                                        row.id,
+                                        workspaceProperty.id,
+                                        workspaceProperty.type,
+                                        nextChecked === true ? "true" : "false"
+                                      )
+                                    }
+                                  />
+                                </div>
+                              </DatabaseCellContent>
+                            ) : isSelectProperty || isPersonProperty ? (
+                              <DatabaseCellContent wrapContent={wrapContent}>
+                                <DatabaseSelectCell
+                                  allowCreate={!isPersonProperty}
+                                  databaseId={payload.database.id}
+                                  editable={editable}
+                                  defaultOptions={
+                                    workspaceProperty.type === "status"
+                                      ? defaultStatusOptions
+                                      : isPersonProperty
+                                        ? personOptions
+                                      : undefined
+                                  }
+                                  multiple={isMultiSelectProperty}
+                                  onSelect={(optionValue) =>
                                     saveCell(
                                       row.id,
                                       workspaceProperty.id,
                                       workspaceProperty.type,
-                                      nextChecked === true ? "true" : "false"
+                                      optionValue
                                     )
                                   }
+                                  propertyConfig={workspaceProperty.config}
+                                  propertyId={property.id}
+                                  propertyName={workspaceProperty.name}
+                                  showStatusDot={
+                                    workspaceProperty.type === "status"
+                                  }
+                                  value={value}
+                                  valueKey={isPersonProperty ? "id" : "name"}
                                 />
-                              </div>
-                            </DatabaseCellContent>
-                          ) : isSelectProperty || isPersonProperty ? (
-                            <DatabaseCellContent wrapContent={wrapContent}>
-                              <DatabaseSelectCell
-                                allowCreate={!isPersonProperty}
-                                databaseId={payload.database.id}
-                                editable={editable}
-                                defaultOptions={
-                                  workspaceProperty.type === "status"
-                                    ? defaultStatusOptions
-                                    : isPersonProperty
-                                      ? personOptions
-                                    : undefined
-                                }
-                                multiple={isMultiSelectProperty}
-                                onSelect={(optionValue) =>
-                                  saveCell(
-                                    row.id,
-                                    workspaceProperty.id,
-                                    workspaceProperty.type,
-                                    optionValue
-                                  )
-                                }
-                                propertyConfig={workspaceProperty.config}
-                                propertyId={property.id}
-                                propertyName={workspaceProperty.name}
-                                showStatusDot={workspaceProperty.type === "status"}
-                                value={value}
-                                valueKey={isPersonProperty ? "id" : "name"}
-                              />
-                            </DatabaseCellContent>
-                          ) : isDateProperty ? (
-                            <DatabaseCellContent wrapContent={wrapContent}>
-                              <DatabaseDateCell
-                                databaseId={payload.database.id}
-                                editable={editable}
-                                label={workspaceProperty.name}
-                                onOpenChange={(open) =>
-                                  setActiveCellKey(open ? key : null)
-                                }
-                                onSelect={(nextValue) =>
-                                  saveCell(
-                                    row.id,
-                                    workspaceProperty.id,
-                                    workspaceProperty.type,
-                                    nextValue
-                                  )
-                                }
-                                propertyConfig={workspaceProperty.config}
-                                propertyId={property.id}
-                                value={value}
-                              />
-                            </DatabaseCellContent>
-                          ) : (
-                            <DatabaseCellContent wrapContent={wrapContent}>
-                              <DatabaseInputCell
-                                label={workspaceProperty.name}
-                                editable={editable}
-                                onActivate={(element) => {
-                                  setActiveCellKey(key)
-                                  resizeCellEditor(element)
-                                }}
-                                onChange={(nextValue) =>
-                                  setDraftCells((drafts) => ({
-                                    ...drafts,
-                                    [key]: nextValue,
-                                  }))
-                                }
-                                onCommit={() => {
-                                  saveCell(
-                                    row.id,
-                                    workspaceProperty.id,
-                                    workspaceProperty.type,
-                                    value
-                                  )
-                                  setDraftCells((drafts) => {
-                                    const nextDrafts = { ...drafts }
+                              </DatabaseCellContent>
+                            ) : isDateProperty ? (
+                              <DatabaseCellContent wrapContent={wrapContent}>
+                                <DatabaseDateCell
+                                  databaseId={payload.database.id}
+                                  editable={editable}
+                                  label={workspaceProperty.name}
+                                  onOpenChange={(open) =>
+                                    setActiveCellKey(open ? key : null)
+                                  }
+                                  onSelect={(nextValue) =>
+                                    saveCell(
+                                      row.id,
+                                      workspaceProperty.id,
+                                      workspaceProperty.type,
+                                      nextValue
+                                    )
+                                  }
+                                  propertyConfig={workspaceProperty.config}
+                                  propertyId={property.id}
+                                  value={value}
+                                />
+                              </DatabaseCellContent>
+                            ) : (
+                              <DatabaseCellContent wrapContent={wrapContent}>
+                                <DatabaseInputCell
+                                  label={workspaceProperty.name}
+                                  editable={editable}
+                                  onActivate={(element) => {
+                                    setActiveCellKey(key)
+                                    resizeCellEditor(element)
+                                  }}
+                                  onChange={(nextValue) =>
+                                    setDraftCells((drafts) => ({
+                                      ...drafts,
+                                      [key]: nextValue,
+                                    }))
+                                  }
+                                  onCommit={() => {
+                                    saveCell(
+                                      row.id,
+                                      workspaceProperty.id,
+                                      workspaceProperty.type,
+                                      value
+                                    )
+                                    setDraftCells((drafts) => {
+                                      const nextDrafts = { ...drafts }
 
-                                    delete nextDrafts[key]
+                                      delete nextDrafts[key]
 
-                                    return nextDrafts
-                                  })
-                                }}
-                                onDeactivate={() =>
-                                  setActiveCellKey((currentKey) =>
-                                    currentKey === key ? null : currentKey
-                                  )
-                                }
-                                onInput={handleCellInput}
-                                propertyConfig={workspaceProperty.config}
-                                type={workspaceProperty.type}
-                                value={
-                                  Array.isArray(value) ? value.join(", ") : value
-                                }
-                                wrapContent={wrapContent}
-                              />
-                            </DatabaseCellContent>
-                          )}
-                        </td>
+                                      return nextDrafts
+                                    })
+                                  }}
+                                  onDeactivate={() =>
+                                    setActiveCellKey((currentKey) =>
+                                      currentKey === key ? null : currentKey
+                                    )
+                                  }
+                                  onInput={handleCellInput}
+                                  propertyConfig={workspaceProperty.config}
+                                  type={workspaceProperty.type}
+                                  value={
+                                    Array.isArray(value) ? value.join(", ") : value
+                                  }
+                                  wrapContent={wrapContent}
+                                />
+                              </DatabaseCellContent>
+                            )}
+                          </td>
+                          {showRightInsert
+                            ? renderInsertPropertyCell(rightInsertKey)
+                            : null}
+                        </Fragment>
                       )
                     })}
                     {editable ? <td /> : null}

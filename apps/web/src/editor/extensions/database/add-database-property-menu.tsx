@@ -15,10 +15,16 @@ export function AddDatabasePropertyMenu({
   disabled,
   isPending,
   onAdd,
+  onOpenChange,
+  open,
+  triggerLabel = "Add property",
 }: {
   disabled: boolean
   isPending: boolean
   onAdd: (type: string, label: string) => void
+  onOpenChange?: (open: boolean) => void
+  open?: boolean
+  triggerLabel?: string
 }) {
   const [query, setQuery] = useState("")
   const normalizedQuery = query.trim().toLowerCase()
@@ -29,7 +35,7 @@ export function AddDatabasePropertyMenu({
   )
 
   return (
-    <DropDrawer>
+    <DropDrawer open={open} onOpenChange={onOpenChange}>
       <DropDrawerTrigger asChild>
         <button
           className="database-add-property"
@@ -37,7 +43,7 @@ export function AddDatabasePropertyMenu({
           type="button"
         >
           {isPending ? <Loader2 className="animate-spin" /> : <Plus />}
-          <span>Add property</span>
+          <span>{triggerLabel}</span>
         </button>
       </DropDrawerTrigger>
       <DropDrawerContent className="w-100">

@@ -289,9 +289,12 @@ export function useUpdateWorkspace() {
     },
     onSuccess: async (workspace) => {
       queryClient.setQueryData(workspaceQueryKey(workspace.id), workspace)
-      await queryClient.invalidateQueries({
-        queryKey: workspacesQueryKey(workspace.organizationId),
-      })
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: workspacesQueryKey(workspace.organizationId),
+        }),
+        queryClient.invalidateQueries({ queryKey: ["database"] }),
+      ])
     },
   })
 }
