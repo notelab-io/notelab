@@ -760,7 +760,7 @@
   }
 
   .database-page-link {
-    @apply text-foreground;
+    @apply relative text-foreground;
   }
 
   .database-page-create {
@@ -835,7 +835,7 @@
   }
 
   .database-page-main {
-    @apply flex min-w-0 flex-1 items-center gap-2;
+    @apply flex min-w-0 flex-1 items-center gap-2 pr-12;
   }
 
   .database-page-icon {
@@ -847,7 +847,7 @@
   }
 
   .database-page-open {
-    @apply ml-auto hidden h-6 shrink-0 items-center gap-1.5 rounded-md border bg-background/80 px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none;
+    @apply absolute right-2 top-1/2 z-20 hidden h-6 -translate-y-1/2 items-center gap-1.5 rounded-md border bg-background/90 px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none;
   }
 
   .database-page-cell:hover .database-page-open,
