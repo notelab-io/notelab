@@ -63,6 +63,7 @@ export function DragBlockMenu({
   onMenuStateChange?: (open: boolean) => void
   onCreateDatabase?: () => Promise<string | null>
 }) {
+  const menuRootRef = useRef<HTMLDivElement | null>(null)
   const [actionsOpen, setActionsOpen] = useState(false)
   const [activeSubmenu, setActiveSubmenu] = useState<"turnInto" | "color" | null>(
     null
@@ -91,6 +92,30 @@ export function DragBlockMenu({
       onMenuStateChange?.(false)
     }
   }, [onMenuStateChange])
+
+  useEffect(() => {
+    if (!isOpen) {
+      return
+    }
+
+    const close = (event: MouseEvent) => {
+      if (
+        event.target instanceof Node &&
+        menuRootRef.current?.contains(event.target)
+      ) {
+        return
+      }
+
+      setActiveSubmenu(null)
+      onOpenChange(false)
+    }
+
+    document.addEventListener("mousedown", close)
+
+    return () => {
+      document.removeEventListener("mousedown", close)
+    }
+  }, [isOpen, onOpenChange])
 
   useEffect(() => {
     if (!actionsOpen) {
@@ -279,7 +304,7 @@ export function DragBlockMenu({
   }
 
   return (
-    <>
+    <div className="contents" ref={menuRootRef}>
       <button
         aria-label="Add block below"
         className="drag-handle-plus"
@@ -553,6 +578,6 @@ export function DragBlockMenu({
           />
         </div>
       ) : null}
-    </>
+    </div>
   )
 }
