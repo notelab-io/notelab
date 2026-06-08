@@ -31,6 +31,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { cn } from "@/lib/utils"
+import { isEmbeddedMobileViewer } from "@/lib/embedded-view"
 import {
   getWorkspaceEmoji,
   type Workspace,
@@ -106,6 +107,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
 
 function AppLayoutContent({ children }: { children?: ReactNode }) {
   const location = useLocation()
+  const embeddedMobileViewer = isEmbeddedMobileViewer()
   const { open: appSidebarOpen } = useSidebar()
   const isSettingsPage = location.pathname.startsWith("/settings")
   const workspaceId = getWorkspaceId(location.pathname)
@@ -153,12 +155,15 @@ function AppLayoutContent({ children }: { children?: ReactNode }) {
     <>
       {isSettingsPage ? <SettingsSidebar /> : <AppSidebar />}
       <SidebarInset className="h-svh overflow-hidden md:peer-data-[variant=floating]:ml-0! md:peer-data-[variant=floating]:h-[calc(100svh-1rem)] md:peer-data-[variant=floating]:rounded-l-none md:peer-data-[variant=floating]:rounded-r-xl md:peer-data-[variant=floating]:border-l-0">
-        <AppHeader
-          isSettingsPage={isSettingsPage}
-          pathname={location.pathname}
-          sidePaneWorkspaceId={sidePaneWorkspaceId}
-          onCloseSidePane={closeSidePane}
-        />
+        {embeddedMobileViewer ? 
+       null : (
+          <AppHeader
+            isSettingsPage={isSettingsPage}
+            pathname={location.pathname}
+            sidePaneWorkspaceId={sidePaneWorkspaceId}
+            onCloseSidePane={closeSidePane}
+          />
+        )}
         <div className="min-h-0 flex-1 overflow-y-auto">
           <WorkspaceSidePaneContext.Provider value={sidePaneContext}>
             {children ?? <Outlet />}

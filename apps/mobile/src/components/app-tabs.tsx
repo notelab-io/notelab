@@ -11,22 +11,25 @@ export default function AppTabs() {
     <NativeTabs
       backgroundColor={colors.background}
       indicatorColor={colors.backgroundElement}
-      disableTransparentOnScrollEdge
-      labelStyle={{ selected: { color: colors.text } }}>
+      disableTransparentOnScrollEdge>
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Icon sf="house.fill" md="home" />
+        <NativeTabs.Trigger.Label hidden>Home</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="ai">
         <NativeTabs.Trigger.Icon sf="sparkles" md="auto_awesome" />
+        <NativeTabs.Trigger.Label hidden>AI</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="inbox">
         <NativeTabs.Trigger.Icon sf="tray.fill" md="inbox" />
+        <NativeTabs.Trigger.Label hidden>Inbox</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="create" role="search">
         <NativeTabs.Trigger.Icon sf="plus.circle.fill" md="add_circle" />
+        <NativeTabs.Trigger.Label hidden>Create</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );

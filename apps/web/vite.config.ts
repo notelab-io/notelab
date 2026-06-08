@@ -12,6 +12,7 @@ const connectorsDir = fileURLToPath(
 const featuresDir = fileURLToPath(
   new URL("../../packages/features/src", import.meta.url),
 );
+const backendTarget = process.env.VITE_API_URL?.replace(/\/$/, "") ?? "http://127.0.0.1:3000";
 
 // https://vite.dev/config/
 export default defineConfig(async () => ({
@@ -60,7 +61,49 @@ export default defineConfig(async () => ({
   server: {
     port: 1420,
     strictPort: true,
-    host: host || false,
+    host: host || process.env.VITE_DEV_HOST || "0.0.0.0",
+    proxy: {
+      "/api": {
+        target: backendTarget,
+        changeOrigin: true,
+      },
+      "/session": {
+        target: backendTarget,
+        changeOrigin: true,
+      },
+      "/sign-in": {
+        target: backendTarget,
+        changeOrigin: true,
+      },
+      "/sign-up": {
+        target: backendTarget,
+        changeOrigin: true,
+      },
+      "/sign-out": {
+        target: backendTarget,
+        changeOrigin: true,
+      },
+      "/email-otp": {
+        target: backendTarget,
+        changeOrigin: true,
+      },
+      "/organization": {
+        target: backendTarget,
+        changeOrigin: true,
+      },
+      "/workspaces": {
+        target: backendTarget,
+        changeOrigin: true,
+      },
+      "/databases": {
+        target: backendTarget,
+        changeOrigin: true,
+      },
+      "/user-settings": {
+        target: backendTarget,
+        changeOrigin: true,
+      },
+    },
     hmr: host
       ? {
           protocol: "ws",

@@ -3,6 +3,7 @@ import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 
 export const API_BASE_URL = resolveApiBaseUrl();
+export const WEB_APP_BASE_URL = resolveWebAppBaseUrl();
 
 function resolveApiBaseUrl() {
   const configuredBaseUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
@@ -11,25 +12,41 @@ function resolveApiBaseUrl() {
     return configuredBaseUrl.replace(/\/$/, '');
   }
 
+  return resolveBaseUrl(3000);
+}
+
+function resolveWebAppBaseUrl() {
+  const configuredBaseUrl = process.env.EXPO_PUBLIC_WEB_URL?.trim();
+
+  if (configuredBaseUrl) {
+    return configuredBaseUrl.replace(/\/$/, '');
+  }
+
+  return resolveBaseUrl(1420);
+}
+
+function resolveBaseUrl(port: number) {
+  const loopbackHost = port === 3000 ? '127.0.0.1' : 'localhost';
+
   if (Platform.OS === 'ios' && !Device.isDevice) {
-    return 'http://127.0.0.1:3000';
+    return `http://${loopbackHost}:${port}`;
   }
 
   if (Platform.OS === 'android' && !Device.isDevice) {
-    return 'http://10.0.2.2:3000';
+    return `http://10.0.2.2:${port}`;
   }
 
   const hostname = readExpoHostname();
 
   if (hostname) {
-    return `http://${hostname}:3000`;
+    return `http://${hostname}:${port}`;
   }
 
   if (Platform.OS === 'android') {
-    return 'http://10.0.2.2:3000';
+    return `http://10.0.2.2:${port}`;
   }
 
-  return 'http://localhost:3000';
+  return `http://localhost:${port}`;
 }
 
 function readExpoHostname() {

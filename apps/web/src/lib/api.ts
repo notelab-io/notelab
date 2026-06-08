@@ -1,5 +1,10 @@
-export const API_BASE_URL =
-  import.meta.env.VITE_API_URL?.replace(/\/$/, "") ?? "http://localhost:3000"
+export const API_BASE_URL = resolveApiBaseUrl()
+
+declare global {
+  interface Window {
+    __NOTELAB_MOBILE_AUTH_COOKIE__?: string
+  }
+}
 
 type ApiFetchOptions = RequestInit & {
   auth?: boolean
@@ -36,9 +41,14 @@ export async function apiFetch<T>(
   { auth = true, headers, body, ...init }: ApiFetchOptions = {},
 ) {
   const requestHeaders = new Headers(headers)
+  const mobileViewerCookie = readEmbeddedMobileAuthCookie()
 
   if (body && !requestHeaders.has("content-type")) {
     requestHeaders.set("content-type", "application/json")
+  }
+
+  if (mobileViewerCookie && !requestHeaders.has("x-mobile-auth-cookie")) {
+    requestHeaders.set("x-mobile-auth-cookie", mobileViewerCookie)
   }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -71,7 +81,31 @@ export function toApiUrl(path: string) {
     return path
   }
 
-  return `${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`
+  return API_BASE_URL
+    ? `${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`
+    : path.startsWith("/")
+      ? path
+      : `/${path}`
+}
+
+function resolveApiBaseUrl() {
+  const configuredBaseUrl = import.meta.env.VITE_API_URL?.replace(/\/$/, "")
+
+  if (configuredBaseUrl) {
+    return configuredBaseUrl
+  }
+
+  return ""
+}
+
+function readEmbeddedMobileAuthCookie() {
+  if (typeof window === "undefined") {
+    return null
+  }
+
+  const cookie = window.__NOTELAB_MOBILE_AUTH_COOKIE__
+
+  return typeof cookie === "string" && cookie.trim() ? cookie : null
 }
 
 function parseJson(value: string) {

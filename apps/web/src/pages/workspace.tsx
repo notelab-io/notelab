@@ -10,6 +10,7 @@ import {
 } from "@/components/app-layout"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
+import { isEmbeddedMobileViewer } from "@/lib/embedded-view"
 import { cn } from "@/lib/utils"
 import {
   getWorkspaceEmoji,
@@ -176,6 +177,10 @@ export function PublicPaneTopbar({
 }: {
   workspaceId: string | null
 }) {
+  if (isEmbeddedMobileViewer()) {
+    return null
+  }
+
   return (
     <header className="flex h-12 shrink-0 items-center gap-3 border-b px-3">
       <PublicWorkspaceBreadcrumb workspaceId={workspaceId} />

@@ -11,10 +11,12 @@ import { AuthScreen } from '@/components/auth-screen';
 import AppTabs from '@/components/app-tabs';
 import { LoadingScreen } from '@/components/loading-screen';
 import { TopBar } from '@/components/top-bar';
+import { WorkspaceItemViewer } from '@/components/workspace-item-viewer';
 import { WorkspaceAuthScreen } from '@/components/workspace-auth-screen';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { NAV_THEME } from '@/lib/theme';
 import { MobileFeaturesProvider } from '@/providers/mobile-features-provider';
+import { MobileViewerProvider, useMobileViewer } from '@/providers/mobile-viewer-provider';
 import { useSession } from '@notelab/features/auth';
 import * as React from 'react';
 
@@ -27,7 +29,9 @@ export default function TabLayout() {
         <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
         <AnimatedSplashOverlay />
         <MobileFeaturesProvider>
-          <AuthenticatedApp />
+          <MobileViewerProvider>
+            <AuthenticatedApp />
+          </MobileViewerProvider>
         </MobileFeaturesProvider>
         <PortalHost />
       </ThemeProvider>
@@ -53,6 +57,7 @@ function AuthenticatedApp() {
 
 function WorkspaceResolvedApp() {
   const session = useSession();
+  const { closeItem, selectedItem } = useMobileViewer();
   const [isWorkspaceReady, setIsWorkspaceReady] = React.useState(false);
   const user = session.data?.user;
 
@@ -62,6 +67,15 @@ function WorkspaceResolvedApp() {
 
   if (!isWorkspaceReady) {
     return <WorkspaceAuthScreen onComplete={() => setIsWorkspaceReady(true)} />;
+  }
+
+  if (selectedItem) {
+    return (
+      <View style={{ flex: 1 }}>
+        <WorkspaceItemViewer item={selectedItem} />
+        <TopBar authBack={{ visible: true, onPress: closeItem }} />
+      </View>
+    );
   }
 
   return (

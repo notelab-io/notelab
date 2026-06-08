@@ -1,6 +1,9 @@
 {
   "name": "notelab",
   "private": true,
+  "dependencies": {
+    "expo-router": "~56.2.8"
+  },
   "workspaces": [
     "apps/*",
     "packages/*"

@@ -32,6 +32,12 @@ const HORIZONTAL_INSET = 12;
 
 export const TopBarInset = 84;
 
+const TOP_BAR_SYMBOLS = {
+  back: { ios: 'chevron.left', android: 'chevron_left', web: 'chevron_left' },
+  close: { ios: 'xmark', android: 'close', web: 'close' },
+  search: { ios: 'magnifyingglass', android: 'search', web: 'search' },
+} satisfies Record<string, React.ComponentProps<typeof SymbolView>['name']>;
+
 type User = NonNullable<SessionResponse['user']>;
 type AuthBackConfig = {
   visible: boolean;
@@ -77,7 +83,7 @@ function AuthTopBar({ authBack }: { authBack: AuthBackConfig }) {
   return (
     <View style={styles.authRow}>
       <IconCircleButton
-        icon="chevron.left"
+        icon={TOP_BAR_SYMBOLS.back}
         onPress={authBack.onPress}
         tintColor={palette.foreground}
       />
@@ -111,6 +117,12 @@ function HomeTopBarControl({ user }: { user: User }) {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const palette = THEME[colorScheme === 'dark' ? 'dark' : 'light'];
+  const searchIconColor =
+    colorScheme === 'dark' ? 'rgba(255,255,255,0.72)' : palette.mutedForeground;
+  const searchPlaceholderColor =
+    colorScheme === 'dark' ? 'rgba(255,255,255,0.56)' : palette.mutedForeground;
+  const searchSelectionColor =
+    colorScheme === 'dark' ? '#FFFFFF' : palette.foreground;
   const styles = React.useMemo(
     () => createStyles(palette, colorScheme === 'dark'),
     [colorScheme, palette]
@@ -171,13 +183,13 @@ function HomeTopBarControl({ user }: { user: User }) {
           {isExpanded ? (
             <View style={styles.searchExpandedRow}>
               <View style={styles.searchIconWrap}>
-                <SymbolView name="magnifyingglass" size={20} tintColor="rgba(255,255,255,0.72)" />
+                <SymbolView name={TOP_BAR_SYMBOLS.search} size={20} tintColor={searchIconColor} />
               </View>
               <TextInput
                 ref={inputRef}
                 placeholder="Search"
-                placeholderTextColor="rgba(255,255,255,0.56)"
-                selectionColor="#FFFFFF"
+                placeholderTextColor={searchPlaceholderColor}
+                selectionColor={searchSelectionColor}
                 style={styles.searchInput}
                 value={query}
                 onChangeText={setQuery}
@@ -194,7 +206,11 @@ function HomeTopBarControl({ user }: { user: User }) {
                 }}
                 style={({ pressed }) => [styles.searchTapArea, pressed && styles.pressed]}>
                 <View style={styles.iconCenter}>
-                  <SymbolView name="magnifyingglass" size={20} tintColor="#FFFFFF" />
+                  <SymbolView
+                    name={TOP_BAR_SYMBOLS.search}
+                    size={20}
+                    tintColor={searchIconColor}
+                  />
                 </View>
               </Pressable>
 
@@ -216,7 +232,7 @@ function HomeTopBarControl({ user }: { user: User }) {
       {isCloseVisible && (
         <View style={styles.closeWrapper}>
           <IconCircleButton
-            icon="xmark"
+            icon={TOP_BAR_SYMBOLS.close}
             onPress={() => {
               setIsCloseVisible(false);
               setIsExpanded(false);
@@ -430,7 +446,7 @@ function createStyles(palette: (typeof THEME)['light'] | (typeof THEME)['dark'],
     searchInput: {
       flex: 1,
       height: '100%',
-      color: '#FFFFFF',
+      color: palette.foreground,
       fontSize: 18,
       lineHeight: 22,
       paddingVertical: 0,

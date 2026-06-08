@@ -10,6 +10,7 @@ import {
 } from "@/components/app-layout"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
+import { isEmbeddedMobileViewer } from "@/lib/embedded-view"
 import { cn } from "@/lib/utils"
 import { getDatabaseEmoji } from "@notelab/features/databases"
 import {
