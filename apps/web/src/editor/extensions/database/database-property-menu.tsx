@@ -11,6 +11,7 @@ import {
   CircleUserRound,
   Copy,
   EyeOff,
+  FileText,
   Flag,
   Filter,
   GripVertical,
@@ -52,6 +53,7 @@ import { Switch } from "@/components/ui/switch"
 import {
   useDeleteDatabaseProperty,
   useDuplicateDatabaseProperty,
+  useUpdateDatabase,
   useUpdateDatabaseProperty,
 } from "@notelab/features/databases"
 import {
@@ -99,11 +101,158 @@ type DatabasePropertyConfig = {
   options?: SelectOption[]
 }
 
+type DatabaseConfig = {
+  emoji?: string
+  nameColumn?: DatabaseNameColumnConfig
+}
+
+type DatabaseNameColumnConfig = {
+  label?: string
+  showPageIcon?: boolean
+  wrapContent?: boolean
+}
+
 type FilesLimitValue = "one_file" | "no_limit"
 type PersonLimitValue = "one_person" | "no_limit"
 type PersonDefaultValue = "no_default" | "created_by"
 type PersonNotificationsValue = "users_and_groups" | "users_only" | "none"
 type SelectOptionSortValue = "manual" | "alphabetical" | "reverse_alphabetical"
+
+function NameColumnGlyph() {
+  return (
+    <span className="inline-flex size-4 shrink-0 items-center justify-center text-[11px] font-semibold leading-none">
+      Aa
+    </span>
+  )
+}
+
+export function DatabaseNamePropertyMenu({
+  config,
+  databaseId,
+  onInsertProperty,
+}: {
+  config?: unknown
+  databaseId: string
+  onInsertProperty: (side: "left" | "right") => void
+}) {
+  const updateDatabase = useUpdateDatabase()
+  const label = getNameColumnLabel(config)
+  const showPageIcon = getNameColumnShowPageIcon(config)
+  const wrapContent = getNameColumnWrapContent(config)
+  const updateNameColumnConfig = (nextConfig: DatabaseNameColumnConfig) => {
+    updateDatabase.mutate({
+      config: getMergedNameColumnConfig(config, nextConfig),
+      databaseId,
+    })
+  }
+
+  return (
+    <DropDrawer>
+      <DropDrawerTrigger asChild>
+        <button
+          aria-label="Name column options"
+          className="group flex h-8 w-full min-w-0 items-stretch gap-2 px-3 py-1 text-left text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none data-[state=open]:text-foreground [&_svg]:size-4 [&_svg]:shrink-0"
+          type="button"
+        >
+          <span className="self-center text-muted-foreground">
+            <NameColumnGlyph />
+          </span>
+          <span className="flex min-w-0 items-center truncate">{label}</span>
+          <ChevronDown className="ml-auto self-center opacity-0 transition-opacity group-hover:opacity-100" />
+        </button>
+      </DropDrawerTrigger>
+      <DropDrawerContent
+        className="w-72"
+        onCloseAutoFocus={(event) => event.preventDefault()}
+      >
+        <div className="flex items-center gap-1.5 px-1.5 py-1">
+          <span className="shrink-0 text-muted-foreground">
+            <NameColumnGlyph />
+          </span>
+          <Input
+            aria-label="Name column label"
+            className="h-auto rounded-none border-0 bg-transparent px-0 py-0 text-sm font-medium shadow-none focus-visible:border-transparent focus-visible:ring-0 dark:bg-transparent"
+            defaultValue={label}
+            onBlur={(event) => {
+              const nextLabel = event.target.value.trim() || "Name"
+
+              if (nextLabel !== label) {
+                updateNameColumnConfig({
+                  label: nextLabel === "Name" ? undefined : nextLabel,
+                })
+              }
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.currentTarget.blur()
+              }
+            }}
+          />
+        </div>
+        <DropDrawerSeparator />
+        <DropDrawerItem
+          aria-pressed={showPageIcon}
+          onSelect={(event) => {
+            event.preventDefault()
+            updateNameColumnConfig({ showPageIcon: !showPageIcon })
+          }}
+        >
+          <FileText />
+          <span>Show page icon</span>
+          <Switch
+            checked={showPageIcon}
+            className="ml-auto pointer-events-none"
+            size="sm"
+            tabIndex={-1}
+          />
+        </DropDrawerItem>
+        <DropDrawerItem disabled>
+          <Sparkles />
+          <span>AI Autofill</span>
+          <DropDrawerShortcut>Soon</DropDrawerShortcut>
+        </DropDrawerItem>
+        <DropDrawerSeparator />
+        <DropDrawerItem disabled>
+          <Filter />
+          <span>Filter</span>
+        </DropDrawerItem>
+        <DropDrawerSub>
+          <DropDrawerSubTrigger>
+            <ArrowDownUp />
+            <span>Sort</span>
+          </DropDrawerSubTrigger>
+          <DropDrawerSubContent>
+            <DropDrawerItem disabled>Ascending</DropDrawerItem>
+            <DropDrawerItem disabled>Descending</DropDrawerItem>
+          </DropDrawerSubContent>
+        </DropDrawerSub>
+        <DropDrawerItem disabled>
+          <Pin />
+          <span>Freeze</span>
+        </DropDrawerItem>
+        <DropDrawerItem
+          aria-pressed={wrapContent}
+          onSelect={(event) => {
+            event.preventDefault()
+            updateNameColumnConfig({ wrapContent: !wrapContent })
+          }}
+        >
+          <TextWrap />
+          <span>{wrapContent ? "Unwrap content" : "Wrap content"}</span>
+        </DropDrawerItem>
+        <DropDrawerSeparator />
+        <DropDrawerItem onSelect={() => onInsertProperty("left")}>
+          <ArrowLeftToLine />
+          <span>Insert left</span>
+        </DropDrawerItem>
+        <DropDrawerItem onSelect={() => onInsertProperty("right")}>
+          <ArrowRightToLine />
+          <span>Insert right</span>
+        </DropDrawerItem>
+      </DropDrawerContent>
+    </DropDrawer>
+  )
+}
 
 export function DatabasePropertyMenu({
   config,
@@ -1029,6 +1178,59 @@ function getWrapContent(config: unknown) {
   }
 
   return (config as DatabasePropertyConfig).wrapContent === true
+}
+
+function getNameColumnConfig(config: unknown) {
+  if (
+    !config ||
+    typeof config !== "object" ||
+    Array.isArray(config) ||
+    !("nameColumn" in config)
+  ) {
+    return {}
+  }
+
+  const nameColumn = (config as DatabaseConfig).nameColumn
+
+  return nameColumn && typeof nameColumn === "object" && !Array.isArray(nameColumn)
+    ? nameColumn
+    : {}
+}
+
+export function getNameColumnLabel(config: unknown) {
+  const label = getNameColumnConfig(config).label
+
+  return typeof label === "string" && label.trim().length > 0
+    ? label.trim()
+    : "Name"
+}
+
+export function getNameColumnShowPageIcon(config: unknown) {
+  const showPageIcon = getNameColumnConfig(config).showPageIcon
+
+  return showPageIcon !== false
+}
+
+export function getNameColumnWrapContent(config: unknown) {
+  const wrapContent = getNameColumnConfig(config).wrapContent
+
+  return wrapContent !== false
+}
+
+function getMergedNameColumnConfig(
+  config: unknown,
+  nextConfig: DatabaseNameColumnConfig
+) {
+  const currentConfig =
+    config && typeof config === "object" && !Array.isArray(config) ? config : {}
+
+  return {
+    ...currentConfig,
+    nameColumn: {
+      ...getNameColumnConfig(config),
+      ...nextConfig,
+    },
+  }
 }
 
 function getMergedPropertyConfig(

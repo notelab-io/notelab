@@ -7,9 +7,11 @@ import { getWorkspaceEmoji } from "@notelab/features/workspaces"
 export function DatabasePageCell({
   onOpen,
   pageId,
+  showPageIcon = true,
 }: {
   onOpen?: (pageId: string) => void
   pageId: string
+  showPageIcon?: boolean
 }) {
   const sidePane = useOptionalWorkspaceSidePane()
   const { data: page, isLoading } = useWorkspace(pageId)
@@ -29,7 +31,9 @@ export function DatabasePageCell({
   return (
     <div className="database-page-link">
       <span className="database-page-main">
-        <span className="database-page-icon">{emoji || <FileText />}</span>
+        {showPageIcon ? (
+          <span className="database-page-icon">{emoji || <FileText />}</span>
+        ) : null}
         <span className="database-page-title">
           {!isLoading && !page
             ? "You don't have access to this block"

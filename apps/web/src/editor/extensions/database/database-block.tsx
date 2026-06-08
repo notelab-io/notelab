@@ -43,7 +43,13 @@ import {
 import { DatabaseInputCell } from "./database-input-cell"
 import { DatabaseDateCell } from "./database-date-cell"
 import { DatabasePageCell } from "./database-page-cell"
-import { DatabasePropertyMenu } from "./database-property-menu"
+import {
+  DatabaseNamePropertyMenu,
+  DatabasePropertyMenu,
+  getNameColumnLabel,
+  getNameColumnShowPageIcon,
+  getNameColumnWrapContent,
+} from "./database-property-menu"
 import { DatabaseSelectCell } from "./database-select-cell"
 import {
   getPropertyValue,
@@ -66,7 +72,7 @@ type InsertPropertySide = "left" | "right"
 type PendingInsertProperty = {
   position: number
   side: InsertPropertySide
-  sourceDatabasePropertyId: string
+  sourceColumnKey: string
 }
 
 type DatabasePageDragPayload = {
@@ -329,11 +335,22 @@ export function DatabaseTableView({
     [accessTargets?.members, session?.user?.id]
   )
   const pendingInsertPropertyKey = pendingInsertProperty
-    ? `insert-property-${pendingInsertProperty.sourceDatabasePropertyId}-${pendingInsertProperty.side}`
+    ? `insert-property-${pendingInsertProperty.sourceColumnKey}-${pendingInsertProperty.side}`
     : null
+  const nameColumnLabel = getNameColumnLabel(payload?.database.config)
+  const nameColumnWrapContent = getNameColumnWrapContent(payload?.database.config)
+  const nameColumnShowPageIcon = getNameColumnShowPageIcon(
+    payload?.database.config
+  )
   const columnKeys = useMemo(() => {
+    const nameKeys =
+      pendingInsertProperty?.sourceColumnKey === "name"
+        ? pendingInsertProperty.side === "left"
+          ? ["insert-property-name-left", "name"]
+          : ["name", "insert-property-name-right"]
+        : ["name"]
     const propertyKeys = properties.flatMap((property) => {
-      if (property.id !== pendingInsertProperty?.sourceDatabasePropertyId) {
+      if (property.id !== pendingInsertProperty?.sourceColumnKey) {
         return [property.id]
       }
 
@@ -344,7 +361,7 @@ export function DatabaseTableView({
         : [property.id, insertKey]
     })
 
-    return ["name", ...propertyKeys, ...(editable ? ["add-property"] : [])]
+    return [...nameKeys, ...propertyKeys, ...(editable ? ["add-property"] : [])]
   }, [editable, pendingInsertProperty, properties])
   const getColumnWidth = (key: string) =>
     columnWidths[key] ??
@@ -415,8 +432,9 @@ export function DatabaseTableView({
   useEffect(() => {
     if (
       pendingInsertProperty &&
+      pendingInsertProperty.sourceColumnKey !== "name" &&
       !properties.some(
-        (property) => property.id === pendingInsertProperty.sourceDatabasePropertyId
+        (property) => property.id === pendingInsertProperty.sourceColumnKey
       )
     ) {
       setPendingInsertProperty(null)
@@ -506,21 +524,21 @@ export function DatabaseTableView({
   }
 
   const openInsertPropertyMenu = (
-    sourceDatabasePropertyId: string,
+    sourceColumnKey: string,
     sourcePosition: number,
     side: InsertPropertySide
   ) => {
     setPendingInsertProperty({
       position: sourcePosition + (side === "right" ? 1 : 0),
       side,
-      sourceDatabasePropertyId,
+      sourceColumnKey,
     })
   }
 
   const clearPendingInsertProperty = (insertKey: string) => {
     setPendingInsertProperty((current) => {
       const currentKey = current
-        ? `insert-property-${current.sourceDatabasePropertyId}-${current.side}`
+        ? `insert-property-${current.sourceColumnKey}-${current.side}`
         : null
 
       return currentKey === insertKey ? null : current
@@ -1019,17 +1037,33 @@ export function DatabaseTableView({
               </colgroup>
               <thead>
                 <tr>
+                  {pendingInsertPropertyKey === "insert-property-name-left"
+                    ? renderInsertPropertyHeader("insert-property-name-left", 0)
+                    : null}
                   <th className="database-name-header">
-                    <span className="database-name-header-content">
-                      <span>Aa</span>
-                      <span>Name</span>
-                    </span>
+                    {editable ? (
+                      <DatabaseNamePropertyMenu
+                        config={payload.database.config}
+                        databaseId={payload.database.id}
+                        onInsertProperty={(side) =>
+                          openInsertPropertyMenu("name", 0, side)
+                        }
+                      />
+                    ) : (
+                      <span className="database-name-header-content">
+                        <span>Aa</span>
+                        <span>{nameColumnLabel}</span>
+                      </span>
+                    )}
                     <span
                       aria-hidden="true"
                       className="database-column-resize-handle"
                       onPointerDown={(event) => startColumnResize("name", event)}
                     />
                   </th>
+                  {pendingInsertPropertyKey === "insert-property-name-right"
+                    ? renderInsertPropertyHeader("insert-property-name-right", 1)
+                    : null}
                   {properties.map((property) => {
                     const leftInsertKey = `insert-property-${property.id}-left`
                     const rightInsertKey = `insert-property-${property.id}-right`
@@ -1120,14 +1154,21 @@ export function DatabaseTableView({
                       setHoveredRowId(row.id)
                     }}
                   >
+                    {pendingInsertPropertyKey === "insert-property-name-left"
+                      ? renderInsertPropertyCell("insert-property-name-left")
+                      : null}
                     <td className="database-page-cell">
-                      <DatabaseCellContent wrapContent>
+                      <DatabaseCellContent wrapContent={nameColumnWrapContent}>
                         <DatabasePageCell
                           onOpen={onOpenPage}
                           pageId={row.pageId}
+                          showPageIcon={nameColumnShowPageIcon}
                         />
                       </DatabaseCellContent>
                     </td>
+                    {pendingInsertPropertyKey === "insert-property-name-right"
+                      ? renderInsertPropertyCell("insert-property-name-right")
+                      : null}
                     {properties.map((property) => {
                       const leftInsertKey = `insert-property-${property.id}-left`
                       const rightInsertKey = `insert-property-${property.id}-right`
