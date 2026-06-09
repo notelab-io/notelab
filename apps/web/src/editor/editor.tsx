@@ -41,6 +41,7 @@ import {
   deleteDraggedEditorBlockSource,
   dropDraggedEditorBlockAt,
   getColumnBlockDragDropTarget,
+  getPlaneBlockDragDropTarget,
   getPlaneDragHandleRect,
   getDraggedEditorBlockPayload,
   preparePlaneBlockDrop,
@@ -156,6 +157,14 @@ type BlockDropLine = {
   left: number
   right: number
   top: number
+}
+
+type DragHandleState = {
+  position: {
+    left: number
+    top: number
+  }
+  target: DragHandleTarget
 }
 
 function findScrollLockElement(element: HTMLElement | null) {
@@ -351,12 +360,8 @@ export function Editor({
 }: EditorProps = {}) {
   const editorId = useId()
   const editorSurfaceRef = useRef<HTMLElement | null>(null)
-  const dragHandlePosRef = useRef<number | null>(null)
-  const pointerDragTargetRef = useRef<DragHandleTarget | null>(null)
-  const [dragHandleTarget, setDragHandleTarget] =
-    useState<DragHandleTarget | null>(null)
-  const [dragHandlePosition, setDragHandlePosition] =
-    useState<{ left: number; top: number } | null>(null)
+  const dragHandleRef = useRef<DragHandleState | null>(null)
+  const [dragHandle, setDragHandle] = useState<DragHandleState | null>(null)
   const [mobileNodeTarget, setMobileNodeTarget] =
     useState<DragHandleTarget | null>(null)
   const [blockDropLine, setBlockDropLine] = useState<BlockDropLine | null>(null)
@@ -615,8 +620,13 @@ export function Editor({
       handleDrop: (view, event) =>
         dropPageOnDatabase(event) ||
         (() => {
-          const target = hasDraggedEditorBlock(event)
-            ? getColumnBlockDragDropTarget(view, event)
+          const draggedBlock = getDraggedEditorBlockPayload(event.dataTransfer)
+          const isListBlock =
+            draggedBlock?.typeName === "listItem" ||
+            draggedBlock?.typeName === "taskItem"
+          const target = draggedBlock
+            ? getColumnBlockDragDropTarget(view, event) ||
+              (!isListBlock ? getPlaneBlockDragDropTarget(view, event) : null)
             : null
 
           setBlockDropLine(null)
@@ -632,14 +642,22 @@ export function Editor({
       handleDOMEvents: {
         dragover: (_view, event) => {
           const hasDraggedBlock = hasDraggedEditorBlock(event)
+          const draggedBlock = getDraggedEditorBlockPayload(event.dataTransfer)
+          const isListBlock =
+            draggedBlock?.typeName === "listItem" ||
+            draggedBlock?.typeName === "taskItem"
           const isDatabaseDropTarget = Boolean(getDropDatabaseElement(event))
           const hasDraggedPage =
             hasDraggedDatabasePage(event) || hasDraggedPageBlock(event)
           const columnDropTarget = hasDraggedBlock
             ? getColumnBlockDragDropTarget(_view, event)
             : null
+          const planeDropTarget =
+            hasDraggedBlock && !columnDropTarget && !isListBlock
+              ? getPlaneBlockDragDropTarget(_view, event)
+              : null
 
-          setBlockDropLine(columnDropTarget?.line ?? null)
+          setBlockDropLine(columnDropTarget?.line ?? planeDropTarget?.line ?? null)
 
           if (!hasDraggedBlock && !hasDraggedPage) {
             return false
@@ -868,7 +886,7 @@ export function Editor({
       return resolvePlaneDragTargetFromPoint({
         clientX,
         clientY,
-        currentTarget: pointerDragTargetRef.current,
+        currentTarget: dragHandleRef.current?.target ?? null,
         view: editor.view,
       })
     },
@@ -881,6 +899,27 @@ export function Editor({
     [resolveDragTargetFromPoint]
   )
 
+  const clearDesktopDragHandle = useCallback(() => {
+    dragHandleRef.current = null
+    setDragHandle(null)
+  }, [])
+
+  const showDesktopDragHandle = useCallback((nextHandle: DragHandleState) => {
+    const currentHandle = dragHandleRef.current
+
+    if (
+      currentHandle?.target.pos === nextHandle.target.pos &&
+      currentHandle.target.node === nextHandle.target.node &&
+      currentHandle.position.left === nextHandle.position.left &&
+      currentHandle.position.top === nextHandle.position.top
+    ) {
+      return
+    }
+
+    dragHandleRef.current = nextHandle
+    setDragHandle(nextHandle)
+  }, [])
+
   const updateDragTargetFromPointer = useCallback(
     (event: ReactPointerEvent<HTMLElement>) => {
       if (dragHandleMenuOpen) {
@@ -889,25 +928,48 @@ export function Editor({
 
       const nextTarget = resolveDragTargetFromPointer(event)
 
-      pointerDragTargetRef.current = nextTarget
-
-      if (!nextTarget || nextTarget.pos === dragHandlePosRef.current) {
-        if (nextTarget && editor) {
-          setDragHandlePosition(
-            getPlaneDragHandleRect(editor.view, nextTarget)
-          )
-        }
+      if (!nextTarget) {
+        clearDesktopDragHandle()
         return
       }
 
-      dragHandlePosRef.current = nextTarget.pos
-      setDragHandleTarget(nextTarget)
-      if (editor) {
-        setDragHandlePosition(getPlaneDragHandleRect(editor.view, nextTarget))
+      if (!editor) {
+        return
       }
+
+      const position = getPlaneDragHandleRect(editor.view, nextTarget)
+
+      if (!position) {
+        clearDesktopDragHandle()
+        return
+      }
+
+      showDesktopDragHandle({ position, target: nextTarget })
     },
-    [dragHandleMenuOpen, editor, resolveDragTargetFromPointer]
+    [
+      clearDesktopDragHandle,
+      dragHandleMenuOpen,
+      editor,
+      resolveDragTargetFromPointer,
+      showDesktopDragHandle,
+    ]
   )
+
+  useEffect(() => {
+    if (dragHandleMenuOpen) {
+      return
+    }
+
+    const handleScroll = () => {
+      clearDesktopDragHandle()
+    }
+
+    window.addEventListener("scroll", handleScroll, true)
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll, true)
+    }
+  }, [clearDesktopDragHandle, dragHandleMenuOpen])
 
   const getTargetPlacement = useCallback(
     (target: DragHandleTarget | null): NodePlacement | null => {
@@ -992,11 +1054,6 @@ export function Editor({
       editor.view.dispatch(tr.scrollIntoView())
       editor.view.focus()
       setMobileNodeTarget({ node: source, pos: nextPos })
-      dragHandlePosRef.current = nextPos
-      setDragHandleTarget({ node: source, pos: nextPos })
-      setDragHandlePosition(
-        getPlaneDragHandleRect(editor.view, { node: source, pos: nextPos })
-      )
     },
     [editor, getTargetPlacement, mobileNodeTarget]
   )
@@ -1095,20 +1152,17 @@ export function Editor({
             return
           }
 
-          pointerDragTargetRef.current = null
-          dragHandlePosRef.current = null
-          setDragHandleTarget(null)
-          setDragHandlePosition(null)
+          clearDesktopDragHandle()
         }}
         onClickCapture={handleMobileNodeClick}
         onPointerMoveCapture={updateDragTargetFromPointer}
       >
-        {editable && editor && dragHandleTarget && dragHandlePosition ? (
+        {editable && editor && dragHandle ? (
           <div
             className="drag-handle"
             style={{
-              left: dragHandlePosition.left,
-              top: dragHandlePosition.top,
+              left: dragHandle.position.left,
+              top: dragHandle.position.top,
             }}
           >
             <DragBlockMenu
@@ -1118,7 +1172,7 @@ export function Editor({
               onMenuStateChange={setDragHandleMenuOpen}
               onCreateDatabase={createEditorDatabase}
               onOpenChange={setPlusMenuOpen}
-              target={dragHandleTarget}
+              target={dragHandle.target}
             />
           </div>
         ) : null}

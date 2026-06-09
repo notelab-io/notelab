@@ -273,6 +273,17 @@ function formatTimestamp(value: string | null | undefined) {
   }).format(date)
 }
 
+function areSerializedPropertyValuesEqual(
+  propertyType: string,
+  currentValue: DatabasePropertyValue,
+  nextValue: DatabasePropertyValue
+) {
+  return (
+    JSON.stringify(serializePropertyValue(propertyType, currentValue)) ===
+    JSON.stringify(serializePropertyValue(propertyType, nextValue))
+  )
+}
+
 type DatabaseTableViewProps = {
   databaseId: string | null | undefined
   editable?: boolean
@@ -559,9 +570,16 @@ export function DatabaseTableView({
     rowId: string,
     propertyId: string,
     propertyType: string,
-    value: DatabasePropertyValue
+    currentValue: DatabasePropertyValue,
+    nextValue: DatabasePropertyValue
   ) => {
     if (!editable || !databaseId) {
+      return
+    }
+
+    if (
+      areSerializedPropertyValuesEqual(propertyType, currentValue, nextValue)
+    ) {
       return
     }
 
@@ -569,7 +587,7 @@ export function DatabaseTableView({
       databaseId,
       propertyId,
       rowId,
-      value: serializePropertyValue(propertyType, value),
+      value: serializePropertyValue(propertyType, nextValue),
     })
   }
 
@@ -1232,6 +1250,7 @@ export function DatabaseTableView({
                                         row.id,
                                         workspaceProperty.id,
                                         workspaceProperty.type,
+                                        cellValues[key] ?? "",
                                         nextChecked === true ? "true" : "false"
                                       )
                                     }
@@ -1257,6 +1276,7 @@ export function DatabaseTableView({
                                       row.id,
                                       workspaceProperty.id,
                                       workspaceProperty.type,
+                                      cellValues[key] ?? "",
                                       optionValue
                                     )
                                   }
@@ -1284,6 +1304,7 @@ export function DatabaseTableView({
                                       row.id,
                                       workspaceProperty.id,
                                       workspaceProperty.type,
+                                      cellValues[key] ?? "",
                                       nextValue
                                     )
                                   }
@@ -1308,11 +1329,15 @@ export function DatabaseTableView({
                                     }))
                                   }
                                   onCommit={() => {
+                                    const persistedValue = cellValues[key] ?? ""
+                                    const nextValue = draftCells[key] ?? persistedValue
+
                                     saveCell(
                                       row.id,
                                       workspaceProperty.id,
                                       workspaceProperty.type,
-                                      value
+                                      persistedValue,
+                                      nextValue
                                     )
                                     setDraftCells((drafts) => {
                                       const nextDrafts = { ...drafts }

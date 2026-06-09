@@ -241,10 +241,6 @@ export function DatabaseNamePropertyMenu({
           <span>{wrapContent ? "Unwrap content" : "Wrap content"}</span>
         </DropDrawerItem>
         <DropDrawerSeparator />
-        <DropDrawerItem onSelect={() => onInsertProperty("left")}>
-          <ArrowLeftToLine />
-          <span>Insert left</span>
-        </DropDrawerItem>
         <DropDrawerItem onSelect={() => onInsertProperty("right")}>
           <ArrowRightToLine />
           <span>Insert right</span>

@@ -21,7 +21,7 @@ export type BlockDragPayload = {
   typeName: string
 }
 
-export type ColumnBlockDragDropTarget = {
+export type BlockDragDropTarget = {
   line: {
     left: number
     right: number
@@ -64,6 +64,9 @@ const parentContainerTypes = new Set([
   "column",
   "columnBlock",
 ])
+
+const DRAG_HANDLE_WIDTH = 56
+const DRAG_HANDLE_GAP = 8
 
 export function registerBlockDragSource(editorId: string, editor: Editor) {
   dragSourceEditors.set(editorId, editor)
@@ -137,20 +140,6 @@ export function resolvePlaneDragTargetFromPoint({
   )
 
   if (!isInsideEditor) {
-    if (!currentTarget) {
-      return null
-    }
-
-    const currentDom = view.nodeDOM(currentTarget.pos)
-
-    if (currentDom instanceof HTMLElement) {
-      const rect = currentDom.getBoundingClientRect()
-
-      if (clientY >= rect.top && clientY <= rect.bottom) {
-        return currentTarget
-      }
-    }
-
     return null
   }
 
@@ -164,16 +153,7 @@ export function resolvePlaneDragTargetFromPoint({
     }
   }
 
-  const coords = view.posAtCoords({
-    left: clientX,
-    top: clientY,
-  })
-
-  if (!coords) {
-    return null
-  }
-
-  return targetFromResolvedPosition(view, coords.pos)
+  return null
 }
 
 export function getPlaneDragHandleRect(
@@ -188,12 +168,10 @@ export function getPlaneDragHandleRect(
 
   const nodeRect = domNode.getBoundingClientRect()
   const editorRect = view.dom.getBoundingClientRect()
-  const handleWidth = 56
-  const handleGap = 8
   const anchorRect = getDragHandleAnchorRect(domNode) ?? nodeRect
   const railLeft = Math.max(
     editorRect.left + 4,
-    anchorRect.left - handleWidth - handleGap,
+    anchorRect.left - DRAG_HANDLE_WIDTH - DRAG_HANDLE_GAP,
   )
 
   return {
@@ -325,7 +303,7 @@ export function preparePlaneBlockDrop(view: EditorView, event: DragEvent) {
 export function getColumnBlockDragDropTarget(
   view: EditorView,
   event: DragEvent,
-): ColumnBlockDragDropTarget | null {
+): BlockDragDropTarget | null {
   const columnElement = columnElementAtPoint(view, event.clientX, event.clientY)
 
   if (!columnElement) {
@@ -402,6 +380,45 @@ export function getColumnBlockDragDropTarget(
       top,
     },
     pos,
+  }
+}
+
+export function getPlaneBlockDragDropTarget(
+  view: EditorView,
+  event: DragEvent,
+): BlockDragDropTarget | null {
+  const domNode = nodeDOMAtCoords({
+    clientX: event.clientX,
+    clientY: event.clientY,
+  })
+
+  if (!domNode) {
+    return null
+  }
+
+  const target = targetFromDOMNode(view, domNode)
+
+  if (!target) {
+    return null
+  }
+
+  const targetDOM = view.nodeDOM(target.pos)
+
+  if (!(targetDOM instanceof HTMLElement)) {
+    return null
+  }
+
+  const rect = targetDOM.getBoundingClientRect()
+  const anchorRect = getDragHandleAnchorRect(targetDOM) ?? rect
+  const placeBefore = event.clientY < rect.top + rect.height / 2
+
+  return {
+    line: {
+      left: anchorRect.left,
+      right: anchorRect.right,
+      top: placeBefore ? rect.top : rect.bottom,
+    },
+    pos: placeBefore ? target.pos : target.pos + target.node.nodeSize,
   }
 }
 
