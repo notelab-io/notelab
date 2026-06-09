@@ -1,12 +1,303 @@
+import * as React from "react"
+import { toast } from "sonner"
+
 import { SettingsHeader } from "@/components/settings-header"
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
+import { Spinner } from "@/components/ui/spinner"
+import { getApiErrorMessage } from "@/lib/api"
+import {
+  useChangePassword,
+  useSession,
+  useUpdateUserProfile,
+} from "@notelab/features/auth"
 
 export default function ProfileSettingsPage() {
+  const { data: sessionData } = useSession()
+
   return (
     <main className="flex flex-1 flex-col gap-6 px-4 py-8">
       <SettingsHeader
         title="Profile"
         description="Update your personal details and account preferences."
       />
+
+      <div className="mx-auto grid w-full max-w-4xl gap-4">
+        <ProfileDetailsCard
+          initialEmail={sessionData?.user?.email ?? ""}
+          initialName={sessionData?.user?.name ?? ""}
+          isReady={Boolean(sessionData?.user)}
+        />
+        <PasswordCard isReady={Boolean(sessionData?.user)} />
+      </div>
     </main>
   )
+}
+
+function ProfileDetailsCard({
+  initialEmail,
+  initialName,
+  isReady,
+}: {
+  initialEmail: string
+  initialName: string
+  isReady: boolean
+}) {
+  const updateUserProfile = useUpdateUserProfile()
+  const [name, setName] = React.useState(initialName)
+  const [email, setEmail] = React.useState(initialEmail)
+  const [error, setError] = React.useState("")
+
+  React.useEffect(() => {
+    setName(initialName)
+    setEmail(initialEmail)
+  }, [initialEmail, initialName])
+
+  const hasChanges =
+    name.trim() !== initialName.trim() ||
+    email.trim().toLowerCase() !== initialEmail.trim().toLowerCase()
+
+  const saveProfile = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+
+    const trimmedName = name.trim()
+    const trimmedEmail = email.trim().toLowerCase()
+
+    if (!trimmedName) {
+      setError("Name is required.")
+      return
+    }
+
+    if (!isValidEmail(trimmedEmail)) {
+      setError("Enter a valid email address.")
+      return
+    }
+
+    setError("")
+    updateUserProfile.mutate(
+      {
+        email: trimmedEmail,
+        name: trimmedName,
+      },
+      {
+        onSuccess: () => {
+          toast.success("Profile updated.")
+        },
+        onError: (mutationError) => {
+          setError(getApiErrorMessage(mutationError))
+        },
+      },
+    )
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Personal details</CardTitle>
+        <CardDescription>
+          Update the name and email tied to your account.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form className="grid gap-4" onSubmit={saveProfile}>
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="profile-name">Name</FieldLabel>
+              <Input
+                autoComplete="name"
+                disabled={!isReady || updateUserProfile.isPending}
+                id="profile-name"
+                onChange={(event) => {
+                  setName(event.target.value)
+                  if (error) {
+                    setError("")
+                  }
+                }}
+                placeholder="Your name"
+                value={name}
+              />
+            </Field>
+
+            <Field data-invalid={Boolean(error)}>
+              <FieldLabel htmlFor="profile-email">Email</FieldLabel>
+              <Input
+                autoComplete="email"
+                disabled={!isReady || updateUserProfile.isPending}
+                id="profile-email"
+                onChange={(event) => {
+                  setEmail(event.target.value)
+                  if (error) {
+                    setError("")
+                  }
+                }}
+                placeholder="you@example.com"
+                type="email"
+                value={email}
+              />
+              <FieldDescription>
+                This address is used for sign-in and workspace invitations.
+              </FieldDescription>
+              <FieldError>{error}</FieldError>
+            </Field>
+          </FieldGroup>
+
+          <Button
+            className="w-fit"
+            disabled={!isReady || !hasChanges || updateUserProfile.isPending}
+            type="submit"
+          >
+            {updateUserProfile.isPending ? <Spinner /> : null}
+            Save changes
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  )
+}
+
+function PasswordCard({ isReady }: { isReady: boolean }) {
+  const changePassword = useChangePassword()
+  const [currentPassword, setCurrentPassword] = React.useState("")
+  const [newPassword, setNewPassword] = React.useState("")
+  const [confirmPassword, setConfirmPassword] = React.useState("")
+  const [error, setError] = React.useState("")
+
+  const canSubmit =
+    Boolean(currentPassword && newPassword && confirmPassword) &&
+    !changePassword.isPending
+
+  const updatePassword = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+
+    if (newPassword !== confirmPassword) {
+      setError("New passwords do not match.")
+      return
+    }
+
+    if (newPassword === currentPassword) {
+      setError("Choose a new password that is different from the current one.")
+      return
+    }
+
+    setError("")
+    changePassword.mutate(
+      {
+        currentPassword,
+        newPassword,
+      },
+      {
+        onSuccess: () => {
+          setCurrentPassword("")
+          setNewPassword("")
+          setConfirmPassword("")
+          toast.success("Password updated.")
+        },
+        onError: (mutationError) => {
+          setError(getApiErrorMessage(mutationError))
+        },
+      },
+    )
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Password</CardTitle>
+        <CardDescription>
+          Change the password associated with your account.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form className="grid gap-4" onSubmit={updatePassword}>
+          <FieldGroup>
+            <Field data-invalid={Boolean(error)}>
+              <FieldLabel htmlFor="profile-current-password">
+                Current password
+              </FieldLabel>
+              <Input
+                autoComplete="current-password"
+                disabled={!isReady || changePassword.isPending}
+                id="profile-current-password"
+                onChange={(event) => {
+                  setCurrentPassword(event.target.value)
+                  if (error) {
+                    setError("")
+                  }
+                }}
+                type="password"
+                value={currentPassword}
+              />
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor="profile-new-password">New password</FieldLabel>
+              <Input
+                autoComplete="new-password"
+                disabled={!isReady || changePassword.isPending}
+                id="profile-new-password"
+                onChange={(event) => {
+                  setNewPassword(event.target.value)
+                  if (error) {
+                    setError("")
+                  }
+                }}
+                type="password"
+                value={newPassword}
+              />
+            </Field>
+
+            <Field data-invalid={Boolean(error)}>
+              <FieldLabel htmlFor="profile-confirm-password">
+                Confirm new password
+              </FieldLabel>
+              <Input
+                autoComplete="new-password"
+                disabled={!isReady || changePassword.isPending}
+                id="profile-confirm-password"
+                onChange={(event) => {
+                  setConfirmPassword(event.target.value)
+                  if (error) {
+                    setError("")
+                  }
+                }}
+                type="password"
+                value={confirmPassword}
+              />
+              <FieldDescription>
+                Use a password you have not used elsewhere.
+              </FieldDescription>
+              <FieldError>{error}</FieldError>
+            </Field>
+          </FieldGroup>
+
+          <Button
+            className="w-fit"
+            disabled={!isReady || !canSubmit}
+            type="submit"
+          >
+            {changePassword.isPending ? <Spinner /> : null}
+            Update password
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  )
+}
+
+function isValidEmail(value: string) {
+  return /\S+@\S+\.\S+/.test(value)
 }

@@ -4,6 +4,8 @@ import { useNotelabFeatures } from "../context"
 import {
   sessionQueryKey,
   sessionQueryOptions,
+  type SessionResponse,
+  type SessionUser,
   type SignInWithOtpInput,
   type SignUpInput,
   type VerifyEmailOtpInput,
@@ -80,6 +82,50 @@ export function useSignOut() {
     mutationFn: () => auth.signOut(),
     onSuccess: () => {
       queryClient.setQueryData(sessionQueryKey, { user: null, session: null })
+    },
+  })
+}
+
+export function useUpdateUserProfile() {
+  const { apiFetch, queryClient } = useNotelabFeatures()
+
+  return useMutation({
+    mutationFn: (input: { email: string; name: string }) =>
+      apiFetch<{ user: SessionUser }>("/user-settings/profile", {
+        method: "PATCH",
+        body: JSON.stringify(input),
+      }),
+    onSuccess: ({ user }) => {
+      queryClient.setQueryData(
+        sessionQueryKey,
+        (current: SessionResponse | undefined) => ({
+          session: current?.session ?? null,
+          user,
+        }),
+      )
+    },
+  })
+}
+
+export function useChangePassword() {
+  const { apiFetch, auth, queryClient } = useNotelabFeatures()
+
+  return useMutation({
+    mutationFn: (input: {
+      currentPassword: string
+      newPassword: string
+      revokeOtherSessions?: boolean
+    }) =>
+      apiFetch<{
+        token: string | null
+        user: SessionUser
+      }>("/api/auth/change-password", {
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: sessionQueryKey })
+      await refreshSessionQuery(auth, queryClient)
     },
   })
 }

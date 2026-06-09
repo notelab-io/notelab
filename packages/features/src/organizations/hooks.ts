@@ -131,6 +131,47 @@ export function useSetActiveOrganization() {
   })
 }
 
+export function useUpdateOrganization() {
+  const { apiFetch, queryClient } = useNotelabFeatures()
+
+  return useMutation({
+    mutationFn: ({
+      organizationId,
+      ...input
+    }: {
+      organizationId: string
+      logo?: string | null
+      metadata?: string | null
+      name?: string
+      slug?: string
+    }) =>
+      apiFetch<Organization>(`/organizations/${encodeURIComponent(organizationId)}`, {
+        method: "PATCH",
+        body: JSON.stringify(input),
+      }),
+    onSuccess: (updatedOrganization) => {
+      queryClient.setQueryData<Organization[]>(
+        organizationsQueryKey,
+        (current = []) => {
+          const hasMatch = current.some(
+            (organization) => organization.id === updatedOrganization.id,
+          )
+
+          if (!hasMatch) {
+            return [...current, updatedOrganization]
+          }
+
+          return current.map((organization) =>
+            organization.id === updatedOrganization.id
+              ? updatedOrganization
+              : organization,
+          )
+        },
+      )
+    },
+  })
+}
+
 function createSlug(value: string) {
   const slug = value
     .trim()
