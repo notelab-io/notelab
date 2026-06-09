@@ -769,10 +769,6 @@
 
   .database-row-drag-handle {
     @apply pointer-events-auto absolute flex size-7 -translate-y-1/2 cursor-grab items-center justify-center rounded-sm bg-transparent text-muted-foreground opacity-0 outline-none hover:text-foreground active:cursor-grabbing focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring/40;
-    transition-duration: 160ms;
-    transition-property: top, opacity, color;
-    transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
-    will-change: top, opacity;
   }
 
   .database-row-drag-handle::after {
@@ -1053,12 +1049,8 @@
   }
 
   .drag-handle {
-    @apply fixed z-40 hidden h-7 w-14 cursor-grab items-center justify-between bg-transparent text-muted-foreground opacity-100 active:cursor-grabbing md:flex;
+    @apply fixed z-40 hidden h-7 w-16 cursor-grab items-center justify-between bg-transparent pr-2 text-muted-foreground opacity-100 active:cursor-grabbing md:flex;
     transform: translate3d(0, 0, 0);
-    transition-duration: 160ms;
-    transition-property: top, left, transform, color;
-    transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
-    will-change: top, left, transform;
   }
 
   .drag-handle-plus,
