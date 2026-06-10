@@ -9,7 +9,7 @@ import {
   DropDrawerTrigger,
 } from "@/components/ui/dropdrawer"
 
-import { databasePropertyTypes } from "./constants"
+import { databasePropertyTypes } from "../constants"
 
 export function AddDatabasePropertyMenu({
   disabled,

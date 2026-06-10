@@ -7,7 +7,7 @@ import {
 import { useSyncExternalStore } from "react"
 
 import { DATABASE_PAGE_DRAG_MIME } from "./constants"
-import { DatabaseTableView } from "./database-block"
+import { DatabaseTableView } from "./table"
 import type { DatabaseBlockOptions } from "./types"
 
 const databasePageDragEvents = new Set([

@@ -64,7 +64,7 @@ import {
   getColorTokenValue,
 } from "@/packages/editor/components/editor/toolbar-data"
 
-import { defaultStatusOptions, getDatabasePropertyType } from "./constants"
+import { defaultStatusOptions, getDatabasePropertyType } from "../constants"
 import {
   dateFormatOptions,
   getDateFormatConfig,
@@ -1193,64 +1193,6 @@ function isSelectOptionSortValue(
   )
 }
 
-function isDatabaseSortDirection(
-  value: unknown
-): value is DatabaseSortDirection {
-  return value === "ascending" || value === "descending"
-}
-
-function isDatabaseSortConfig(value: unknown): value is DatabaseSortConfig {
-  return (
-    Boolean(value) &&
-    typeof value === "object" &&
-    !Array.isArray(value) &&
-    typeof (value as DatabaseSortConfig).column === "string" &&
-    (value as DatabaseSortConfig).column.length > 0 &&
-    isDatabaseSortDirection((value as DatabaseSortConfig).direction)
-  )
-}
-
-export function getDatabaseSorts(config: unknown): DatabaseSortConfig[] {
-  if (
-    !config ||
-    typeof config !== "object" ||
-    Array.isArray(config)
-  ) {
-    return []
-  }
-
-  const sorts = (config as DatabaseConfig).sorts
-
-  if (Array.isArray(sorts)) {
-    return sorts.filter(isDatabaseSortConfig)
-  }
-
-  const sort = (config as DatabaseConfig).sort
-
-  return isDatabaseSortConfig(sort) ? [sort] : []
-}
-
-export function getDatabaseSort(config: unknown): DatabaseSortConfig | null {
-  return getDatabaseSorts(config)[0] ?? null
-}
-
-function upsertDatabaseSort(
-  sorts: DatabaseSortConfig[],
-  nextSort: DatabaseSortConfig
-) {
-  const existingSortIndex = sorts.findIndex(
-    (sort) => sort.column === nextSort.column
-  )
-
-  if (existingSortIndex === -1) {
-    return [...sorts, nextSort]
-  }
-
-  return sorts.map((sort, index) =>
-    index === existingSortIndex ? nextSort : sort
-  )
-}
-
 function getSortedSelectOptions(
   options: SelectOption[],
   sort: SelectOptionSortValue
@@ -1274,7 +1216,10 @@ function getNextOptionColor(options: SelectOption[]) {
   return cyclingColorTokens[options.length % cyclingColorTokens.length]?.value ?? "default"
 }
 
-function getUniqueOptionName(options: SelectOption[], baseName: string) {
+function getUniqueOptionName(
+  options: SelectOption[],
+  baseName: string
+) {
   const optionNames = new Set(options.map((option) => option.name))
 
   if (!optionNames.has(baseName)) {
@@ -1365,6 +1310,56 @@ function getMergedNameColumnConfig(
       ...nextConfig,
     },
   })
+}
+
+function isDatabaseSortDirection(
+  value: unknown
+): value is DatabaseSortDirection {
+  return value === "ascending" || value === "descending"
+}
+
+function isDatabaseSortConfig(value: unknown): value is DatabaseSortConfig {
+  return (
+    Boolean(value) &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    typeof (value as DatabaseSortConfig).column === "string" &&
+    (value as DatabaseSortConfig).column.length > 0 &&
+    isDatabaseSortDirection((value as DatabaseSortConfig).direction)
+  )
+}
+
+export function getDatabaseSorts(config: unknown): DatabaseSortConfig[] {
+  if (!config || typeof config !== "object" || Array.isArray(config)) {
+    return []
+  }
+
+  const sorts = (config as DatabaseConfig).sorts
+
+  if (Array.isArray(sorts)) {
+    return sorts.filter(isDatabaseSortConfig)
+  }
+
+  const sort = (config as DatabaseConfig).sort
+
+  return isDatabaseSortConfig(sort) ? [sort] : []
+}
+
+function upsertDatabaseSort(
+  sorts: DatabaseSortConfig[],
+  nextSort: DatabaseSortConfig
+) {
+  const existingSortIndex = sorts.findIndex(
+    (sort) => sort.column === nextSort.column
+  )
+
+  if (existingSortIndex === -1) {
+    return [...sorts, nextSort]
+  }
+
+  return sorts.map((sort, index) =>
+    index === existingSortIndex ? nextSort : sort
+  )
 }
 
 export function getMergedDatabaseConfig(

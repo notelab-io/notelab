@@ -67,7 +67,7 @@ import {
   databaseNameColumnDefaultWidth,
   defaultStatusOptions,
   getDatabasePropertyType,
-} from "./constants"
+} from "../constants"
 import { DatabaseInputCell } from "./database-input-cell"
 import { DatabaseDateCell } from "./database-date-cell"
 import { DatabasePageCell } from "./database-page-cell"
@@ -83,11 +83,12 @@ import {
   type DatabaseSortDirection,
 } from "./database-property-menu"
 import { DatabaseSelectCell } from "./database-select-cell"
+import { DatabaseViewSettingsMenu } from "./database-view-settings-menu"
 import {
   getPropertyValue,
   serializePropertyValue,
   type DatabasePropertyValue,
-} from "./utils"
+} from "../utils"
 
 type RowDragOverlay = {
   height: number
@@ -501,20 +502,6 @@ type DatabaseSortOption = {
   value: string
 }
 
-const databaseSortDirectionOptions = [
-  {
-    label: "Ascending",
-    value: "ascending",
-  },
-  {
-    label: "Descending",
-    value: "descending",
-  },
-] satisfies {
-  label: string
-  value: DatabaseSortDirection
-}[]
-
 function NameColumnGlyph() {
   return (
     <span className="inline-flex size-4 shrink-0 items-center justify-center text-[11px] font-semibold leading-none">
@@ -581,6 +568,8 @@ export function DatabaseTableView({
   const [sortPickerQuery, setSortPickerQuery] = useState("")
   const [sortPickerOpen, setSortPickerOpen] = useState(false)
   const [sortPopoverOpen, setSortPopoverOpen] = useState(false)
+  const [addSortPickerQuery, setAddSortPickerQuery] = useState("")
+  const [addSortPickerOpen, setAddSortPickerOpen] = useState(false)
   const tableWrapRef = useRef<HTMLDivElement | null>(null)
   const [rowLayout, setRowLayout] = useState<{
     centers: Record<string, number>
@@ -653,6 +642,11 @@ export function DatabaseTableView({
     [databaseSorts, sortColumnOptions]
   )
   const isTableSorted = activeDatabaseSorts.length > 0
+  const visiblePropertyCount = properties.length + 1
+  const usedSortColumnValues = useMemo(
+    () => new Set(activeDatabaseSorts.map((sort) => sort.column)),
+    [activeDatabaseSorts]
+  )
   const filteredSortColumnOptions = useMemo(() => {
     const normalizedQuery = sortPickerQuery.trim().toLowerCase()
 
@@ -664,6 +658,22 @@ export function DatabaseTableView({
       option.label.toLowerCase().includes(normalizedQuery)
     )
   }, [sortColumnOptions, sortPickerQuery])
+  const addableSortColumnOptions = useMemo(
+    () =>
+      sortColumnOptions.filter((option) => !usedSortColumnValues.has(option.value)),
+    [sortColumnOptions, usedSortColumnValues]
+  )
+  const filteredAddableSortColumnOptions = useMemo(() => {
+    const normalizedQuery = addSortPickerQuery.trim().toLowerCase()
+
+    if (!normalizedQuery) {
+      return addableSortColumnOptions
+    }
+
+    return addableSortColumnOptions.filter((option) =>
+      option.label.toLowerCase().includes(normalizedQuery)
+    )
+  }, [addSortPickerQuery, addableSortColumnOptions])
   const canAddDatabaseSort = activeDatabaseSorts.length < sortColumnOptions.length
   const pendingInsertPropertyKey = pendingInsertProperty
     ? `insert-property-${pendingInsertProperty.sourceColumnKey}-${pendingInsertProperty.side}`
@@ -712,6 +722,7 @@ export function DatabaseTableView({
   useEffect(() => {
     if (activeDatabaseSorts.length === 0) {
       setShowSortPill(false)
+      setAddSortPickerOpen(false)
       setSortPopoverOpen(false)
     }
   }, [activeDatabaseSorts.length])
@@ -891,17 +902,10 @@ export function DatabaseTableView({
       },
     ])
     setShowSortPill(true)
+    setAddSortPickerOpen(false)
+    setAddSortPickerQuery("")
     setSortPickerQuery("")
     setSortPickerOpen(false)
-  }
-  const addDatabaseSort = () => {
-    const nextSortColumn = sortColumnOptions[0]
-
-    if (!nextSortColumn) {
-      return
-    }
-
-    createDatabaseSort(nextSortColumn.value)
   }
   const updateDatabaseSort = (
     index: number,
@@ -934,6 +938,33 @@ export function DatabaseTableView({
       return nextVisible
     })
   }
+  const saveDatabaseTitle = useCallback(
+    (nextTitle: string) => {
+      if (!databaseId || nextTitle === payload?.database.name) {
+        return
+      }
+
+      updateDatabase.mutate({
+        databaseId,
+        name: nextTitle,
+      })
+    },
+    [databaseId, payload?.database.name, updateDatabase]
+  )
+  const copyDatabaseViewLink = useCallback(() => {
+    if (!databaseId || typeof window === "undefined") {
+      return
+    }
+
+    void navigator.clipboard
+      .writeText(`${window.location.origin}/database/${databaseId}`)
+      .then(() => {
+        toast.success("Copied link to view")
+      })
+      .catch(() => {
+        toast.error("Couldn't copy link to view")
+      })
+  }, [databaseId])
 
   const openInsertPropertyMenu = (
     sourceColumnKey: string,
@@ -1229,17 +1260,7 @@ export function DatabaseTableView({
                 aria-label="Database title"
                 className="database-title-input h-auto min-w-0 w-full rounded-none border-0 bg-transparent px-0 py-0 text-2xl font-semibold leading-tight text-foreground shadow-none placeholder:text-muted-foreground/40 focus-visible:border-transparent focus-visible:ring-0 md:text-2xl dark:bg-transparent"
                 disabled={!databaseId}
-                onBlur={(event) => {
-                  if (
-                    databaseId &&
-                    event.target.value !== payload?.database.name
-                  ) {
-                    updateDatabase.mutate({
-                      databaseId,
-                      name: event.target.value,
-                    })
-                  }
-                }}
+                onBlur={(event) => saveDatabaseTitle(event.target.value)}
                 onChange={(event) => {
                   setDraftTitle(event.target.value)
                 }}
@@ -1333,14 +1354,63 @@ export function DatabaseTableView({
                         )
                       })}
                       {canAddDatabaseSort ? (
-                        <button
-                          className="inline-flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                          onClick={addDatabaseSort}
-                          type="button"
+                        <DropDrawer
+                          open={addSortPickerOpen}
+                          onOpenChange={(open) => {
+                            setAddSortPickerOpen(open)
+
+                            if (!open) {
+                              setAddSortPickerQuery("")
+                            }
+                          }}
                         >
-                          <Plus className="size-4" />
-                          <span>Add sort</span>
-                        </button>
+                          <DropDrawerTrigger asChild>
+                            <button
+                              className="inline-flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                              type="button"
+                            >
+                              <Plus className="size-4" />
+                              <span>Add sort</span>
+                            </button>
+                          </DropDrawerTrigger>
+                          <DropDrawerContent
+                            align="start"
+                            className="w-72"
+                            onCloseAutoFocus={(event) => event.preventDefault()}
+                          >
+                            <div className="flex items-center gap-1.5 px-1.5 py-1">
+                              <ArrowDownUp className="size-4 shrink-0 text-muted-foreground" />
+                              <Input
+                                aria-label="Add sort property"
+                                className="h-auto rounded-none border-0 bg-transparent px-0 py-0 text-sm font-medium shadow-none focus-visible:border-transparent focus-visible:ring-0 dark:bg-transparent"
+                                onChange={(event) =>
+                                  setAddSortPickerQuery(event.target.value)
+                                }
+                                placeholder="Sort by..."
+                                value={addSortPickerQuery}
+                              />
+                            </div>
+                            <DropDrawerSeparator />
+                            {filteredAddableSortColumnOptions.length > 0 ? (
+                              filteredAddableSortColumnOptions.map((option) => (
+                                <DropDrawerItem
+                                  key={option.value}
+                                  onSelect={(event) => {
+                                    event.preventDefault()
+                                    createDatabaseSort(option.value)
+                                  }}
+                                >
+                                  {option.icon}
+                                  <span>{option.label}</span>
+                                </DropDrawerItem>
+                              ))
+                            ) : (
+                              <DropDrawerItem disabled>
+                                No properties found.
+                              </DropDrawerItem>
+                            )}
+                          </DropDrawerContent>
+                        </DropDrawer>
                       ) : null}
                       <button
                         className="inline-flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
@@ -1422,6 +1492,17 @@ export function DatabaseTableView({
                   <ArrowDownUp />
                 </Button>
               )}
+              <DatabaseViewSettingsMenu
+                activeDatabaseSorts={activeDatabaseSorts}
+                databaseName={payload?.database.name}
+                draftTitle={draftTitle}
+                nameColumnLabel={nameColumnLabel}
+                onCopyDatabaseViewLink={copyDatabaseViewLink}
+                onDraftTitleChange={setDraftTitle}
+                onSaveDatabaseTitle={saveDatabaseTitle}
+                properties={properties}
+                visiblePropertyCount={visiblePropertyCount}
+              />
               <Button
                 className="database-new-button"
                 disabled={!databaseId || addRow.isPending}
