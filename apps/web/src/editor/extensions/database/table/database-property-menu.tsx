@@ -9,6 +9,7 @@ import {
   EyeOff,
   Filter,
   Pin,
+  Plus,
   Settings2,
   Sparkles,
   TextWrap,
@@ -26,6 +27,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { Button } from "@/components/ui/button"
 import {
   DropDrawer,
   DropDrawerContent,
@@ -37,6 +39,14 @@ import {
   DropDrawerTrigger,
 } from "@/components/ui/dropdrawer"
 import { Input } from "@/components/ui/input"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {
   useDeleteDatabaseProperty,
   useDuplicateDatabaseProperty,
@@ -82,6 +92,7 @@ export function DatabasePropertyMenu({
   open?: boolean
   type: string
 }) {
+  const [automationDialogOpen, setAutomationDialogOpen] = useState(false)
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false)
   const updateDatabase = useUpdateDatabase()
   const updateProperty = useUpdateDatabaseProperty()
@@ -93,6 +104,7 @@ export function DatabasePropertyMenu({
   const currentSortDirection = currentSorts.find(
     (sort) => sort.column === databasePropertyId
   )?.direction
+  const isButtonProperty = type === "button"
   const wrapContent = getPropertyWrapContent(config)
   const updatePropertyConfig = (nextConfig: DatabasePropertyConfig) => {
     updateProperty.mutate({
@@ -160,15 +172,22 @@ export function DatabasePropertyMenu({
             />
           </div>
           <DropDrawerSeparator />
-          <DatabasePropertyEditSubmenu
-            config={config}
-            databaseId={databaseId}
-            databasePropertyId={databasePropertyId}
-            type={type}
-          >
-            <Settings2 />
-            <span>Edit property</span>
-          </DatabasePropertyEditSubmenu>
+          {isButtonProperty ? (
+            <DropDrawerItem onSelect={() => setAutomationDialogOpen(true)}>
+              <Sparkles />
+              <span>Edit automation</span>
+            </DropDrawerItem>
+          ) : (
+            <DatabasePropertyEditSubmenu
+              config={config}
+              databaseId={databaseId}
+              databasePropertyId={databasePropertyId}
+              type={type}
+            >
+              <Settings2 />
+              <span>Edit property</span>
+            </DatabasePropertyEditSubmenu>
+          )}
           <DropDrawerItem
             aria-pressed={wrapContent}
             onSelect={(event) => {
@@ -299,6 +318,65 @@ export function DatabasePropertyMenu({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <Dialog
+        open={automationDialogOpen}
+        onOpenChange={setAutomationDialogOpen}
+      >
+        <DialogContent className="sm:max-w-xl">
+          <ButtonAutomationDialog propertyName={name} />
+        </DialogContent>
+      </Dialog>
+    </>
+  )
+}
+
+function ButtonAutomationDialog({
+  propertyName,
+}: {
+  propertyName: string
+}) {
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle>{propertyName}</DialogTitle>
+        <DialogDescription>
+          Configure what happens when this button is clicked.
+        </DialogDescription>
+      </DialogHeader>
+      <div className="grid gap-6">
+        <section className="grid gap-2">
+          <div className="text-sm font-medium text-muted-foreground">When</div>
+          <Button
+            className="w-full"
+            type="button"
+            variant="outline"
+          >
+            <Sparkles className="size-5 shrink-0 text-muted-foreground" />
+            <span className="font-medium text-foreground">
+              Button is clicked
+            </span>
+          </Button>
+        </section>
+        <div className="flex justify-center">
+          <div className="h-10 w-px bg-border" />
+        </div>
+        <section className="grid gap-2">
+          <div className="text-sm font-medium text-muted-foreground">Do</div>
+          <Button
+            className="w-full"
+            type="button"
+            variant="outline"
+          >
+            <Plus className="size-5 shrink-0" />
+            <span>New action</span>
+          </Button>
+        </section>
+      </div>
+      <DialogFooter>
+        <Button type="button">
+          Save
+        </Button>
+      </DialogFooter>
     </>
   )
 }
