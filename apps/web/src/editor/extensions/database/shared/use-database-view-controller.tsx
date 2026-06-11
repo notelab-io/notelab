@@ -46,6 +46,7 @@ import {
   hasDatabasePageDragPayload,
   type DatabasePageDragPayload,
 } from "./database-page-drop"
+import type { DatabaseViewContextValue } from "./database-view-context"
 import {
   areSerializedPropertyValuesEqual,
   getSortedDatabaseItems,
@@ -471,6 +472,31 @@ export function useDatabaseViewController({
       type,
     })
   }
+  const updateDatabasePropertyConfig = (
+    databasePropertyId: string,
+    config: unknown
+  ) => {
+    if (!databaseId) {
+      return Promise.resolve()
+    }
+
+    return updateProperty.mutateAsync({
+      config,
+      databaseId,
+      databasePropertyId,
+    })
+  }
+  const renameDatabaseProperty = (databasePropertyId: string, name: string) => {
+    if (!databaseId) {
+      return
+    }
+
+    updateProperty.mutate({
+      databaseId,
+      databasePropertyId,
+      name,
+    })
+  }
   const saveDatabaseSorts = (nextSorts: DatabaseSortConfig[]) => {
     if (!databaseId || !activeView?.id) {
       return
@@ -671,26 +697,26 @@ export function useDatabaseViewController({
     addDraggedPageRow(dragPayload, items.length)
   }
 
-  const databaseViewContext = {
+  const databaseViewContext: DatabaseViewContextValue = {
     activePropertyValueKey,
     activeDatabaseSorts,
     activeView,
     activeVisibilityConfig,
     addableSortFieldOptions,
     addDatabaseProperty,
-    addDatabaseRow,
-    addDatabaseView,
     addDraggedPageRow,
     addKanbanView,
-    addProperty,
-    addRow,
+    addDatabaseRow,
     addTableView,
     canAddDatabaseSort,
     propertyValuesByKey,
     clearDatabaseSort,
     copyDatabaseViewLink,
     createDatabaseSort,
+    databaseConfig: payload?.database.config,
     databaseId,
+    databaseName: payload?.database.name,
+    databaseOrganizationId: payload?.database.organizationId,
     draftPropertyValues,
     draftDatabaseTitle,
     draftViewTitle,
@@ -698,19 +724,22 @@ export function useDatabaseViewController({
     getDatabasePageDragPayload,
     groupProperty: kanbanGroupProperty,
     hasDatabasePageDragPayload,
+    isAddingDatabaseProperty: addProperty.isPending,
+    isAddingDatabaseRow: addRow.isPending,
+    isAddingDatabaseView: addDatabaseView.isPending,
     titlePropertyLabel,
     showPageIconInTitle,
-    onAddDatabaseRow: addDatabaseRow,
     onOpenPage,
     options: kanbanOptions,
     organizationId,
-    payload,
     personOptions,
     properties,
     removeDatabaseSort,
+    renameDatabaseProperty,
     items,
     savePropertyValue,
     saveDatabaseTitle,
+    saveDatabaseSorts,
     saveDatabaseViewTitle,
     setActivePropertyValueKey,
     setActiveViewId,
@@ -726,10 +755,11 @@ export function useDatabaseViewController({
     sortedItems,
     togglePropertyVisibility,
     toggleSortPillVisibility,
+    updateDatabasePropertyConfig,
     updateDatabaseSort,
-    updateProperty,
     visibleProperties,
     visiblePropertyCount,
+    views: payload?.views ?? [],
   }
 
   return {

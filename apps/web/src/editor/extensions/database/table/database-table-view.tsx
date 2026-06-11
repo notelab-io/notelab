@@ -43,6 +43,14 @@ type PendingInsertProperty = {
   sourceColumnKey: string
 }
 
+function requireDatabaseId(databaseId: string | null | undefined) {
+  if (!databaseId) {
+    throw new Error("DatabaseTableView requires a Database id.")
+  }
+
+  return databaseId
+}
+
 function getColumnWidth(columnWidths: Record<string, number>, key: string) {
   return (
     columnWidths[key] ??
@@ -62,30 +70,32 @@ export function DatabaseTableView() {
     activeDatabaseSorts,
     addDatabaseProperty,
     addDraggedPageRow,
-    addProperty,
-    addRow,
     propertyValuesByKey,
+    databaseConfig,
     databaseId,
     draftPropertyValues,
     editable,
     getDatabasePageDragPayload,
     hasDatabasePageDragPayload,
+    isAddingDatabaseProperty,
+    isAddingDatabaseRow,
     titlePropertyLabel: nameColumnLabel,
     showPageIconInTitle: nameColumnShowPageIcon,
-    onAddDatabaseRow,
+    addDatabaseRow,
     onOpenPage,
-    payload,
     personOptions,
     items: rows,
     savePropertyValue,
     setActivePropertyValueKey,
     setDraftPropertyValues,
     sortedItems: sortedRows,
-    updateProperty,
+    renameDatabaseProperty,
+    updateDatabasePropertyConfig,
     visibleProperties,
   } = useDatabaseViewContext()
   const reorderRows = useReorderDatabaseRows()
-  const nameColumnWrapContent = getNameColumnWrapContent(payload?.database.config)
+  const loadedDatabaseId = requireDatabaseId(databaseId)
+  const nameColumnWrapContent = getNameColumnWrapContent(databaseConfig)
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({})
   const [hoveredRowId, setHoveredRowId] = useState<string | null>(null)
   const [draggedRowId, setDraggedRowId] = useState<string | null>(null)
@@ -375,8 +385,8 @@ export function DatabaseTableView() {
       key={insertKey}
     >
       <AddDatabasePropertyMenu
-        disabled={addProperty.isPending}
-        isPending={addProperty.isPending}
+        disabled={isAddingDatabaseProperty}
+        isPending={isAddingDatabaseProperty}
         onAdd={(type, label) =>
           addInsertedDatabaseProperty(type, label, position, insertKey)
         }
@@ -504,7 +514,7 @@ export function DatabaseTableView() {
                 event.dataTransfer.setData(
                   DATABASE_PAGE_DRAG_MIME,
                   JSON.stringify({
-                    databaseId: payload.database.id,
+                    databaseId: loadedDatabaseId,
                     pageId: activeDragRow.pageId,
                     rowId: activeDragRow.id,
                   })
@@ -573,8 +583,8 @@ export function DatabaseTableView() {
               <th className="database-name-header">
                 {editable ? (
                   <DatabaseNamePropertyMenu
-                    config={payload.database.config}
-                    databaseId={payload.database.id}
+                    config={databaseConfig}
+                    databaseId={loadedDatabaseId}
                     onOpenChange={(open) =>
                       handleEditingPropertyOpenChange("name", open)
                     }
@@ -616,8 +626,8 @@ export function DatabaseTableView() {
                       {editable ? (
                         <DatabasePropertyMenu
                           config={property.property.config}
-                          databaseConfig={payload.database.config}
-                          databaseId={payload.database.id}
+                          databaseConfig={databaseConfig}
+                          databaseId={loadedDatabaseId}
                           databasePropertyId={property.id}
                           name={property.property.name}
                           onOpenChange={(open) =>
@@ -632,11 +642,7 @@ export function DatabaseTableView() {
                             )
                           }
                           onRename={(name) =>
-                            updateProperty.mutate({
-                              databaseId: payload.database.id,
-                              databasePropertyId: property.id,
-                              name,
-                            })
+                            renameDatabaseProperty(property.id, name)
                           }
                           open={editingPropertyKey === property.id}
                         />
@@ -665,8 +671,8 @@ export function DatabaseTableView() {
               {editable ? (
                 <th className="database-add-property-cell">
                   <AddDatabasePropertyMenu
-                    disabled={addProperty.isPending}
-                    isPending={addProperty.isPending}
+                    disabled={isAddingDatabaseProperty}
+                    isPending={isAddingDatabaseProperty}
                     onAdd={addDatabaseProperty}
                   />
                   <span
@@ -731,11 +737,7 @@ export function DatabaseTableView() {
                             onActiveValueChange={setActivePropertyValueKey}
                             onDraftValuesChange={setDraftPropertyValues}
                             onPropertyConfigChange={(databasePropertyId, config) =>
-                              updateProperty.mutateAsync({
-                                config,
-                                databaseId: payload.database.id,
-                                databasePropertyId,
-                              })
+                              updateDatabasePropertyConfig(databasePropertyId, config)
                             }
                             onSaveValue={savePropertyValue}
                             persistedValue={persistedValue}
@@ -768,11 +770,11 @@ export function DatabaseTableView() {
           >
             <button
               className="database-page-create database-page-create-full"
-              disabled={!databaseId || addRow.isPending}
-              onClick={onAddDatabaseRow}
+              disabled={!databaseId || isAddingDatabaseRow}
+              onClick={() => addDatabaseRow()}
               type="button"
             >
-              {addRow.isPending ? <Loader2 className="animate-spin" /> : <Plus />}
+              {isAddingDatabaseRow ? <Loader2 className="animate-spin" /> : <Plus />}
               <span>New page</span>
             </button>
           </div>

@@ -30,22 +30,23 @@ export function DatabaseViewToolbar() {
     activeVisibilityConfig,
     addableSortFieldOptions,
     addDatabaseRow,
-    addDatabaseView,
     addKanbanView,
-    addProperty,
-    addRow,
     addTableView,
     canAddDatabaseSort,
     clearDatabaseSort,
     copyDatabaseViewLink,
     createDatabaseSort,
     databaseId,
+    databaseName,
+    databaseOrganizationId,
     draftDatabaseTitle,
     draftViewTitle,
     editable,
+    isAddingDatabaseProperty,
+    isAddingDatabaseRow,
+    isAddingDatabaseView,
     titlePropertyLabel,
     organizationId,
-    payload,
     properties,
     removeDatabaseSort,
     saveDatabaseTitle,
@@ -63,6 +64,7 @@ export function DatabaseViewToolbar() {
     toggleSortPillVisibility,
     updateDatabaseSort,
     visiblePropertyCount,
+    views,
   } = useDatabaseViewContext()
 
   return (
@@ -83,7 +85,7 @@ export function DatabaseViewToolbar() {
       <div className="flex min-w-0 items-center gap-2">
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2 overflow-x-auto">
-            {(payload?.views ?? []).map(
+            {views.map(
               (view: { id: string; name: string; type: string }) => {
               const isActiveView = view.id === activeView?.id
               const ViewIcon = view.type === "kanban" ? Kanban : Table2
@@ -114,12 +116,12 @@ export function DatabaseViewToolbar() {
                 <Button
                   aria-label="Add database view"
                   className="h-8 w-8 shrink-0 rounded-full"
-                  disabled={!databaseId || addDatabaseView.isPending}
+                  disabled={!databaseId || isAddingDatabaseView}
                   size="icon"
                   type="button"
                   variant="ghost"
                 >
-                  {addDatabaseView.isPending ? (
+                  {isAddingDatabaseView ? (
                     <Loader2 className="size-4 animate-spin" />
                   ) : (
                     <Plus className="size-4" />
@@ -128,7 +130,7 @@ export function DatabaseViewToolbar() {
               </DropDrawerTrigger>
               <DropDrawerContent align="start" className="w-40">
                 <DropDrawerItem
-                  disabled={!databaseId || addDatabaseView.isPending}
+                  disabled={!databaseId || isAddingDatabaseView}
                   onSelect={addTableView}
                 >
                   <Table2 className="size-4" />
@@ -137,8 +139,8 @@ export function DatabaseViewToolbar() {
                 <DropDrawerItem
                   disabled={
                     !databaseId ||
-                    addDatabaseView.isPending ||
-                    addProperty.isPending
+                    isAddingDatabaseView ||
+                    isAddingDatabaseProperty
                   }
                   onSelect={addKanbanView}
                 >
@@ -233,12 +235,12 @@ export function DatabaseViewToolbar() {
                 databaseId={databaseId ?? undefined}
                 databaseName={draftDatabaseTitle}
                 dataSources={
-                  payload?.database.id
+                  databaseId
                     ? [
                         {
-                          id: payload.database.id,
-                          name: draftDatabaseTitle || payload.database.name,
-                          viewCount: payload.views.length,
+                          id: databaseId,
+                          name: draftDatabaseTitle || databaseName || "Untitled",
+                          viewCount: views.length,
                         },
                       ]
                     : []
@@ -246,7 +248,7 @@ export function DatabaseViewToolbar() {
                 draftViewTitle={draftViewTitle}
                 titlePropertyLabel={titlePropertyLabel}
                 organizationId={
-                  payload?.database.organizationId ?? organizationId ?? undefined
+                  databaseOrganizationId ?? organizationId ?? undefined
                 }
                 onCopyDatabaseViewLink={copyDatabaseViewLink}
                 onClearDatabaseSort={clearDatabaseSort}
@@ -265,11 +267,11 @@ export function DatabaseViewToolbar() {
               />
               <Button
                 className="database-new-button"
-                disabled={!databaseId || addRow.isPending}
+                disabled={!databaseId || isAddingDatabaseRow}
                 onClick={() => addDatabaseRow()}
                 type="button"
               >
-                {addRow.isPending ? (
+                {isAddingDatabaseRow ? (
                   <Loader2 className="animate-spin" />
                 ) : (
                   <Plus />

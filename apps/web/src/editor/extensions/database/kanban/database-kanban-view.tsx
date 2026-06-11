@@ -23,32 +23,26 @@ type DatabaseRow = {
 
 export function DatabaseKanbanView() {
   const {
-    addRow,
     propertyValuesByKey,
     databaseId,
     draftPropertyValues,
     editable,
     groupProperty,
+    isAddingDatabaseRow,
     showPageIconInTitle,
-    onAddDatabaseRow,
+    addDatabaseRow,
     onOpenPage,
-    payload,
     personOptions,
     items,
     savePropertyValue,
     setActivePropertyValueKey,
     setDraftPropertyValues,
-    updateProperty,
+    updateDatabasePropertyConfig,
     visibleProperties,
     options,
   } = useDatabaseViewContext()
-  const addRowPending = addRow.isPending
   const onPropertyConfigChange = (databasePropertyId: string, config: unknown) =>
-    updateProperty.mutateAsync({
-      config,
-      databaseId: payload.database.id,
-      databasePropertyId,
-    })
+    updateDatabasePropertyConfig(databasePropertyId, config)
   const renderCardProperty = (
     row: DatabaseRow,
     property: DatabasePropertyListItem,
@@ -155,11 +149,11 @@ export function DatabaseKanbanView() {
                   {editable && !isEmptyOption ? (
                     <button
                       className="database-kanban-new-card"
-                      disabled={!databaseId || addRowPending}
-                      onClick={() => onAddDatabaseRow(option.name)}
+                      disabled={!databaseId || isAddingDatabaseRow}
+                      onClick={() => addDatabaseRow(option.name)}
                       type="button"
                     >
-                      {addRowPending ? (
+                      {isAddingDatabaseRow ? (
                         <Loader2 className="animate-spin" />
                       ) : (
                         <Plus />

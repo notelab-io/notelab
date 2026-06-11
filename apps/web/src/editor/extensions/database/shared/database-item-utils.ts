@@ -7,7 +7,7 @@ import type {
   DatabaseSortDirection,
 } from "./database-view-config"
 
-type SortableDatabaseItem = {
+export type SortableDatabaseItem = {
   createdAt: string
   id: string
   page: {
