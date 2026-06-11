@@ -104,9 +104,11 @@ type ShareTargetValue = `${AccessTargetType}:${string}`
 
 export function NavActions({
   databaseId,
+  pathname,
   workspaceId,
 }: {
   databaseId?: string | null
+  pathname?: string
   workspaceId?: string | null
 }) {
   const navigate = useNavigate()
@@ -124,6 +126,7 @@ export function NavActions({
   const isMobile = useIsMobile()
   const listWorkspace = workspaces.find((item) => item.id === actionWorkspaceId)
   const isDatabasePage = Boolean(databaseId)
+  const hasPageActions = Boolean(actionWorkspaceId || databaseId)
   const workspaceMetadata = (workspace?.metadata ?? {}) as WorkspaceMetadata
   const usesUserPreference = usesUserFullWidthPreference(workspaceMetadata)
   const effectiveFullWidth = resolveWorkspaceFullWidth(
@@ -304,106 +307,119 @@ export function NavActions({
       <div className="hidden font-medium text-muted-foreground md:inline-block">
         Edited recently
       </div>
-      {actionWorkspaceId ? (
-        <WorkspaceShareDialog workspaceId={actionWorkspaceId} />
-      ) : null}
       <Button
-        aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
-        className={cn("h-7 w-7", isFavorite && "text-yellow-500")}
-        disabled={
-          databaseId
-            ? !databasePayload || setDatabaseFavorite.isPending
-            : !workspaceId || setFavorite.isPending
-        }
-        onClick={toggleFavorite}
-        size="icon"
-        title={isFavorite ? "Remove from favorites" : "Add to favorites"}
+        className="h-8 gap-2"
+        onClick={() => void navigate({ to: "/canvas" })}
+        size="sm"
         type="button"
-        variant="ghost"
+        variant={pathname === "/canvas" ? "default" : "outline"}
       >
-        <StarIcon className={isFavorite ? "fill-current" : undefined} />
+        Canvas
       </Button>
-      <Popover open={isOpen} onOpenChange={setIsOpen}>
-        <PopoverTrigger asChild>
+      {hasPageActions ? (
+        <>
+          {actionWorkspaceId ? (
+            <WorkspaceShareDialog workspaceId={actionWorkspaceId} />
+          ) : null}
           <Button
-            variant="ghost"
+            aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+            className={cn("h-7 w-7", isFavorite && "text-yellow-500")}
+            disabled={
+              databaseId
+                ? !databasePayload || setDatabaseFavorite.isPending
+                : !workspaceId || setFavorite.isPending
+            }
+            onClick={toggleFavorite}
             size="icon"
-            className="h-7 w-7 data-[state=open]:bg-accent"
+            title={isFavorite ? "Remove from favorites" : "Add to favorites"}
+            type="button"
+            variant="ghost"
           >
-            <MoreHorizontalIcon />
+            <StarIcon className={isFavorite ? "fill-current" : undefined} />
           </Button>
-        </PopoverTrigger>
-        <PopoverContent
-          className="w-56 overflow-hidden rounded-lg p-0"
-          align="end"
-        >
-          <Sidebar collapsible="none" className="bg-transparent">
-            <SidebarContent>
-              <SidebarGroup>
-                <SidebarGroupContent className="gap-0">
-                  <SidebarMenu>
-                    {!isDatabasePage && !isMobile ? (
-                      <>
-                        <SidebarMenuItem>
-                          <SidebarMenuButton
-                            aria-pressed={effectiveFullWidth}
-                            disabled={!workspace || fullWidthUpdatePending}
-                            onClick={toggleWorkspaceFullWidth}
-                            type="button"
-                          >
-                            <span>Full Width</span>
-                            <Switch
-                              checked={effectiveFullWidth}
-                              className="ml-auto pointer-events-none"
-                              size="sm"
-                              tabIndex={-1}
-                            />
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                        <SidebarMenuItem>
-                          <SidebarMenuButton
-                            aria-pressed={usesUserPreference}
-                            disabled={!workspace || fullWidthUpdatePending}
-                            onClick={toggleUseUserFullWidthPreference}
-                            type="button"
-                          >
-                            <span>Use my preferences</span>
-                            <Switch
-                              checked={usesUserPreference}
-                              className="ml-auto pointer-events-none"
-                              size="sm"
-                              tabIndex={-1}
-                            />
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      </>
-                    ) : null}
-                    {moreActions.map((label) => (
-                      <SidebarMenuItem key={label}>
-                        <SidebarMenuButton
-                          disabled={
-                            (label === "Copy Link" &&
-                              !workspaceId &&
-                              !databaseId) ||
-                            (label === "Duplicate" &&
-                              (isDatabasePage ||
-                                !workspace ||
-                                createWorkspace.isPending))
-                          }
-                          onClick={() => runMoreAction(label)}
-                          type="button"
-                        >
-                          <span>{label}</span>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    ))}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
-            </SidebarContent>
-          </Sidebar>
-        </PopoverContent>
-      </Popover>
+          <Popover open={isOpen} onOpenChange={setIsOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 data-[state=open]:bg-accent"
+              >
+                <MoreHorizontalIcon />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              className="w-56 overflow-hidden rounded-lg p-0"
+              align="end"
+            >
+              <Sidebar collapsible="none" className="bg-transparent">
+                <SidebarContent>
+                  <SidebarGroup>
+                    <SidebarGroupContent className="gap-0">
+                      <SidebarMenu>
+                        {!isDatabasePage && !isMobile ? (
+                          <>
+                            <SidebarMenuItem>
+                              <SidebarMenuButton
+                                aria-pressed={effectiveFullWidth}
+                                disabled={!workspace || fullWidthUpdatePending}
+                                onClick={toggleWorkspaceFullWidth}
+                                type="button"
+                              >
+                                <span>Full Width</span>
+                                <Switch
+                                  checked={effectiveFullWidth}
+                                  className="ml-auto pointer-events-none"
+                                  size="sm"
+                                  tabIndex={-1}
+                                />
+                              </SidebarMenuButton>
+                            </SidebarMenuItem>
+                            <SidebarMenuItem>
+                              <SidebarMenuButton
+                                aria-pressed={usesUserPreference}
+                                disabled={!workspace || fullWidthUpdatePending}
+                                onClick={toggleUseUserFullWidthPreference}
+                                type="button"
+                              >
+                                <span>Use my preferences</span>
+                                <Switch
+                                  checked={usesUserPreference}
+                                  className="ml-auto pointer-events-none"
+                                  size="sm"
+                                  tabIndex={-1}
+                                />
+                              </SidebarMenuButton>
+                            </SidebarMenuItem>
+                          </>
+                        ) : null}
+                        {moreActions.map((label) => (
+                          <SidebarMenuItem key={label}>
+                            <SidebarMenuButton
+                              disabled={
+                                (label === "Copy Link" &&
+                                  !workspaceId &&
+                                  !databaseId) ||
+                                (label === "Duplicate" &&
+                                  (isDatabasePage ||
+                                    !workspace ||
+                                    createWorkspace.isPending))
+                              }
+                              onClick={() => runMoreAction(label)}
+                              type="button"
+                            >
+                              <span>{label}</span>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        ))}
+                      </SidebarMenu>
+                    </SidebarGroupContent>
+                  </SidebarGroup>
+                </SidebarContent>
+              </Sidebar>
+            </PopoverContent>
+          </Popover>
+        </>
+      ) : null}
     </div>
   )
 }

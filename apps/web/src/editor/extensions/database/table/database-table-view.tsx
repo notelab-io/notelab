@@ -56,6 +56,7 @@ import {
 } from "../constants"
 import { DatabaseInputCell } from "./database-input-cell"
 import { DatabaseDateCell } from "./database-date-cell"
+import { DatabaseFilesCell } from "./database-files-cell"
 import { DatabasePageCell } from "./database-page-cell"
 import {
   getDatabaseSorts,
@@ -492,7 +493,9 @@ export function DatabaseTableView({
   showExpandButton = false,
   showTitle = true,
 }: DatabaseTableViewProps) {
-  const [draftCells, setDraftCells] = useState<Record<string, string>>({})
+  const [draftCells, setDraftCells] = useState<
+    Record<string, DatabasePropertyValue>
+  >({})
   const updateDatabase = useUpdateDatabase()
   const addProperty = useAddDatabaseProperty()
   const updateProperty = useUpdateDatabaseProperty()
@@ -1669,6 +1672,7 @@ export function DatabaseTableView({
                       const isCheckboxProperty =
                         workspaceProperty.type === "checkbox"
                       const isDateProperty = workspaceProperty.type === "date"
+                      const isFilesProperty = workspaceProperty.type === "files"
                       const isReadOnlyTimeCell = isReadOnlyTimeProperty(
                         workspaceProperty.type
                       )
@@ -1775,6 +1779,27 @@ export function DatabaseTableView({
                                   }
                                   propertyConfig={workspaceProperty.config}
                                   propertyId={property.id}
+                                  value={value}
+                                />
+                              </DatabaseCellContent>
+                            ) : isFilesProperty ? (
+                              <DatabaseCellContent wrapContent={wrapContent}>
+                                <DatabaseFilesCell
+                                  editable={editable}
+                                  label={workspaceProperty.name}
+                                  onOpenChange={(open) =>
+                                    setActiveCellKey(open ? key : null)
+                                  }
+                                  onSelect={(nextValue) =>
+                                    saveCell(
+                                      row.id,
+                                      workspaceProperty.id,
+                                      workspaceProperty.type,
+                                      cellValues[key] ?? "",
+                                      nextValue
+                                    )
+                                  }
+                                  propertyConfig={workspaceProperty.config}
                                   value={value}
                                 />
                               </DatabaseCellContent>

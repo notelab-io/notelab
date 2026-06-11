@@ -279,7 +279,13 @@ function PaneNavActions({ pathname }: { pathname: string }) {
   const workspaceId = getWorkspaceId(pathname)
   const databaseId = getDatabaseId(pathname)
 
-  return <NavActions databaseId={databaseId} workspaceId={workspaceId} />
+  return (
+    <NavActions
+      databaseId={databaseId}
+      pathname={pathname}
+      workspaceId={workspaceId}
+    />
+  )
 }
 
 function WorkspaceBreadcrumb({ workspaceId }: { workspaceId: string }) {
@@ -417,6 +423,18 @@ function AppBreadcrumbs({ pathname }: { pathname: string }) {
               </BreadcrumbItem>
             </>
           )}
+        </BreadcrumbList>
+      </Breadcrumb>
+    )
+  }
+
+  if (pathname === "/canvas") {
+    return (
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbPage className="line-clamp-1">Canvas</BreadcrumbPage>
+          </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
     )

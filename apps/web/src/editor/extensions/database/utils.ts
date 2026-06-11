@@ -107,6 +107,10 @@ export function serializePropertyValue(
     return value
   }
 
+  if (propertyType === "files") {
+    return Array.isArray(value) ? value : value.trim() ? value : null
+  }
+
   if (propertyType === "number") {
     const nextValue = Array.isArray(value) ? value[0] : value
     const trimmedValue = nextValue.trim()

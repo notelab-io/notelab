@@ -299,10 +299,11 @@ export function FlowCanvas() {
 
   return (
     <div
-      className="relative h-full min-h-[calc(100svh-3rem)] w-full bg-muted/20"
+      className="relative h-full min-h-[calc(100svh-3rem)] w-full bg-background"
       ref={containerRef}
     >
       <ReactFlow
+        className="bg-background"
         connectionMode={ConnectionMode.Loose}
         defaultViewport={{ x: 0, y: 0, zoom: 1 }}
         edgeTypes={edgeTypes}

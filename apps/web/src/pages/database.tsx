@@ -293,58 +293,77 @@ function DatabaseMainPane({
   )
 }
 
-function DatabasePageSkeleton() {
+export function DatabasePagePreview({
+  className,
+  compact = false,
+}: {
+  className?: string
+  compact?: boolean
+}) {
   return (
-    <div className="flex min-h-[calc(100svh-3rem)] flex-col">
-      <div className="px-5 pb-6 pt-12 sm:px-8 md:px-20 lg:px-24">
-        <div className="w-full space-y-6">
-          <div className="space-y-5">
-            <Skeleton className="size-12 rounded-xl" />
-            <div className="space-y-3">
-              <Skeleton className="h-10 w-72 max-w-full" />
-              <Skeleton className="h-4 w-40" />
-            </div>
+    <div className={cn("flex h-full min-h-0 flex-col bg-background", className)}>
+      <div
+        className={cn(
+          "w-full space-y-6",
+          compact
+            ? "px-4 pb-4 pt-4"
+            : "px-5 pb-6 pt-12 sm:px-8 md:px-20 lg:px-24",
+        )}
+      >
+        <div className="space-y-5">
+          <Skeleton className={cn(compact ? "size-9 rounded-lg" : "size-12 rounded-xl")} />
+          <div className="space-y-3">
+            <Skeleton className={cn("max-w-full", compact ? "h-7 w-40" : "h-10 w-72")} />
+            <Skeleton className={cn(compact ? "h-3.5 w-24" : "h-4 w-40")} />
           </div>
-          <div className="flex flex-wrap items-center gap-3 border-y py-3">
-            <Skeleton className="h-8 w-24 rounded-md" />
-            <Skeleton className="h-8 w-28 rounded-md" />
-            <Skeleton className="h-8 w-20 rounded-md" />
-          </div>
-          <div className="overflow-hidden rounded-md border">
-            <div className="grid grid-cols-[1.6fr_1fr_1fr_0.8fr] border-b bg-muted/30">
-              {Array.from({ length: 4 }).map((_, index) => (
-                <div className="border-r p-3 last:border-r-0" key={index}>
-                  <Skeleton className="h-4 w-24" />
-                </div>
-              ))}
-            </div>
-            {Array.from({ length: 6 }).map((_, rowIndex) => (
-              <div
-                className="grid grid-cols-[1.6fr_1fr_1fr_0.8fr] border-b last:border-b-0"
-                key={rowIndex}
-              >
-                {Array.from({ length: 4 }).map((_, columnIndex) => (
-                  <div
-                    className="border-r p-3 last:border-r-0"
-                    key={columnIndex}
-                  >
-                    <Skeleton
-                      className={cn(
-                        "h-4",
-                        columnIndex === 0
-                          ? "w-4/5"
-                          : columnIndex === 3
-                            ? "w-14"
-                            : "w-2/3",
-                      )}
-                    />
-                  </div>
-                ))}
+        </div>
+        <div className={cn("flex flex-wrap items-center gap-3 border-y py-3", compact && "gap-2 py-2.5")}>
+          <Skeleton className={cn("rounded-md", compact ? "h-7 w-20" : "h-8 w-24")} />
+          <Skeleton className={cn("rounded-md", compact ? "h-7 w-24" : "h-8 w-28")} />
+          <Skeleton className={cn("rounded-md", compact ? "h-7 w-16" : "h-8 w-20")} />
+        </div>
+        <div className="overflow-hidden rounded-md border">
+          <div className="grid grid-cols-[1.6fr_1fr_1fr_0.8fr] border-b bg-muted/30">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div className={cn("border-r last:border-r-0", compact ? "p-2.5" : "p-3")} key={index}>
+                <Skeleton className={cn(compact ? "h-3.5 w-16" : "h-4 w-24")} />
               </div>
             ))}
           </div>
+          {Array.from({ length: compact ? 4 : 6 }).map((_, rowIndex) => (
+            <div
+              className="grid grid-cols-[1.6fr_1fr_1fr_0.8fr] border-b last:border-b-0"
+              key={rowIndex}
+            >
+              {Array.from({ length: 4 }).map((_, columnIndex) => (
+                <div
+                  className={cn("border-r last:border-r-0", compact ? "p-2.5" : "p-3")}
+                  key={columnIndex}
+                >
+                  <Skeleton
+                    className={cn(
+                      compact ? "h-3.5" : "h-4",
+                      columnIndex === 0
+                        ? compact ? "w-3/4" : "w-4/5"
+                        : columnIndex === 3
+                          ? compact ? "w-10" : "w-14"
+                          : compact ? "w-1/2" : "w-2/3",
+                    )}
+                  />
+                </div>
+              ))}
+            </div>
+          ))}
         </div>
       </div>
+    </div>
+  )
+}
+
+function DatabasePageSkeleton() {
+  return (
+    <div className="flex min-h-[calc(100svh-3rem)] flex-col">
+      <DatabasePagePreview />
     </div>
   )
 }
