@@ -34,6 +34,7 @@ export type DatabasePropertyConfig = {
 
 type DatabaseConfig = {
   emoji?: string
+  groupPropertyId?: string
   hiddenPropertyIds?: string[]
   nameColumn?: DatabaseNameColumnConfig
   sort?: DatabaseSortConfig

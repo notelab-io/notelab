@@ -2,6 +2,7 @@ import {
   ArrowDownUp,
   ChevronLeft,
   CircleHelp,
+  Check,
   Database,
   Eye,
   EyeOff,
@@ -56,6 +57,7 @@ type DatabaseViewProperty = {
   id: string
   property: {
     config?: unknown
+    id: string
     name: string
     type: string
   }
@@ -137,6 +139,8 @@ export function DatabaseViewSettingsMenu({
   databaseName,
   dataSources,
   draftViewTitle,
+  groupProperties,
+  groupPropertyId,
   linkedDataSources = [],
   titlePropertyLabel,
   organizationId,
@@ -146,6 +150,7 @@ export function DatabaseViewSettingsMenu({
   onDraftViewTitleChange,
   onRemoveDatabaseSort,
   onSaveDatabaseViewTitle,
+  onSetViewGroupProperty,
   onTogglePropertyVisibility,
   onUpdateDatabaseSort,
   properties,
@@ -161,6 +166,8 @@ export function DatabaseViewSettingsMenu({
   databaseName?: string
   dataSources: DatabaseSourceMenuItem[]
   draftViewTitle: string
+  groupProperties: DatabaseViewProperty[]
+  groupPropertyId: string | null
   linkedDataSources?: DatabaseSourceMenuItem[]
   titlePropertyLabel: string
   organizationId?: string
@@ -170,6 +177,7 @@ export function DatabaseViewSettingsMenu({
   onDraftViewTitleChange: (title: string) => void
   onRemoveDatabaseSort: (index: number) => void
   onSaveDatabaseViewTitle: (title: string) => void
+  onSetViewGroupProperty: (groupPropertyId: string | null) => void
   onTogglePropertyVisibility: (propertyId: string) => void
   onUpdateDatabaseSort: (index: number, patch: DatabaseSortUpdatePatch) => void
   properties: DatabaseViewProperty[]
@@ -185,6 +193,9 @@ export function DatabaseViewSettingsMenu({
   const isKanbanView = activeViewType === "kanban"
   const ViewTypeIcon = isKanbanView ? Kanban : Table2
   const viewTypeLabel = isKanbanView ? "Kanban" : "Table"
+  const activeGroupProperty = groupProperties.find(
+    (property) => property.property.id === groupPropertyId
+  )
 
   const linkableDatabaseOptions = workspaces.flatMap((workspace) =>
     (workspace.databases ?? [])
@@ -352,11 +363,43 @@ export function DatabaseViewSettingsMenu({
         </DatabaseSortSubmenu>
         <DropDrawerSub>
           <DropDrawerSubTrigger>
-            <GripVertical />
-            <span>Group</span>
+            <ViewSettingsRow
+              icon={<GripVertical />}
+              label="Group"
+              right={activeGroupProperty?.property.name ?? "None"}
+            />
           </DropDrawerSubTrigger>
-          <DropDrawerSubContent>
-            <DropDrawerItem disabled>Grouping options</DropDrawerItem>
+          <DropDrawerSubContent className="w-72">
+            <DropDrawerItem onSelect={() => onSetViewGroupProperty(null)}>
+              <GripVertical />
+              <span>No grouping</span>
+              {groupPropertyId === null ? (
+                <Check className="ml-auto text-foreground" />
+              ) : null}
+            </DropDrawerItem>
+            {groupProperties.length > 0 ? (
+              groupProperties.map((property) => {
+                const PropertyIcon = getDatabasePropertyType(
+                  property.property.type
+                ).icon
+                const isSelected = property.property.id === groupPropertyId
+
+                return (
+                  <DropDrawerItem
+                    key={property.id}
+                    onSelect={() => onSetViewGroupProperty(property.property.id)}
+                  >
+                    <PropertyIcon />
+                    <span>{property.property.name}</span>
+                    {isSelected ? (
+                      <Check className="ml-auto text-foreground" />
+                    ) : null}
+                  </DropDrawerItem>
+                )
+              })
+            ) : (
+              <DropDrawerItem disabled>No groupable properties yet</DropDrawerItem>
+            )}
           </DropDrawerSubContent>
         </DropDrawerSub>
         <DropDrawerSub>

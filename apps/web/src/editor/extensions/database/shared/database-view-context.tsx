@@ -43,7 +43,10 @@ export type DatabaseViewContextValue = {
   activeVisibilityConfig: unknown
   addableSortFieldOptions: DatabaseSearchableMenuOption[]
   addDatabaseProperty: (type?: string, label?: string, position?: number) => void
-  addDatabaseRow: (groupValue?: string) => void
+  addDatabaseRow: (
+    groupValue?: string,
+    groupProperty?: DatabasePropertyListItem | null
+  ) => void
   addDraggedPageRow: (
     dragPayload: DatabasePageDragPayload,
     position: number
@@ -65,7 +68,9 @@ export type DatabaseViewContextValue = {
   getDatabasePageDragPayload: (
     dataTransfer: DataTransfer | null
   ) => DatabasePageDragPayload | null
+  groupOptions: DatabaseSelectOption[]
   groupProperty: DatabasePropertyListItem | null
+  groupableProperties: DatabasePropertyListItem[]
   hasDatabasePageDragPayload: (dataTransfer: DataTransfer | null) => boolean
   isAddingDatabaseProperty: boolean
   isAddingDatabaseRow: boolean
@@ -96,6 +101,7 @@ export type DatabaseViewContextValue = {
     SetStateAction<Record<string, DatabasePropertyValue>>
   >
   setDraftViewTitle: Dispatch<SetStateAction<string>>
+  setViewGroupProperty: (groupPropertyId: string | null) => void
   setSortPickerOpen: Dispatch<SetStateAction<boolean>>
   showExpandButton: boolean
   showPageIconInTitle: boolean

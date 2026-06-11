@@ -467,6 +467,22 @@
     @apply max-w-full overflow-x-auto;
   }
 
+  .database-table-groups {
+    @apply flex min-w-0 flex-col gap-5;
+  }
+
+  .database-table-group {
+    @apply min-w-0;
+  }
+
+  .database-table-group-toggle {
+    @apply mb-2 flex min-h-8 items-center gap-2 rounded-sm px-1 py-1 text-left text-foreground transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none;
+  }
+
+  .database-table-group-count {
+    @apply inline-flex min-w-5 justify-center rounded-sm bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground;
+  }
+
   .database-kanban-wrap {
     @apply mt-2 max-w-full overflow-x-auto pb-2;
   }

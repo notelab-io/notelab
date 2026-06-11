@@ -127,6 +127,53 @@ export function register({ assert, loadModule, test }) {
       ],
     ])
   })
+
+  test("database view commands update group config", async () => {
+    const { getDatabaseViewCommands } = await loadModule(
+      "/src/editor/extensions/database/shared/database-view-commands.ts"
+    )
+    const updateDatabaseView = createMutation()
+    const commands = getDatabaseViewCommands({
+      activeDatabaseSorts: [],
+      activeView: {
+        config: { emoji: "📌" },
+        id: "view-1",
+        name: "Table",
+        type: "table",
+      },
+      databaseId,
+      editable: true,
+      isKanbanView: false,
+      items: [],
+      kanbanGroupProperty: null,
+      mutations: createMutations({ updateDatabaseView }),
+      payload: createPayload(),
+      properties: [],
+      setActiveViewId: () => {},
+      setShowSortPill: () => {},
+      setSortPickerOpen: () => {},
+    })
+
+    commands.setViewGroupProperty("property-status")
+    commands.setViewGroupProperty(null)
+
+    assert.deepEqual(updateDatabaseView.calls, [
+      [
+        {
+          config: { emoji: "📌", groupPropertyId: "property-status" },
+          databaseId,
+          databaseViewId: "view-1",
+        },
+      ],
+      [
+        {
+          config: { emoji: "📌", groupPropertyId: undefined },
+          databaseId,
+          databaseViewId: "view-1",
+        },
+      ],
+    ])
+  })
 }
 
 function createMutation() {

@@ -6,6 +6,8 @@ import type {
 } from "@notelab/features/databases"
 
 import {
+  getConfiguredGroupProperty,
+  getGroupOptions,
   getKanbanGroupProperty,
   getKanbanOptions,
 } from "../kanban/database-kanban-config"
@@ -60,6 +62,16 @@ export function getDatabaseViewModel({
     payload?.views.find((view) => view.id === activeViewId) ??
     payload?.views[0] ??
     null
+  const nameGroupProperty = {
+    id: "name",
+    position: -1,
+    property: {
+      config: payload?.database.config,
+      id: "name",
+      name: titlePropertyLabel,
+      type: "text",
+    },
+  }
   const sortFieldOptions = getSortFieldOptions(titlePropertyLabel, properties)
   const activeViewConfig = activeView?.config ?? payload?.database.config
   const isKanbanView = activeView?.type === "kanban"
@@ -68,6 +80,7 @@ export function getDatabaseViewModel({
     isKanbanView,
     properties,
   })
+  const groupableProperties = [nameGroupProperty, ...properties]
   const visibleProperties = properties.filter(
     (property) =>
       !getPropertyHiddenForView(
@@ -77,6 +90,15 @@ export function getDatabaseViewModel({
       )
   )
   const databaseSorts = getDatabaseSorts(activeViewConfig)
+  const groupProperty =
+    activeViewConfig &&
+    typeof activeViewConfig === "object" &&
+    !Array.isArray(activeViewConfig) &&
+    "groupPropertyId" in activeViewConfig &&
+    (activeViewConfig as { groupPropertyId?: unknown }).groupPropertyId === "name"
+      ? nameGroupProperty
+      : getConfiguredGroupProperty(properties, activeViewConfig)
+  const groupOptions = getGroupOptions(groupProperty)
   const kanbanGroupProperty = getKanbanGroupProperty(properties, activeViewConfig)
   const kanbanOptions = getKanbanOptions(kanbanGroupProperty)
   const activeDatabaseSorts = getActiveDatabaseSorts(
@@ -110,6 +132,9 @@ export function getDatabaseViewModel({
     addableSortFieldOptions,
     canAddDatabaseSort: activeDatabaseSorts.length < sortFieldOptions.length,
     databaseSorts,
+    groupOptions,
+    groupProperty,
+    groupableProperties,
     isKanbanView,
     items,
     kanbanGroupProperty,

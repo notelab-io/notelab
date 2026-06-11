@@ -120,13 +120,19 @@ export function getDatabaseViewCommands({
         type,
       })
     },
-    addDatabaseRow: (groupValue?: string) => {
+    addDatabaseRow: (
+      groupValue?: string,
+      groupPropertyOverride?: DatabasePropertyListItem | null
+    ) => {
       if (!editable || !databaseId || addRow.isPending) {
         return
       }
 
       const existingItemIds = new Set(items.map((row) => row.id))
       const defaultStatusValue = defaultStatusOptions[0]?.name ?? "Not started"
+      const nextGroupProperty =
+        groupPropertyOverride ??
+        (isKanbanView ? kanbanGroupProperty : null)
       const nextGroupValue =
         groupValue ??
         (isKanbanView && kanbanGroupProperty?.property.type === "status"
@@ -136,11 +142,18 @@ export function getDatabaseViewCommands({
       addRow.mutate(
         {
           databaseId,
-          title: "Untitled",
+          title:
+            nextGroupProperty?.id === "name" && nextGroupValue
+              ? nextGroupValue
+              : "Untitled",
         },
         {
           onSuccess: (nextPayload) => {
-            if (!nextGroupValue || !kanbanGroupProperty) {
+            if (
+              !nextGroupValue ||
+              !nextGroupProperty ||
+              nextGroupProperty.id === "name"
+            ) {
               return
             }
 
@@ -154,10 +167,10 @@ export function getDatabaseViewCommands({
 
             updateValue.mutate({
               databaseId,
-              propertyId: kanbanGroupProperty.property.id,
+              propertyId: nextGroupProperty.property.id,
               rowId: addedItem.id,
               value: serializePropertyValue(
-                kanbanGroupProperty.property.type,
+                nextGroupProperty.property.type,
                 nextGroupValue
               ),
             })
@@ -335,6 +348,19 @@ export function getDatabaseViewCommands({
         .catch(() => {
           toast.error("Couldn't copy link to view")
         })
+    },
+    setViewGroupProperty: (groupPropertyId: string | null) => {
+      if (!databaseId || !activeView?.id) {
+        return
+      }
+
+      updateDatabaseView.mutate({
+        config: getMergedDatabaseConfig(activeView.config, {
+          groupPropertyId: groupPropertyId ?? undefined,
+        }),
+        databaseId,
+        databaseViewId: activeView.id,
+      })
     },
     createDatabaseSort: (field: string) => {
       saveDatabaseSorts([

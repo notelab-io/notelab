@@ -8,6 +8,7 @@ import {
   Copy,
   EyeOff,
   Filter,
+  GripVertical,
   Pin,
   Plus,
   Settings2,
@@ -79,16 +80,20 @@ export function DatabasePropertyMenu({
   onInsertProperty,
   onRename,
   open,
+  onToggleGroup,
+  isGrouped = false,
   type,
 }: {
   config?: unknown
   databaseConfig?: unknown
   databaseId: string
   databasePropertyId: string
+  isGrouped?: boolean
   name: string
   onOpenChange?: (open: boolean) => void
   onInsertProperty: (side: "left" | "right") => void
   onRename: (name: string) => void
+  onToggleGroup?: () => void
   open?: boolean
   type: string
 }) {
@@ -223,6 +228,15 @@ export function DatabasePropertyMenu({
           <DropDrawerItem disabled>
             <Filter />
             <span>Filter</span>
+          </DropDrawerItem>
+          <DropDrawerItem
+            onSelect={(event) => {
+              event.preventDefault()
+              onToggleGroup?.()
+            }}
+          >
+            <GripVertical />
+            <span>{isGrouped ? "Ungroup" : "Group"}</span>
           </DropDrawerItem>
           <DropDrawerSub>
             <DropDrawerSubTrigger>

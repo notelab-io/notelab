@@ -1,5 +1,6 @@
 import {
   ArrowDownUp,
+  GripVertical,
   ArrowRightToLine,
   Check,
   ChevronDown,
@@ -41,14 +42,18 @@ import { NameColumnGlyph } from "./name-column-glyph"
 export function DatabaseNamePropertyMenu({
   config,
   databaseId,
+  isGrouped = false,
   onOpenChange,
   onInsertProperty,
+  onToggleGroup,
   open,
 }: {
   config?: unknown
   databaseId: string
+  isGrouped?: boolean
   onOpenChange?: (open: boolean) => void
   onInsertProperty: (side: "left" | "right") => void
+  onToggleGroup?: () => void
   open?: boolean
 }) {
   const updateDatabase = useUpdateDatabase()
@@ -147,6 +152,15 @@ export function DatabaseNamePropertyMenu({
         <DropDrawerItem disabled>
           <Filter />
           <span>Filter</span>
+        </DropDrawerItem>
+        <DropDrawerItem
+          onSelect={(event) => {
+            event.preventDefault()
+            onToggleGroup?.()
+          }}
+        >
+          <GripVertical />
+          <span>{isGrouped ? "Ungroup" : "Group"}</span>
         </DropDrawerItem>
         <DropDrawerSub>
           <DropDrawerSubTrigger>

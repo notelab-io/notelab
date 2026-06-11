@@ -57,6 +57,19 @@ export function getKanbanGroupPropertyId(config: unknown) {
     : null
 }
 
+export function getConfiguredGroupProperty(
+  properties: DatabasePropertyListItem[],
+  config: unknown
+) {
+  const configuredGroupPropertyId = getKanbanGroupPropertyId(config)
+
+  return configuredGroupPropertyId
+    ? properties.find(
+        (property) => property.property.id === configuredGroupPropertyId
+      ) ?? null
+    : null
+}
+
 export function getKanbanGroupProperty(
   properties: DatabasePropertyListItem[],
   config: unknown
@@ -67,7 +80,7 @@ export function getKanbanGroupProperty(
         (property) =>
           property.property.id === configuredGroupPropertyId &&
           isKanbanGroupProperty(property)
-      )
+      ) ?? null
     : null
 
   return (
@@ -78,7 +91,7 @@ export function getKanbanGroupProperty(
   )
 }
 
-export function getKanbanOptions(property: DatabasePropertyListItem | null) {
+export function getGroupOptions(property: DatabasePropertyListItem | null) {
   if (!property) {
     return []
   }
@@ -90,4 +103,8 @@ export function getKanbanOptions(property: DatabasePropertyListItem | null) {
   }
 
   return property.property.type === "status" ? defaultStatusOptions : []
+}
+
+export function getKanbanOptions(property: DatabasePropertyListItem | null) {
+  return getGroupOptions(property)
 }

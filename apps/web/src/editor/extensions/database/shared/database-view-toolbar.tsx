@@ -42,6 +42,8 @@ export function DatabaseViewToolbar() {
     draftDatabaseTitle,
     draftViewTitle,
     editable,
+    groupProperty,
+    groupableProperties,
     isAddingDatabaseProperty,
     isAddingDatabaseRow,
     isAddingDatabaseView,
@@ -54,6 +56,7 @@ export function DatabaseViewToolbar() {
     setActiveViewId,
     setDraftDatabaseTitle,
     setDraftViewTitle,
+    setViewGroupProperty,
     setSortPickerOpen,
     showExpandButton,
     showSortPill,
@@ -246,6 +249,8 @@ export function DatabaseViewToolbar() {
                     : []
                 }
                 draftViewTitle={draftViewTitle}
+                groupProperties={groupableProperties}
+                groupPropertyId={groupProperty?.property.id ?? null}
                 titlePropertyLabel={titlePropertyLabel}
                 organizationId={
                   databaseOrganizationId ?? organizationId ?? undefined
@@ -256,6 +261,7 @@ export function DatabaseViewToolbar() {
                 onDraftViewTitleChange={setDraftViewTitle}
                 onRemoveDatabaseSort={removeDatabaseSort}
                 onSaveDatabaseViewTitle={saveDatabaseViewTitle}
+                onSetViewGroupProperty={setViewGroupProperty}
                 onTogglePropertyVisibility={togglePropertyVisibility}
                 onUpdateDatabaseSort={updateDatabaseSort}
                 properties={properties}
