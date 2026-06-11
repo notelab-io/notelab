@@ -55,6 +55,7 @@ import {
   getDatabasePropertyType,
 } from "../constants"
 import { DatabasePropertyDate } from "../database-property-date"
+import { DatabasePropertyButton } from "../database-property-button"
 import { DatabasePropertyFiles } from "../database-property-files"
 import { DatabasePropertyInput } from "../database-property-input"
 import { DatabasePropertySelect } from "../database-property-select"
@@ -1671,6 +1672,7 @@ export function DatabaseTableView({
                         workspaceProperty.type === "status"
                       const isCheckboxProperty =
                         workspaceProperty.type === "checkbox"
+                      const isButtonProperty = workspaceProperty.type === "button"
                       const isDateProperty = workspaceProperty.type === "date"
                       const isFilesProperty = workspaceProperty.type === "files"
                       const isReadOnlyTimeCell = isReadOnlyTimeProperty(
@@ -1725,6 +1727,15 @@ export function DatabaseTableView({
                                     }
                                   />
                                 </div>
+                              </DatabaseCellContent>
+                            ) : isButtonProperty ? (
+                              <DatabaseCellContent wrapContent={wrapContent}>
+                                <DatabasePropertyButton
+                                  className="px-3 py-1"
+                                  editable={editable}
+                                  label={workspaceProperty.name}
+                                  value={value}
+                                />
                               </DatabaseCellContent>
                             ) : isSelectProperty || isPersonProperty ? (
                               <DatabaseCellContent wrapContent={wrapContent}>

@@ -21,6 +21,7 @@ import {
 } from "@notelab/features/workspaces"
 
 import { DatabasePropertyDate } from "../../extensions/database/database-property-date"
+import { DatabasePropertyButton } from "../../extensions/database/database-property-button"
 import { DatabasePropertyFiles } from "../../extensions/database/database-property-files"
 import { DatabasePropertyInput } from "../../extensions/database/database-property-input"
 import { DatabasePropertySelect } from "../../extensions/database/database-property-select"
@@ -307,6 +308,7 @@ export function WorkspaceMetadata({
                 property.type === "multi_select" ||
                 property.type === "status"
               const isCheckboxProperty = property.type === "checkbox"
+              const isButtonProperty = property.type === "button"
               const isDateProperty = property.type === "date"
               const isFilesProperty = property.type === "files"
               const isPersonProperty = property.type === "person"
@@ -348,6 +350,12 @@ export function WorkspaceMetadata({
                           }
                         />
                       </div>
+                    ) : isButtonProperty ? (
+                      <DatabasePropertyButton
+                        editable={editable}
+                        label={property.name}
+                        value={value}
+                      />
                     ) : isSelectProperty || isPersonProperty ? (
                       <DatabasePropertySelect
                         allowCreate={false}
