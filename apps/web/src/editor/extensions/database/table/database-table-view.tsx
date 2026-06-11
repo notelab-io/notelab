@@ -1239,54 +1239,58 @@ export function DatabaseTableView({
             />
           ) : null}
           <div className="flex min-w-0 items-center gap-2">
-            <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto">
-              {(payload?.views ?? []).map((view, index) => {
-                const isActiveView = index === 0
+            <div className="min-w-0 flex-1">
+              <div className="flex min-w-0 items-center gap-2 overflow-x-auto">
+                {(payload?.views ?? []).map((view, index) => {
+                  const isActiveView = index === 0
 
-                return (
-                  <div
-                    className={cn(
-                      "inline-flex h-8 shrink-0 items-center rounded-full px-3 text-sm font-medium",
-                      isActiveView
-                        ? "bg-secondary text-secondary-foreground"
-                        : "bg-muted/50 text-muted-foreground"
-                    )}
-                    key={view.id}
-                  >
-                    <Table2 className="mr-2 size-4 shrink-0" />
-                    <span className="truncate">
-                      {isActiveView ? draftViewTitle : view.name}
-                    </span>
-                  </div>
-                )
-              })}
+                  return (
+                    <div
+                      className={cn(
+                        "inline-flex h-8 shrink-0 items-center rounded-full px-3 text-sm font-medium",
+                        isActiveView
+                          ? "bg-secondary text-secondary-foreground"
+                          : "bg-muted/50 text-muted-foreground"
+                      )}
+                      key={view.id}
+                    >
+                      <Table2 className="mr-2 size-4 shrink-0" />
+                      <span className="truncate">
+                        {isActiveView ? draftViewTitle : view.name}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
               {activeDatabaseSorts.length > 0 && showSortPill ? (
-                <DatabaseSortPopover
-                  activeDatabaseSorts={activeDatabaseSorts}
-                  addableSortColumnOptions={addableSortColumnOptions}
-                  canAddDatabaseSort={canAddDatabaseSort}
-                  onClearDatabaseSort={clearDatabaseSort}
-                  onCreateDatabaseSort={createDatabaseSort}
-                  onRemoveDatabaseSort={removeDatabaseSort}
-                  onUpdateDatabaseSort={updateDatabaseSort}
-                  sortColumnOptions={sortColumnOptions}
-                >
-                  <Button
-                    aria-label="Open sort options"
-                    className="group h-8 shrink-0 rounded-full px-3"
-                    type="button"
-                    variant="secondary"
+                <div className="mt-2 flex min-w-0 items-center gap-2 overflow-x-auto">
+                  <DatabaseSortPopover
+                    activeDatabaseSorts={activeDatabaseSorts}
+                    addableSortColumnOptions={addableSortColumnOptions}
+                    canAddDatabaseSort={canAddDatabaseSort}
+                    onClearDatabaseSort={clearDatabaseSort}
+                    onCreateDatabaseSort={createDatabaseSort}
+                    onRemoveDatabaseSort={removeDatabaseSort}
+                    onUpdateDatabaseSort={updateDatabaseSort}
+                    sortColumnOptions={sortColumnOptions}
                   >
-                    <ArrowDownUp className="size-4 self-center shrink-0" />
-                    <span className="self-center truncate">
-                      {activeDatabaseSorts.length === 0
-                        ? "Sort"
-                        : `${activeDatabaseSorts.length} sort${
-                            activeDatabaseSorts.length === 1 ? "" : "s"
-                          }`}
-                    </span>
-                  </Button>
-                </DatabaseSortPopover>
+                    <Button
+                      aria-label="Open sort options"
+                      className="group h-8 shrink-0 rounded-full px-3"
+                      type="button"
+                      variant="secondary"
+                    >
+                      <ArrowDownUp className="size-4 self-center shrink-0" />
+                      <span className="self-center truncate">
+                        {activeDatabaseSorts.length === 0
+                          ? "Sort"
+                          : `${activeDatabaseSorts.length} sort${
+                              activeDatabaseSorts.length === 1 ? "" : "s"
+                            }`}
+                      </span>
+                    </Button>
+                  </DatabaseSortPopover>
+                </div>
               ) : null}
             </div>
             <div className="ml-auto flex shrink-0 items-center gap-2">
