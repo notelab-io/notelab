@@ -91,6 +91,20 @@ export function DatabasePropertyEditSubmenu({
   )
 }
 
+export function hasDatabasePropertyEditSettings(type: string) {
+  return (
+    type === "url" ||
+    type === "status" ||
+    type === "select" ||
+    type === "multi_select" ||
+    type === "person" ||
+    type === "files" ||
+    type === "date" ||
+    type === "created_time" ||
+    type === "edited_time"
+  )
+}
+
 function DatabasePropertyEditMenuItems({
   config,
   databaseId,
