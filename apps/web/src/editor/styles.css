@@ -467,6 +467,50 @@
     @apply max-w-full overflow-x-auto;
   }
 
+  .database-kanban-wrap {
+    @apply mt-2 max-w-full overflow-x-auto pb-2;
+  }
+
+  .database-kanban-board {
+    @apply flex min-h-72 w-max min-w-full gap-3;
+  }
+
+  .database-kanban-column {
+    @apply flex w-72 shrink-0 flex-col rounded-md bg-muted/35;
+  }
+
+  .database-kanban-column-header {
+    @apply flex min-h-10 items-center gap-2 border-b border-border px-3 py-2;
+  }
+
+  .database-kanban-count {
+    @apply ml-auto inline-flex min-w-5 justify-center rounded-sm bg-background px-1.5 py-0.5 text-xs font-medium text-muted-foreground;
+  }
+
+  .database-kanban-cards {
+    @apply flex flex-1 flex-col gap-2 p-2;
+  }
+
+  .database-kanban-card {
+    @apply overflow-hidden rounded-md border bg-background shadow-xs;
+  }
+
+  .database-kanban-card .database-page-link {
+    @apply min-h-10 border-b border-border px-3 py-2;
+  }
+
+  .database-kanban-card .database-select-cell-trigger {
+    @apply min-h-9 px-3 py-2;
+  }
+
+  .database-kanban-new-card {
+    @apply flex h-9 w-full items-center gap-2 rounded-md px-2 text-left text-sm text-muted-foreground transition-colors hover:bg-background hover:text-foreground disabled:opacity-70;
+  }
+
+  .database-kanban-new-card svg {
+    @apply size-4 shrink-0;
+  }
+
   .database-table {
     @apply w-full table-fixed border-collapse overflow-hidden;
     min-width: max(100%, var(--database-table-min-width, 100%));

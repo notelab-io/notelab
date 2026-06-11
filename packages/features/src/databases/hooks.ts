@@ -27,6 +27,13 @@ type UpdateDatabaseViewInput = {
   name?: string
 }
 
+type AddDatabaseViewInput = {
+  config?: unknown
+  databaseId: string
+  name?: string
+  type?: string
+}
+
 type AddPropertyInput = {
   config?: unknown
   databaseId: string
@@ -150,6 +157,19 @@ export function useUpdateDatabaseView() {
           body: JSON.stringify(patch),
         }
       ),
+    onSuccess: (payload) => setDatabasePayload(queryClient, payload),
+  })
+}
+
+export function useAddDatabaseView() {
+  const { apiFetch, queryClient } = useNotelabFeatures()
+
+  return useMutation({
+    mutationFn: async ({ databaseId, ...input }: AddDatabaseViewInput) =>
+      apiFetch<DatabasePayload>(`/databases/${databaseId}/views`, {
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
     onSuccess: (payload) => setDatabasePayload(queryClient, payload),
   })
 }

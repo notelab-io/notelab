@@ -3,6 +3,7 @@ import {
   ArrowDownUp,
   FileText,
   GripVertical,
+  Kanban,
   Loader2,
   Maximize2,
   Plus,
@@ -30,12 +31,18 @@ import { Checkbox } from "@/components/ui/checkbox"
 import {
   DropDrawer,
   DropDrawerContent,
+  DropDrawerItem,
   DropDrawerTrigger,
 } from "@/components/ui/dropdrawer"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
+import {
+  getColorTokenBadgeClassName,
+  getColorTokenDotClassName,
+} from "@/packages/editor/components/editor/toolbar-data"
 import { useSession } from "@notelab/features/auth"
 import {
+  useAddDatabaseView,
   useAddDatabaseProperty,
   useAddDatabaseRow,
   useDatabase,
@@ -94,6 +101,27 @@ import {
   serializePropertyValue,
   type DatabasePropertyValue,
 } from "../utils"
+
+type DatabaseSelectOption = {
+  color?: string
+  id: string
+  name: string
+}
+
+type DatabasePropertyListItem = {
+  id: string
+  position: number
+  property: {
+    config?: unknown
+    id: string
+    name: string
+    type: string
+  }
+}
+
+type DatabaseViewConfig = {
+  groupPropertyId?: unknown
+}
 
 type RowDragOverlay = {
   height: number
@@ -254,6 +282,77 @@ function DatabaseCellContent({
 
 function isReadOnlyTimeProperty(type: string) {
   return type === "created_time" || type === "edited_time"
+}
+
+function isKanbanGroupProperty(property: DatabasePropertyListItem) {
+  return property.property.type === "status" || property.property.type === "select"
+}
+
+function getSelectOptions(config: unknown) {
+  if (!config || typeof config !== "object" || !("options" in config)) {
+    return []
+  }
+
+  const options = (config as { options?: unknown }).options
+
+  if (!Array.isArray(options)) {
+    return []
+  }
+
+  return options.filter(
+    (option): option is DatabaseSelectOption =>
+      Boolean(option) &&
+      typeof option === "object" &&
+      typeof (option as DatabaseSelectOption).id === "string" &&
+      typeof (option as DatabaseSelectOption).name === "string"
+  )
+}
+
+function getKanbanGroupPropertyId(config: unknown) {
+  if (!config || typeof config !== "object" || Array.isArray(config)) {
+    return null
+  }
+
+  const groupPropertyId = (config as DatabaseViewConfig).groupPropertyId
+
+  return typeof groupPropertyId === "string" && groupPropertyId.length > 0
+    ? groupPropertyId
+    : null
+}
+
+function getKanbanGroupProperty(
+  properties: DatabasePropertyListItem[],
+  config: unknown
+) {
+  const configuredGroupPropertyId = getKanbanGroupPropertyId(config)
+  const configuredGroupProperty = configuredGroupPropertyId
+    ? properties.find(
+        (property) =>
+          property.property.id === configuredGroupPropertyId &&
+          isKanbanGroupProperty(property)
+      )
+    : null
+
+  return (
+    configuredGroupProperty ??
+    properties.find((property) => property.property.type === "status") ??
+    properties.find((property) => property.property.type === "select") ??
+    null
+  )
+}
+
+function getKanbanOptions(property: DatabasePropertyListItem | null) {
+  if (!property) {
+    return []
+  }
+
+  const options = getSelectOptions(property.property.config)
+
+  if (options.length > 0) {
+    return options
+  }
+
+  return property.property.type === "status" ? defaultStatusOptions : []
 }
 
 function getReadOnlyTimePropertyValue(
@@ -501,6 +600,7 @@ export function DatabaseTableView({
   >({})
   const updateDatabase = useUpdateDatabase()
   const updateDatabaseView = useUpdateDatabaseView()
+  const addDatabaseView = useAddDatabaseView()
   const addProperty = useAddDatabaseProperty()
   const updateProperty = useUpdateDatabaseProperty()
   const addRow = useAddDatabaseRow(organizationId)
@@ -513,6 +613,7 @@ export function DatabaseTableView({
   )
   const [draftDatabaseTitle, setDraftDatabaseTitle] = useState("New database")
   const [draftViewTitle, setDraftViewTitle] = useState("Table")
+  const [activeViewId, setActiveViewId] = useState<string | null>(null)
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({})
   const [activeCellKey, setActiveCellKey] = useState<string | null>(null)
   const [hoveredRowId, setHoveredRowId] = useState<string | null>(null)
@@ -563,7 +664,13 @@ export function DatabaseTableView({
   const nameColumnShowPageIcon = getNameColumnShowPageIcon(
     payload?.database.config
   )
-  const activeView = payload?.views[0] ?? null
+  const activeView = useMemo(
+    () =>
+      payload?.views.find((view) => view.id === activeViewId) ??
+      payload?.views[0] ??
+      null,
+    [activeViewId, payload?.views]
+  )
   const sortColumnOptions = useMemo<DatabaseSearchableMenuOption[]>(
     () => [
       {
@@ -583,9 +690,20 @@ export function DatabaseTableView({
     ],
     [nameColumnLabel, properties]
   )
+  const activeViewConfig = activeView?.config ?? payload?.database.config
+  const isKanbanView = activeView?.type === "kanban"
+  const isTableView = !isKanbanView
   const databaseSorts = useMemo(
-    () => getDatabaseSorts(payload?.database.config),
-    [payload?.database.config]
+    () => getDatabaseSorts(activeViewConfig),
+    [activeViewConfig]
+  )
+  const kanbanGroupProperty = useMemo(
+    () => getKanbanGroupProperty(properties, activeViewConfig),
+    [activeViewConfig, properties]
+  )
+  const kanbanOptions = useMemo(
+    () => getKanbanOptions(kanbanGroupProperty),
+    [kanbanGroupProperty]
   )
   const activeDatabaseSorts = useMemo<DatabaseActiveSort[]>(
     () =>
@@ -660,6 +778,17 @@ export function DatabaseTableView({
       setDraftDatabaseTitle(payload.database.name)
     }
   }, [payload?.database.id, payload?.database.name])
+
+  useEffect(() => {
+    if (!payload?.views.length) {
+      setActiveViewId(null)
+      return
+    }
+
+    if (!activeViewId || !payload.views.some((view) => view.id === activeViewId)) {
+      setActiveViewId(payload.views[0].id)
+    }
+  }, [activeViewId, payload?.views])
 
   useEffect(() => {
     if (activeView?.name) {
@@ -743,6 +872,132 @@ export function DatabaseTableView({
     return () => window.removeEventListener("resize", measureRows)
   }, [measureRows])
 
+  const addTableView = useCallback(() => {
+    if (!databaseId || addDatabaseView.isPending) {
+      return
+    }
+
+    const existingViewIds = new Set((payload?.views ?? []).map((view) => view.id))
+
+    addDatabaseView.mutate(
+      {
+        databaseId,
+        name: "Table",
+        type: "table",
+      },
+      {
+        onSuccess: (nextPayload) => {
+          const addedView =
+            nextPayload.views.find((view) => !existingViewIds.has(view.id)) ??
+            nextPayload.views.at(-1)
+
+          setActiveViewId(addedView?.id ?? null)
+        },
+        onError: () => {
+          toast.error("Couldn't add table view")
+        },
+      }
+    )
+  }, [addDatabaseView, databaseId, payload?.views])
+
+  const addKanbanView = useCallback(() => {
+    if (!databaseId || addDatabaseView.isPending || addProperty.isPending) {
+      return
+    }
+
+    const existingViewIds = new Set((payload?.views ?? []).map((view) => view.id))
+    const currentProperties = payload?.properties ?? []
+    const groupProperty =
+      currentProperties.find((property) => property.property.type === "status") ??
+      currentProperties.find((property) => property.property.type === "select")
+    const addView = (
+      groupPropertyId: string,
+      onViewAdded?: (nextPayload: { rows: { id: string }[] }) => void
+    ) => {
+      addDatabaseView.mutate(
+        {
+          config: { groupPropertyId },
+          databaseId,
+          name: "Kanban",
+          type: "kanban",
+        },
+        {
+          onSuccess: (nextPayload) => {
+            const addedView =
+              nextPayload.views.find((view) => !existingViewIds.has(view.id)) ??
+              nextPayload.views.at(-1)
+
+            setActiveViewId(addedView?.id ?? null)
+            onViewAdded?.(nextPayload)
+          },
+          onError: () => {
+            toast.error("Couldn't add kanban view")
+          },
+        }
+      )
+    }
+
+    if (groupProperty) {
+      addView(groupProperty.property.id)
+      return
+    }
+
+    const existingPropertyIds = new Set(
+      currentProperties.map((property) => property.property.id)
+    )
+
+    addProperty.mutate(
+      {
+        config: {
+          defaultOptionId: defaultStatusOptions[0]?.id,
+          options: defaultStatusOptions,
+        },
+        databaseId,
+        name: "Status",
+        type: "status",
+      },
+      {
+        onSuccess: (nextPayload) => {
+          const addedProperty =
+            nextPayload.properties.find(
+              (property) =>
+                !existingPropertyIds.has(property.property.id) &&
+                property.property.type === "status"
+            ) ??
+            nextPayload.properties.find(
+              (property) => property.property.type === "status"
+            )
+
+          if (!addedProperty) {
+            toast.error("Couldn't create status property")
+            return
+          }
+
+          addView(addedProperty.property.id, (viewPayload) => {
+            for (const row of viewPayload.rows) {
+              updateValue.mutate({
+                databaseId,
+                propertyId: addedProperty.property.id,
+                rowId: row.id,
+                value: defaultStatusOptions[0]?.name ?? "Not started",
+              })
+            }
+          })
+        },
+        onError: () => {
+          toast.error("Couldn't create status property")
+        },
+      }
+    )
+  }, [
+    addDatabaseView,
+    addProperty,
+    databaseId,
+    payload?.properties,
+    payload?.views,
+    updateValue,
+  ])
+
   const isDraggingDatabaseRow = Boolean(rowDragOverlay)
 
   useEffect(() => {
@@ -799,15 +1054,50 @@ export function DatabaseTableView({
     measureRows()
   }, [activeCellKey, measureRows, properties, sortedRows])
 
-  const addDatabaseRow = () => {
+  const addDatabaseRow = (groupValue?: string) => {
     if (!editable || !databaseId || addRow.isPending) {
       return
     }
 
-    addRow.mutate({
-      databaseId,
-      title: "Untitled",
-    })
+    const existingRowIds = new Set(rows.map((row) => row.id))
+    const defaultStatusValue = defaultStatusOptions[0]?.name ?? "Not started"
+    const nextGroupValue =
+      groupValue ??
+      (isKanbanView && kanbanGroupProperty?.property.type === "status"
+        ? defaultStatusValue
+        : null)
+
+    addRow.mutate(
+      {
+        databaseId,
+        title: "Untitled",
+      },
+      {
+        onSuccess: (nextPayload) => {
+          if (!nextGroupValue || !kanbanGroupProperty) {
+            return
+          }
+
+          const addedRow =
+            nextPayload.rows.find((row) => !existingRowIds.has(row.id)) ??
+            nextPayload.rows.at(-1)
+
+          if (!addedRow) {
+            return
+          }
+
+          updateValue.mutate({
+            databaseId,
+            propertyId: kanbanGroupProperty.property.id,
+            rowId: addedRow.id,
+            value: serializePropertyValue(
+              kanbanGroupProperty.property.type,
+              nextGroupValue
+            ),
+          })
+        },
+      }
+    )
   }
 
   const addDatabaseProperty = (
@@ -834,16 +1124,17 @@ export function DatabaseTableView({
     })
   }
   const saveDatabaseSorts = (nextSorts: DatabaseSortConfig[]) => {
-    if (!databaseId) {
+    if (!databaseId || !activeView?.id) {
       return
     }
 
-    updateDatabase.mutate({
-      config: getMergedDatabaseConfig(payload?.database.config, {
+    updateDatabaseView.mutate({
+      config: getMergedDatabaseConfig(activeView.config, {
         sort: undefined,
         sorts: nextSorts.length > 0 ? nextSorts : undefined,
       }),
       databaseId,
+      databaseViewId: activeView.id,
     })
   }
   const createDatabaseSort = (column: string) => {
@@ -1205,7 +1496,7 @@ export function DatabaseTableView({
   )
 
   return (
-      <div
+    <div
         className={
           fullPage
             ? "database-block-shell database-block-shell-full"
@@ -1241,26 +1532,68 @@ export function DatabaseTableView({
           <div className="flex min-w-0 items-center gap-2">
             <div className="min-w-0 flex-1">
               <div className="flex min-w-0 items-center gap-2 overflow-x-auto">
-                {(payload?.views ?? []).map((view, index) => {
-                  const isActiveView = index === 0
+                {(payload?.views ?? []).map((view) => {
+                  const isActiveView = view.id === activeView?.id
+                  const ViewIcon = view.type === "kanban" ? Kanban : Table2
 
                   return (
-                    <div
+                    <button
+                      aria-pressed={isActiveView}
                       className={cn(
-                        "inline-flex h-8 shrink-0 items-center rounded-full px-3 text-sm font-medium",
+                        "inline-flex h-8 shrink-0 items-center rounded-full px-3 text-sm font-medium transition-colors",
                         isActiveView
                           ? "bg-secondary text-secondary-foreground"
-                          : "bg-muted/50 text-muted-foreground"
+                          : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
                       )}
                       key={view.id}
+                      onClick={() => setActiveViewId(view.id)}
+                      type="button"
                     >
-                      <Table2 className="mr-2 size-4 shrink-0" />
+                      <ViewIcon className="mr-2 size-4 shrink-0" />
                       <span className="truncate">
                         {isActiveView ? draftViewTitle : view.name}
                       </span>
-                    </div>
+                    </button>
                   )
                 })}
+                <DropDrawer>
+                  <DropDrawerTrigger asChild>
+                    <Button
+                      aria-label="Add database view"
+                      className="h-8 w-8 shrink-0 rounded-full"
+                      disabled={!databaseId || addDatabaseView.isPending}
+                      size="icon"
+                      type="button"
+                      variant="ghost"
+                    >
+                      {addDatabaseView.isPending ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Plus className="size-4" />
+                      )}
+                    </Button>
+                  </DropDrawerTrigger>
+                  <DropDrawerContent align="start" className="w-40">
+                    <DropDrawerItem
+                      disabled={!databaseId || addDatabaseView.isPending}
+                      onSelect={addTableView}
+                    >
+                      <Table2 className="size-4" />
+                      <span>Table</span>
+                    </DropDrawerItem>
+                    <DropDrawerItem
+                      disabled={
+                        !databaseId ||
+                        addDatabaseView.isPending ||
+                        addProperty.isPending
+                      }
+                      onSelect={addKanbanView}
+                    >
+                      <Kanban className="size-4" />
+                      <span>Kanban</span>
+                    </DropDrawerItem>
+                  </DropDrawerContent>
+                </DropDrawer>
               </div>
               {activeDatabaseSorts.length > 0 && showSortPill ? (
                 <div className="mt-2 flex min-w-0 items-center gap-2 overflow-x-auto">
@@ -1340,6 +1673,7 @@ export function DatabaseTableView({
                   )}
                   <DatabaseViewSettingsMenu
                     activeDatabaseSorts={activeDatabaseSorts}
+                    activeViewType={activeView?.type}
                     databaseId={databaseId ?? undefined}
                     databaseName={draftDatabaseTitle}
                     dataSources={
@@ -1355,7 +1689,11 @@ export function DatabaseTableView({
                     }
                     draftViewTitle={draftViewTitle}
                     nameColumnLabel={nameColumnLabel}
-                    organizationId={payload?.database.organizationId ?? organizationId ?? undefined}
+                    organizationId={
+                      payload?.database.organizationId ??
+                      organizationId ??
+                      undefined
+                    }
                     onCopyDatabaseViewLink={copyDatabaseViewLink}
                     onClearDatabaseSort={clearDatabaseSort}
                     onCreateDatabaseSort={createDatabaseSort}
@@ -1372,7 +1710,7 @@ export function DatabaseTableView({
                   <Button
                     className="database-new-button"
                     disabled={!databaseId || addRow.isPending}
-                    onClick={addDatabaseRow}
+                    onClick={() => addDatabaseRow()}
                     type="button"
                   >
                     {addRow.isPending ? (
@@ -1413,6 +1751,135 @@ export function DatabaseTableView({
           <div className="database-empty-state">
             <Loader2 className="animate-spin" />
             <span>Loading database...</span>
+          </div>
+        ) : isKanbanView ? (
+          <div className="database-kanban-wrap">
+            {kanbanGroupProperty && kanbanOptions.length > 0 ? (
+              <div className="database-kanban-board">
+                {[
+                  ...kanbanOptions,
+                  ...(sortedRows.some((row) => {
+                    const key = `${row.pageId}:${kanbanGroupProperty.property.id}`
+                    const value = cellValues[key] ?? ""
+                    const groupValue = Array.isArray(value)
+                      ? value[0] ?? ""
+                      : value
+
+                    return (
+                      kanbanGroupProperty.property.type !== "status" &&
+                      !groupValue
+                    )
+                  })
+                    ? [{ color: "gray", id: "empty", name: "Empty" }]
+                    : []),
+                ].map((option) => {
+                  const isEmptyOption = option.id === "empty"
+                  const optionRows = sortedRows.filter((row) => {
+                    const key = `${row.pageId}:${kanbanGroupProperty.property.id}`
+                    const value = cellValues[key] ?? ""
+                    const groupValue = Array.isArray(value)
+                      ? value[0] ?? ""
+                      : value
+                    const normalizedGroupValue =
+                      groupValue ||
+                      (kanbanGroupProperty.property.type === "status"
+                        ? defaultStatusOptions[0]?.name ?? "Not started"
+                        : "")
+
+                    return isEmptyOption
+                      ? !groupValue
+                      : normalizedGroupValue === option.name
+                  })
+
+                  return (
+                    <section className="database-kanban-column" key={option.id}>
+                      <div className="database-kanban-column-header">
+                        <span className={getColorTokenBadgeClassName(option.color)}>
+                          <span
+                            aria-hidden="true"
+                            className={getColorTokenDotClassName(option.color)}
+                          />
+                          {option.name}
+                        </span>
+                        <span className="database-kanban-count">
+                          {optionRows.length}
+                        </span>
+                      </div>
+                      <div className="database-kanban-cards">
+                        {optionRows.map((row) => {
+                          const key = `${row.pageId}:${kanbanGroupProperty.property.id}`
+                          const persistedValue = cellValues[key] ?? ""
+                          const value =
+                            persistedValue ||
+                            (kanbanGroupProperty.property.type === "status"
+                              ? defaultStatusOptions[0]?.name ?? "Not started"
+                              : "")
+
+                          return (
+                            <article className="database-kanban-card" key={row.id}>
+                              <DatabasePageCell
+                                onOpen={onOpenPage}
+                                pageId={row.pageId}
+                                showPageIcon={nameColumnShowPageIcon}
+                              />
+                              <DatabasePropertySelect
+                                editable={editable && !isEmptyOption}
+                                defaultOptions={
+                                  kanbanGroupProperty.property.type === "status"
+                                    ? defaultStatusOptions
+                                    : undefined
+                                }
+                                label={kanbanGroupProperty.property.name}
+                                onSelect={(optionValue) =>
+                                  saveCell(
+                                    row.id,
+                                    kanbanGroupProperty.property.id,
+                                    kanbanGroupProperty.property.type,
+                                    persistedValue,
+                                    optionValue
+                                  )
+                                }
+                                onPropertyConfigChange={(config) =>
+                                  updateProperty.mutateAsync({
+                                    config,
+                                    databaseId: payload.database.id,
+                                    databasePropertyId: kanbanGroupProperty.id,
+                                  })
+                                }
+                                propertyConfig={kanbanGroupProperty.property.config}
+                                showStatusDot={
+                                  kanbanGroupProperty.property.type === "status"
+                                }
+                                value={value}
+                              />
+                            </article>
+                          )
+                        })}
+                        {editable && !isEmptyOption ? (
+                          <button
+                            className="database-kanban-new-card"
+                            disabled={!databaseId || addRow.isPending}
+                            onClick={() => addDatabaseRow(option.name)}
+                            type="button"
+                          >
+                            {addRow.isPending ? (
+                              <Loader2 className="animate-spin" />
+                            ) : (
+                              <Plus />
+                            )}
+                            <span>New page</span>
+                          </button>
+                        ) : null}
+                      </div>
+                    </section>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="database-empty-state">
+                <span>Add a select or status property to use Kanban.</span>
+              </div>
+            )}
           </div>
         ) : (
           <div
@@ -1475,7 +1942,7 @@ export function DatabaseTableView({
               clearRowDrag()
             }}
           >
-            {editable && !isTableSorted ? (
+            {editable && isTableView && !isTableSorted ? (
               <div className="database-row-drag-rail">
                 {activeDragRow ? (
                   <button
@@ -1968,7 +2435,7 @@ export function DatabaseTableView({
                   <button
                     className="database-page-create database-page-create-full"
                     disabled={!databaseId || addRow.isPending}
-                    onClick={addDatabaseRow}
+                    onClick={() => addDatabaseRow()}
                     type="button"
                   >
                     {addRow.isPending ? (

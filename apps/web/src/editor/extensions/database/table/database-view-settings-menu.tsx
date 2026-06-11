@@ -8,6 +8,7 @@ import {
   FileText,
   Filter,
   GripVertical,
+  Kanban,
   Link as LinkIcon,
   Lock,
   MoreHorizontal,
@@ -131,6 +132,7 @@ function DataSourceMenuItem({
 
 export function DatabaseViewSettingsMenu({
   activeDatabaseSorts,
+  activeViewType,
   addableSortColumnOptions,
   canAddDatabaseSort,
   databaseId,
@@ -152,6 +154,7 @@ export function DatabaseViewSettingsMenu({
   visiblePropertyCount,
 }: {
   activeDatabaseSorts: DatabaseActiveSort[]
+  activeViewType?: string
   addableSortColumnOptions: DatabaseSearchableMenuOption[]
   canAddDatabaseSort: boolean
   databaseId?: string
@@ -178,6 +181,9 @@ export function DatabaseViewSettingsMenu({
   const updateProperty = useUpdateDatabaseProperty()
   const { data: workspaces = [], isLoading: isLoadingWorkspaces } =
     useWorkspaces(organizationId)
+  const isKanbanView = activeViewType === "kanban"
+  const ViewTypeIcon = isKanbanView ? Kanban : Table2
+  const viewTypeLabel = isKanbanView ? "Kanban" : "Table"
 
   const linkableDatabaseOptions = workspaces.flatMap((workspace) =>
     (workspace.databases ?? [])
@@ -271,15 +277,19 @@ export function DatabaseViewSettingsMenu({
         <DropDrawerSub>
           <DropDrawerSubTrigger>
             <ViewSettingsRow
-              icon={<Table2 />}
+              icon={<ViewTypeIcon />}
               label="Layout"
-              right="Table"
+              right={viewTypeLabel}
             />
           </DropDrawerSubTrigger>
           <DropDrawerSubContent>
             <DropDrawerItem disabled>
               <Table2 />
               <span>Table</span>
+            </DropDrawerItem>
+            <DropDrawerItem disabled>
+              <Kanban />
+              <span>Kanban</span>
             </DropDrawerItem>
           </DropDrawerSubContent>
         </DropDrawerSub>
