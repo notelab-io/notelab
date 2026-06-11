@@ -63,7 +63,7 @@ import {
   upsertDatabaseSort,
   type DatabasePropertyConfig,
   type DatabaseSortDirection,
-} from "./database-column-config"
+} from "./database-view-config"
 import { DatabasePropertyEditSubmenu } from "./database-property-edit-submenu"
 
 export { DatabaseNamePropertyMenu } from "./database-name-property-menu"

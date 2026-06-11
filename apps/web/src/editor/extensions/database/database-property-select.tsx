@@ -11,7 +11,7 @@ import {
   getColorTokenBadgeClassName,
   getColorTokenDotClassName,
 } from "@/packages/editor/components/editor/toolbar-data"
-import type { DatabaseSelectOption } from "./table/database-column-config"
+import type { DatabaseSelectOption } from "./shared/database-view-config"
 
 type DatabasePropertySelectOption = DatabaseSelectOption & {
   suffix?: string
@@ -58,7 +58,7 @@ function getSelectOptions(config: unknown) {
   }
 
   return options.filter(
-    (option): option is DatabaseSelectOption =>
+    (option): option is DatabasePropertySelectOption =>
       Boolean(option) &&
       typeof option === "object" &&
       typeof option.id === "string" &&
@@ -68,7 +68,7 @@ function getSelectOptions(config: unknown) {
 
 function getSelectConfigWithOptions(
   config: unknown,
-  options: DatabaseSelectOption[]
+  options: DatabasePropertySelectOption[]
 ) {
   return {
     ...(config && typeof config === "object" ? config : {}),
@@ -115,7 +115,7 @@ export function DatabasePropertySelect({
   const selectOptions =
     configuredOptions.length > 0 ? configuredOptions : defaultOptions
   const selectedValues = Array.isArray(value) ? value : value ? [value] : []
-  const getOptionValue = (option: DatabaseSelectOption) => option[valueKey]
+  const getOptionValue = (option: DatabasePropertySelectOption) => option[valueKey]
   const getSelectedOption = (optionValue: string) =>
     selectOptions.find((option) => getOptionValue(option) === optionValue)
   const getOptionColor = (optionValue: string) =>

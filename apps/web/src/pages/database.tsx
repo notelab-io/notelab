@@ -10,7 +10,6 @@ import {
 } from "@/components/app-layout"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
-import { isEmbeddedMobileViewer } from "@/lib/embedded-view"
 import { cn } from "@/lib/utils"
 import { getDatabaseEmoji } from "@notelab/features/databases"
 import {
@@ -24,7 +23,7 @@ import {
 } from "@notelab/features/databases"
 import { useSession } from "@notelab/features/auth"
 import { WorkspaceMetadata as WorkspaceMetadataView } from "@/packages/editor/components/editor/workspace-metadata"
-import { DatabaseTableView } from "@/packages/editor/extensions/database"
+import { DatabaseView } from "@/packages/editor/extensions/database"
 import {
   PublicPaneTopbar,
   PublicWorkspaceBreadcrumb,
@@ -280,7 +279,7 @@ function DatabaseMainPane({
         workspaceId={databasePageId}
       />
       <div className="tiptap-editor px-5 pb-10 sm:px-8 md:px-20 lg:px-24">
-        <DatabaseTableView
+        <DatabaseView
           databaseId={databaseId}
           editable={!readOnly}
           fullPage

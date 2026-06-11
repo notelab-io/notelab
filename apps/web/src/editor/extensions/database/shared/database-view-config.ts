@@ -34,6 +34,7 @@ export type DatabasePropertyConfig = {
 
 type DatabaseConfig = {
   emoji?: string
+  hiddenPropertyIds?: string[]
   nameColumn?: DatabaseNameColumnConfig
   sort?: DatabaseSortConfig
   sorts?: DatabaseSortConfig[]
@@ -153,6 +154,42 @@ export function getPropertyHidden(config: unknown) {
   }
 
   return (config as DatabasePropertyConfig).hidden === true
+}
+
+export function getViewHiddenPropertyIds(config: unknown) {
+  if (
+    !config ||
+    typeof config !== "object" ||
+    Array.isArray(config) ||
+    !("hiddenPropertyIds" in config)
+  ) {
+    return []
+  }
+
+  const hiddenPropertyIds = (config as DatabaseConfig).hiddenPropertyIds
+
+  return Array.isArray(hiddenPropertyIds)
+    ? hiddenPropertyIds.filter(
+        (propertyId): propertyId is string => typeof propertyId === "string"
+      )
+    : []
+}
+
+export function getPropertyHiddenForView(
+  propertyId: string,
+  propertyConfig: unknown,
+  viewConfig: unknown
+) {
+  const hasViewVisibilityConfig =
+    viewConfig !== null &&
+    typeof viewConfig === "object" &&
+    !Array.isArray(viewConfig) &&
+    "hiddenPropertyIds" in viewConfig
+  const hiddenPropertyIds = getViewHiddenPropertyIds(viewConfig)
+
+  return hasViewVisibilityConfig
+    ? hiddenPropertyIds.includes(propertyId)
+    : getPropertyHidden(propertyConfig)
 }
 
 export function getPersonLimit(config: unknown) {

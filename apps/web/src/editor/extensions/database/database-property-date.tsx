@@ -22,7 +22,7 @@ import {
   type DatabaseDatePropertyConfig,
   type DateFormatValue,
   type TimeFormatValue,
-} from "./table/database-date-config"
+} from "./shared/database-date-config"
 
 type DatabasePropertyDateProps = {
   editable?: boolean

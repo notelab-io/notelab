@@ -7,7 +7,7 @@ import {
 import { useSyncExternalStore } from "react"
 
 import { DATABASE_PAGE_DRAG_MIME } from "./constants"
-import { DatabaseTableView } from "./table"
+import { DatabaseView } from "./shared/database-view"
 import type { DatabaseBlockOptions } from "./types"
 
 const databasePageDragEvents = new Set([
@@ -47,7 +47,7 @@ function DatabaseBlockView({ editor, extension, node }: ReactNodeViewProps) {
       data-database-id={databaseId ?? undefined}
       data-type="databaseBlock"
     >
-      <DatabaseTableView
+      <DatabaseView
         databaseId={databaseId}
         editable={isEditable}
         onOpenPage={options.onOpenPage}

@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-import { type DatabaseSortDirection } from "./database-column-config"
+import { type DatabaseSortDirection } from "./database-view-config"
 import {
   DatabaseSearchableMenuItems,
   type DatabaseSearchableMenuOption,
@@ -41,31 +41,31 @@ export type DatabaseSortUpdatePatch = {
 
 type DatabaseSortMenuProps = {
   activeDatabaseSorts: DatabaseActiveSort[]
-  addableSortColumnOptions: DatabaseSearchableMenuOption[]
+  addableSortFieldOptions: DatabaseSearchableMenuOption[]
   canAddDatabaseSort: boolean
   onClearDatabaseSort: () => void
-  onCreateDatabaseSort: (column: string) => void
+  onCreateDatabaseSort: (field: string) => void
   onRemoveDatabaseSort: (index: number) => void
   onUpdateDatabaseSort: (index: number, patch: DatabaseSortUpdatePatch) => void
-  sortColumnOptions: DatabaseSearchableMenuOption[]
+  sortFieldOptions: DatabaseSearchableMenuOption[]
 }
 
 function DatabaseSortMenuContent({
   activeDatabaseSorts,
-  addableSortColumnOptions,
+  addableSortFieldOptions,
   canAddDatabaseSort,
   onClearDatabaseSort,
   onCreateDatabaseSort,
   onRemoveDatabaseSort,
   onUpdateDatabaseSort,
-  sortColumnOptions,
+  sortFieldOptions,
 }: DatabaseSortMenuProps) {
   const [addSortPickerOpen, setAddSortPickerOpen] = useState(false)
 
   return (
     <div className="flex w-fit max-w-full flex-col gap-2">
       {activeDatabaseSorts.map((sort, index) => {
-        const availableSortOptions = sortColumnOptions.filter(
+        const availableSortOptions = sortFieldOptions.filter(
           (option) =>
             option.value === sort.column ||
             !activeDatabaseSorts.some(
@@ -78,7 +78,9 @@ function DatabaseSortMenuContent({
           <div className="flex items-center gap-2" key={`${sort.column}:${index}`}>
             <ArrowDownUp className="size-4 text-muted-foreground" />
             <Select
-              onValueChange={(column) => onUpdateDatabaseSort(index, { column })}
+              onValueChange={(field) =>
+                onUpdateDatabaseSort(index, { column: field })
+              }
               value={sort.column}
             >
               <SelectTrigger className="w-56">
@@ -141,7 +143,7 @@ function DatabaseSortMenuContent({
               inputPlaceholder="Sort by..."
               onSelect={onCreateDatabaseSort}
               open={addSortPickerOpen}
-              options={addableSortColumnOptions}
+              options={addableSortFieldOptions}
             />
           </DropDrawerContent>
         </DropDrawer>
@@ -161,14 +163,14 @@ function DatabaseSortMenuContent({
 
 export function DatabaseSortPopover({
   activeDatabaseSorts,
-  addableSortColumnOptions,
+  addableSortFieldOptions,
   canAddDatabaseSort,
   children,
   onClearDatabaseSort,
   onCreateDatabaseSort,
   onRemoveDatabaseSort,
   onUpdateDatabaseSort,
-  sortColumnOptions,
+  sortFieldOptions,
 }: DatabaseSortMenuProps & {
   children: ReactNode
 }) {
@@ -181,13 +183,13 @@ export function DatabaseSortPopover({
       >
         <DatabaseSortMenuContent
           activeDatabaseSorts={activeDatabaseSorts}
-          addableSortColumnOptions={addableSortColumnOptions}
+          addableSortFieldOptions={addableSortFieldOptions}
           canAddDatabaseSort={canAddDatabaseSort}
           onClearDatabaseSort={onClearDatabaseSort}
           onCreateDatabaseSort={onCreateDatabaseSort}
           onRemoveDatabaseSort={onRemoveDatabaseSort}
           onUpdateDatabaseSort={onUpdateDatabaseSort}
-          sortColumnOptions={sortColumnOptions}
+          sortFieldOptions={sortFieldOptions}
         />
       </PopoverContent>
     </Popover>
@@ -196,14 +198,14 @@ export function DatabaseSortPopover({
 
 export function DatabaseSortSubmenu({
   activeDatabaseSorts,
-  addableSortColumnOptions,
+  addableSortFieldOptions,
   canAddDatabaseSort,
   children,
   onClearDatabaseSort,
   onCreateDatabaseSort,
   onRemoveDatabaseSort,
   onUpdateDatabaseSort,
-  sortColumnOptions,
+  sortFieldOptions,
 }: DatabaseSortMenuProps & {
   children: ReactNode
 }) {
@@ -213,13 +215,13 @@ export function DatabaseSortSubmenu({
       <DropDrawerSubContent className="w-fit min-w-0 max-w-[calc(100vw-2rem)] p-3">
         <DatabaseSortMenuContent
           activeDatabaseSorts={activeDatabaseSorts}
-          addableSortColumnOptions={addableSortColumnOptions}
+          addableSortFieldOptions={addableSortFieldOptions}
           canAddDatabaseSort={canAddDatabaseSort}
           onClearDatabaseSort={onClearDatabaseSort}
           onCreateDatabaseSort={onCreateDatabaseSort}
           onRemoveDatabaseSort={onRemoveDatabaseSort}
           onUpdateDatabaseSort={onUpdateDatabaseSort}
-          sortColumnOptions={sortColumnOptions}
+          sortFieldOptions={sortFieldOptions}
         />
       </DropDrawerSubContent>
     </DropDrawerSub>

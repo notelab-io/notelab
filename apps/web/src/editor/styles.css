@@ -499,8 +499,38 @@
     @apply min-h-10 border-b border-border px-3 py-2;
   }
 
-  .database-kanban-card .database-select-cell-trigger {
-    @apply min-h-9 px-3 py-2;
+  .database-kanban-card-properties {
+    @apply flex flex-col gap-2 px-3 py-2;
+  }
+
+  .database-kanban-property {
+    @apply grid min-w-0 grid-cols-[5.5rem_minmax(0,1fr)] items-start gap-2;
+  }
+
+  .database-kanban-property-label {
+    @apply truncate pt-1 text-xs font-medium text-muted-foreground;
+  }
+
+  .database-kanban-property-value {
+    @apply min-w-0;
+  }
+
+  .database-kanban-property-value
+    :is(
+      .database-checkbox-cell,
+      .database-date-cell-trigger,
+      .database-input-cell-trigger,
+      .database-select-cell-trigger
+    ) {
+    @apply min-h-7 px-0 py-0;
+  }
+
+  .database-kanban-property-value .database-input-cell {
+    @apply min-h-7 px-0 py-0 leading-6;
+  }
+
+  .database-kanban-property-value .database-input-cell-wrap {
+    @apply h-auto min-h-7;
   }
 
   .database-kanban-new-card {

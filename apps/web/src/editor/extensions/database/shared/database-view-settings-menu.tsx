@@ -33,14 +33,12 @@ import {
   DropDrawerTrigger,
 } from "@/components/ui/dropdrawer"
 import { Input } from "@/components/ui/input"
-import { useUpdateDatabaseProperty } from "@notelab/features/databases"
 import { useWorkspaces } from "@notelab/features/workspaces"
 
 import { getDatabasePropertyType } from "../constants"
 import {
-  getMergedPropertyConfig,
-  getPropertyHidden,
-} from "./database-column-config"
+  getPropertyHiddenForView,
+} from "./database-view-config"
 import { DatabasePropertyEditSubmenu } from "./database-property-menu"
 import { hasDatabasePropertyEditSettings } from "./database-property-edit-submenu"
 import {
@@ -133,14 +131,14 @@ function DataSourceMenuItem({
 export function DatabaseViewSettingsMenu({
   activeDatabaseSorts,
   activeViewType,
-  addableSortColumnOptions,
+  addableSortFieldOptions,
   canAddDatabaseSort,
   databaseId,
   databaseName,
   dataSources,
   draftViewTitle,
   linkedDataSources = [],
-  nameColumnLabel,
+  titlePropertyLabel,
   organizationId,
   onCopyDatabaseViewLink,
   onClearDatabaseSort,
@@ -148,37 +146,40 @@ export function DatabaseViewSettingsMenu({
   onDraftViewTitleChange,
   onRemoveDatabaseSort,
   onSaveDatabaseViewTitle,
+  onTogglePropertyVisibility,
   onUpdateDatabaseSort,
   properties,
-  sortColumnOptions,
+  sortFieldOptions,
+  viewConfig,
   visiblePropertyCount,
 }: {
   activeDatabaseSorts: DatabaseActiveSort[]
   activeViewType?: string
-  addableSortColumnOptions: DatabaseSearchableMenuOption[]
+  addableSortFieldOptions: DatabaseSearchableMenuOption[]
   canAddDatabaseSort: boolean
   databaseId?: string
   databaseName?: string
   dataSources: DatabaseSourceMenuItem[]
   draftViewTitle: string
   linkedDataSources?: DatabaseSourceMenuItem[]
-  nameColumnLabel: string
+  titlePropertyLabel: string
   organizationId?: string
   onCopyDatabaseViewLink: () => void
   onClearDatabaseSort: () => void
-  onCreateDatabaseSort: (column: string) => void
+  onCreateDatabaseSort: (field: string) => void
   onDraftViewTitleChange: (title: string) => void
   onRemoveDatabaseSort: (index: number) => void
   onSaveDatabaseViewTitle: (title: string) => void
+  onTogglePropertyVisibility: (propertyId: string) => void
   onUpdateDatabaseSort: (index: number, patch: DatabaseSortUpdatePatch) => void
   properties: DatabaseViewProperty[]
-  sortColumnOptions: DatabaseSearchableMenuOption[]
+  sortFieldOptions: DatabaseSearchableMenuOption[]
+  viewConfig?: unknown
   visiblePropertyCount: number
 }) {
   const [open, setOpen] = useState(false)
   const [manageDataSourcesOpen, setManageDataSourcesOpen] = useState(false)
   const [showLinkExistingPicker, setShowLinkExistingPicker] = useState(false)
-  const updateProperty = useUpdateDatabaseProperty()
   const { data: workspaces = [], isLoading: isLoadingWorkspaces } =
     useWorkspaces(organizationId)
   const isKanbanView = activeViewType === "kanban"
@@ -203,20 +204,6 @@ export function DatabaseViewSettingsMenu({
       setManageDataSourcesOpen(false)
       setShowLinkExistingPicker(false)
     }
-  }
-
-  const togglePropertyVisibility = (property: DatabaseViewProperty) => {
-    if (!databaseId) {
-      return
-    }
-
-    updateProperty.mutate({
-      config: getMergedPropertyConfig(property.property.config, {
-        hidden: !getPropertyHidden(property.property.config),
-      }),
-      databaseId,
-      databasePropertyId: property.id,
-    })
   }
 
   return (
@@ -304,12 +291,16 @@ export function DatabaseViewSettingsMenu({
           <DropDrawerSubContent className="w-72">
             <DropDrawerItem disabled>
               <NameColumnGlyph />
-              <span>{nameColumnLabel}</span>
+              <span>{titlePropertyLabel}</span>
               <Eye className="ml-auto text-muted-foreground" />
             </DropDrawerItem>
             {properties.map((property) => {
               const PropertyIcon = getDatabasePropertyType(property.property.type).icon
-              const visible = !getPropertyHidden(property.property.config)
+              const visible = !getPropertyHiddenForView(
+                property.id,
+                property.property.config,
+                viewConfig
+              )
 
               return (
                 <DropDrawerItem
@@ -317,7 +308,7 @@ export function DatabaseViewSettingsMenu({
                   key={property.id}
                   onSelect={(event) => {
                     event.preventDefault()
-                    togglePropertyVisibility(property)
+                    onTogglePropertyVisibility(property.id)
                   }}
                 >
                   <PropertyIcon />
@@ -343,13 +334,13 @@ export function DatabaseViewSettingsMenu({
         </DropDrawerSub>
         <DatabaseSortSubmenu
           activeDatabaseSorts={activeDatabaseSorts}
-          addableSortColumnOptions={addableSortColumnOptions}
+          addableSortFieldOptions={addableSortFieldOptions}
           canAddDatabaseSort={canAddDatabaseSort}
           onClearDatabaseSort={onClearDatabaseSort}
           onCreateDatabaseSort={onCreateDatabaseSort}
           onRemoveDatabaseSort={onRemoveDatabaseSort}
           onUpdateDatabaseSort={onUpdateDatabaseSort}
-          sortColumnOptions={sortColumnOptions}
+          sortFieldOptions={sortFieldOptions}
         >
           <ViewSettingsRow
             icon={<ArrowDownUp />}

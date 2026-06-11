@@ -1,137 +1,39 @@
-import { Link } from "@tanstack/react-router"
 import {
-  ArrowDownUp,
-  FileText,
-  GripVertical,
-  Kanban,
-  Loader2,
-  Maximize2,
-  Plus,
-  Table2,
-} from "lucide-react"
-import {
+  Fragment,
   useCallback,
   useEffect,
-  Fragment,
   useLayoutEffect,
-  useMemo,
   useRef,
   useState,
   type CSSProperties,
   type DragEvent as ReactDragEvent,
-  type FormEvent,
-  type PointerEvent,
-  type ReactNode,
-  type WheelEvent as ReactWheelEvent,
 } from "react"
-import { toast } from "sonner"
+import { FileText, GripVertical, Loader2, Plus } from "lucide-react"
+import { useReorderDatabaseRows } from "@notelab/features/databases"
 
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
+import { AddDatabasePropertyMenu } from "../shared/add-database-property-menu"
+import { DatabaseTableCellContent } from "./database-table-cell-content"
 import {
-  DropDrawer,
-  DropDrawerContent,
-  DropDrawerItem,
-  DropDrawerTrigger,
-} from "@/components/ui/dropdrawer"
-import { Input } from "@/components/ui/input"
-import { cn } from "@/lib/utils"
-import {
-  getColorTokenBadgeClassName,
-  getColorTokenDotClassName,
-} from "@/packages/editor/components/editor/toolbar-data"
-import { useSession } from "@notelab/features/auth"
-import {
-  useAddDatabaseView,
-  useAddDatabaseProperty,
-  useAddDatabaseRow,
-  useDatabase,
-  useReorderDatabaseRows,
-  useUpdateDatabase,
-  useUpdateDatabaseView,
-  useUpdateDatabaseProperty,
-  useUpdateDatabasePropertyValue,
-} from "@notelab/features/databases"
-import { useWorkspacePersonAccessTargets } from "@notelab/features/workspaces"
-
-import { AddDatabasePropertyMenu } from "./add-database-property-menu"
-import {
-  DATABASE_PAGE_DRAG_MIME,
   databaseAddPropertyColumnDefaultWidth,
   databaseColumnMinWidth,
   databaseNameColumnDefaultWidth,
-  defaultStatusOptions,
-  getDatabasePropertyType,
+  DATABASE_PAGE_DRAG_MIME,
 } from "../constants"
-import { DatabasePropertyDate } from "../database-property-date"
-import { DatabasePropertyButton } from "../database-property-button"
-import { DatabasePropertyFiles } from "../database-property-files"
-import { DatabasePropertyInput } from "../database-property-input"
-import { DatabasePropertySelect } from "../database-property-select"
-import { DatabasePageCell } from "./database-page-cell"
-import {
-  getDatabaseSorts,
-  getMergedDatabaseConfig,
-  getNameColumnLabel,
-  getNameColumnShowPageIcon,
-  getNameColumnWrapContent,
-  getPersonLimit,
-  getPropertyHidden,
-  getPropertyWrapContent,
-  type DatabaseSortConfig,
-  type DatabaseSortDirection,
-} from "./database-column-config"
-import { formatDatabaseDateValue } from "./database-date-config"
+import { DatabasePageLink } from "../shared/database-page-link"
 import {
   DatabaseNamePropertyMenu,
   DatabasePropertyMenu,
-} from "./database-property-menu"
+} from "../shared/database-property-menu"
+import { DatabasePropertyValue } from "../shared/database-property-value"
 import {
-  DatabaseSearchableMenuItems,
-  type DatabaseSearchableMenuOption,
-} from "./database-searchable-menu-items"
+  getNameColumnWrapContent,
+  getPropertyWrapContent,
+} from "../shared/database-view-config"
+import { useDatabaseViewContext } from "../shared/database-view-context"
 import {
-  DatabaseSortPopover,
-  type DatabaseActiveSort,
-} from "./database-sort-menu"
-import { NameColumnGlyph } from "./name-column-glyph"
-import { DatabaseViewSettingsMenu } from "./database-view-settings-menu"
-import {
-  getPropertyValue,
-  serializePropertyValue,
-  type DatabasePropertyValue,
-} from "../utils"
-
-type DatabaseSelectOption = {
-  color?: string
-  id: string
-  name: string
-}
-
-type DatabasePropertyListItem = {
-  id: string
-  position: number
-  property: {
-    config?: unknown
-    id: string
-    name: string
-    type: string
-  }
-}
-
-type DatabaseViewConfig = {
-  groupPropertyId?: unknown
-}
-
-type RowDragOverlay = {
-  height: number
-  left: number
-  offsetX: number
-  offsetY: number
-  title: string
-  top: number
-  width: number
-}
+  hideNativeTableRowDragPreview,
+  type TableRowDragOverlay,
+} from "./database-table-row-drag"
 
 type InsertPropertySide = "left" | "right"
 
@@ -141,625 +43,8 @@ type PendingInsertProperty = {
   sourceColumnKey: string
 }
 
-type DatabasePageDragPayload = {
-  databaseId?: string
-  pageId: string
-  rowId?: string
-  title?: string
-}
-
-function getDatabasePageDragPayload(
-  dataTransfer: DataTransfer | null
-): DatabasePageDragPayload | null {
-  const payload = dataTransfer?.getData(DATABASE_PAGE_DRAG_MIME)
-
-  if (!payload) {
-    return null
-  }
-
-  try {
-    const parsed = JSON.parse(payload) as {
-      databaseId?: unknown
-      pageId?: unknown
-      rowId?: unknown
-      title?: unknown
-    }
-
-    if (typeof parsed.pageId !== "string" || !parsed.pageId) {
-      return null
-    }
-
-    return {
-      databaseId:
-        typeof parsed.databaseId === "string" ? parsed.databaseId : undefined,
-      pageId: parsed.pageId,
-      rowId: typeof parsed.rowId === "string" ? parsed.rowId : undefined,
-      title: typeof parsed.title === "string" ? parsed.title : undefined,
-    }
-  } catch {
-    return null
-  }
-}
-
-function hasDatabasePageDragPayload(dataTransfer: DataTransfer | null) {
-  return Array.from(dataTransfer?.types ?? []).includes(DATABASE_PAGE_DRAG_MIME)
-}
-
-function hideNativeDragPreview(dataTransfer: DataTransfer) {
-  const dragImage = document.createElement("span")
-
-  dragImage.style.position = "fixed"
-  dragImage.style.top = "-100px"
-  dragImage.style.left = "-100px"
-  dragImage.style.width = "1px"
-  dragImage.style.height = "1px"
-  dragImage.style.opacity = "0"
-
-  document.body.appendChild(dragImage)
-  dataTransfer.setDragImage(dragImage, 0, 0)
-  window.requestAnimationFrame(() => dragImage.remove())
-}
-
-function handleDatabaseCellWheel(event: ReactWheelEvent<HTMLDivElement>) {
-  const horizontalDelta =
-    Math.abs(event.deltaX) > 0 ? event.deltaX : event.shiftKey ? event.deltaY : 0
-
-  if (!horizontalDelta) {
-    return
-  }
-
-  const scrollElement = event.currentTarget
-  const maxScrollLeft = scrollElement.scrollWidth - scrollElement.clientWidth
-  const tableScrollElement = scrollElement.closest<HTMLDivElement>(
-    ".database-table-scroll"
-  )
-
-  const scrollTable = (delta: number) => {
-    if (!tableScrollElement) {
-      return false
-    }
-
-    const tableMaxScrollLeft =
-      tableScrollElement.scrollWidth - tableScrollElement.clientWidth
-    const nextScrollLeft = Math.min(
-      tableMaxScrollLeft,
-      Math.max(0, tableScrollElement.scrollLeft + delta)
-    )
-
-    if (nextScrollLeft === tableScrollElement.scrollLeft) {
-      return false
-    }
-
-    tableScrollElement.scrollLeft = nextScrollLeft
-    return true
-  }
-
-  if (maxScrollLeft <= 1) {
-    if (scrollTable(horizontalDelta)) {
-      event.preventDefault()
-      event.stopPropagation()
-    }
-
-    return
-  }
-
-  const previousScrollLeft = scrollElement.scrollLeft
-  const nextScrollLeft = Math.min(
-    maxScrollLeft,
-    Math.max(0, previousScrollLeft + horizontalDelta)
-  )
-  const consumedDelta = nextScrollLeft - previousScrollLeft
-  const remainingDelta = horizontalDelta - consumedDelta
-
-  scrollElement.scrollLeft = nextScrollLeft
-
-  if (remainingDelta) {
-    scrollTable(remainingDelta)
-  }
-
-  event.preventDefault()
-  event.stopPropagation()
-}
-
-function DatabaseCellContent({
-  children,
-  wrapContent = false,
-}: {
-  children: ReactNode
-  wrapContent?: boolean
-}) {
+function getColumnWidth(columnWidths: Record<string, number>, key: string) {
   return (
-    <div
-      className="database-cell-scroll"
-      data-database-cell-scroll
-      data-wrap-content={wrapContent ? "true" : "false"}
-      onWheel={handleDatabaseCellWheel}
-    >
-      {children}
-    </div>
-  )
-}
-
-function isReadOnlyTimeProperty(type: string) {
-  return type === "created_time" || type === "edited_time"
-}
-
-function isKanbanGroupProperty(property: DatabasePropertyListItem) {
-  return property.property.type === "status" || property.property.type === "select"
-}
-
-function getSelectOptions(config: unknown) {
-  if (!config || typeof config !== "object" || !("options" in config)) {
-    return []
-  }
-
-  const options = (config as { options?: unknown }).options
-
-  if (!Array.isArray(options)) {
-    return []
-  }
-
-  return options.filter(
-    (option): option is DatabaseSelectOption =>
-      Boolean(option) &&
-      typeof option === "object" &&
-      typeof (option as DatabaseSelectOption).id === "string" &&
-      typeof (option as DatabaseSelectOption).name === "string"
-  )
-}
-
-function getKanbanGroupPropertyId(config: unknown) {
-  if (!config || typeof config !== "object" || Array.isArray(config)) {
-    return null
-  }
-
-  const groupPropertyId = (config as DatabaseViewConfig).groupPropertyId
-
-  return typeof groupPropertyId === "string" && groupPropertyId.length > 0
-    ? groupPropertyId
-    : null
-}
-
-function getKanbanGroupProperty(
-  properties: DatabasePropertyListItem[],
-  config: unknown
-) {
-  const configuredGroupPropertyId = getKanbanGroupPropertyId(config)
-  const configuredGroupProperty = configuredGroupPropertyId
-    ? properties.find(
-        (property) =>
-          property.property.id === configuredGroupPropertyId &&
-          isKanbanGroupProperty(property)
-      )
-    : null
-
-  return (
-    configuredGroupProperty ??
-    properties.find((property) => property.property.type === "status") ??
-    properties.find((property) => property.property.type === "select") ??
-    null
-  )
-}
-
-function getKanbanOptions(property: DatabasePropertyListItem | null) {
-  if (!property) {
-    return []
-  }
-
-  const options = getSelectOptions(property.property.config)
-
-  if (options.length > 0) {
-    return options
-  }
-
-  return property.property.type === "status" ? defaultStatusOptions : []
-}
-
-function getReadOnlyTimePropertyValue(
-  row: {
-    createdAt: string
-    page: {
-      createdAt?: string
-      updatedAt?: string
-    }
-    updatedAt: string
-  },
-  config: unknown,
-  type: string
-) {
-  const value =
-    type === "created_time"
-      ? row.page.createdAt ?? row.createdAt
-      : row.page.updatedAt ?? row.updatedAt
-
-  return formatDatabaseDateValue(value, config)
-}
-
-function getReadOnlyTimePropertySortValue(
-  row: {
-    createdAt: string
-    page: {
-      createdAt?: string
-      updatedAt?: string
-    }
-    updatedAt: string
-  },
-  type: string
-) {
-  return type === "created_time"
-    ? row.page.createdAt ?? row.createdAt
-    : row.page.updatedAt ?? row.updatedAt
-}
-
-function isEmptySortValue(value: number | string | null) {
-  return value === null || value === ""
-}
-
-function compareSortValues(
-  firstValue: number | string | null,
-  secondValue: number | string | null,
-  direction: DatabaseSortDirection
-) {
-  const firstIsEmpty = isEmptySortValue(firstValue)
-  const secondIsEmpty = isEmptySortValue(secondValue)
-
-  if (firstIsEmpty || secondIsEmpty) {
-    if (firstIsEmpty && secondIsEmpty) {
-      return 0
-    }
-
-    return firstIsEmpty ? 1 : -1
-  }
-
-  let comparison = 0
-
-  if (typeof firstValue === "number" && typeof secondValue === "number") {
-    comparison = firstValue - secondValue
-  } else {
-    comparison = String(firstValue).localeCompare(String(secondValue), undefined, {
-      numeric: true,
-      sensitivity: "base",
-    })
-  }
-
-  return direction === "descending" ? comparison * -1 : comparison
-}
-
-function getComparableDateValue(
-  value: DatabasePropertyValue | string | null | undefined
-) {
-  const rawValue = Array.isArray(value) ? value[0] ?? "" : value
-  const timestamp = rawValue ? new Date(rawValue).getTime() : Number.NaN
-
-  return Number.isFinite(timestamp) ? timestamp : null
-}
-
-function getComparableNumberValue(value: DatabasePropertyValue) {
-  const rawValue = Array.isArray(value) ? value[0] ?? "" : value
-  const parsedValue = rawValue.trim() ? Number(rawValue) : Number.NaN
-
-  return Number.isFinite(parsedValue) ? parsedValue : null
-}
-
-function getComparablePersonValue(
-  value: DatabasePropertyValue,
-  personOptionsById: Map<string, string>
-) {
-  const personIds = Array.isArray(value) ? value : value ? [value] : []
-
-  return personIds
-    .map((personId) => personOptionsById.get(personId) ?? personId)
-    .join(", ")
-}
-
-function getComparablePropertyValue(
-  row: {
-    createdAt: string
-    page: {
-      name: string
-      createdAt?: string
-      updatedAt?: string
-    }
-    pageId: string
-    updatedAt: string
-  },
-  property: {
-    property: {
-      id: string
-      type: string
-    }
-  },
-  cellValues: Record<string, DatabasePropertyValue>,
-  personOptionsById: Map<string, string>
-) {
-  const propertyValue = cellValues[`${row.pageId}:${property.property.id}`] ?? ""
-
-  switch (property.property.type) {
-    case "checkbox":
-      return propertyValue === "true" ? 1 : 0
-    case "created_time":
-    case "edited_time":
-      return getComparableDateValue(
-        getReadOnlyTimePropertySortValue(row, property.property.type)
-      )
-    case "date":
-      return getComparableDateValue(propertyValue)
-    case "number":
-      return getComparableNumberValue(propertyValue)
-    case "person":
-      return getComparablePersonValue(propertyValue, personOptionsById)
-    default:
-      return Array.isArray(propertyValue) ? propertyValue.join(", ") : propertyValue
-  }
-}
-
-function getSortedRows(
-  rows: {
-    createdAt: string
-    id: string
-    page: {
-      name: string
-      createdAt?: string
-      updatedAt?: string
-    }
-    pageId: string
-    position: number
-    updatedAt: string
-  }[],
-  properties: {
-    id: string
-    property: {
-      id: string
-      type: string
-    }
-  }[],
-  cellValues: Record<string, DatabasePropertyValue>,
-  sorts: DatabaseSortConfig[],
-  personOptionsById: Map<string, string>
-) {
-  if (sorts.length === 0) {
-    return rows
-  }
-
-  return [...rows].sort((firstRow, secondRow) => {
-    for (const sort of sorts) {
-      const comparison =
-        sort.column === "name"
-          ? compareSortValues(
-              firstRow.page.name.trim(),
-              secondRow.page.name.trim(),
-              sort.direction
-            )
-          : (() => {
-              const sortedProperty = properties.find(
-                (property) => property.id === sort.column
-              )
-
-              if (!sortedProperty) {
-                return 0
-              }
-
-              return compareSortValues(
-                getComparablePropertyValue(
-                  firstRow,
-                  sortedProperty,
-                  cellValues,
-                  personOptionsById
-                ),
-                getComparablePropertyValue(
-                  secondRow,
-                  sortedProperty,
-                  cellValues,
-                  personOptionsById
-                ),
-                sort.direction
-              )
-            })()
-
-      if (comparison !== 0) {
-        return comparison
-      }
-    }
-
-    return firstRow.position - secondRow.position
-  })
-}
-
-function areSerializedPropertyValuesEqual(
-  propertyType: string,
-  currentValue: DatabasePropertyValue,
-  nextValue: DatabasePropertyValue
-) {
-  return (
-    JSON.stringify(serializePropertyValue(propertyType, currentValue)) ===
-    JSON.stringify(serializePropertyValue(propertyType, nextValue))
-  )
-}
-
-type DatabaseTableViewProps = {
-  databaseId: string | null | undefined
-  editable?: boolean
-  fullPage?: boolean
-  onOpenPage?: (pageId: string) => void
-  organizationId?: string | null
-  showExpandButton?: boolean
-  showTitle?: boolean
-}
-
-export function DatabaseTableView({
-  databaseId,
-  editable = true,
-  fullPage = false,
-  onOpenPage,
-  organizationId,
-  showExpandButton = false,
-  showTitle = true,
-}: DatabaseTableViewProps) {
-  const [draftCells, setDraftCells] = useState<
-    Record<string, DatabasePropertyValue>
-  >({})
-  const updateDatabase = useUpdateDatabase()
-  const updateDatabaseView = useUpdateDatabaseView()
-  const addDatabaseView = useAddDatabaseView()
-  const addProperty = useAddDatabaseProperty()
-  const updateProperty = useUpdateDatabaseProperty()
-  const addRow = useAddDatabaseRow(organizationId)
-  const reorderRows = useReorderDatabaseRows()
-  const updateValue = useUpdateDatabasePropertyValue()
-  const { data: payload, isLoading } = useDatabase(databaseId)
-  const { data: session } = useSession()
-  const { data: accessTargets } = useWorkspacePersonAccessTargets(
-    payload?.database.pageId
-  )
-  const [draftDatabaseTitle, setDraftDatabaseTitle] = useState("New database")
-  const [draftViewTitle, setDraftViewTitle] = useState("Table")
-  const [activeViewId, setActiveViewId] = useState<string | null>(null)
-  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({})
-  const [activeCellKey, setActiveCellKey] = useState<string | null>(null)
-  const [hoveredRowId, setHoveredRowId] = useState<string | null>(null)
-  const [draggedRowId, setDraggedRowId] = useState<string | null>(null)
-  const [rowDragOverlay, setRowDragOverlay] =
-    useState<RowDragOverlay | null>(null)
-  const [rowDropTargetIndex, setRowDropTargetIndex] = useState<number | null>(
-    null
-  )
-  const [pendingInsertProperty, setPendingInsertProperty] =
-    useState<PendingInsertProperty | null>(null)
-  const [showSortPill, setShowSortPill] = useState(true)
-  const [sortPickerOpen, setSortPickerOpen] = useState(false)
-  const [editingPropertyKey, setEditingPropertyKey] = useState<string | null>(
-    null
-  )
-  const tableWrapRef = useRef<HTMLDivElement | null>(null)
-  const [rowLayout, setRowLayout] = useState<{
-    centers: Record<string, number>
-    dropTops: number[]
-  }>({ centers: {}, dropTops: [] })
-
-  const propertyValues = payload?.values ?? []
-  const properties = payload?.properties ?? []
-  const visibleProperties = useMemo(
-    () => properties.filter((property) => !getPropertyHidden(property.property.config)),
-    [properties]
-  )
-  const rows = payload?.rows ?? []
-  const personOptions = useMemo(
-    () =>
-      (accessTargets?.members ?? []).map((member) => ({
-        id: member.id,
-        name: member.name || member.email,
-        suffix: member.id === session?.user?.id ? "(you)" : undefined,
-      })),
-    [accessTargets?.members, session?.user?.id]
-  )
-  const personOptionsById = useMemo(
-    () =>
-      new Map(
-        personOptions.map((personOption) => [personOption.id, personOption.name])
-      ),
-    [personOptions]
-  )
-  const nameColumnLabel = getNameColumnLabel(payload?.database.config)
-  const nameColumnWrapContent = getNameColumnWrapContent(payload?.database.config)
-  const nameColumnShowPageIcon = getNameColumnShowPageIcon(
-    payload?.database.config
-  )
-  const activeView = useMemo(
-    () =>
-      payload?.views.find((view) => view.id === activeViewId) ??
-      payload?.views[0] ??
-      null,
-    [activeViewId, payload?.views]
-  )
-  const sortColumnOptions = useMemo<DatabaseSearchableMenuOption[]>(
-    () => [
-      {
-        icon: <NameColumnGlyph />,
-        label: nameColumnLabel,
-        value: "name",
-      },
-      ...properties.map((property) => {
-        const PropertyIcon = getDatabasePropertyType(property.property.type).icon
-
-        return {
-          icon: <PropertyIcon />,
-          label: property.property.name,
-          value: property.id,
-        }
-      }),
-    ],
-    [nameColumnLabel, properties]
-  )
-  const activeViewConfig = activeView?.config ?? payload?.database.config
-  const isKanbanView = activeView?.type === "kanban"
-  const isTableView = !isKanbanView
-  const databaseSorts = useMemo(
-    () => getDatabaseSorts(activeViewConfig),
-    [activeViewConfig]
-  )
-  const kanbanGroupProperty = useMemo(
-    () => getKanbanGroupProperty(properties, activeViewConfig),
-    [activeViewConfig, properties]
-  )
-  const kanbanOptions = useMemo(
-    () => getKanbanOptions(kanbanGroupProperty),
-    [kanbanGroupProperty]
-  )
-  const activeDatabaseSorts = useMemo<DatabaseActiveSort[]>(
-    () =>
-      databaseSorts.flatMap((sort) => {
-        const option = sortColumnOptions.find(
-          (sortOption) => sortOption.value === sort.column
-        )
-
-        return option
-          ? [
-              {
-                ...sort,
-                label: option.label,
-              },
-            ]
-          : []
-      }),
-    [databaseSorts, sortColumnOptions]
-  )
-  const isTableSorted = activeDatabaseSorts.length > 0
-  const visiblePropertyCount = visibleProperties.length + 1
-  const usedSortColumnValues = useMemo(
-    () => new Set(activeDatabaseSorts.map((sort) => sort.column)),
-    [activeDatabaseSorts]
-  )
-  const addableSortColumnOptions = useMemo(
-    () =>
-      sortColumnOptions.filter((option) => !usedSortColumnValues.has(option.value)),
-    [sortColumnOptions, usedSortColumnValues]
-  )
-  const canAddDatabaseSort = activeDatabaseSorts.length < sortColumnOptions.length
-  const pendingInsertPropertyKey = pendingInsertProperty
-    ? `insert-property-${pendingInsertProperty.sourceColumnKey}-${pendingInsertProperty.side}`
-    : null
-  const columnKeys = useMemo(() => {
-    const nameKeys =
-      pendingInsertProperty?.sourceColumnKey === "name"
-        ? pendingInsertProperty.side === "left"
-          ? ["insert-property-name-left", "name"]
-          : ["name", "insert-property-name-right"]
-        : ["name"]
-    const propertyKeys = visibleProperties.flatMap((property) => {
-      if (property.id !== pendingInsertProperty?.sourceColumnKey) {
-        return [property.id]
-      }
-
-      const insertKey = `insert-property-${property.id}-${pendingInsertProperty.side}`
-
-      return pendingInsertProperty.side === "left"
-        ? [insertKey, property.id]
-        : [property.id, insertKey]
-    })
-
-    return [...nameKeys, ...propertyKeys, ...(editable ? ["add-property"] : [])]
-  }, [editable, pendingInsertProperty, visibleProperties])
-  const getColumnWidth = (key: string) =>
     columnWidths[key] ??
     (key === "name"
       ? databaseNameColumnDefaultWidth
@@ -768,50 +53,90 @@ export function DatabaseTableView({
         : key.startsWith("insert-property-")
           ? databaseAddPropertyColumnDefaultWidth
           : databaseColumnMinWidth)
+  )
+}
+
+export function DatabaseTableView() {
+  const {
+    activePropertyValueKey,
+    activeDatabaseSorts,
+    addDatabaseProperty,
+    addDraggedPageRow,
+    addProperty,
+    addRow,
+    propertyValuesByKey,
+    databaseId,
+    draftPropertyValues,
+    editable,
+    getDatabasePageDragPayload,
+    hasDatabasePageDragPayload,
+    titlePropertyLabel: nameColumnLabel,
+    showPageIconInTitle: nameColumnShowPageIcon,
+    onAddDatabaseRow,
+    onOpenPage,
+    payload,
+    personOptions,
+    items: rows,
+    savePropertyValue,
+    setActivePropertyValueKey,
+    setDraftPropertyValues,
+    sortedItems: sortedRows,
+    updateProperty,
+    visibleProperties,
+  } = useDatabaseViewContext()
+  const reorderRows = useReorderDatabaseRows()
+  const nameColumnWrapContent = getNameColumnWrapContent(payload?.database.config)
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({})
+  const [hoveredRowId, setHoveredRowId] = useState<string | null>(null)
+  const [draggedRowId, setDraggedRowId] = useState<string | null>(null)
+  const [rowDragOverlay, setRowDragOverlay] =
+    useState<TableRowDragOverlay | null>(null)
+  const [rowDropTargetIndex, setRowDropTargetIndex] = useState<number | null>(
+    null
+  )
+  const [pendingInsertProperty, setPendingInsertProperty] =
+    useState<PendingInsertProperty | null>(null)
+  const [editingPropertyKey, setEditingPropertyKey] = useState<string | null>(
+    null
+  )
+  const tableWrapRef = useRef<HTMLDivElement | null>(null)
+  const [rowLayout, setRowLayout] = useState<{
+    centers: Record<string, number>
+    dropTops: number[]
+  }>({ centers: {}, dropTops: [] })
+  const isTableSorted = activeDatabaseSorts.length > 0
+  const activeInsertProperty = pendingInsertProperty
+  const pendingInsertPropertyKey = activeInsertProperty
+    ? `insert-property-${activeInsertProperty.sourceColumnKey}-${activeInsertProperty.side}`
+    : null
+  const columnKeys = (() => {
+    const nameKeys =
+      activeInsertProperty?.sourceColumnKey === "name"
+        ? activeInsertProperty.side === "left"
+          ? ["insert-property-name-left", "name"]
+          : ["name", "insert-property-name-right"]
+        : ["name"]
+    const propertyKeys = visibleProperties.flatMap((property: any) => {
+      if (
+        !activeInsertProperty ||
+        property.id !== activeInsertProperty.sourceColumnKey
+      ) {
+        return [property.id]
+      }
+
+      const insertKey = `insert-property-${property.id}-${activeInsertProperty.side}`
+
+      return activeInsertProperty.side === "left"
+        ? [insertKey, property.id]
+        : [property.id, insertKey]
+    })
+
+    return [...nameKeys, ...propertyKeys, ...(editable ? ["add-property"] : [])]
+  })()
   const tableMinWidth = columnKeys.reduce(
-    (width, key) => width + getColumnWidth(key),
+    (width, key) => width + getColumnWidth(columnWidths, key),
     0
   )
-
-  useEffect(() => {
-    if (payload?.database.name) {
-      setDraftDatabaseTitle(payload.database.name)
-    }
-  }, [payload?.database.id, payload?.database.name])
-
-  useEffect(() => {
-    if (!payload?.views.length) {
-      setActiveViewId(null)
-      return
-    }
-
-    if (!activeViewId || !payload.views.some((view) => view.id === activeViewId)) {
-      setActiveViewId(payload.views[0].id)
-    }
-  }, [activeViewId, payload?.views])
-
-  useEffect(() => {
-    if (activeView?.name) {
-      setDraftViewTitle(activeView.name)
-    }
-  }, [activeView?.id, activeView?.name])
-
-  useEffect(() => {
-    if (activeDatabaseSorts.length === 0) {
-      setShowSortPill(false)
-    }
-  }, [activeDatabaseSorts.length])
-
-  useEffect(() => {
-    if (
-      editingPropertyKey &&
-      editingPropertyKey !== "name" &&
-      !visibleProperties.some((property) => property.id === editingPropertyKey)
-    ) {
-      setEditingPropertyKey(null)
-    }
-  }, [editingPropertyKey, visibleProperties])
-
   const getRowElements = useCallback(() => {
     return Array.from(
       tableWrapRef.current?.querySelectorAll<HTMLTableRowElement>(
@@ -819,7 +144,6 @@ export function DatabaseTableView({
       ) ?? []
     )
   }, [])
-
   const measureRows = useCallback(() => {
     const wrapperElement = tableWrapRef.current
 
@@ -853,13 +177,81 @@ export function DatabaseTableView({
 
     return { centers, dropTops }
   }, [getRowElements])
+  const getRowDropTargetIndex = (clientY: number) => {
+    const rowElements = getRowElements()
+
+    if (rowElements.length === 0) {
+      return 0
+    }
+
+    const targetIndex = rowElements.findIndex((rowElement) => {
+      const rect = rowElement.getBoundingClientRect()
+
+      return clientY < rect.top + rect.height / 2
+    })
+
+    return targetIndex === -1 ? rowElements.length : targetIndex
+  }
+  const moveDraggedRow = () => {
+    if (!databaseId || !draggedRowId || rowDropTargetIndex === null || isTableSorted) {
+      return
+    }
+
+    const sourceIndex = rows.findIndex((row: any) => row.id === draggedRowId)
+
+    if (sourceIndex === -1) {
+      return
+    }
+
+    const nextRows = [...rows]
+    const [draggedRow] = nextRows.splice(sourceIndex, 1)
+    const nextTargetIndex =
+      rowDropTargetIndex > sourceIndex
+        ? rowDropTargetIndex - 1
+        : rowDropTargetIndex
+
+    nextRows.splice(nextTargetIndex, 0, draggedRow)
+
+    const rowIds = nextRows.map((row: any) => row.id)
+
+    if (rowIds.every((rowId: string, index: number) => rowId === rows[index]?.id)) {
+      return
+    }
+
+    reorderRows.mutate({ databaseId, rowIds })
+  }
+  const clearRowDrag = () => {
+    setDraggedRowId(null)
+    setRowDragOverlay(null)
+    setRowDropTargetIndex(null)
+  }
+  const rowDropLineTop =
+    rowDropTargetIndex === null
+      ? null
+      : (rowLayout.dropTops[rowDropTargetIndex] ?? null)
+  const activeDragRowId = draggedRowId ?? hoveredRowId
+  const activeDragRowIndex = activeDragRowId
+    ? sortedRows.findIndex((row: any) => row.id === activeDragRowId)
+    : -1
+  const activeDragRow =
+    activeDragRowIndex === -1 ? null : sortedRows[activeDragRowIndex]
+
+  useEffect(() => {
+    if (
+      editingPropertyKey &&
+      editingPropertyKey !== "name" &&
+      !visibleProperties.some((property: any) => property.id === editingPropertyKey)
+    ) {
+      setEditingPropertyKey(null)
+    }
+  }, [editingPropertyKey, visibleProperties])
 
   useEffect(() => {
     if (
       pendingInsertProperty &&
       pendingInsertProperty.sourceColumnKey !== "name" &&
       !visibleProperties.some(
-        (property) => property.id === pendingInsertProperty.sourceColumnKey
+        (property: any) => property.id === pendingInsertProperty.sourceColumnKey
       )
     ) {
       setPendingInsertProperty(null)
@@ -872,141 +264,13 @@ export function DatabaseTableView({
     return () => window.removeEventListener("resize", measureRows)
   }, [measureRows])
 
-  const addTableView = useCallback(() => {
-    if (!databaseId || addDatabaseView.isPending) {
-      return
-    }
-
-    const existingViewIds = new Set((payload?.views ?? []).map((view) => view.id))
-
-    addDatabaseView.mutate(
-      {
-        databaseId,
-        name: "Table",
-        type: "table",
-      },
-      {
-        onSuccess: (nextPayload) => {
-          const addedView =
-            nextPayload.views.find((view) => !existingViewIds.has(view.id)) ??
-            nextPayload.views.at(-1)
-
-          setActiveViewId(addedView?.id ?? null)
-        },
-        onError: () => {
-          toast.error("Couldn't add table view")
-        },
-      }
-    )
-  }, [addDatabaseView, databaseId, payload?.views])
-
-  const addKanbanView = useCallback(() => {
-    if (!databaseId || addDatabaseView.isPending || addProperty.isPending) {
-      return
-    }
-
-    const existingViewIds = new Set((payload?.views ?? []).map((view) => view.id))
-    const currentProperties = payload?.properties ?? []
-    const groupProperty =
-      currentProperties.find((property) => property.property.type === "status") ??
-      currentProperties.find((property) => property.property.type === "select")
-    const addView = (
-      groupPropertyId: string,
-      onViewAdded?: (nextPayload: { rows: { id: string }[] }) => void
-    ) => {
-      addDatabaseView.mutate(
-        {
-          config: { groupPropertyId },
-          databaseId,
-          name: "Kanban",
-          type: "kanban",
-        },
-        {
-          onSuccess: (nextPayload) => {
-            const addedView =
-              nextPayload.views.find((view) => !existingViewIds.has(view.id)) ??
-              nextPayload.views.at(-1)
-
-            setActiveViewId(addedView?.id ?? null)
-            onViewAdded?.(nextPayload)
-          },
-          onError: () => {
-            toast.error("Couldn't add kanban view")
-          },
-        }
-      )
-    }
-
-    if (groupProperty) {
-      addView(groupProperty.property.id)
-      return
-    }
-
-    const existingPropertyIds = new Set(
-      currentProperties.map((property) => property.property.id)
-    )
-
-    addProperty.mutate(
-      {
-        config: {
-          defaultOptionId: defaultStatusOptions[0]?.id,
-          options: defaultStatusOptions,
-        },
-        databaseId,
-        name: "Status",
-        type: "status",
-      },
-      {
-        onSuccess: (nextPayload) => {
-          const addedProperty =
-            nextPayload.properties.find(
-              (property) =>
-                !existingPropertyIds.has(property.property.id) &&
-                property.property.type === "status"
-            ) ??
-            nextPayload.properties.find(
-              (property) => property.property.type === "status"
-            )
-
-          if (!addedProperty) {
-            toast.error("Couldn't create status property")
-            return
-          }
-
-          addView(addedProperty.property.id, (viewPayload) => {
-            for (const row of viewPayload.rows) {
-              updateValue.mutate({
-                databaseId,
-                propertyId: addedProperty.property.id,
-                rowId: row.id,
-                value: defaultStatusOptions[0]?.name ?? "Not started",
-              })
-            }
-          })
-        },
-        onError: () => {
-          toast.error("Couldn't create status property")
-        },
-      }
-    )
-  }, [
-    addDatabaseView,
-    addProperty,
-    databaseId,
-    payload?.properties,
-    payload?.views,
-    updateValue,
-  ])
-
-  const isDraggingDatabaseRow = Boolean(rowDragOverlay)
-
   useEffect(() => {
-    if (!isDraggingDatabaseRow) {
+    if (!rowDragOverlay) {
       return
     }
 
     const moveOverlay = (event: DragEvent) => {
-      setRowDragOverlay((overlay) =>
+      setRowDragOverlay((overlay: any) =>
         overlay
           ? {
               ...overlay,
@@ -1020,283 +284,14 @@ export function DatabaseTableView({
     window.addEventListener("dragover", moveOverlay)
 
     return () => window.removeEventListener("dragover", moveOverlay)
-  }, [isDraggingDatabaseRow])
-
-  const cellValues = useMemo(() => {
-    const values: Record<string, DatabasePropertyValue> = {}
-
-    for (const row of rows) {
-      for (const property of properties) {
-        values[`${row.pageId}:${property.property.id}`] = getPropertyValue(
-          propertyValues,
-          row.pageId,
-          property.property.id,
-          property.property.type
-        )
-      }
-    }
-
-    return values
-  }, [properties, propertyValues, rows])
-  const sortedRows = useMemo(
-    () =>
-      getSortedRows(
-        rows,
-        properties,
-        cellValues,
-        activeDatabaseSorts,
-        personOptionsById
-      ),
-    [activeDatabaseSorts, cellValues, personOptionsById, properties, rows]
-  )
+  }, [rowDragOverlay])
 
   useLayoutEffect(() => {
     measureRows()
-  }, [activeCellKey, measureRows, properties, sortedRows])
-
-  const addDatabaseRow = (groupValue?: string) => {
-    if (!editable || !databaseId || addRow.isPending) {
-      return
-    }
-
-    const existingRowIds = new Set(rows.map((row) => row.id))
-    const defaultStatusValue = defaultStatusOptions[0]?.name ?? "Not started"
-    const nextGroupValue =
-      groupValue ??
-      (isKanbanView && kanbanGroupProperty?.property.type === "status"
-        ? defaultStatusValue
-        : null)
-
-    addRow.mutate(
-      {
-        databaseId,
-        title: "Untitled",
-      },
-      {
-        onSuccess: (nextPayload) => {
-          if (!nextGroupValue || !kanbanGroupProperty) {
-            return
-          }
-
-          const addedRow =
-            nextPayload.rows.find((row) => !existingRowIds.has(row.id)) ??
-            nextPayload.rows.at(-1)
-
-          if (!addedRow) {
-            return
-          }
-
-          updateValue.mutate({
-            databaseId,
-            propertyId: kanbanGroupProperty.property.id,
-            rowId: addedRow.id,
-            value: serializePropertyValue(
-              kanbanGroupProperty.property.type,
-              nextGroupValue
-            ),
-          })
-        },
-      }
-    )
-  }
-
-  const addDatabaseProperty = (
-    type = "text",
-    label = "Property",
-    position?: number
-  ) => {
-    if (!editable || !databaseId || addProperty.isPending) {
-      return
-    }
-
-    addProperty.mutate({
-      config:
-        type === "status"
-          ? {
-              defaultOptionId: defaultStatusOptions[0]?.id,
-              options: defaultStatusOptions,
-            }
-          : undefined,
-      databaseId,
-      name: label,
-      position,
-      type,
-    })
-  }
-  const saveDatabaseSorts = (nextSorts: DatabaseSortConfig[]) => {
-    if (!databaseId || !activeView?.id) {
-      return
-    }
-
-    updateDatabaseView.mutate({
-      config: getMergedDatabaseConfig(activeView.config, {
-        sort: undefined,
-        sorts: nextSorts.length > 0 ? nextSorts : undefined,
-      }),
-      databaseId,
-      databaseViewId: activeView.id,
-    })
-  }
-  const createDatabaseSort = (column: string) => {
-    saveDatabaseSorts([
-      ...activeDatabaseSorts.map(({ column, direction }) => ({
-        column,
-        direction,
-      })),
-      {
-        column,
-        direction: "ascending",
-      },
-    ])
-    setShowSortPill(true)
-    setSortPickerOpen(false)
-  }
-  const updateDatabaseSort = (
-    index: number,
-    patch: Partial<DatabaseSortConfig>
-  ) => {
-    saveDatabaseSorts(
-      activeDatabaseSorts.map(({ column, direction }, sortIndex) =>
-        sortIndex === index ? { column, direction, ...patch } : { column, direction }
-      )
-    )
-  }
-  const removeDatabaseSort = (index: number) => {
-    saveDatabaseSorts(
-      activeDatabaseSorts.flatMap(({ column, direction }, sortIndex) =>
-        sortIndex === index ? [] : [{ column, direction }]
-      )
-    )
-  }
-  const clearDatabaseSort = () => {
-    saveDatabaseSorts([])
-  }
-  const handleEditingPropertyOpenChange = (
-    propertyKey: string,
-    nextOpen: boolean
-  ) => {
-    setEditingPropertyKey((currentKey) =>
-      nextOpen ? propertyKey : currentKey === propertyKey ? null : currentKey
-    )
-  }
-  const toggleSortPillVisibility = () => {
-    setShowSortPill((visible) => !visible)
-  }
-  const saveDatabaseTitle = useCallback(
-    (nextTitle: string) => {
-      if (!databaseId || nextTitle === payload?.database.name) {
-        return
-      }
-
-      updateDatabase.mutate({
-        databaseId,
-        name: nextTitle,
-      })
-    },
-    [databaseId, payload?.database.name, updateDatabase]
-  )
-  const saveDatabaseViewTitle = useCallback(
-    (nextTitle: string) => {
-      if (
-        !databaseId ||
-        !activeView?.id ||
-        nextTitle === activeView.name
-      ) {
-        return
-      }
-
-      updateDatabaseView.mutate({
-        databaseId,
-        databaseViewId: activeView.id,
-        name: nextTitle,
-      })
-    },
-    [activeView?.id, activeView?.name, databaseId, updateDatabaseView]
-  )
-  const copyDatabaseViewLink = useCallback(() => {
-    if (!databaseId || typeof window === "undefined") {
-      return
-    }
-
-    void navigator.clipboard
-      .writeText(`${window.location.origin}/database/${databaseId}`)
-      .then(() => {
-        toast.success("Copied link to view")
-      })
-      .catch(() => {
-        toast.error("Couldn't copy link to view")
-      })
-  }, [databaseId])
-
-  const openInsertPropertyMenu = (
-    sourceColumnKey: string,
-    sourcePosition: number,
-    side: InsertPropertySide
-  ) => {
-    setPendingInsertProperty({
-      position: sourcePosition + (side === "right" ? 1 : 0),
-      side,
-      sourceColumnKey,
-    })
-  }
-
-  const clearPendingInsertProperty = (insertKey: string) => {
-    setPendingInsertProperty((current) => {
-      const currentKey = current
-        ? `insert-property-${current.sourceColumnKey}-${current.side}`
-        : null
-
-      return currentKey === insertKey ? null : current
-    })
-  }
-
-  const addInsertedDatabaseProperty = (
-    type: string,
-    label: string,
-    position: number,
-    insertKey: string
-  ) => {
-    addDatabaseProperty(type, label, position)
-    clearPendingInsertProperty(insertKey)
-  }
-
-  const saveCell = (
-    rowId: string,
-    propertyId: string,
-    propertyType: string,
-    currentValue: DatabasePropertyValue,
-    nextValue: DatabasePropertyValue
-  ) => {
-    if (!editable || !databaseId) {
-      return
-    }
-
-    if (
-      areSerializedPropertyValuesEqual(propertyType, currentValue, nextValue)
-    ) {
-      return
-    }
-
-    updateValue.mutate({
-      databaseId,
-      propertyId,
-      rowId,
-      value: serializePropertyValue(propertyType, nextValue),
-    })
-  }
-
-  const resizeCellEditor = (element: HTMLTextAreaElement) => {
-    element.style.height = "auto"
-    element.style.height = `${element.scrollHeight}px`
-  }
-
-  const handleCellInput = (event: FormEvent<HTMLTextAreaElement>) => {
-    resizeCellEditor(event.currentTarget)
-  }
-
+  }, [activePropertyValueKey, measureRows, visibleProperties, sortedRows])
   const startColumnResize = (
     columnKey: string,
-    event: PointerEvent<HTMLSpanElement>
+    event: React.PointerEvent<HTMLSpanElement>
   ) => {
     if (!editable) {
       return
@@ -1306,7 +301,7 @@ export function DatabaseTableView({
     event.stopPropagation()
 
     const startX = event.clientX
-    const startWidth = getColumnWidth(columnKey)
+    const startWidth = getColumnWidth(columnWidths, columnKey)
 
     const handlePointerMove = (moveEvent: globalThis.PointerEvent) => {
       const nextWidth = Math.max(
@@ -1314,7 +309,7 @@ export function DatabaseTableView({
         startWidth + moveEvent.clientX - startX
       )
 
-      setColumnWidths((widths) => ({
+      setColumnWidths((widths: Record<string, number>) => ({
         ...widths,
         [columnKey]: nextWidth,
       }))
@@ -1333,135 +328,48 @@ export function DatabaseTableView({
     window.addEventListener("pointercancel", removeListeners)
   }
 
-  const getRowDropTargetIndex = (clientY: number) => {
-    const rowElements = getRowElements()
-
-    if (rowElements.length === 0) {
-      return 0
-    }
-
-    const targetIndex = rowElements.findIndex((rowElement) => {
-      const rect = rowElement.getBoundingClientRect()
-
-      return clientY < rect.top + rect.height / 2
-    })
-
-    return targetIndex === -1 ? rowElements.length : targetIndex
-  }
-
-  const moveDraggedRow = () => {
-    if (!databaseId || !draggedRowId || rowDropTargetIndex === null || isTableSorted) {
-      return
-    }
-
-    const sourceIndex = rows.findIndex((row) => row.id === draggedRowId)
-
-    if (sourceIndex === -1) {
-      return
-    }
-
-    const nextRows = [...rows]
-    const [draggedRow] = nextRows.splice(sourceIndex, 1)
-    const nextTargetIndex =
-      rowDropTargetIndex > sourceIndex
-        ? rowDropTargetIndex - 1
-        : rowDropTargetIndex
-
-    nextRows.splice(nextTargetIndex, 0, draggedRow)
-
-    const rowIds = nextRows.map((row) => row.id)
-
-    if (rowIds.every((rowId, index) => rowId === rows[index]?.id)) {
-      return
-    }
-
-    reorderRows.mutate({ databaseId, rowIds })
-  }
-
-  const addDraggedPageRow = (
-    dragPayload: DatabasePageDragPayload,
-    position = rowDropTargetIndex
+  const handleEditingPropertyOpenChange = (
+    propertyKey: string,
+    nextOpen: boolean
   ) => {
-    if (!databaseId || position === null || addRow.isPending) {
-      return
-    }
+    setEditingPropertyKey((currentKey: string | null) =>
+      nextOpen ? propertyKey : currentKey === propertyKey ? null : currentKey
+    )
+  }
 
-    if (dragPayload.pageId === payload?.database.pageId) {
-      toast.error("You can't nest a page inside itself.")
-      return
-    }
-
-    if (rows.some((row) => row.pageId === dragPayload.pageId)) {
-      toast.error("This page is already in this database.")
-      return
-    }
-
-    addRow.mutate({
-      databaseId,
-      pageId: dragPayload.pageId,
-      position,
-      title: dragPayload.title,
+  const openInsertPropertyMenu = (
+    sourceColumnKey: string,
+    sourcePosition: number,
+    side: "left" | "right"
+  ) => {
+    setPendingInsertProperty({
+      position: sourcePosition + (side === "right" ? 1 : 0),
+      side,
+      sourceColumnKey,
     })
   }
 
-  const isTableDragEvent = (event: ReactDragEvent<HTMLElement>) =>
-    event.target instanceof HTMLElement &&
-    Boolean(event.target.closest(".database-table-wrap"))
+  const clearPendingInsertProperty = (insertKey: string) => {
+    setPendingInsertProperty((current: any) => {
+      const currentKey = current
+        ? `insert-property-${current.sourceColumnKey}-${current.side}`
+        : null
 
-  const handleDatabaseBlockDragOver = (
-    event: ReactDragEvent<HTMLDivElement>
+      return currentKey === insertKey ? null : current
+    })
+  }
+
+  const addInsertedDatabaseProperty = (
+    type: string,
+    label: string,
+    position: number,
+    insertKey: string
   ) => {
-    if (isTableDragEvent(event)) {
-      return
-    }
-
-    if (!hasDatabasePageDragPayload(event.dataTransfer)) {
-      return
-    }
-
-    event.preventDefault()
-    event.dataTransfer.dropEffect = "move"
-    measureRows()
-    setRowDropTargetIndex(rows.length)
+    addDatabaseProperty(type, label, position)
+    clearPendingInsertProperty(insertKey)
   }
 
-  const handleDatabaseBlockDrop = (event: ReactDragEvent<HTMLDivElement>) => {
-    if (isTableDragEvent(event)) {
-      return
-    }
-
-    const dragPayload = getDatabasePageDragPayload(event.dataTransfer)
-
-    if (!dragPayload) {
-      return
-    }
-
-    event.preventDefault()
-    event.stopPropagation()
-    addDraggedPageRow(dragPayload, rows.length)
-    clearRowDrag()
-  }
-
-  const clearRowDrag = () => {
-    setDraggedRowId(null)
-    setRowDragOverlay(null)
-    setRowDropTargetIndex(null)
-  }
-
-  const rowDropLineTop =
-    rowDropTargetIndex === null
-      ? null
-      : (rowLayout.dropTops[rowDropTargetIndex] ?? null)
-  const activeDragRowId = draggedRowId ?? hoveredRowId
-  const activeDragRowIndex = activeDragRowId
-    ? sortedRows.findIndex((row) => row.id === activeDragRowId)
-    : -1
-  const activeDragRow =
-    activeDragRowIndex === -1 ? null : sortedRows[activeDragRowIndex]
-  const renderInsertPropertyHeader = (
-    insertKey: string,
-    position: number
-  ) => (
+  const renderInsertPropertyHeader = (insertKey: string, position: number) => (
     <th
       className="database-add-property-cell database-insert-property-cell"
       key={insertKey}
@@ -1487,6 +395,7 @@ export function DatabaseTableView({
       />
     </th>
   )
+
   const renderInsertPropertyCell = (insertKey: string) => (
     <td
       aria-hidden="true"
@@ -1497,959 +406,378 @@ export function DatabaseTableView({
 
   return (
     <div
-        className={
-          fullPage
-            ? "database-block-shell database-block-shell-full"
-            : "database-block-shell"
+      className="database-table-wrap"
+      ref={tableWrapRef}
+      onMouseLeave={() => {
+        if (!draggedRowId) {
+          setHoveredRowId(null)
         }
-        contentEditable={false}
-        onDragLeave={(event) => {
-          if (
-            !event.currentTarget.contains(
-              event.relatedTarget as globalThis.Node | null
-            )
-          ) {
-            setRowDropTargetIndex(null)
-          }
-        }}
-        onDragOver={handleDatabaseBlockDragOver}
-        onDrop={handleDatabaseBlockDrop}
-      >
-        <div className="database-toolbar">
-          {showTitle ? (
-            <Input
-              aria-label="Database title"
-              className="database-title-input h-auto min-w-0 w-full rounded-none border-0 bg-transparent px-0 py-0 text-2xl font-semibold leading-tight text-foreground shadow-none placeholder:text-muted-foreground/40 focus-visible:border-transparent focus-visible:ring-0 md:text-2xl dark:bg-transparent"
-              disabled={!databaseId}
-              onBlur={(event) => saveDatabaseTitle(event.target.value)}
-              onChange={(event) => {
-                setDraftDatabaseTitle(event.target.value)
-              }}
-              placeholder="New database"
-              value={draftDatabaseTitle}
-            />
-          ) : null}
-          <div className="flex min-w-0 items-center gap-2">
-            <div className="min-w-0 flex-1">
-              <div className="flex min-w-0 items-center gap-2 overflow-x-auto">
-                {(payload?.views ?? []).map((view) => {
-                  const isActiveView = view.id === activeView?.id
-                  const ViewIcon = view.type === "kanban" ? Kanban : Table2
+      }}
+      onDragLeave={(event) => {
+        if (
+          !event.currentTarget.contains(
+            event.relatedTarget as globalThis.Node | null
+          )
+        ) {
+          setRowDropTargetIndex(null)
+        }
+      }}
+      onDragOver={(event: ReactDragEvent<HTMLDivElement>) => {
+        const hasDragPayload = hasDatabasePageDragPayload(event.dataTransfer)
 
-                  return (
-                    <button
-                      aria-pressed={isActiveView}
-                      className={cn(
-                        "inline-flex h-8 shrink-0 items-center rounded-full px-3 text-sm font-medium transition-colors",
-                        isActiveView
-                          ? "bg-secondary text-secondary-foreground"
-                          : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
-                      )}
-                      key={view.id}
-                      onClick={() => setActiveViewId(view.id)}
-                      type="button"
-                    >
-                      <ViewIcon className="mr-2 size-4 shrink-0" />
-                      <span className="truncate">
-                        {isActiveView ? draftViewTitle : view.name}
-                      </span>
-                    </button>
-                  )
-                })}
-                <DropDrawer>
-                  <DropDrawerTrigger asChild>
-                    <Button
-                      aria-label="Add database view"
-                      className="h-8 w-8 shrink-0 rounded-full"
-                      disabled={!databaseId || addDatabaseView.isPending}
-                      size="icon"
-                      type="button"
-                      variant="ghost"
-                    >
-                      {addDatabaseView.isPending ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : (
-                        <Plus className="size-4" />
-                      )}
-                    </Button>
-                  </DropDrawerTrigger>
-                  <DropDrawerContent align="start" className="w-40">
-                    <DropDrawerItem
-                      disabled={!databaseId || addDatabaseView.isPending}
-                      onSelect={addTableView}
-                    >
-                      <Table2 className="size-4" />
-                      <span>Table</span>
-                    </DropDrawerItem>
-                    <DropDrawerItem
-                      disabled={
-                        !databaseId ||
-                        addDatabaseView.isPending ||
-                        addProperty.isPending
-                      }
-                      onSelect={addKanbanView}
-                    >
-                      <Kanban className="size-4" />
-                      <span>Kanban</span>
-                    </DropDrawerItem>
-                  </DropDrawerContent>
-                </DropDrawer>
-              </div>
-              {activeDatabaseSorts.length > 0 && showSortPill ? (
-                <div className="mt-2 flex min-w-0 items-center gap-2 overflow-x-auto">
-                  <DatabaseSortPopover
-                    activeDatabaseSorts={activeDatabaseSorts}
-                    addableSortColumnOptions={addableSortColumnOptions}
-                    canAddDatabaseSort={canAddDatabaseSort}
-                    onClearDatabaseSort={clearDatabaseSort}
-                    onCreateDatabaseSort={createDatabaseSort}
-                    onRemoveDatabaseSort={removeDatabaseSort}
-                    onUpdateDatabaseSort={updateDatabaseSort}
-                    sortColumnOptions={sortColumnOptions}
-                  >
-                    <Button
-                      aria-label="Open sort options"
-                      className="group h-8 shrink-0 rounded-full px-3"
-                      type="button"
-                      variant="secondary"
-                    >
-                      <ArrowDownUp className="size-4 self-center shrink-0" />
-                      <span className="self-center truncate">
-                        {activeDatabaseSorts.length === 0
-                          ? "Sort"
-                          : `${activeDatabaseSorts.length} sort${
-                              activeDatabaseSorts.length === 1 ? "" : "s"
-                            }`}
-                      </span>
-                    </Button>
-                  </DatabaseSortPopover>
-                </div>
-              ) : null}
-            </div>
-            <div className="ml-auto flex shrink-0 items-center gap-2">
-              {editable ? (
-                <>
-                  {activeDatabaseSorts.length === 0 ? (
-                    <DropDrawer open={sortPickerOpen} onOpenChange={setSortPickerOpen}>
-                      <DropDrawerTrigger asChild>
-                        <Button
-                          aria-label="Add sort"
-                          className="text-muted-foreground"
-                          size="icon"
-                          type="button"
-                          variant="ghost"
-                        >
-                          <ArrowDownUp />
-                        </Button>
-                      </DropDrawerTrigger>
-                      <DropDrawerContent
-                        align="start"
-                        className="w-72"
-                        onCloseAutoFocus={(event) => event.preventDefault()}
-                      >
-                        <DatabaseSearchableMenuItems
-                          inputAriaLabel="Sort properties"
-                          inputIcon={<ArrowDownUp className="size-4" />}
-                          inputPlaceholder="Sort by..."
-                          onSelect={createDatabaseSort}
-                          open={sortPickerOpen}
-                          options={sortColumnOptions}
-                        />
-                      </DropDrawerContent>
-                    </DropDrawer>
-                  ) : (
-                    <Button
-                      aria-label={showSortPill ? "Hide sort pill" : "Show sort pill"}
-                      className={
-                        showSortPill ? "text-foreground" : "text-muted-foreground"
-                      }
-                      onClick={toggleSortPillVisibility}
-                      size="icon"
-                      type="button"
-                      variant="ghost"
-                    >
-                      <ArrowDownUp />
-                    </Button>
-                  )}
-                  <DatabaseViewSettingsMenu
-                    activeDatabaseSorts={activeDatabaseSorts}
-                    activeViewType={activeView?.type}
-                    databaseId={databaseId ?? undefined}
-                    databaseName={draftDatabaseTitle}
-                    dataSources={
-                      payload?.database.id
-                        ? [
-                            {
-                              id: payload.database.id,
-                              name: draftDatabaseTitle || payload.database.name,
-                              viewCount: payload.views.length,
-                            },
-                          ]
-                        : []
-                    }
-                    draftViewTitle={draftViewTitle}
-                    nameColumnLabel={nameColumnLabel}
-                    organizationId={
-                      payload?.database.organizationId ??
-                      organizationId ??
-                      undefined
-                    }
-                    onCopyDatabaseViewLink={copyDatabaseViewLink}
-                    onClearDatabaseSort={clearDatabaseSort}
-                    onCreateDatabaseSort={createDatabaseSort}
-                    onDraftViewTitleChange={setDraftViewTitle}
-                    onRemoveDatabaseSort={removeDatabaseSort}
-                    onSaveDatabaseViewTitle={saveDatabaseViewTitle}
-                    onUpdateDatabaseSort={updateDatabaseSort}
-                    properties={properties}
-                    sortColumnOptions={sortColumnOptions}
-                    addableSortColumnOptions={addableSortColumnOptions}
-                    canAddDatabaseSort={canAddDatabaseSort}
-                    visiblePropertyCount={visiblePropertyCount}
-                  />
-                  <Button
-                    className="database-new-button"
-                    disabled={!databaseId || addRow.isPending}
-                    onClick={() => addDatabaseRow()}
-                    type="button"
-                  >
-                    {addRow.isPending ? (
-                      <Loader2 className="animate-spin" />
-                    ) : (
-                      <Plus />
-                    )}
-                    <span>New</span>
-                  </Button>
-                </>
-              ) : null}
-              {showExpandButton && databaseId ? (
-                <Button
-                  aria-label="Expand database"
-                  asChild
-                  className="database-expand-button"
-                  size="icon"
-                  type="button"
-                  variant="ghost"
-                >
-                  <Link
-                    params={{ databaseId }}
-                    title="Expand database"
-                    to="/database/$databaseId"
-                  >
-                    <Maximize2 />
-                  </Link>
-                </Button>
-              ) : null}
-            </div>
-          </div>
-        </div>
-        {!databaseId ? (
-          <div className="database-empty-state">
-            <span>Database reference missing.</span>
-          </div>
-        ) : isLoading || !payload ? (
-          <div className="database-empty-state">
-            <Loader2 className="animate-spin" />
-            <span>Loading database...</span>
-          </div>
-        ) : isKanbanView ? (
-          <div className="database-kanban-wrap">
-            {kanbanGroupProperty && kanbanOptions.length > 0 ? (
-              <div className="database-kanban-board">
-                {[
-                  ...kanbanOptions,
-                  ...(sortedRows.some((row) => {
-                    const key = `${row.pageId}:${kanbanGroupProperty.property.id}`
-                    const value = cellValues[key] ?? ""
-                    const groupValue = Array.isArray(value)
-                      ? value[0] ?? ""
-                      : value
+        if (!draggedRowId && !hasDragPayload) {
+          return
+        }
 
-                    return (
-                      kanbanGroupProperty.property.type !== "status" &&
-                      !groupValue
-                    )
-                  })
-                    ? [{ color: "gray", id: "empty", name: "Empty" }]
-                    : []),
-                ].map((option) => {
-                  const isEmptyOption = option.id === "empty"
-                  const optionRows = sortedRows.filter((row) => {
-                    const key = `${row.pageId}:${kanbanGroupProperty.property.id}`
-                    const value = cellValues[key] ?? ""
-                    const groupValue = Array.isArray(value)
-                      ? value[0] ?? ""
-                      : value
-                    const normalizedGroupValue =
-                      groupValue ||
-                      (kanbanGroupProperty.property.type === "status"
-                        ? defaultStatusOptions[0]?.name ?? "Not started"
-                        : "")
-
-                    return isEmptyOption
-                      ? !groupValue
-                      : normalizedGroupValue === option.name
-                  })
-
-                  return (
-                    <section className="database-kanban-column" key={option.id}>
-                      <div className="database-kanban-column-header">
-                        <span className={getColorTokenBadgeClassName(option.color)}>
-                          <span
-                            aria-hidden="true"
-                            className={getColorTokenDotClassName(option.color)}
-                          />
-                          {option.name}
-                        </span>
-                        <span className="database-kanban-count">
-                          {optionRows.length}
-                        </span>
-                      </div>
-                      <div className="database-kanban-cards">
-                        {optionRows.map((row) => {
-                          const key = `${row.pageId}:${kanbanGroupProperty.property.id}`
-                          const persistedValue = cellValues[key] ?? ""
-                          const value =
-                            persistedValue ||
-                            (kanbanGroupProperty.property.type === "status"
-                              ? defaultStatusOptions[0]?.name ?? "Not started"
-                              : "")
-
-                          return (
-                            <article className="database-kanban-card" key={row.id}>
-                              <DatabasePageCell
-                                onOpen={onOpenPage}
-                                pageId={row.pageId}
-                                showPageIcon={nameColumnShowPageIcon}
-                              />
-                              <DatabasePropertySelect
-                                editable={editable && !isEmptyOption}
-                                defaultOptions={
-                                  kanbanGroupProperty.property.type === "status"
-                                    ? defaultStatusOptions
-                                    : undefined
-                                }
-                                label={kanbanGroupProperty.property.name}
-                                onSelect={(optionValue) =>
-                                  saveCell(
-                                    row.id,
-                                    kanbanGroupProperty.property.id,
-                                    kanbanGroupProperty.property.type,
-                                    persistedValue,
-                                    optionValue
-                                  )
-                                }
-                                onPropertyConfigChange={(config) =>
-                                  updateProperty.mutateAsync({
-                                    config,
-                                    databaseId: payload.database.id,
-                                    databasePropertyId: kanbanGroupProperty.id,
-                                  })
-                                }
-                                propertyConfig={kanbanGroupProperty.property.config}
-                                showStatusDot={
-                                  kanbanGroupProperty.property.type === "status"
-                                }
-                                value={value}
-                              />
-                            </article>
-                          )
-                        })}
-                        {editable && !isEmptyOption ? (
-                          <button
-                            className="database-kanban-new-card"
-                            disabled={!databaseId || addRow.isPending}
-                            onClick={() => addDatabaseRow(option.name)}
-                            type="button"
-                          >
-                            {addRow.isPending ? (
-                              <Loader2 className="animate-spin" />
-                            ) : (
-                              <Plus />
-                            )}
-                            <span>New page</span>
-                          </button>
-                        ) : null}
-                      </div>
-                    </section>
-                  )
-                })}
-              </div>
-            ) : (
-              <div className="database-empty-state">
-                <span>Add a select or status property to use Kanban.</span>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div
-            className="database-table-wrap"
-            ref={tableWrapRef}
-            onMouseLeave={() => {
-              if (!draggedRowId) {
-                setHoveredRowId(null)
-              }
-            }}
-            onDragLeave={(event) => {
-              if (
-                !event.currentTarget.contains(
-                  event.relatedTarget as globalThis.Node | null
-                )
-              ) {
-                setRowDropTargetIndex(null)
-              }
-            }}
-            onDragOver={(event) => {
-              const hasDragPayload = hasDatabasePageDragPayload(
-                event.dataTransfer
-              )
-
-              if (!draggedRowId && !hasDragPayload) {
-                return
-              }
-
-              event.preventDefault()
-              event.stopPropagation()
-              event.dataTransfer.dropEffect = "move"
-              if (draggedRowId) {
-                setRowDragOverlay((overlay) =>
-                  overlay
-                    ? {
-                        ...overlay,
-                        left: event.clientX - overlay.offsetX,
-                        top: event.clientY - overlay.offsetY,
-                      }
-                    : overlay
-                )
-              }
-              measureRows()
-              setRowDropTargetIndex(getRowDropTargetIndex(event.clientY))
-            }}
-            onDrop={(event) => {
-              const dragPayload = getDatabasePageDragPayload(event.dataTransfer)
-
-              if ((!draggedRowId && !dragPayload) || rowDropTargetIndex === null) {
-                return
-              }
-
-              event.preventDefault()
-              event.stopPropagation()
-              if (draggedRowId) {
-                moveDraggedRow()
-              } else if (dragPayload) {
-                addDraggedPageRow(dragPayload)
-              }
-              clearRowDrag()
-            }}
-          >
-            {editable && isTableView && !isTableSorted ? (
-              <div className="database-row-drag-rail">
-                {activeDragRow ? (
-                  <button
-                    aria-label={`Drag ${activeDragRow.page.name.trim() || "Untitled"}`}
-                    className="database-row-drag-handle"
-                    data-database-row-drag-handle
-                    data-dragging={
-                      draggedRowId === activeDragRow.id ? "true" : undefined
-                    }
-                    data-visible="true"
-                    draggable
-                    key="database-row-drag-handle"
-                    onClick={(event) => event.preventDefault()}
-                    onDragStart={(event) => {
-                      measureRows()
-                      const rowElement = tableWrapRef.current?.querySelector(
-                        `tr[data-database-row-id="${activeDragRow.id}"]`
-                      )
-                      const rowRect = rowElement?.getBoundingClientRect()
-                      const tableRect = tableWrapRef.current
-                        ?.querySelector(".database-table")
-                        ?.getBoundingClientRect()
-
-                      if (rowRect && tableRect) {
-                        setRowDragOverlay({
-                          height: rowRect.height,
-                          left: rowRect.left,
-                          offsetX: event.clientX - rowRect.left,
-                          offsetY: event.clientY - rowRect.top,
-                          title: activeDragRow.page.name.trim() || "Untitled",
-                          top: rowRect.top,
-                          width: tableRect.width,
-                        })
-                      }
-
-                      hideNativeDragPreview(event.dataTransfer)
-                      setDraggedRowId(activeDragRow.id)
-                      setRowDropTargetIndex(activeDragRowIndex)
-                      event.dataTransfer.effectAllowed = "copyMove"
-                      event.dataTransfer.setData(
-                        DATABASE_PAGE_DRAG_MIME,
-                        JSON.stringify({
-                          databaseId: payload.database.id,
-                          pageId: activeDragRow.pageId,
-                          rowId: activeDragRow.id,
-                        })
-                      )
-                      event.dataTransfer.setData(
-                        "text/plain",
-                        activeDragRow.page.name.trim() || "Untitled"
-                      )
-                    }}
-                    onDragEnd={clearRowDrag}
-                    onMouseEnter={() => {
-                      measureRows()
-                      setHoveredRowId(activeDragRow.id)
-                    }}
-                    style={{
-                      top: rowLayout.centers[activeDragRow.id] ?? 0,
-                    }}
-                    title="Drag page"
-                    type="button"
-                  >
-                    <GripVertical />
-                  </button>
-                ) : null}
-              </div>
-            ) : null}
-            {rowDragOverlay ? (
-              <div
-                aria-hidden="true"
-                className="database-row-drag-overlay"
-                style={{
-                  height: rowDragOverlay.height,
-                  left: rowDragOverlay.left,
-                  top: rowDragOverlay.top,
-                  width: rowDragOverlay.width,
-                }}
-              >
-                <span className="database-row-drag-overlay-cell">
-                  <FileText />
-                  <span>{rowDragOverlay.title}</span>
-                </span>
-              </div>
-            ) : null}
-            {rowDropLineTop !== null ? (
-              <div
-                className="pointer-events-none absolute left-0 right-0 z-30 h-0.5 -translate-y-px bg-primary"
-                style={{ top: rowDropLineTop }}
-              />
-            ) : null}
-            <div className="database-table-scroll">
-              <table
-                className="database-table"
-                style={
-                  {
-                    "--database-table-min-width": `${tableMinWidth}px`,
-                  } as CSSProperties
+        event.preventDefault()
+        event.stopPropagation()
+        event.dataTransfer.dropEffect = "move"
+        if (draggedRowId) {
+          setRowDragOverlay((overlay: any) =>
+            overlay
+              ? {
+                  ...overlay,
+                  left: event.clientX - overlay.offsetX,
+                  top: event.clientY - overlay.offsetY,
                 }
-              >
-              <colgroup>
-                {columnKeys.map((key) => (
-                  <col key={key} style={{ width: getColumnWidth(key) }} />
-                ))}
-              </colgroup>
-              <thead>
-                <tr>
-                  {pendingInsertPropertyKey === "insert-property-name-left"
-                    ? renderInsertPropertyHeader("insert-property-name-left", 0)
-                    : null}
-                  <th className="database-name-header">
-                    {editable ? (
-                      <DatabaseNamePropertyMenu
-                        config={payload.database.config}
-                        databaseId={payload.database.id}
-                        onOpenChange={(open) =>
-                          handleEditingPropertyOpenChange("name", open)
-                        }
-                        onInsertProperty={(side) =>
-                          openInsertPropertyMenu("name", 0, side)
-                        }
-                        open={editingPropertyKey === "name"}
-                      />
-                    ) : (
-                      <span className="database-name-header-content">
-                        <span>Aa</span>
-                        <span>{nameColumnLabel}</span>
-                      </span>
-                    )}
-                    <span
-                      aria-hidden="true"
-                      className="database-column-resize-handle"
-                      onPointerDown={(event) => startColumnResize("name", event)}
-                    />
-                  </th>
-                  {pendingInsertPropertyKey === "insert-property-name-right"
-                    ? renderInsertPropertyHeader("insert-property-name-right", 1)
-                    : null}
-                  {visibleProperties.map((property) => {
-                    const leftInsertKey = `insert-property-${property.id}-left`
-                    const rightInsertKey = `insert-property-${property.id}-right`
-                    const showLeftInsert =
-                      pendingInsertPropertyKey === leftInsertKey
-                    const showRightInsert =
-                      pendingInsertPropertyKey === rightInsertKey
+              : overlay
+          )
+        }
+        measureRows()
+        setRowDropTargetIndex(getRowDropTargetIndex(event.clientY))
+      }}
+      onDrop={(event) => {
+        const dragPayload = getDatabasePageDragPayload(event.dataTransfer)
 
-                    return (
-                      <Fragment key={property.id}>
-                        {showLeftInsert
-                          ? renderInsertPropertyHeader(
-                              leftInsertKey,
-                              pendingInsertProperty?.position ?? property.position
+        if ((!draggedRowId && !dragPayload) || rowDropTargetIndex === null) {
+          return
+        }
+
+        event.preventDefault()
+        event.stopPropagation()
+        if (draggedRowId) {
+          moveDraggedRow()
+        } else if (dragPayload) {
+          addDraggedPageRow(dragPayload, rowDropTargetIndex)
+        }
+        clearRowDrag()
+      }}
+    >
+      {editable && !isTableSorted ? (
+        <div className="database-row-drag-rail">
+          {activeDragRow ? (
+            <button
+              aria-label={`Drag ${activeDragRow.page.name.trim() || "Untitled"}`}
+              className="database-row-drag-handle"
+              data-database-row-drag-handle
+              data-dragging={draggedRowId === activeDragRow.id ? "true" : undefined}
+              data-visible="true"
+              draggable
+              key="database-row-drag-handle"
+              onClick={(event) => event.preventDefault()}
+              onDragStart={(event) => {
+                measureRows()
+                const rowElement = tableWrapRef.current?.querySelector(
+                  `tr[data-database-row-id="${activeDragRow.id}"]`
+                )
+                const rowRect = rowElement?.getBoundingClientRect()
+                const tableRect = tableWrapRef.current
+                  ?.querySelector(".database-table")
+                  ?.getBoundingClientRect()
+
+                if (rowRect && tableRect) {
+                  setRowDragOverlay({
+                    height: rowRect.height,
+                    left: rowRect.left,
+                    offsetX: event.clientX - rowRect.left,
+                    offsetY: event.clientY - rowRect.top,
+                    title: activeDragRow.page.name.trim() || "Untitled",
+                    top: rowRect.top,
+                    width: tableRect.width,
+                  })
+                }
+
+                hideNativeTableRowDragPreview(event.dataTransfer)
+                setDraggedRowId(activeDragRow.id)
+                setRowDropTargetIndex(activeDragRowIndex)
+                event.dataTransfer.effectAllowed = "copyMove"
+                event.dataTransfer.setData(
+                  DATABASE_PAGE_DRAG_MIME,
+                  JSON.stringify({
+                    databaseId: payload.database.id,
+                    pageId: activeDragRow.pageId,
+                    rowId: activeDragRow.id,
+                  })
+                )
+                event.dataTransfer.setData(
+                  "text/plain",
+                  activeDragRow.page.name.trim() || "Untitled"
+                )
+              }}
+              onDragEnd={clearRowDrag}
+              onMouseEnter={() => {
+                measureRows()
+                setHoveredRowId(activeDragRow.id)
+              }}
+              style={{ top: rowLayout.centers[activeDragRow.id] ?? 0 }}
+              title="Drag page"
+              type="button"
+            >
+              <GripVertical />
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+      {rowDragOverlay ? (
+        <div
+          aria-hidden="true"
+          className="database-row-drag-overlay"
+          style={{
+            height: rowDragOverlay.height,
+            left: rowDragOverlay.left,
+            top: rowDragOverlay.top,
+            width: rowDragOverlay.width,
+          }}
+        >
+          <span className="database-row-drag-overlay-cell">
+            <FileText />
+            <span>{rowDragOverlay.title}</span>
+          </span>
+        </div>
+      ) : null}
+      {rowDropLineTop !== null ? (
+        <div
+          className="pointer-events-none absolute left-0 right-0 z-30 h-0.5 -translate-y-px bg-primary"
+          style={{ top: rowDropLineTop }}
+        />
+      ) : null}
+      <div className="database-table-scroll">
+        <table
+          className="database-table"
+          style={
+            {
+              "--database-table-min-width": `${tableMinWidth}px`,
+            } as CSSProperties
+          }
+        >
+          <colgroup>
+            {columnKeys.map((key) => (
+              <col key={key} style={{ width: getColumnWidth(columnWidths, key) }} />
+            ))}
+          </colgroup>
+          <thead>
+            <tr>
+              {pendingInsertPropertyKey === "insert-property-name-left"
+                ? renderInsertPropertyHeader("insert-property-name-left", 0)
+                : null}
+              <th className="database-name-header">
+                {editable ? (
+                  <DatabaseNamePropertyMenu
+                    config={payload.database.config}
+                    databaseId={payload.database.id}
+                    onOpenChange={(open) =>
+                      handleEditingPropertyOpenChange("name", open)
+                    }
+                    onInsertProperty={(side) =>
+                      openInsertPropertyMenu("name", 0, side)
+                    }
+                    open={editingPropertyKey === "name"}
+                  />
+                ) : (
+                  <span className="database-name-header-content">
+                    <span>Aa</span>
+                    <span>{nameColumnLabel}</span>
+                  </span>
+                )}
+                <span
+                  aria-hidden="true"
+                  className="database-column-resize-handle"
+                  onPointerDown={(event) => startColumnResize("name", event)}
+                />
+              </th>
+              {pendingInsertPropertyKey === "insert-property-name-right"
+                ? renderInsertPropertyHeader("insert-property-name-right", 1)
+                : null}
+              {visibleProperties.map((property: any) => {
+                const leftInsertKey = `insert-property-${property.id}-left`
+                const rightInsertKey = `insert-property-${property.id}-right`
+                const showLeftInsert = pendingInsertPropertyKey === leftInsertKey
+                const showRightInsert = pendingInsertPropertyKey === rightInsertKey
+
+                return (
+                  <Fragment key={property.id}>
+                    {showLeftInsert
+                      ? renderInsertPropertyHeader(
+                          leftInsertKey,
+                          pendingInsertProperty?.position ?? property.position
+                        )
+                      : null}
+                    <th className="database-property-header">
+                      {editable ? (
+                        <DatabasePropertyMenu
+                          config={property.property.config}
+                          databaseConfig={payload.database.config}
+                          databaseId={payload.database.id}
+                          databasePropertyId={property.id}
+                          name={property.property.name}
+                          onOpenChange={(open) =>
+                            handleEditingPropertyOpenChange(property.id, open)
+                          }
+                          type={property.property.type}
+                          onInsertProperty={(side) =>
+                            openInsertPropertyMenu(
+                              property.id,
+                              property.position,
+                              side
                             )
-                          : null}
-                        <th className="database-property-header">
-                          {editable ? (
-                            <DatabasePropertyMenu
-                              config={property.property.config}
-                              databaseConfig={payload.database.config}
-                              databaseId={payload.database.id}
-                              databasePropertyId={property.id}
-                              name={property.property.name}
-                              onOpenChange={(open) =>
-                                handleEditingPropertyOpenChange(property.id, open)
-                              }
-                              type={property.property.type}
-                              onInsertProperty={(side) =>
-                                openInsertPropertyMenu(
-                                  property.id,
-                                  property.position,
-                                  side
-                                )
-                              }
-                              onRename={(name) =>
-                                updateProperty.mutate({
-                                  databaseId: payload.database.id,
-                                  databasePropertyId: property.id,
-                                  name,
-                                })
-                              }
-                              open={editingPropertyKey === property.id}
-                            />
-                          ) : (
-                            <span className="database-property-header-label">
-                              {property.property.name}
-                            </span>
-                          )}
-                          <span
-                            aria-hidden="true"
-                            className="database-column-resize-handle"
-                            onPointerDown={(event) =>
-                              startColumnResize(property.id, event)
-                            }
-                          />
-                        </th>
-                        {showRightInsert
-                          ? renderInsertPropertyHeader(
-                              rightInsertKey,
-                              pendingInsertProperty?.position ??
-                                property.position + 1
-                            )
-                          : null}
-                      </Fragment>
-                    )
-                  })}
-                  {editable ? (
-                    <th className="database-add-property-cell">
-                      <AddDatabasePropertyMenu
-                        disabled={addProperty.isPending}
-                        isPending={addProperty.isPending}
-                        onAdd={addDatabaseProperty}
-                      />
+                          }
+                          onRename={(name) =>
+                            updateProperty.mutate({
+                              databaseId: payload.database.id,
+                              databasePropertyId: property.id,
+                              name,
+                            })
+                          }
+                          open={editingPropertyKey === property.id}
+                        />
+                      ) : (
+                        <span className="database-property-header-label">
+                          {property.property.name}
+                        </span>
+                      )}
                       <span
                         aria-hidden="true"
                         className="database-column-resize-handle"
                         onPointerDown={(event) =>
-                          startColumnResize("add-property", event)
+                          startColumnResize(property.id, event)
                         }
                       />
                     </th>
-                  ) : null}
-                </tr>
-              </thead>
-              <tbody>
-                {sortedRows.map((row) => (
-                  <tr
-                    data-database-row-id={row.id}
-                    key={row.id}
-                    onMouseEnter={() => {
-                      measureRows()
-                      setHoveredRowId(row.id)
-                    }}
-                  >
-                    {pendingInsertPropertyKey === "insert-property-name-left"
-                      ? renderInsertPropertyCell("insert-property-name-left")
+                    {showRightInsert
+                      ? renderInsertPropertyHeader(
+                          rightInsertKey,
+                          pendingInsertProperty?.position ?? property.position + 1
+                        )
                       : null}
-                    <td className="database-page-cell">
-                      <DatabaseCellContent wrapContent={nameColumnWrapContent}>
-                        <DatabasePageCell
-                          onOpen={onOpenPage}
-                          pageId={row.pageId}
-                          showPageIcon={nameColumnShowPageIcon}
-                        />
-                      </DatabaseCellContent>
-                    </td>
-                    {pendingInsertPropertyKey === "insert-property-name-right"
-                      ? renderInsertPropertyCell("insert-property-name-right")
-                      : null}
-                    {visibleProperties.map((property) => {
-                      const leftInsertKey = `insert-property-${property.id}-left`
-                      const rightInsertKey = `insert-property-${property.id}-right`
-                      const showLeftInsert =
-                        pendingInsertPropertyKey === leftInsertKey
-                      const showRightInsert =
-                        pendingInsertPropertyKey === rightInsertKey
-                      const workspaceProperty = property.property
-                      const key = `${row.pageId}:${workspaceProperty.id}`
-                      const value = draftCells[key] ?? cellValues[key] ?? ""
-                      const wrapContent = getPropertyWrapContent(
-                        workspaceProperty.config
-                      )
-                      const isSelectProperty =
-                        workspaceProperty.type === "select" ||
-                        workspaceProperty.type === "multi_select" ||
-                        workspaceProperty.type === "status"
-                      const isCheckboxProperty =
-                        workspaceProperty.type === "checkbox"
-                      const isButtonProperty = workspaceProperty.type === "button"
-                      const isDateProperty = workspaceProperty.type === "date"
-                      const isFilesProperty = workspaceProperty.type === "files"
-                      const isReadOnlyTimeCell = isReadOnlyTimeProperty(
-                        workspaceProperty.type
-                      )
-                      const isPersonProperty = workspaceProperty.type === "person"
-                      const isMultiSelectProperty =
-                        workspaceProperty.type === "multi_select" ||
-                        (isPersonProperty &&
-                          getPersonLimit(workspaceProperty.config) !==
-                            "one_person")
-
-                      return (
-                        <Fragment key={property.id}>
-                          {showLeftInsert
-                            ? renderInsertPropertyCell(leftInsertKey)
-                            : null}
-                          <td
-                            className="database-value-cell"
-                            data-active={activeCellKey === key ? "true" : undefined}
-                            data-wrap-content={wrapContent ? "true" : undefined}
-                          >
-                            {isReadOnlyTimeCell ? (
-                              <DatabaseCellContent wrapContent={wrapContent}>
-                                <span className="database-input-cell-trigger">
-                                  {getReadOnlyTimePropertyValue(
-                                    row,
-                                    workspaceProperty.config,
-                                    workspaceProperty.type
-                                  ) || (
-                                    <span className="text-muted-foreground">
-                                      Empty
-                                    </span>
-                                  )}
-                                </span>
-                              </DatabaseCellContent>
-                            ) : isCheckboxProperty ? (
-                              <DatabaseCellContent wrapContent={wrapContent}>
-                                <div className="database-checkbox-cell">
-                                  <Checkbox
-                                    aria-label={`${workspaceProperty.name} value`}
-                                    checked={value === "true"}
-                                    disabled={!editable}
-                                    onCheckedChange={(nextChecked) =>
-                                      saveCell(
-                                        row.id,
-                                        workspaceProperty.id,
-                                        workspaceProperty.type,
-                                        cellValues[key] ?? "",
-                                        nextChecked === true ? "true" : "false"
-                                      )
-                                    }
-                                  />
-                                </div>
-                              </DatabaseCellContent>
-                            ) : isButtonProperty ? (
-                              <DatabaseCellContent wrapContent={wrapContent}>
-                                <DatabasePropertyButton
-                                  className="px-3 py-1"
-                                  editable={editable}
-                                  label={workspaceProperty.name}
-                                  value={value}
-                                />
-                              </DatabaseCellContent>
-                            ) : isSelectProperty || isPersonProperty ? (
-                              <DatabaseCellContent wrapContent={wrapContent}>
-                                <DatabasePropertySelect
-                                  allowCreate={!isPersonProperty}
-                                  editable={editable}
-                                  defaultOptions={
-                                    workspaceProperty.type === "status"
-                                      ? defaultStatusOptions
-                                      : isPersonProperty
-                                        ? personOptions
-                                      : undefined
-                                  }
-                                  label={workspaceProperty.name}
-                                  multiple={isMultiSelectProperty}
-                                  onSelect={(optionValue) =>
-                                    saveCell(
-                                      row.id,
-                                      workspaceProperty.id,
-                                      workspaceProperty.type,
-                                      cellValues[key] ?? "",
-                                      optionValue
-                                    )
-                                  }
-                                  onPropertyConfigChange={(config) =>
-                                    updateProperty.mutateAsync({
-                                      config,
-                                      databaseId: payload.database.id,
-                                      databasePropertyId: property.id,
-                                    })
-                                  }
-                                  propertyConfig={workspaceProperty.config}
-                                  showStatusDot={
-                                    workspaceProperty.type === "status"
-                                  }
-                                  value={value}
-                                  valueKey={isPersonProperty ? "id" : "name"}
-                                />
-                              </DatabaseCellContent>
-                            ) : isDateProperty ? (
-                              <DatabaseCellContent wrapContent={wrapContent}>
-                                <DatabasePropertyDate
-                                  editable={editable}
-                                  label={workspaceProperty.name}
-                                  onOpenChange={(open) =>
-                                    setActiveCellKey(open ? key : null)
-                                  }
-                                  onPropertyConfigChange={(config) =>
-                                    updateProperty.mutateAsync({
-                                      config,
-                                      databaseId: payload.database.id,
-                                      databasePropertyId: property.id,
-                                    })
-                                  }
-                                  onSelect={(nextValue) =>
-                                    saveCell(
-                                      row.id,
-                                      workspaceProperty.id,
-                                      workspaceProperty.type,
-                                      cellValues[key] ?? "",
-                                      nextValue
-                                    )
-                                  }
-                                  propertyConfig={workspaceProperty.config}
-                                  value={value}
-                                />
-                              </DatabaseCellContent>
-                            ) : isFilesProperty ? (
-                              <DatabaseCellContent wrapContent={wrapContent}>
-                                <DatabasePropertyFiles
-                                  editable={editable}
-                                  label={workspaceProperty.name}
-                                  onOpenChange={(open) =>
-                                    setActiveCellKey(open ? key : null)
-                                  }
-                                  onSelect={(nextValue) =>
-                                    saveCell(
-                                      row.id,
-                                      workspaceProperty.id,
-                                      workspaceProperty.type,
-                                      cellValues[key] ?? "",
-                                      nextValue
-                                    )
-                                  }
-                                  propertyConfig={workspaceProperty.config}
-                                  value={value}
-                                />
-                              </DatabaseCellContent>
-                            ) : (
-                              <DatabaseCellContent wrapContent={wrapContent}>
-                                <DatabasePropertyInput
-                                  label={workspaceProperty.name}
-                                  editable={editable}
-                                  onActivate={(element) => {
-                                    setActiveCellKey(key)
-                                    resizeCellEditor(element)
-                                  }}
-                                  onChange={(nextValue) =>
-                                    setDraftCells((drafts) => ({
-                                      ...drafts,
-                                      [key]: nextValue,
-                                    }))
-                                  }
-                                  onCommit={() => {
-                                    const persistedValue = cellValues[key] ?? ""
-                                    const nextValue = draftCells[key] ?? persistedValue
-
-                                    saveCell(
-                                      row.id,
-                                      workspaceProperty.id,
-                                      workspaceProperty.type,
-                                      persistedValue,
-                                      nextValue
-                                    )
-                                    setDraftCells((drafts) => {
-                                      const nextDrafts = { ...drafts }
-
-                                      delete nextDrafts[key]
-
-                                      return nextDrafts
-                                    })
-                                  }}
-                                  onDeactivate={() =>
-                                    setActiveCellKey((currentKey) =>
-                                      currentKey === key ? null : currentKey
-                                    )
-                                  }
-                                  onInput={handleCellInput}
-                                  propertyConfig={workspaceProperty.config}
-                                  type={workspaceProperty.type}
-                                  value={
-                                    Array.isArray(value) ? value.join(", ") : value
-                                  }
-                                  wrapContent={wrapContent}
-                                />
-                              </DatabaseCellContent>
-                            )}
-                          </td>
-                          {showRightInsert
-                            ? renderInsertPropertyCell(rightInsertKey)
-                            : null}
-                        </Fragment>
-                      )
-                    })}
-                    {editable ? <td /> : null}
-                  </tr>
-                ))}
-              </tbody>
-              </table>
+                  </Fragment>
+                )
+              })}
               {editable ? (
-                <div
-                  className="database-page-create-row"
-                  style={
-                    {
-                      "--database-table-min-width": `${tableMinWidth}px`,
-                    } as CSSProperties
-                  }
-                >
-                  <button
-                    className="database-page-create database-page-create-full"
-                    disabled={!databaseId || addRow.isPending}
-                    onClick={() => addDatabaseRow()}
-                    type="button"
-                  >
-                    {addRow.isPending ? (
-                      <Loader2 className="animate-spin" />
-                    ) : (
-                      <Plus />
-                    )}
-                    <span>New page</span>
-                  </button>
-                </div>
+                <th className="database-add-property-cell">
+                  <AddDatabasePropertyMenu
+                    disabled={addProperty.isPending}
+                    isPending={addProperty.isPending}
+                    onAdd={addDatabaseProperty}
+                  />
+                  <span
+                    aria-hidden="true"
+                    className="database-column-resize-handle"
+                    onPointerDown={(event) =>
+                      startColumnResize("add-property", event)
+                    }
+                  />
+                </th>
               ) : null}
-            </div>
+            </tr>
+          </thead>
+          <tbody>
+            {sortedRows.map((row: any) => (
+              <tr
+                data-database-row-id={row.id}
+                key={row.id}
+                onMouseEnter={() => {
+                  measureRows()
+                  setHoveredRowId(row.id)
+                }}
+              >
+                {pendingInsertPropertyKey === "insert-property-name-left"
+                  ? renderInsertPropertyCell("insert-property-name-left")
+                  : null}
+                <td className="database-page-cell">
+                  <DatabaseTableCellContent wrapContent={nameColumnWrapContent}>
+                    <DatabasePageLink
+                      onOpen={onOpenPage}
+                      pageId={row.pageId}
+                      showPageIcon={nameColumnShowPageIcon}
+                    />
+                  </DatabaseTableCellContent>
+                </td>
+                {pendingInsertPropertyKey === "insert-property-name-right"
+                  ? renderInsertPropertyCell("insert-property-name-right")
+                  : null}
+                {visibleProperties.map((property: any) => {
+                  const leftInsertKey = `insert-property-${property.id}-left`
+                  const rightInsertKey = `insert-property-${property.id}-right`
+                  const showLeftInsert = pendingInsertPropertyKey === leftInsertKey
+                  const showRightInsert = pendingInsertPropertyKey === rightInsertKey
+                  const workspaceProperty = property.property
+                  const key = `${row.pageId}:${workspaceProperty.id}`
+                  const persistedValue = propertyValuesByKey[key] ?? ""
+                  const value = draftPropertyValues[key] ?? persistedValue
+                  const wrapContent = getPropertyWrapContent(workspaceProperty.config)
+
+                  return (
+                    <Fragment key={property.id}>
+                      {showLeftInsert ? renderInsertPropertyCell(leftInsertKey) : null}
+                      <td
+                        className="database-value-cell"
+                        data-active={activePropertyValueKey === key ? "true" : undefined}
+                        data-wrap-content={wrapContent ? "true" : undefined}
+                      >
+                        <DatabaseTableCellContent wrapContent={wrapContent}>
+                          <DatabasePropertyValue
+                            draftValues={draftPropertyValues}
+                            editable={editable}
+                            onActiveValueChange={setActivePropertyValueKey}
+                            onDraftValuesChange={setDraftPropertyValues}
+                            onPropertyConfigChange={(databasePropertyId, config) =>
+                              updateProperty.mutateAsync({
+                                config,
+                                databaseId: payload.database.id,
+                                databasePropertyId,
+                              })
+                            }
+                            onSaveValue={savePropertyValue}
+                            persistedValue={persistedValue}
+                            personOptions={personOptions}
+                            property={property}
+                            row={row}
+                            value={value}
+                          />
+                        </DatabaseTableCellContent>
+                      </td>
+                      {showRightInsert
+                        ? renderInsertPropertyCell(rightInsertKey)
+                        : null}
+                    </Fragment>
+                  )
+                })}
+                {editable ? <td /> : null}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {editable ? (
+          <div
+            className="database-page-create-row"
+            style={
+              {
+                "--database-table-min-width": `${tableMinWidth}px`,
+              } as CSSProperties
+            }
+          >
+            <button
+              className="database-page-create database-page-create-full"
+              disabled={!databaseId || addRow.isPending}
+              onClick={onAddDatabaseRow}
+              type="button"
+            >
+              {addRow.isPending ? <Loader2 className="animate-spin" /> : <Plus />}
+              <span>New page</span>
+            </button>
           </div>
-        )}
+        ) : null}
       </div>
+    </div>
   )
 }

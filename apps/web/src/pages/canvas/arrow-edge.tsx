@@ -157,8 +157,6 @@ export function ArrowEdge({
 
   const connectEndpoint = useCallback(
     (endpoint: DragEndpoint, nodeId: string) => {
-      const node = getNode(nodeId)
-
       setEdges((currentEdges) =>
         currentEdges.map((edge) =>
           edge.id === id
@@ -171,7 +169,7 @@ export function ArrowEdge({
         ),
       )
     },
-    [getNode, id, setEdges],
+    [id, setEdges],
   )
 
   useEffect(() => {

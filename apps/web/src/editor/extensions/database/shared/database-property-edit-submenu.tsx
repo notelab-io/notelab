@@ -49,7 +49,7 @@ import {
   getStatusDefaultOptionId,
   type DatabasePropertyConfig,
   type DatabaseSelectOption,
-} from "./database-column-config"
+} from "./database-view-config"
 
 type StatusOption = DatabaseSelectOption & {
   group?: string

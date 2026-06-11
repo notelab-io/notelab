@@ -27,8 +27,8 @@ import { DatabasePropertyInput } from "../../extensions/database/database-proper
 import { DatabasePropertySelect } from "../../extensions/database/database-property-select"
 import { getDatabasePropertyType } from "../../extensions/database/constants"
 import { defaultStatusOptions } from "../../extensions/database/constants"
-import { formatDatabaseDateValue } from "../../extensions/database/table/database-date-config"
-import { getPersonLimit } from "../../extensions/database/table/database-column-config"
+import { formatDatabaseDateValue } from "../../extensions/database/shared/database-date-config"
+import { getPersonLimit } from "../../extensions/database/shared/database-view-config"
 import {
   type DatabasePropertyValue,
   parsePropertyValue,

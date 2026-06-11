@@ -4,7 +4,7 @@ import { useOptionalWorkspaceSidePane } from "@/components/app-layout"
 import { useWorkspace } from "@notelab/features/workspaces"
 import { getWorkspaceEmoji } from "@notelab/features/workspaces"
 
-export function DatabasePageCell({
+export function DatabasePageLink({
   onOpen,
   pageId,
   showPageIcon = true,
