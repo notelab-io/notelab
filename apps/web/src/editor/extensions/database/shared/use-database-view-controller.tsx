@@ -20,27 +20,13 @@ import {
 } from "@notelab/features/databases"
 import { useWorkspacePersonAccessTargets } from "@notelab/features/workspaces"
 
+import { defaultStatusOptions } from "../constants"
 import {
-  getKanbanGroupProperty,
-  getKanbanOptions,
-} from "../kanban/database-kanban-config"
-import {
-  defaultStatusOptions,
-  getDatabasePropertyType,
-} from "../constants"
-import {
-  getDatabaseSorts,
   getMergedDatabaseConfig,
-  getNameColumnLabel,
-  getNameColumnShowPageIcon,
   getPropertyHidden,
-  getPropertyHiddenForView,
   getViewHiddenPropertyIds,
   type DatabaseSortConfig,
 } from "./database-view-config"
-import type { DatabaseSearchableMenuOption } from "./database-searchable-menu-items"
-import type { DatabaseActiveSort } from "./database-sort-menu"
-import { NameColumnGlyph } from "./name-column-glyph"
 import {
   getDatabasePageDragPayload,
   hasDatabasePageDragPayload,
@@ -49,14 +35,13 @@ import {
 import type { DatabaseViewContextValue } from "./database-view-context"
 import {
   areSerializedPropertyValuesEqual,
-  getSortedDatabaseItems,
   hasViewHiddenPropertyIds,
 } from "./database-item-utils"
 import {
-  getPropertyValue,
   serializePropertyValue,
   type DatabasePropertyValue,
 } from "../utils"
+import { getDatabaseViewModel } from "./database-view-model"
 
 export type DatabaseViewProps = {
   databaseId: string | null | undefined
@@ -99,119 +84,36 @@ export function useDatabaseViewController({
   const [showSortPill, setShowSortPill] = useState(true)
   const [sortPickerOpen, setSortPickerOpen] = useState(false)
 
-  const propertyValues = payload?.values ?? []
-  const properties = payload?.properties ?? []
-  const items = payload?.rows ?? []
-  const personOptions = useMemo(
+  const viewModel = useMemo(
     () =>
-      (accessTargets?.members ?? []).map((member) => ({
-        id: member.id,
-        name: member.name || member.email,
-        suffix: member.id === session?.user?.id ? "(you)" : undefined,
-      })),
-    [accessTargets?.members, session?.user?.id]
-  )
-  const personOptionsById = useMemo(
-    () =>
-      new Map(
-        personOptions.map((personOption) => [personOption.id, personOption.name])
-      ),
-    [personOptions]
-  )
-  const titlePropertyLabel = getNameColumnLabel(payload?.database.config)
-  const showPageIconInTitle = getNameColumnShowPageIcon(
-    payload?.database.config
-  )
-  const activeView = useMemo(
-    () =>
-      payload?.views.find((view) => view.id === activeViewId) ??
-      payload?.views[0] ??
-      null,
-    [activeViewId, payload?.views]
-  )
-  const sortFieldOptions = useMemo<DatabaseSearchableMenuOption[]>(
-    () => [
-      {
-        icon: <NameColumnGlyph />,
-        label: titlePropertyLabel,
-        value: "name",
-      },
-      ...properties.map((property) => {
-        const PropertyIcon = getDatabasePropertyType(property.property.type).icon
-
-        return {
-          icon: <PropertyIcon />,
-          label: property.property.name,
-          value: property.id,
-        }
+      getDatabaseViewModel({
+        accessTargets,
+        activeViewId,
+        currentUserId: session?.user?.id,
+        payload,
       }),
-    ],
-    [titlePropertyLabel, properties]
+    [accessTargets, activeViewId, payload, session?.user?.id]
   )
-  const activeViewConfig = activeView?.config ?? payload?.database.config
-  const isKanbanView = activeView?.type === "kanban"
-  const activeVisibilityConfig = useMemo(() => {
-    if (!isKanbanView || hasViewHiddenPropertyIds(activeViewConfig)) {
-      return activeViewConfig
-    }
-
-    return getMergedDatabaseConfig(activeViewConfig, {
-      hiddenPropertyIds: properties.map((property) => property.id),
-    })
-  }, [activeViewConfig, isKanbanView, properties])
-  const visibleProperties = useMemo(
-    () =>
-      properties.filter(
-        (property) =>
-          !getPropertyHiddenForView(
-            property.id,
-            property.property.config,
-            activeVisibilityConfig
-          )
-      ),
-    [activeVisibilityConfig, properties]
-  )
-  const databaseSorts = useMemo(
-    () => getDatabaseSorts(activeViewConfig),
-    [activeViewConfig]
-  )
-  const kanbanGroupProperty = useMemo(
-    () => getKanbanGroupProperty(properties, activeViewConfig),
-    [activeViewConfig, properties]
-  )
-  const kanbanOptions = useMemo(
-    () => getKanbanOptions(kanbanGroupProperty),
-    [kanbanGroupProperty]
-  )
-  const activeDatabaseSorts = useMemo<DatabaseActiveSort[]>(
-    () =>
-      databaseSorts.flatMap((sort) => {
-        const option = sortFieldOptions.find(
-          (sortOption) => sortOption.value === sort.column
-        )
-
-        return option
-          ? [
-              {
-                ...sort,
-                label: option.label,
-              },
-            ]
-          : []
-      }),
-    [databaseSorts, sortFieldOptions]
-  )
-  const visiblePropertyCount = visibleProperties.length + 1
-  const usedSortFieldValues = useMemo(
-    () => new Set(activeDatabaseSorts.map((sort) => sort.column)),
-    [activeDatabaseSorts]
-  )
-  const addableSortFieldOptions = useMemo(
-    () =>
-      sortFieldOptions.filter((option) => !usedSortFieldValues.has(option.value)),
-    [sortFieldOptions, usedSortFieldValues]
-  )
-  const canAddDatabaseSort = activeDatabaseSorts.length < sortFieldOptions.length
+  const {
+    activeDatabaseSorts,
+    activeView,
+    activeVisibilityConfig,
+    addableSortFieldOptions,
+    canAddDatabaseSort,
+    isKanbanView,
+    items,
+    kanbanGroupProperty,
+    kanbanOptions,
+    personOptions,
+    properties,
+    propertyValuesByKey,
+    showPageIconInTitle,
+    sortFieldOptions,
+    sortedItems,
+    titlePropertyLabel,
+    visibleProperties,
+    visiblePropertyCount,
+  } = viewModel
   useEffect(() => {
     if (payload?.database.name) {
       setDraftDatabaseTitle(payload.database.name)
@@ -374,34 +276,6 @@ export function useDatabaseViewController({
     payload?.views,
     updateValue,
   ])
-
-  const propertyValuesByKey = useMemo(() => {
-    const values: Record<string, DatabasePropertyValue> = {}
-
-    for (const row of items) {
-      for (const property of properties) {
-        values[`${row.pageId}:${property.property.id}`] = getPropertyValue(
-          propertyValues,
-          row.pageId,
-          property.property.id,
-          property.property.type
-        )
-      }
-    }
-
-    return values
-  }, [properties, propertyValues, items])
-  const sortedItems = useMemo(
-    () =>
-      getSortedDatabaseItems(
-        items,
-        properties,
-        propertyValuesByKey,
-        activeDatabaseSorts,
-        personOptionsById
-      ),
-    [activeDatabaseSorts, propertyValuesByKey, personOptionsById, properties, items]
-  )
 
   const addDatabaseRow = (groupValue?: string) => {
     if (!editable || !databaseId || addRow.isPending) {
