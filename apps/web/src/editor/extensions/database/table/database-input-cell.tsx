@@ -69,9 +69,7 @@ export function DatabaseInputCell({
         {displayValue}
       </a>
     ) : (
-      <span className="database-input-cell-trigger">
-        {displayValue || (type === "url" ? null : <span className="text-muted-foreground">Empty</span>)}
-      </span>
+      <span className="database-input-cell-trigger">{displayValue}</span>
     )
   }
 
@@ -110,20 +108,17 @@ export function DatabaseInputCell({
           className="database-input-cell-trigger"
           type="button"
         >
-          {type === "url" && actionHref ? (
+          {actionHref ? (
             <a
+              className="database-input-cell-link"
               href={actionHref}
-              rel="noreferrer"
-              target="_blank"
               onClick={(event) => event.stopPropagation()}
+              {...actionLinkProps}
             >
               {displayValue}
             </a>
           ) : (
-            displayValue ||
-            (type === "url" ? null : (
-              <span className="text-muted-foreground">Empty</span>
-            ))
+            displayValue
           )}
         </button>
       </PopoverTrigger>

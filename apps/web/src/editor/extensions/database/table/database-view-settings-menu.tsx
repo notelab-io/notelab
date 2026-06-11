@@ -2,10 +2,10 @@ import {
   ArrowDownUp,
   Database,
   Eye,
+  EyeOff,
   FileText,
   Filter,
   GripVertical,
-  HelpCircle,
   Link as LinkIcon,
   Lock,
   MoreHorizontal,
@@ -29,23 +29,32 @@ import {
   DropDrawerTrigger,
 } from "@/components/ui/dropdrawer"
 import { Input } from "@/components/ui/input"
+import { useUpdateDatabaseProperty } from "@notelab/features/databases"
 
 import { getDatabasePropertyType } from "../constants"
-import { type DatabaseSortDirection } from "./database-column-config"
+import {
+  getMergedPropertyConfig,
+  getPropertyHidden,
+} from "./database-column-config"
+import { DatabasePropertyEditSubmenu } from "./database-property-menu"
+import {
+  DatabaseSearchableMenuItems,
+  type DatabaseSearchableMenuOption,
+} from "./database-searchable-menu-items"
+import {
+  DatabaseSortSubmenu,
+  type DatabaseActiveSort,
+  type DatabaseSortUpdatePatch,
+} from "./database-sort-menu"
 import { NameColumnGlyph } from "./name-column-glyph"
 
 type DatabaseViewProperty = {
   id: string
   property: {
+    config?: unknown
     name: string
     type: string
   }
-}
-
-type ActiveDatabaseSort = {
-  column: string
-  direction: DatabaseSortDirection
-  label: string
 }
 
 function ViewSettingsRow({
@@ -70,29 +79,64 @@ function ViewSettingsRow({
 
 export function DatabaseViewSettingsMenu({
   activeDatabaseSorts,
+  addableSortColumnOptions,
+  canAddDatabaseSort,
+  databaseId,
   databaseName,
   draftTitle,
   nameColumnLabel,
   onCopyDatabaseViewLink,
+  onClearDatabaseSort,
+  onCreateDatabaseSort,
   onDraftTitleChange,
+  onRemoveDatabaseSort,
   onSaveDatabaseTitle,
+  onUpdateDatabaseSort,
   properties,
+  sortColumnOptions,
   visiblePropertyCount,
 }: {
-  activeDatabaseSorts: ActiveDatabaseSort[]
+  activeDatabaseSorts: DatabaseActiveSort[]
+  addableSortColumnOptions: DatabaseSearchableMenuOption[]
+  canAddDatabaseSort: boolean
+  databaseId?: string
   databaseName?: string
   draftTitle: string
   nameColumnLabel: string
   onCopyDatabaseViewLink: () => void
+  onClearDatabaseSort: () => void
+  onCreateDatabaseSort: (column: string) => void
   onDraftTitleChange: (title: string) => void
+  onRemoveDatabaseSort: (index: number) => void
   onSaveDatabaseTitle: (title: string) => void
+  onUpdateDatabaseSort: (index: number, patch: DatabaseSortUpdatePatch) => void
   properties: DatabaseViewProperty[]
+  sortColumnOptions: DatabaseSearchableMenuOption[]
   visiblePropertyCount: number
 }) {
   const [open, setOpen] = useState(false)
+  const updateProperty = useUpdateDatabaseProperty()
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen)
+  }
+
+  const togglePropertyVisibility = (property: DatabaseViewProperty) => {
+    if (!databaseId) {
+      return
+    }
+
+    updateProperty.mutate({
+      config: getMergedPropertyConfig(property.property.config, {
+        hidden: !getPropertyHidden(property.property.config),
+      }),
+      databaseId,
+      databasePropertyId: property.id,
+    })
+  }
 
   return (
-    <DropDrawer open={open} onOpenChange={setOpen}>
+    <DropDrawer open={open} onOpenChange={handleOpenChange}>
       <DropDrawerTrigger asChild>
         <Button
           aria-label="Open view settings"
@@ -122,30 +166,28 @@ export function DatabaseViewSettingsMenu({
             <X className="size-4" />
           </button>
         </div>
-        <div className="px-2 py-1">
-          <div className="flex items-center gap-2 rounded-lg border border-border/70 bg-background px-2.5 py-2 shadow-sm">
-            <Table2 className="size-4 shrink-0 text-muted-foreground" />
-            <Input
-              aria-label="View name"
-              className="h-auto border-0 bg-transparent px-0 py-0 text-sm font-semibold shadow-none focus-visible:border-transparent focus-visible:ring-0 dark:bg-transparent"
-              onBlur={(event) => onSaveDatabaseTitle(event.target.value)}
-              onChange={(event) => onDraftTitleChange(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.currentTarget.blur()
-                }
-              }}
-              placeholder="Untitled view"
-              value={draftTitle}
-            />
-            <button
-              aria-label="View settings info"
-              className="inline-flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              type="button"
-            >
-              <HelpCircle className="size-4" />
-            </button>
-          </div>
+        <div className="flex items-center gap-1.5 px-1.5 py-1">
+          <Table2 className="size-4 shrink-0 text-muted-foreground" />
+          <Input
+            aria-label="View name"
+            className="h-auto rounded-none border-0 bg-transparent px-0 py-0 text-sm font-medium shadow-none focus-visible:border-transparent focus-visible:ring-0 dark:bg-transparent"
+            defaultValue={draftTitle}
+            key={draftTitle}
+            onBlur={(event) => {
+              const nextTitle = event.target.value.trim()
+
+              if (nextTitle !== draftTitle) {
+                onDraftTitleChange(nextTitle)
+                onSaveDatabaseTitle(nextTitle)
+              }
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.currentTarget.blur()
+              }
+            }}
+            placeholder="Untitled view"
+          />
         </div>
         <DropDrawerSeparator />
         <DropDrawerSub>
@@ -175,14 +217,28 @@ export function DatabaseViewSettingsMenu({
             <DropDrawerItem disabled>
               <NameColumnGlyph />
               <span>{nameColumnLabel}</span>
+              <Eye className="ml-auto text-muted-foreground" />
             </DropDrawerItem>
             {properties.map((property) => {
               const PropertyIcon = getDatabasePropertyType(property.property.type).icon
+              const visible = !getPropertyHidden(property.property.config)
 
               return (
-                <DropDrawerItem disabled key={property.id}>
+                <DropDrawerItem
+                  aria-pressed={visible}
+                  key={property.id}
+                  onSelect={(event) => {
+                    event.preventDefault()
+                    togglePropertyVisibility(property)
+                  }}
+                >
                   <PropertyIcon />
                   <span>{property.property.name}</span>
+                  {visible ? (
+                    <Eye className="ml-auto text-muted-foreground" />
+                  ) : (
+                    <EyeOff className="ml-auto text-muted-foreground" />
+                  )}
                 </DropDrawerItem>
               )
             })}
@@ -197,32 +253,24 @@ export function DatabaseViewSettingsMenu({
             <DropDrawerItem disabled>No filters yet</DropDrawerItem>
           </DropDrawerSubContent>
         </DropDrawerSub>
-        <DropDrawerSub>
-          <DropDrawerSubTrigger>
-            <ViewSettingsRow
-              icon={<ArrowDownUp />}
-              label="Sort"
-              right={
-                activeDatabaseSorts.length > 0 ? activeDatabaseSorts.length : undefined
-              }
-            />
-          </DropDrawerSubTrigger>
-          <DropDrawerSubContent className="w-72">
-            {activeDatabaseSorts.length > 0 ? (
-              activeDatabaseSorts.map((sort, index) => (
-                <DropDrawerItem disabled key={`${sort.column}:${index}`}>
-                  <ViewSettingsRow
-                    icon={<ArrowDownUp />}
-                    label={sort.label}
-                    right={sort.direction}
-                  />
-                </DropDrawerItem>
-              ))
-            ) : (
-              <DropDrawerItem disabled>No active sorts</DropDrawerItem>
-            )}
-          </DropDrawerSubContent>
-        </DropDrawerSub>
+        <DatabaseSortSubmenu
+          activeDatabaseSorts={activeDatabaseSorts}
+          addableSortColumnOptions={addableSortColumnOptions}
+          canAddDatabaseSort={canAddDatabaseSort}
+          onClearDatabaseSort={onClearDatabaseSort}
+          onCreateDatabaseSort={onCreateDatabaseSort}
+          onRemoveDatabaseSort={onRemoveDatabaseSort}
+          onUpdateDatabaseSort={onUpdateDatabaseSort}
+          sortColumnOptions={sortColumnOptions}
+        >
+          <ViewSettingsRow
+            icon={<ArrowDownUp />}
+            label="Sort"
+            right={
+              activeDatabaseSorts.length > 0 ? activeDatabaseSorts.length : undefined
+            }
+          />
+        </DatabaseSortSubmenu>
         <DropDrawerSub>
           <DropDrawerSubTrigger>
             <GripVertical />
@@ -266,20 +314,50 @@ export function DatabaseViewSettingsMenu({
             <span>Edit properties</span>
           </DropDrawerSubTrigger>
           <DropDrawerSubContent className="w-72">
-            {properties.length > 0 ? (
-              properties.map((property) => {
-                const PropertyIcon = getDatabasePropertyType(property.property.type).icon
+            <DatabaseSearchableMenuItems
+              emptyMessage="No properties yet."
+              inputAriaLabel="Edit properties"
+              inputIcon={<Settings2 className="size-4" />}
+              inputPlaceholder="Edit property..."
+              open={open}
+              options={properties.map((property) => {
+                const PropertyIcon = getDatabasePropertyType(
+                  property.property.type
+                ).icon
+
+                return {
+                  icon: <PropertyIcon />,
+                  label: property.property.name,
+                  value: property.id,
+                }
+              })}
+              renderOption={(option) => {
+                const property = properties.find(
+                  (candidate) => candidate.id === option.value
+                )
+
+                if (!property || !databaseId) {
+                  return (
+                    <DropDrawerItem disabled>
+                      {option.icon}
+                      <span>{option.label}</span>
+                    </DropDrawerItem>
+                  )
+                }
 
                 return (
-                  <DropDrawerItem disabled key={property.id}>
-                    <PropertyIcon />
-                    <span>{property.property.name}</span>
-                  </DropDrawerItem>
+                  <DatabasePropertyEditSubmenu
+                    config={property.property.config}
+                    databaseId={databaseId}
+                    databasePropertyId={property.id}
+                    type={property.property.type}
+                  >
+                    {option.icon}
+                    <span>{option.label}</span>
+                  </DatabasePropertyEditSubmenu>
                 )
-              })
-            ) : (
-              <DropDrawerItem disabled>No properties yet</DropDrawerItem>
-            )}
+              }}
+            />
           </DropDrawerSubContent>
         </DropDrawerSub>
         <DropDrawerSub>

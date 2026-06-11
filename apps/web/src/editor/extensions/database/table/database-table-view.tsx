@@ -30,23 +30,9 @@ import { Checkbox } from "@/components/ui/checkbox"
 import {
   DropDrawer,
   DropDrawerContent,
-  DropDrawerItem,
-  DropDrawerSeparator,
   DropDrawerTrigger,
 } from "@/components/ui/dropdrawer"
 import { Input } from "@/components/ui/input"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { useSession } from "@notelab/features/auth"
 import {
   useAddDatabaseProperty,
@@ -78,14 +64,24 @@ import {
   getNameColumnShowPageIcon,
   getNameColumnWrapContent,
   getPersonLimit,
+  getPropertyHidden,
   getPropertyWrapContent,
   type DatabaseSortConfig,
   type DatabaseSortDirection,
 } from "./database-column-config"
+import { formatDatabaseDateValue } from "./database-date-config"
 import {
   DatabaseNamePropertyMenu,
   DatabasePropertyMenu,
 } from "./database-property-menu"
+import {
+  DatabaseSearchableMenuItems,
+  type DatabaseSearchableMenuOption,
+} from "./database-searchable-menu-items"
+import {
+  DatabaseSortPopover,
+  type DatabaseActiveSort,
+} from "./database-sort-menu"
 import { NameColumnGlyph } from "./name-column-glyph"
 import { DatabaseSelectCell } from "./database-select-cell"
 import { DatabaseViewSettingsMenu } from "./database-view-settings-menu"
@@ -253,7 +249,7 @@ function DatabaseCellContent({
 }
 
 function isReadOnlyTimeProperty(type: string) {
-  return type === "created_time" || type === "last_edited_time"
+  return type === "created_time" || type === "edited_time"
 }
 
 function getReadOnlyTimePropertyValue(
@@ -265,6 +261,7 @@ function getReadOnlyTimePropertyValue(
     }
     updatedAt: string
   },
+  config: unknown,
   type: string
 ) {
   const value =
@@ -272,7 +269,7 @@ function getReadOnlyTimePropertyValue(
       ? row.page.createdAt ?? row.createdAt
       : row.page.updatedAt ?? row.updatedAt
 
-  return formatTimestamp(value)
+  return formatDatabaseDateValue(value, config)
 }
 
 function getReadOnlyTimePropertySortValue(
@@ -289,23 +286,6 @@ function getReadOnlyTimePropertySortValue(
   return type === "created_time"
     ? row.page.createdAt ?? row.createdAt
     : row.page.updatedAt ?? row.updatedAt
-}
-
-function formatTimestamp(value: string | null | undefined) {
-  if (!value) {
-    return ""
-  }
-
-  const date = new Date(value)
-
-  if (Number.isNaN(date.getTime())) {
-    return ""
-  }
-
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date)
 }
 
 function isEmptySortValue(value: number | string | null) {
@@ -395,7 +375,7 @@ function getComparablePropertyValue(
     case "checkbox":
       return propertyValue === "true" ? 1 : 0
     case "created_time":
-    case "last_edited_time":
+    case "edited_time":
       return getComparableDateValue(
         getReadOnlyTimePropertySortValue(row, property.property.type)
       )
@@ -482,12 +462,6 @@ function getSortedRows(
   })
 }
 
-type DatabaseSortOption = {
-  icon: ReactNode
-  label: string
-  value: string
-}
-
 function areSerializedPropertyValuesEqual(
   propertyType: string,
   currentValue: DatabasePropertyValue,
@@ -543,11 +517,10 @@ export function DatabaseTableView({
   const [pendingInsertProperty, setPendingInsertProperty] =
     useState<PendingInsertProperty | null>(null)
   const [showSortPill, setShowSortPill] = useState(true)
-  const [sortPickerQuery, setSortPickerQuery] = useState("")
   const [sortPickerOpen, setSortPickerOpen] = useState(false)
-  const [sortPopoverOpen, setSortPopoverOpen] = useState(false)
-  const [addSortPickerQuery, setAddSortPickerQuery] = useState("")
-  const [addSortPickerOpen, setAddSortPickerOpen] = useState(false)
+  const [editingPropertyKey, setEditingPropertyKey] = useState<string | null>(
+    null
+  )
   const tableWrapRef = useRef<HTMLDivElement | null>(null)
   const [rowLayout, setRowLayout] = useState<{
     centers: Record<string, number>
@@ -556,6 +529,10 @@ export function DatabaseTableView({
 
   const propertyValues = payload?.values ?? []
   const properties = payload?.properties ?? []
+  const visibleProperties = useMemo(
+    () => properties.filter((property) => !getPropertyHidden(property.property.config)),
+    [properties]
+  )
   const rows = payload?.rows ?? []
   const personOptions = useMemo(
     () =>
@@ -578,7 +555,7 @@ export function DatabaseTableView({
   const nameColumnShowPageIcon = getNameColumnShowPageIcon(
     payload?.database.config
   )
-  const sortColumnOptions = useMemo<DatabaseSortOption[]>(
+  const sortColumnOptions = useMemo<DatabaseSearchableMenuOption[]>(
     () => [
       {
         icon: <NameColumnGlyph />,
@@ -601,7 +578,7 @@ export function DatabaseTableView({
     () => getDatabaseSorts(payload?.database.config),
     [payload?.database.config]
   )
-  const activeDatabaseSorts = useMemo(
+  const activeDatabaseSorts = useMemo<DatabaseActiveSort[]>(
     () =>
       databaseSorts.flatMap((sort) => {
         const option = sortColumnOptions.find(
@@ -620,38 +597,16 @@ export function DatabaseTableView({
     [databaseSorts, sortColumnOptions]
   )
   const isTableSorted = activeDatabaseSorts.length > 0
-  const visiblePropertyCount = properties.length + 1
+  const visiblePropertyCount = visibleProperties.length + 1
   const usedSortColumnValues = useMemo(
     () => new Set(activeDatabaseSorts.map((sort) => sort.column)),
     [activeDatabaseSorts]
   )
-  const filteredSortColumnOptions = useMemo(() => {
-    const normalizedQuery = sortPickerQuery.trim().toLowerCase()
-
-    if (!normalizedQuery) {
-      return sortColumnOptions
-    }
-
-    return sortColumnOptions.filter((option) =>
-      option.label.toLowerCase().includes(normalizedQuery)
-    )
-  }, [sortColumnOptions, sortPickerQuery])
   const addableSortColumnOptions = useMemo(
     () =>
       sortColumnOptions.filter((option) => !usedSortColumnValues.has(option.value)),
     [sortColumnOptions, usedSortColumnValues]
   )
-  const filteredAddableSortColumnOptions = useMemo(() => {
-    const normalizedQuery = addSortPickerQuery.trim().toLowerCase()
-
-    if (!normalizedQuery) {
-      return addableSortColumnOptions
-    }
-
-    return addableSortColumnOptions.filter((option) =>
-      option.label.toLowerCase().includes(normalizedQuery)
-    )
-  }, [addSortPickerQuery, addableSortColumnOptions])
   const canAddDatabaseSort = activeDatabaseSorts.length < sortColumnOptions.length
   const pendingInsertPropertyKey = pendingInsertProperty
     ? `insert-property-${pendingInsertProperty.sourceColumnKey}-${pendingInsertProperty.side}`
@@ -663,7 +618,7 @@ export function DatabaseTableView({
           ? ["insert-property-name-left", "name"]
           : ["name", "insert-property-name-right"]
         : ["name"]
-    const propertyKeys = properties.flatMap((property) => {
+    const propertyKeys = visibleProperties.flatMap((property) => {
       if (property.id !== pendingInsertProperty?.sourceColumnKey) {
         return [property.id]
       }
@@ -676,7 +631,7 @@ export function DatabaseTableView({
     })
 
     return [...nameKeys, ...propertyKeys, ...(editable ? ["add-property"] : [])]
-  }, [editable, pendingInsertProperty, properties])
+  }, [editable, pendingInsertProperty, visibleProperties])
   const getColumnWidth = (key: string) =>
     columnWidths[key] ??
     (key === "name"
@@ -700,10 +655,18 @@ export function DatabaseTableView({
   useEffect(() => {
     if (activeDatabaseSorts.length === 0) {
       setShowSortPill(false)
-      setAddSortPickerOpen(false)
-      setSortPopoverOpen(false)
     }
   }, [activeDatabaseSorts.length])
+
+  useEffect(() => {
+    if (
+      editingPropertyKey &&
+      editingPropertyKey !== "name" &&
+      !visibleProperties.some((property) => property.id === editingPropertyKey)
+    ) {
+      setEditingPropertyKey(null)
+    }
+  }, [editingPropertyKey, visibleProperties])
 
   const getRowElements = useCallback(() => {
     return Array.from(
@@ -751,13 +714,13 @@ export function DatabaseTableView({
     if (
       pendingInsertProperty &&
       pendingInsertProperty.sourceColumnKey !== "name" &&
-      !properties.some(
+      !visibleProperties.some(
         (property) => property.id === pendingInsertProperty.sourceColumnKey
       )
     ) {
       setPendingInsertProperty(null)
     }
-  }, [pendingInsertProperty, properties])
+  }, [pendingInsertProperty, visibleProperties])
 
   useEffect(() => {
     window.addEventListener("resize", measureRows)
@@ -880,9 +843,6 @@ export function DatabaseTableView({
       },
     ])
     setShowSortPill(true)
-    setAddSortPickerOpen(false)
-    setAddSortPickerQuery("")
-    setSortPickerQuery("")
     setSortPickerOpen(false)
   }
   const updateDatabaseSort = (
@@ -905,16 +865,16 @@ export function DatabaseTableView({
   const clearDatabaseSort = () => {
     saveDatabaseSorts([])
   }
+  const handleEditingPropertyOpenChange = (
+    propertyKey: string,
+    nextOpen: boolean
+  ) => {
+    setEditingPropertyKey((currentKey) =>
+      nextOpen ? propertyKey : currentKey === propertyKey ? null : currentKey
+    )
+  }
   const toggleSortPillVisibility = () => {
-    setShowSortPill((visible) => {
-      const nextVisible = !visible
-
-      if (!nextVisible) {
-        setSortPopoverOpen(false)
-      }
-
-      return nextVisible
-    })
+    setShowSortPill((visible) => !visible)
   }
   const saveDatabaseTitle = useCallback(
     (nextTitle: string) => {
@@ -1245,163 +1205,33 @@ export function DatabaseTableView({
                 placeholder="New database"
                 value={draftTitle}
               />
-              {((activeDatabaseSorts.length > 0 && showSortPill) ||
-                sortPopoverOpen) ? (
-                <Popover open={sortPopoverOpen} onOpenChange={setSortPopoverOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      aria-label="Open sort options"
-                      className="group h-8 rounded-full px-3"
-                      type="button"
-                      variant="secondary"
-                    >
-                      <ArrowDownUp className="size-4 self-center shrink-0" />
-                      <span className="self-center truncate">
-                        {activeDatabaseSorts.length === 0
-                          ? "Sort"
-                          : `${activeDatabaseSorts.length} sort${
-                              activeDatabaseSorts.length === 1 ? "" : "s"
-                            }`}
-                      </span>
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    align="start"
-                    className="w-fit min-w-0 max-w-[calc(100vw-2rem)] gap-2 p-3"
+              {activeDatabaseSorts.length > 0 && showSortPill ? (
+                <DatabaseSortPopover
+                  activeDatabaseSorts={activeDatabaseSorts}
+                  addableSortColumnOptions={addableSortColumnOptions}
+                  canAddDatabaseSort={canAddDatabaseSort}
+                  onClearDatabaseSort={clearDatabaseSort}
+                  onCreateDatabaseSort={createDatabaseSort}
+                  onRemoveDatabaseSort={removeDatabaseSort}
+                  onUpdateDatabaseSort={updateDatabaseSort}
+                  sortColumnOptions={sortColumnOptions}
+                >
+                  <Button
+                    aria-label="Open sort options"
+                    className="group h-8 rounded-full px-3"
+                    type="button"
+                    variant="secondary"
                   >
-                    <div className="flex w-fit max-w-full flex-col gap-2">
-                      {activeDatabaseSorts.map((sort, index) => {
-                        const availableSortOptions = sortColumnOptions.filter(
-                          (option) =>
-                            option.value === sort.column ||
-                            !activeDatabaseSorts.some(
-                              (activeSort, activeIndex) =>
-                                activeIndex !== index &&
-                                activeSort.column === option.value
-                            )
-                        )
-
-                        return (
-                          <div
-                            className="flex items-center gap-2"
-                            key={`${sort.column}:${index}`}
-                          >
-                            <ArrowDownUp className="size-4 text-muted-foreground" />
-                            <Select
-                              onValueChange={(column) =>
-                                updateDatabaseSort(index, { column })
-                              }
-                              value={sort.column}
-                            >
-                              <SelectTrigger className="w-56">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent align="start">
-                                {availableSortOptions.map((option) => (
-                                  <SelectItem key={option.value} value={option.value}>
-                                    {option.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <Select
-                              onValueChange={(direction) =>
-                                updateDatabaseSort(index, {
-                                  direction: direction as DatabaseSortDirection,
-                                })
-                              }
-                              value={sort.direction}
-                            >
-                              <SelectTrigger className="w-48">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent align="start">
-                                <SelectItem value="ascending">Ascending</SelectItem>
-                                <SelectItem value="descending">Descending</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <button
-                              aria-label={`Remove ${sort.label} sort`}
-                              className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                              onClick={() => removeDatabaseSort(index)}
-                              type="button"
-                            >
-                              <X className="size-4" />
-                            </button>
-                          </div>
-                        )
-                      })}
-                      {canAddDatabaseSort ? (
-                        <DropDrawer
-                          open={addSortPickerOpen}
-                          onOpenChange={(open) => {
-                            setAddSortPickerOpen(open)
-
-                            if (!open) {
-                              setAddSortPickerQuery("")
-                            }
-                          }}
-                        >
-                          <DropDrawerTrigger asChild>
-                            <button
-                              className="inline-flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                              type="button"
-                            >
-                              <Plus className="size-4" />
-                              <span>Add sort</span>
-                            </button>
-                          </DropDrawerTrigger>
-                          <DropDrawerContent
-                            align="start"
-                            className="w-72"
-                            onCloseAutoFocus={(event) => event.preventDefault()}
-                          >
-                            <div className="flex items-center gap-1.5 px-1.5 py-1">
-                              <ArrowDownUp className="size-4 shrink-0 text-muted-foreground" />
-                              <Input
-                                aria-label="Add sort property"
-                                className="h-auto rounded-none border-0 bg-transparent px-0 py-0 text-sm font-medium shadow-none focus-visible:border-transparent focus-visible:ring-0 dark:bg-transparent"
-                                onChange={(event) =>
-                                  setAddSortPickerQuery(event.target.value)
-                                }
-                                placeholder="Sort by..."
-                                value={addSortPickerQuery}
-                              />
-                            </div>
-                            <DropDrawerSeparator />
-                            {filteredAddableSortColumnOptions.length > 0 ? (
-                              filteredAddableSortColumnOptions.map((option) => (
-                                <DropDrawerItem
-                                  key={option.value}
-                                  onSelect={(event) => {
-                                    event.preventDefault()
-                                    createDatabaseSort(option.value)
-                                  }}
-                                >
-                                  {option.icon}
-                                  <span>{option.label}</span>
-                                </DropDrawerItem>
-                              ))
-                            ) : (
-                              <DropDrawerItem disabled>
-                                No properties found.
-                              </DropDrawerItem>
-                            )}
-                          </DropDrawerContent>
-                        </DropDrawer>
-                      ) : null}
-                      <button
-                        className="inline-flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
-                        disabled={activeDatabaseSorts.length === 0}
-                        onClick={clearDatabaseSort}
-                        type="button"
-                      >
-                        <X className="size-4" />
-                        <span>Delete sort</span>
-                      </button>
-                    </div>
-                  </PopoverContent>
-                </Popover>
+                    <ArrowDownUp className="size-4 self-center shrink-0" />
+                    <span className="self-center truncate">
+                      {activeDatabaseSorts.length === 0
+                        ? "Sort"
+                        : `${activeDatabaseSorts.length} sort${
+                            activeDatabaseSorts.length === 1 ? "" : "s"
+                          }`}
+                    </span>
+                  </Button>
+                </DatabaseSortPopover>
               ) : null}
             </div>
           ) : (
@@ -1427,33 +1257,14 @@ export function DatabaseTableView({
                     className="w-72"
                     onCloseAutoFocus={(event) => event.preventDefault()}
                   >
-                    <div className="flex items-center gap-1.5 px-1.5 py-1">
-                      <ArrowDownUp className="size-4 shrink-0 text-muted-foreground" />
-                      <Input
-                        aria-label="Sort properties"
-                        className="h-auto rounded-none border-0 bg-transparent px-0 py-0 text-sm font-medium shadow-none focus-visible:border-transparent focus-visible:ring-0 dark:bg-transparent"
-                        onChange={(event) => setSortPickerQuery(event.target.value)}
-                        placeholder="Sort by..."
-                        value={sortPickerQuery}
-                      />
-                    </div>
-                    <DropDrawerSeparator />
-                    {filteredSortColumnOptions.length > 0 ? (
-                      filteredSortColumnOptions.map((option) => (
-                        <DropDrawerItem
-                          key={option.value}
-                          onSelect={(event) => {
-                            event.preventDefault()
-                            createDatabaseSort(option.value)
-                          }}
-                        >
-                          {option.icon}
-                          <span>{option.label}</span>
-                        </DropDrawerItem>
-                      ))
-                    ) : (
-                      <DropDrawerItem disabled>No properties found.</DropDrawerItem>
-                    )}
+                    <DatabaseSearchableMenuItems
+                      inputAriaLabel="Sort properties"
+                      inputIcon={<ArrowDownUp className="size-4" />}
+                      inputPlaceholder="Sort by..."
+                      onSelect={createDatabaseSort}
+                      open={sortPickerOpen}
+                      options={sortColumnOptions}
+                    />
                   </DropDrawerContent>
                 </DropDrawer>
               ) : (
@@ -1472,13 +1283,21 @@ export function DatabaseTableView({
               )}
               <DatabaseViewSettingsMenu
                 activeDatabaseSorts={activeDatabaseSorts}
+                databaseId={databaseId ?? undefined}
                 databaseName={payload?.database.name}
                 draftTitle={draftTitle}
                 nameColumnLabel={nameColumnLabel}
                 onCopyDatabaseViewLink={copyDatabaseViewLink}
+                onClearDatabaseSort={clearDatabaseSort}
+                onCreateDatabaseSort={createDatabaseSort}
                 onDraftTitleChange={setDraftTitle}
+                onRemoveDatabaseSort={removeDatabaseSort}
                 onSaveDatabaseTitle={saveDatabaseTitle}
+                onUpdateDatabaseSort={updateDatabaseSort}
                 properties={properties}
+                sortColumnOptions={sortColumnOptions}
+                addableSortColumnOptions={addableSortColumnOptions}
+                canAddDatabaseSort={canAddDatabaseSort}
                 visiblePropertyCount={visiblePropertyCount}
               />
               <Button
@@ -1697,9 +1516,13 @@ export function DatabaseTableView({
                       <DatabaseNamePropertyMenu
                         config={payload.database.config}
                         databaseId={payload.database.id}
+                        onOpenChange={(open) =>
+                          handleEditingPropertyOpenChange("name", open)
+                        }
                         onInsertProperty={(side) =>
                           openInsertPropertyMenu("name", 0, side)
                         }
+                        open={editingPropertyKey === "name"}
                       />
                     ) : (
                       <span className="database-name-header-content">
@@ -1716,7 +1539,7 @@ export function DatabaseTableView({
                   {pendingInsertPropertyKey === "insert-property-name-right"
                     ? renderInsertPropertyHeader("insert-property-name-right", 1)
                     : null}
-                  {properties.map((property) => {
+                  {visibleProperties.map((property) => {
                     const leftInsertKey = `insert-property-${property.id}-left`
                     const rightInsertKey = `insert-property-${property.id}-right`
                     const showLeftInsert =
@@ -1740,6 +1563,9 @@ export function DatabaseTableView({
                               databaseId={payload.database.id}
                               databasePropertyId={property.id}
                               name={property.property.name}
+                              onOpenChange={(open) =>
+                                handleEditingPropertyOpenChange(property.id, open)
+                              }
                               type={property.property.type}
                               onInsertProperty={(side) =>
                                 openInsertPropertyMenu(
@@ -1755,6 +1581,7 @@ export function DatabaseTableView({
                                   name,
                                 })
                               }
+                              open={editingPropertyKey === property.id}
                             />
                           ) : (
                             <span className="database-property-header-label">
@@ -1822,7 +1649,7 @@ export function DatabaseTableView({
                     {pendingInsertPropertyKey === "insert-property-name-right"
                       ? renderInsertPropertyCell("insert-property-name-right")
                       : null}
-                    {properties.map((property) => {
+                    {visibleProperties.map((property) => {
                       const leftInsertKey = `insert-property-${property.id}-left`
                       const rightInsertKey = `insert-property-${property.id}-right`
                       const showLeftInsert =
@@ -1867,6 +1694,7 @@ export function DatabaseTableView({
                                 <span className="database-input-cell-trigger">
                                   {getReadOnlyTimePropertyValue(
                                     row,
+                                    workspaceProperty.config,
                                     workspaceProperty.type
                                   ) || (
                                     <span className="text-muted-foreground">

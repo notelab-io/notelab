@@ -21,6 +21,7 @@ export type DatabasePropertyConfig = {
   dateFormat?: DateFormatValue
   defaultOptionId?: string
   filesLimit?: FilesLimitValue
+  hidden?: boolean
   personDefault?: PersonDefaultValue
   personLimit?: PersonLimitValue
   personNotifications?: PersonNotificationsValue
@@ -144,6 +145,14 @@ export function getPropertyWrapContent(config: unknown) {
   }
 
   return (config as DatabasePropertyConfig).wrapContent === true
+}
+
+export function getPropertyHidden(config: unknown) {
+  if (!config || typeof config !== "object" || !("hidden" in config)) {
+    return false
+  }
+
+  return (config as DatabasePropertyConfig).hidden === true
 }
 
 export function getPersonLimit(config: unknown) {

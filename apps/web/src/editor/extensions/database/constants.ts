@@ -81,7 +81,7 @@ export const databasePropertyTypes: DatabasePropertyType[][] = [
   ],
   [
     { icon: Clock, label: "Created time", type: "created_time" },
-    { icon: Clock, label: "Last edited time", type: "last_edited_time" },
+    { icon: Clock, label: "Edited time", type: "edited_time" },
   ],
 ]
 

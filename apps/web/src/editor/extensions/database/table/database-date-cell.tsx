@@ -14,6 +14,7 @@ import { Switch } from "@/components/ui/switch"
 import { useUpdateDatabaseProperty } from "@notelab/features/databases"
 import {
   dateFormatOptions,
+  formatDatabaseDateValueWithFormats,
   getDateFormatConfig,
   getDateFormatLabel,
   getTimeFormatConfig,
@@ -59,7 +60,11 @@ export function DatabaseDateCell({
   const selectedRange = useMemo(() => parseDateRange(value), [value])
   const dateFormat = getDateFormatConfig(propertyConfig)
   const timeFormat = getTimeFormatConfig(propertyConfig)
-  const displayValue = formatDisplayValue(selectedRange, dateFormat, timeFormat)
+  const displayValue = formatDatabaseDateValueWithFormats(
+    value,
+    dateFormat,
+    timeFormat
+  )
   const dateFormatLabel = getDateFormatLabel(dateFormat)
   const timeFormatLabel = getTimeFormatLabel(timeFormat)
   const hasTime = timeFormat !== "hidden"
@@ -638,140 +643,4 @@ function getTimeValueFromDate(date: Date) {
   const minutes = String(date.getMinutes()).padStart(2, "0")
 
   return `${hours}:${minutes}`
-}
-
-function formatDisplayValue(
-  range: { end?: Date; endTime: string; start?: Date; startTime: string },
-  dateFormat: DateFormatValue,
-  timeFormat: TimeFormatValue
-) {
-  if (range.start && range.end) {
-    return `${formatDate(
-      range.start,
-      dateFormat,
-      timeFormat,
-      range.startTime
-    )} - ${formatDate(range.end, dateFormat, timeFormat, range.endTime)}`
-  }
-
-  return range.start
-    ? formatDate(range.start, dateFormat, timeFormat, range.startTime)
-    : ""
-}
-
-function formatDate(
-  date: Date,
-  dateFormat: DateFormatValue,
-  timeFormat: TimeFormatValue,
-  timeValue: string
-) {
-  const dateValue = formatDateOnly(date, dateFormat)
-  const formattedTimeValue = formatTime(timeValue, timeFormat)
-
-  return formattedTimeValue ? `${dateValue} ${formattedTimeValue}` : dateValue
-}
-
-function formatDateOnly(date: Date, dateFormat: DateFormatValue) {
-  if (dateFormat === "short") {
-    return new Intl.DateTimeFormat(undefined, {
-      day: "numeric",
-      month: "short",
-    }).format(date)
-  }
-
-  if (dateFormat === "month_day_year") {
-    return formatNumericDate(date, [
-      date.getMonth() + 1,
-      date.getDate(),
-      date.getFullYear(),
-    ])
-  }
-
-  if (dateFormat === "day_month_year") {
-    return formatNumericDate(date, [
-      date.getDate(),
-      date.getMonth() + 1,
-      date.getFullYear(),
-    ])
-  }
-
-  if (dateFormat === "year_month_day") {
-    return formatNumericDate(date, [
-      date.getFullYear(),
-      date.getMonth() + 1,
-      date.getDate(),
-    ])
-  }
-
-  if (dateFormat === "relative") {
-    return formatRelativeDate(date)
-  }
-
-  return new Intl.DateTimeFormat(undefined, {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  }).format(date)
-}
-
-function formatTime(value: string, timeFormat: TimeFormatValue) {
-  if (timeFormat === "hidden" || !value) {
-    return ""
-  }
-
-  const [hoursValue, minutesValue] = value.split(":")
-  const date = new Date()
-  const hours = Number(hoursValue)
-  const minutes = Number(minutesValue)
-
-  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) {
-    return ""
-  }
-
-  date.setHours(hours, minutes, 0, 0)
-
-  return new Intl.DateTimeFormat(undefined, {
-    hour: "numeric",
-    hour12: timeFormat === "12_hour",
-    minute: "2-digit",
-  }).format(date)
-}
-
-function formatNumericDate(date: Date, parts: number[]) {
-  return parts
-    .map((part, index) =>
-      index === 0 && part === date.getFullYear()
-        ? String(part)
-        : String(part).padStart(2, "0")
-    )
-    .join("/")
-}
-
-function formatRelativeDate(date: Date) {
-  const today = new Date()
-  const todayStart = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate()
-  )
-  const dateStart = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-  const dayDiff = Math.round(
-    (dateStart.getTime() - todayStart.getTime()) / (1000 * 60 * 60 * 24)
-  )
-
-  if (dayDiff === 0) {
-    return "Today"
-  }
-
-  if (dayDiff === -1) {
-    return "Yesterday"
-  }
-
-  if (dayDiff === 1) {
-    return "Tomorrow"
-  }
-
-  return new Intl.RelativeTimeFormat(undefined, {
-    numeric: "auto",
-  }).format(dayDiff, "day")
 }
