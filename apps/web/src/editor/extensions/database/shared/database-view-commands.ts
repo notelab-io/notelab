@@ -483,6 +483,22 @@ export function getDatabaseViewCommands({
         getPlainDatabaseFilters().filter((_, filterIndex) => filterIndex !== index)
       )
     },
+    reorderDatabaseFilters: (filterIds: string[]) => {
+      const filters = getPlainDatabaseFilters()
+      const filtersById = new Map(
+        filters.map((filter) => [filter.id, filter])
+      )
+      const reorderedFilters = filterIds.flatMap((filterId) => {
+        const filter = filtersById.get(filterId)
+
+        return filter ? [filter] : []
+      })
+      const remainingFilters = filters.filter(
+        (filter) => !filterIds.includes(filter.id)
+      )
+
+      saveDatabaseFilters([...reorderedFilters, ...remainingFilters])
+    },
     removeDatabaseSort: (index: number) => {
       saveDatabaseSorts(
         activeDatabaseSorts.flatMap(({ column, direction }, sortIndex) =>

@@ -247,6 +247,7 @@ export function useDatabaseViewController({
     removeDatabaseFilter: commands.removeDatabaseFilter,
     removeDatabaseSort: commands.removeDatabaseSort,
     renameDatabaseProperty: commands.renameDatabaseProperty,
+    reorderDatabaseFilters: commands.reorderDatabaseFilters,
     items,
     savePropertyValue: commands.savePropertyValue,
     saveDatabaseTitle: commands.saveDatabaseTitle,

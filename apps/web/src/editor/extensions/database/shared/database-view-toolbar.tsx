@@ -63,6 +63,7 @@ export function DatabaseViewToolbar() {
     properties,
     removeDatabaseFilter,
     removeDatabaseSort,
+    reorderDatabaseFilters,
     saveDatabaseConditionalColors,
     saveDatabaseTitle,
     saveDatabaseViewTitle,
@@ -184,6 +185,7 @@ export function DatabaseViewToolbar() {
                   onClearDatabaseFilter={clearDatabaseFilter}
                   onCreateDatabaseFilter={createDatabaseFilter}
                   onRemoveDatabaseFilter={removeDatabaseFilter}
+                  onReorderDatabaseFilters={reorderDatabaseFilters}
                   onUpdateDatabaseFilter={updateDatabaseFilter}
                 >
                   <Button
@@ -360,6 +362,7 @@ export function DatabaseViewToolbar() {
                 onDraftViewTitleChange={setDraftViewTitle}
                 onRemoveDatabaseFilter={removeDatabaseFilter}
                 onRemoveDatabaseSort={removeDatabaseSort}
+                onReorderDatabaseFilters={reorderDatabaseFilters}
                 onSaveDatabaseConditionalColors={saveDatabaseConditionalColors}
                 onSaveDatabaseViewTitle={saveDatabaseViewTitle}
                 onSetViewGroupProperty={setViewGroupProperty}

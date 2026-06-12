@@ -108,6 +108,7 @@ export type DatabaseViewContextValue = {
   removeDatabaseFilter: (index: number) => void
   removeDatabaseSort: (index: number) => void
   renameDatabaseProperty: (databasePropertyId: string, name: string) => void
+  reorderDatabaseFilters: (filterIds: string[]) => void
   saveDatabaseTitle: (nextTitle: string) => void
   saveDatabaseViewTitle: (nextTitle: string) => void
   saveDatabaseConditionalColors: (
