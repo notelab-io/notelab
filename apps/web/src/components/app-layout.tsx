@@ -152,7 +152,7 @@ function AppLayoutContent({ children }: { children?: ReactNode }) {
   }, [appSidebarOpen, chatSidebarOpen, sidePaneWorkspaceId])
 
   return (
-    <>
+    <WorkspaceSidePaneContext.Provider value={sidePaneContext}>
       {isSettingsPage ? <SettingsSidebar /> : <AppSidebar />}
       <SidebarInset className="h-svh overflow-hidden md:peer-data-[variant=floating]:ml-0! md:peer-data-[variant=floating]:h-[calc(100svh-1rem)] md:peer-data-[variant=floating]:rounded-l-none md:peer-data-[variant=floating]:rounded-r-xl md:peer-data-[variant=floating]:border-l-0">
         {embeddedMobileViewer ? 
@@ -165,9 +165,7 @@ function AppLayoutContent({ children }: { children?: ReactNode }) {
           />
         )}
         <div className="min-h-0 flex-1 overflow-y-auto">
-          <WorkspaceSidePaneContext.Provider value={sidePaneContext}>
-            {children ?? <Outlet />}
-          </WorkspaceSidePaneContext.Provider>
+          {children ?? <Outlet />}
         </div>
       </SidebarInset>
       <ChatSidebar
@@ -175,7 +173,7 @@ function AppLayoutContent({ children }: { children?: ReactNode }) {
         onOpen={openChatSidebar}
         open={chatSidebarOpen}
       />
-    </>
+    </WorkspaceSidePaneContext.Provider>
   )
 }
 
