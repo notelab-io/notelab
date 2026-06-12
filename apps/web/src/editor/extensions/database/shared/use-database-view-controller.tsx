@@ -81,6 +81,7 @@ export function useDatabaseViewController({
     [accessTargets, activeViewId, payload, session?.user?.id]
   )
   const {
+    activeConditionalColors,
     activeDatabaseFilters,
     activeDatabaseSorts,
     activeView,
@@ -196,6 +197,7 @@ export function useDatabaseViewController({
 
   const databaseViewContext: DatabaseViewContextValue = {
     activePropertyValueKey,
+    activeConditionalColors,
     activeDatabaseFilters,
     activeDatabaseSorts,
     activeView,
@@ -248,6 +250,7 @@ export function useDatabaseViewController({
     items,
     savePropertyValue: commands.savePropertyValue,
     saveDatabaseTitle: commands.saveDatabaseTitle,
+    saveDatabaseConditionalColors: commands.saveDatabaseConditionalColors,
     saveDatabaseFilters: commands.saveDatabaseFilters,
     saveDatabaseSorts: commands.saveDatabaseSorts,
     saveDatabaseViewTitle: commands.saveDatabaseViewTitle,

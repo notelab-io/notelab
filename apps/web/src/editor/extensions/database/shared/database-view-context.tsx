@@ -32,6 +32,7 @@ import type {
 } from "./database-sort-menu"
 import type {
   DatabasePropertyFilterConfig,
+  DatabaseConditionalColorConfig,
   DatabaseSortConfig,
 } from "./database-view-config"
 import type {
@@ -41,7 +42,15 @@ import type {
   SortableDatabaseItem,
 } from "./database-item-utils"
 
+export type DatabaseActiveConditionalColor = Omit<
+  DatabaseConditionalColorConfig,
+  "filter"
+> & {
+  filter: DatabaseActiveFilter
+}
+
 export type DatabaseViewContextValue = {
+  activeConditionalColors: DatabaseActiveConditionalColor[]
   activeDatabaseFilters: DatabaseActiveFilter[]
   activeDatabaseSorts: DatabaseActiveSort[]
   activePropertyValueKey: string | null
@@ -101,6 +110,9 @@ export type DatabaseViewContextValue = {
   renameDatabaseProperty: (databasePropertyId: string, name: string) => void
   saveDatabaseTitle: (nextTitle: string) => void
   saveDatabaseViewTitle: (nextTitle: string) => void
+  saveDatabaseConditionalColors: (
+    nextConditionalColors: DatabaseConditionalColorConfig[]
+  ) => void
   saveDatabaseFilters: (nextFilters: DatabasePropertyFilterConfig[]) => void
   saveDatabaseSorts: (nextSorts: DatabaseSortConfig[]) => void
   savePropertyValue: (

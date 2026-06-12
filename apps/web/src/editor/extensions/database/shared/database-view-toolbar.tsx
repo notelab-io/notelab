@@ -27,6 +27,7 @@ import { DatabaseViewSettingsMenu } from "./database-view-settings-menu"
 
 export function DatabaseViewToolbar() {
   const {
+    activeConditionalColors,
     activeDatabaseFilters,
     activeDatabaseSorts,
     activeView,
@@ -62,6 +63,7 @@ export function DatabaseViewToolbar() {
     properties,
     removeDatabaseFilter,
     removeDatabaseSort,
+    saveDatabaseConditionalColors,
     saveDatabaseTitle,
     saveDatabaseViewTitle,
     setActiveViewId,
@@ -324,6 +326,7 @@ export function DatabaseViewToolbar() {
                 </Button>
               )}
               <DatabaseViewSettingsMenu
+                activeConditionalColors={activeConditionalColors}
                 activeDatabaseSorts={activeDatabaseSorts}
                 activeViewType={activeView?.type}
                 activeDatabaseFilters={activeDatabaseFilters}
@@ -357,6 +360,7 @@ export function DatabaseViewToolbar() {
                 onDraftViewTitleChange={setDraftViewTitle}
                 onRemoveDatabaseFilter={removeDatabaseFilter}
                 onRemoveDatabaseSort={removeDatabaseSort}
+                onSaveDatabaseConditionalColors={saveDatabaseConditionalColors}
                 onSaveDatabaseViewTitle={saveDatabaseViewTitle}
                 onSetViewGroupProperty={setViewGroupProperty}
                 onSetViewType={setViewType}

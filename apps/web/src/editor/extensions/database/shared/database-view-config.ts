@@ -16,6 +16,16 @@ type PersonLimitValue = "one_person" | "no_limit"
 type PersonDefaultValue = "no_default" | "created_by"
 type PersonNotificationsValue = "users_and_groups" | "users_only" | "none"
 type SelectOptionSortValue = "manual" | "alphabetical" | "reverse_alphabetical"
+export type DatabaseConditionalColorApplyTarget = "entire-row" | "this-property"
+export type DatabaseConditionalColorStyle = "page-background"
+
+export type DatabaseConditionalColorConfig = {
+  applyTo: DatabaseConditionalColorApplyTarget
+  color: string
+  filter: DatabasePropertyFilterConfig
+  id: string
+  style: DatabaseConditionalColorStyle
+}
 
 export type DatabasePropertyConfig = {
   dateFormat?: DateFormatValue
@@ -33,6 +43,7 @@ export type DatabasePropertyConfig = {
 }
 
 type DatabaseConfig = {
+  conditionalColors?: DatabaseConditionalColorConfig[]
   emoji?: string
   filter?: DatabaseFilterItemConfig | DatabaseFilterItemConfig[]
   filters?: DatabaseFilterItemConfig[]
@@ -233,6 +244,28 @@ export function getDatabaseFilters(config: unknown): DatabaseFilterItemConfig[] 
   const normalizedFilter = normalizeDatabaseFilter(filter, "filter-legacy")
 
   return normalizedFilter ? [normalizedFilter] : []
+}
+
+export function getDatabaseConditionalColors(
+  config: unknown
+): DatabaseConditionalColorConfig[] {
+  const conditionalColors =
+    config && typeof config === "object" && !Array.isArray(config)
+      ? (config as DatabaseConfig).conditionalColors
+      : undefined
+
+  if (!Array.isArray(conditionalColors)) {
+    return []
+  }
+
+  return conditionalColors.flatMap((value, index) => {
+    const setting = normalizeDatabaseConditionalColor(
+      value,
+      `conditional-color-${index}`
+    )
+
+    return setting ? [setting] : []
+  })
 }
 
 export function getMergedDatabaseConfig(
@@ -454,6 +487,34 @@ function normalizeDatabaseFilter(
     operator,
     propertyId,
     values: getDatabaseFilterValues(valueRecord.values),
+  }
+}
+
+function normalizeDatabaseConditionalColor(
+  value: unknown,
+  fallbackId: string
+): DatabaseConditionalColorConfig | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null
+  }
+
+  const valueRecord = value as Record<string, unknown>
+  const normalizedFilter = normalizeDatabaseFilter(
+    valueRecord.filter,
+    `${fallbackId}-filter`
+  )
+
+  if (!normalizedFilter || isDatabaseFilterGroup(normalizedFilter)) {
+    return null
+  }
+
+  return {
+    applyTo:
+      valueRecord.applyTo === "this-property" ? "this-property" : "entire-row",
+    color: typeof valueRecord.color === "string" ? valueRecord.color : "green",
+    filter: normalizedFilter,
+    id: getDatabaseFilterId(value, fallbackId),
+    style: "page-background",
   }
 }
 

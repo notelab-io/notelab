@@ -29,6 +29,7 @@ import {
   getPropertyHidden,
   getViewHiddenPropertyIds,
   getValidDatabaseFilterOperator,
+  type DatabaseConditionalColorConfig,
   type DatabasePropertyFilterConfig,
   type DatabaseSortConfig,
 } from "./database-view-config"
@@ -115,6 +116,23 @@ export function getDatabaseViewCommands({
       config: getMergedDatabaseConfig(activeView.config, {
         filter: undefined,
         filters: nextFilters.length > 0 ? nextFilters : undefined,
+      }),
+      databaseId,
+      databaseViewId: activeView.id,
+    })
+  }
+
+  const saveDatabaseConditionalColors = (
+    nextConditionalColors: DatabaseConditionalColorConfig[]
+  ) => {
+    if (!databaseId || !activeView?.id) {
+      return
+    }
+
+    updateDatabaseView.mutate({
+      config: getMergedDatabaseConfig(activeView.config, {
+        conditionalColors:
+          nextConditionalColors.length > 0 ? nextConditionalColors : undefined,
       }),
       databaseId,
       databaseViewId: activeView.id,
@@ -484,6 +502,7 @@ export function getDatabaseViewCommands({
       })
     },
     saveDatabaseFilters,
+    saveDatabaseConditionalColors,
     saveDatabaseSorts,
     saveDatabaseTitle: (nextTitle: string) => {
       if (!databaseId || nextTitle === payload?.database.name) {

@@ -19,7 +19,9 @@ import {
 } from "lucide-react"
 import { useReorderDatabaseRows } from "@notelab/features/databases"
 import { Checkbox } from "@/components/ui/checkbox"
+import { cn } from "@/lib/utils"
 import {
+  getColorToken,
   getColorTokenBadgeClassName,
   getColorTokenDotClassName,
 } from "@/packages/editor/components/editor/toolbar-data"
@@ -45,6 +47,7 @@ import {
 } from "../shared/database-view-config"
 import { useDatabaseViewContext } from "../shared/database-view-context"
 import { useInlineDatabaseScroll } from "../shared/use-inline-database-scroll"
+import { databaseItemMatchesFilter } from "../shared/database-item-utils"
 import {
   hideNativeTableRowDragPreview,
   type TableRowDragOverlay,
@@ -106,6 +109,10 @@ function getColumnWidth(columnWidths: Record<string, number>, key: string) {
           ? databaseAddPropertyColumnDefaultWidth
           : databaseColumnMinWidth)
   )
+}
+
+function getConditionalColorClassName(color?: string) {
+  return color ? getColorToken(color).backgroundClass : undefined
 }
 
 function areRowLayoutsEqual(
@@ -179,6 +186,7 @@ function getRowGroupValue(row: any, groupProperty: any, propertyValuesByKey: any
 
 export function DatabaseTableView() {
   const {
+    activeConditionalColors,
     activePropertyValueKey,
     activeDatabaseFilters,
     activeDatabaseSorts,
@@ -199,6 +207,7 @@ export function DatabaseTableView() {
     addDatabaseRow,
     onOpenPage,
     personOptions,
+    properties,
     items: rows,
     savePropertyValue,
     setActivePropertyValueKey,
@@ -482,6 +491,40 @@ export function DatabaseTableView() {
     isTableGrouped || rowDropTargetIndex === null
       ? null
       : (rowLayout.dropTops[rowDropTargetIndex] ?? null)
+  const getRowConditionalColors = useCallback(
+    (row: any) => {
+      const propertyColors: Record<string, string> = {}
+      let rowColor: string | undefined
+
+      for (const setting of activeConditionalColors) {
+        if (
+          !databaseItemMatchesFilter({
+            filter: setting.filter,
+            item: row,
+            personOptionsById,
+            properties,
+            propertyValuesByKey,
+          })
+        ) {
+          continue
+        }
+
+        if (setting.applyTo === "entire-row") {
+          rowColor ??= setting.color
+        } else {
+          propertyColors[setting.filter.propertyId] ??= setting.color
+        }
+      }
+
+      return { propertyColors, rowColor }
+    },
+    [
+      activeConditionalColors,
+      personOptionsById,
+      properties,
+      propertyValuesByKey,
+    ]
+  )
   useEffect(() => {
     if (
       activeEditingPropertyKey &&
@@ -860,74 +903,91 @@ export function DatabaseTableView() {
 
   const renderTableRows = (tableRows: any[]) => (
     <tbody>
-      {tableRows.map((row: any) => (
-        <tr
-          data-database-row-id={row.id}
-          key={row.id}
-          onMouseEnter={() => {
-            measureRows()
-            setHoveredRowId(row.id)
-          }}
-        >
-          {pendingInsertPropertyKey === "insert-property-name-left"
-            ? renderInsertPropertyCell("insert-property-name-left")
-            : null}
-          <td className="database-page-cell">
-            <DatabaseTableCellContent wrapContent={nameColumnWrapContent}>
-              <DatabasePageLink
-                onOpen={onOpenPage}
-                pageId={row.pageId}
-                showPageIcon={nameColumnShowPageIcon}
-              />
-            </DatabaseTableCellContent>
-          </td>
-          {pendingInsertPropertyKey === "insert-property-name-right"
-            ? renderInsertPropertyCell("insert-property-name-right")
-            : null}
-          {renderedProperties.map((property: any) => {
-            const leftInsertKey = `insert-property-${property.id}-left`
-            const rightInsertKey = `insert-property-${property.id}-right`
-            const showLeftInsert = pendingInsertPropertyKey === leftInsertKey
-            const showRightInsert = pendingInsertPropertyKey === rightInsertKey
-            const workspaceProperty = property.property
-            const key = `${row.pageId}:${workspaceProperty.id}`
-            const persistedValue = propertyValuesByKey[key] ?? ""
-            const value = draftPropertyValues[key] ?? persistedValue
-            const wrapContent = getPropertyWrapContent(workspaceProperty.config)
+      {tableRows.map((row: any) => {
+        const conditionalColors = getRowConditionalColors(row)
 
-            return (
-              <Fragment key={property.id}>
-                {showLeftInsert ? renderInsertPropertyCell(leftInsertKey) : null}
-                <td
-                  className="database-value-cell"
-                  data-active={activePropertyValueKey === key ? "true" : undefined}
-                  data-wrap-content={wrapContent ? "true" : undefined}
-                >
-                  <DatabaseTableCellContent wrapContent={wrapContent}>
-                    <DatabasePropertyValue
-                      draftValues={draftPropertyValues}
-                      editable={editable}
-                      onActiveValueChange={setActivePropertyValueKey}
-                      onDraftValuesChange={setDraftPropertyValues}
-                      onPropertyConfigChange={(databasePropertyId, config) =>
-                        updateDatabasePropertyConfig(databasePropertyId, config)
-                      }
-                      onSaveValue={savePropertyValue}
-                      persistedValue={persistedValue}
-                      personOptions={personOptions}
-                      property={property}
-                      row={row}
-                      value={value}
-                    />
-                  </DatabaseTableCellContent>
-                </td>
-                {showRightInsert ? renderInsertPropertyCell(rightInsertKey) : null}
-              </Fragment>
-            )
-          })}
-          {editable ? <td /> : null}
-        </tr>
-      ))}
+        return (
+          <tr
+            className={getConditionalColorClassName(conditionalColors.rowColor)}
+            data-database-row-id={row.id}
+            key={row.id}
+            onMouseEnter={() => {
+              measureRows()
+              setHoveredRowId(row.id)
+            }}
+          >
+            {pendingInsertPropertyKey === "insert-property-name-left"
+              ? renderInsertPropertyCell("insert-property-name-left")
+              : null}
+            <td
+              className={cn(
+                "database-page-cell",
+                getConditionalColorClassName(conditionalColors.propertyColors.name)
+              )}
+            >
+              <DatabaseTableCellContent wrapContent={nameColumnWrapContent}>
+                <DatabasePageLink
+                  onOpen={onOpenPage}
+                  pageId={row.pageId}
+                  showPageIcon={nameColumnShowPageIcon}
+                />
+              </DatabaseTableCellContent>
+            </td>
+            {pendingInsertPropertyKey === "insert-property-name-right"
+              ? renderInsertPropertyCell("insert-property-name-right")
+              : null}
+            {renderedProperties.map((property: any) => {
+              const leftInsertKey = `insert-property-${property.id}-left`
+              const rightInsertKey = `insert-property-${property.id}-right`
+              const showLeftInsert = pendingInsertPropertyKey === leftInsertKey
+              const showRightInsert = pendingInsertPropertyKey === rightInsertKey
+              const workspaceProperty = property.property
+              const key = `${row.pageId}:${workspaceProperty.id}`
+              const persistedValue = propertyValuesByKey[key] ?? ""
+              const value = draftPropertyValues[key] ?? persistedValue
+              const wrapContent = getPropertyWrapContent(workspaceProperty.config)
+
+              return (
+                <Fragment key={property.id}>
+                  {showLeftInsert ? renderInsertPropertyCell(leftInsertKey) : null}
+                  <td
+                    className={cn(
+                      "database-value-cell",
+                      getConditionalColorClassName(
+                        conditionalColors.propertyColors[property.id]
+                      )
+                    )}
+                    data-active={
+                      activePropertyValueKey === key ? "true" : undefined
+                    }
+                    data-wrap-content={wrapContent ? "true" : undefined}
+                  >
+                    <DatabaseTableCellContent wrapContent={wrapContent}>
+                      <DatabasePropertyValue
+                        draftValues={draftPropertyValues}
+                        editable={editable}
+                        onActiveValueChange={setActivePropertyValueKey}
+                        onDraftValuesChange={setDraftPropertyValues}
+                        onPropertyConfigChange={(databasePropertyId, config) =>
+                          updateDatabasePropertyConfig(databasePropertyId, config)
+                        }
+                        onSaveValue={savePropertyValue}
+                        persistedValue={persistedValue}
+                        personOptions={personOptions}
+                        property={property}
+                        row={row}
+                        value={value}
+                      />
+                    </DatabaseTableCellContent>
+                  </td>
+                  {showRightInsert ? renderInsertPropertyCell(rightInsertKey) : null}
+                </Fragment>
+              )
+            })}
+            {editable ? <td /> : null}
+          </tr>
+        )
+      })}
     </tbody>
   )
 

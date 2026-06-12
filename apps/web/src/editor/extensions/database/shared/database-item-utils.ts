@@ -508,6 +508,28 @@ function itemMatchesFilter({
   })
 }
 
+export function databaseItemMatchesFilter({
+  filter,
+  item,
+  personOptionsById,
+  properties,
+  propertyValuesByKey,
+}: {
+  filter: DatabaseFilterItemConfig
+  item: SortableDatabaseItem
+  personOptionsById: Map<string, string>
+  properties: SortableDatabaseProperty[]
+  propertyValuesByKey: Record<string, DatabasePropertyValue>
+}) {
+  return itemMatchesFilter({
+    filter,
+    item,
+    personOptionsById,
+    properties,
+    propertyValuesByKey,
+  })
+}
+
 function itemMatchesFilters({
   filters,
   item,

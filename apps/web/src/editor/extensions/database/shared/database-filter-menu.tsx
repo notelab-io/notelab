@@ -85,7 +85,9 @@ const dateFilterCalendarClassNames = {
   months: "w-full",
 }
 
-function filterOperatorNeedsValue(operator: DatabasePropertyFilterOperator) {
+export function filterOperatorNeedsValue(
+  operator: DatabasePropertyFilterOperator
+) {
   return operator !== "is_empty" && operator !== "is_not_empty"
 }
 
@@ -186,7 +188,7 @@ function getDateBetweenFilterValueLabel(values: string[]) {
   return startValue || "Date range"
 }
 
-function getNextFilterValuesForOperator(
+export function getNextFilterValuesForOperator(
   filter: DatabaseActiveFilter,
   operator: DatabasePropertyFilterOperator
 ) {
@@ -492,7 +494,7 @@ function DatabaseDateFilterValueControl({
   )
 }
 
-function DatabaseFilterValueControl({
+export function DatabaseFilterValueControl({
   filter,
   index,
   onUpdateDatabaseFilter,

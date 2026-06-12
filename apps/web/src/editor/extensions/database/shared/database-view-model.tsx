@@ -15,6 +15,7 @@ import { getDatabasePropertyType } from "../constants"
 import { getPropertyValue, type DatabasePropertyValue } from "../utils"
 import {
   getDatabaseFilterOperatorLabel,
+  getDatabaseConditionalColors,
   getDatabaseFilters,
   getDatabaseSorts,
   getMergedDatabaseConfig,
@@ -26,6 +27,7 @@ import {
   type DatabaseFilterItemConfig,
   type DatabasePropertyConfig,
   type DatabasePropertyFilterConfig,
+  type DatabaseConditionalColorConfig,
 } from "./database-view-config"
 import type { DatabaseSearchableMenuOption } from "./database-searchable-menu-items"
 import type { DatabaseActiveFilter } from "./database-filter-menu"
@@ -100,6 +102,7 @@ export function getDatabaseViewModel({
   )
   const databaseSorts = getDatabaseSorts(activeViewConfig)
   const databaseFilters = getDatabaseFilters(activeViewConfig)
+  const databaseConditionalColors = getDatabaseConditionalColors(activeViewConfig)
   const groupProperty =
     activeViewConfig &&
     typeof activeViewConfig === "object" &&
@@ -129,6 +132,11 @@ export function getDatabaseViewModel({
   const filterFieldOptions = sortFieldOptions
   const activeDatabaseFilters = getActiveDatabaseFilters(
     databaseFilters,
+    filterFieldOptions,
+    properties
+  )
+  const activeConditionalColors = getActiveDatabaseConditionalColors(
+    databaseConditionalColors,
     filterFieldOptions,
     properties
   )
@@ -162,6 +170,7 @@ export function getDatabaseViewModel({
   return {
     activeDatabaseFilters,
     activeDatabaseSorts,
+    activeConditionalColors,
     activeView,
     activeViewConfig,
     activeVisibilityConfig,
@@ -170,6 +179,7 @@ export function getDatabaseViewModel({
     canAddDatabaseFilter: activeDatabaseFilters.length < filterFieldOptions.length,
     canAddDatabaseSort: activeDatabaseSorts.length < sortFieldOptions.length,
     databaseFilters,
+    databaseConditionalColors,
     databaseSorts,
     filteredItems,
     filterFieldOptions,
@@ -298,6 +308,29 @@ function getActiveDatabaseFilters(
         propertyType,
       },
     ]
+  })
+}
+
+function getActiveDatabaseConditionalColors(
+  conditionalColors: DatabaseConditionalColorConfig[],
+  filterFieldOptions: DatabaseSearchableMenuOption[],
+  properties: DatabaseProperty[]
+) {
+  return conditionalColors.flatMap((setting) => {
+    const [filter] = getActiveDatabaseFilters(
+      [setting.filter],
+      filterFieldOptions,
+      properties
+    )
+
+    return filter
+      ? [
+          {
+            ...setting,
+            filter,
+          },
+        ]
+      : []
   })
 }
 
