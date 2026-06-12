@@ -65,7 +65,9 @@ export function useDatabaseViewController({
   const [draftViewTitle, setDraftViewTitle] = useState("Table")
   const [activeViewId, setActiveViewId] = useState<string | null>(null)
   const [activePropertyValueKey, setActivePropertyValueKey] = useState<string | null>(null)
+  const [showFilterPill, setShowFilterPill] = useState(true)
   const [showSortPill, setShowSortPill] = useState(true)
+  const [filterPickerOpen, setFilterPickerOpen] = useState(false)
   const [sortPickerOpen, setSortPickerOpen] = useState(false)
 
   const viewModel = useMemo(
@@ -79,11 +81,17 @@ export function useDatabaseViewController({
     [accessTargets, activeViewId, payload, session?.user?.id]
   )
   const {
+    activeDatabaseFilters,
     activeDatabaseSorts,
     activeView,
     activeVisibilityConfig,
+    addableFilterFieldOptions,
     addableSortFieldOptions,
+    canAddDatabaseFilter,
     canAddDatabaseSort,
+    filterFieldOptions,
+    filterValueOptionsByField,
+    filteredItems,
     groupOptions,
     groupProperty,
     groupableProperties,
@@ -130,7 +138,14 @@ export function useDatabaseViewController({
     }
   }, [activeDatabaseSorts.length])
 
+  useEffect(() => {
+    if (activeDatabaseFilters.length === 0) {
+      setShowFilterPill(false)
+    }
+  }, [activeDatabaseFilters.length])
+
   const commands = getDatabaseViewCommands({
+    activeDatabaseFilters,
     activeDatabaseSorts,
     activeView,
     databaseId,
@@ -150,6 +165,8 @@ export function useDatabaseViewController({
     payload,
     properties,
     setActiveViewId,
+    setFilterPickerOpen,
+    setShowFilterPill,
     setShowSortPill,
     setSortPickerOpen,
   })
@@ -179,19 +196,24 @@ export function useDatabaseViewController({
 
   const databaseViewContext: DatabaseViewContextValue = {
     activePropertyValueKey,
+    activeDatabaseFilters,
     activeDatabaseSorts,
     activeView,
     activeVisibilityConfig,
+    addableFilterFieldOptions,
     addableSortFieldOptions,
     addDatabaseProperty: commands.addDatabaseProperty,
     addDraggedPageRow: commands.addDraggedPageRow,
     addKanbanView: commands.addKanbanView,
     addDatabaseRow: commands.addDatabaseRow,
     addTableView: commands.addTableView,
+    canAddDatabaseFilter,
     canAddDatabaseSort,
     propertyValuesByKey,
+    clearDatabaseFilter: commands.clearDatabaseFilter,
     clearDatabaseSort: commands.clearDatabaseSort,
     copyDatabaseViewLink: commands.copyDatabaseViewLink,
+    createDatabaseFilter: commands.createDatabaseFilter,
     createDatabaseSort: commands.createDatabaseSort,
     databaseConfig: payload?.database.config,
     databaseId,
@@ -201,6 +223,10 @@ export function useDatabaseViewController({
     draftDatabaseTitle,
     draftViewTitle,
     editable,
+    filterFieldOptions,
+    filterPickerOpen,
+    filterValueOptionsByField,
+    filteredItems,
     getDatabasePageDragPayload,
     groupOptions,
     groupProperty,
@@ -216,11 +242,13 @@ export function useDatabaseViewController({
     organizationId,
     personOptions,
     properties,
+    removeDatabaseFilter: commands.removeDatabaseFilter,
     removeDatabaseSort: commands.removeDatabaseSort,
     renameDatabaseProperty: commands.renameDatabaseProperty,
     items,
     savePropertyValue: commands.savePropertyValue,
     saveDatabaseTitle: commands.saveDatabaseTitle,
+    saveDatabaseFilters: commands.saveDatabaseFilters,
     saveDatabaseSorts: commands.saveDatabaseSorts,
     saveDatabaseViewTitle: commands.saveDatabaseViewTitle,
     setActivePropertyValueKey,
@@ -228,18 +256,22 @@ export function useDatabaseViewController({
     setDraftPropertyValues,
     setDraftDatabaseTitle,
     setDraftViewTitle,
+    setFilterPickerOpen,
     setViewGroupProperty: commands.setViewGroupProperty,
     setViewType: commands.setViewType,
     setSortPickerOpen,
     showExpandButton,
+    showFilterPill,
     showSortPill,
     showTitle,
     sortFieldOptions,
     sortPickerOpen,
     sortedItems,
     togglePropertyVisibility: commands.togglePropertyVisibility,
+    toggleFilterPillVisibility: commands.toggleFilterPillVisibility,
     toggleSortPillVisibility: commands.toggleSortPillVisibility,
     updateDatabasePropertyConfig: commands.updateDatabasePropertyConfig,
+    updateDatabaseFilter: commands.updateDatabaseFilter,
     updateDatabaseSort: commands.updateDatabaseSort,
     visibleProperties,
     visiblePropertyCount,

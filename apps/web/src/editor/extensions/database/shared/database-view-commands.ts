@@ -24,11 +24,15 @@ import {
 } from "./database-item-utils"
 import type { DatabasePageDragPayload } from "./database-page-drop"
 import {
+  getDatabaseFilterOperatorsForType,
   getMergedDatabaseConfig,
   getPropertyHidden,
   getViewHiddenPropertyIds,
+  getValidDatabaseFilterOperator,
+  type DatabasePropertyFilterConfig,
   type DatabaseSortConfig,
 } from "./database-view-config"
+import type { DatabaseFilterUpdatePatch } from "./database-filter-menu"
 
 type DatabaseMutations = {
   addDatabaseView: ReturnType<typeof useAddDatabaseView>
@@ -43,6 +47,7 @@ type DatabaseMutations = {
 export type DatabaseViewCommands = ReturnType<typeof getDatabaseViewCommands>
 
 export function getDatabaseViewCommands({
+  activeDatabaseFilters,
   activeDatabaseSorts,
   activeView,
   databaseId,
@@ -54,9 +59,12 @@ export function getDatabaseViewCommands({
   payload,
   properties,
   setActiveViewId,
+  setFilterPickerOpen,
+  setShowFilterPill,
   setShowSortPill,
   setSortPickerOpen,
 }: {
+  activeDatabaseFilters: DatabasePropertyFilterConfig[]
   activeDatabaseSorts: DatabaseSortConfig[]
   activeView: DatabaseView | null
   databaseId: string | null | undefined
@@ -68,6 +76,8 @@ export function getDatabaseViewCommands({
   payload: DatabasePayload | null | undefined
   properties: DatabaseProperty[]
   setActiveViewId: Dispatch<SetStateAction<string | null>>
+  setFilterPickerOpen: Dispatch<SetStateAction<boolean>>
+  setShowFilterPill: Dispatch<SetStateAction<boolean>>
   setShowSortPill: Dispatch<SetStateAction<boolean>>
   setSortPickerOpen: Dispatch<SetStateAction<boolean>>
 }) {
@@ -95,6 +105,58 @@ export function getDatabaseViewCommands({
       databaseViewId: activeView.id,
     })
   }
+
+  const saveDatabaseFilters = (nextFilters: DatabasePropertyFilterConfig[]) => {
+    if (!databaseId || !activeView?.id) {
+      return
+    }
+
+    updateDatabaseView.mutate({
+      config: getMergedDatabaseConfig(activeView.config, {
+        filter: undefined,
+        filters: nextFilters.length > 0 ? nextFilters : undefined,
+      }),
+      databaseId,
+      databaseViewId: activeView.id,
+    })
+  }
+
+  const getFilterPropertyType = (
+    propertyId: DatabasePropertyFilterConfig["propertyId"]
+  ) => {
+    if (propertyId === "name") {
+      return "text"
+    }
+
+    return (
+      properties.find((property) => property.id === propertyId)?.property.type ??
+      "text"
+    )
+  }
+
+  const createDatabaseFilter = (
+    propertyId: DatabasePropertyFilterConfig["propertyId"]
+  ): DatabasePropertyFilterConfig => {
+    const propertyType = getFilterPropertyType(propertyId)
+
+    return {
+      id: createDatabaseFilterId(),
+      operator: getDatabaseFilterOperatorsForType(propertyType)[0]?.value ?? "is",
+      propertyId,
+      values: [],
+    }
+  }
+
+  const getPlainDatabaseFilters = () =>
+    activeDatabaseFilters.map(({ id, operator, propertyId, values }) => ({
+      id,
+      operator: getValidDatabaseFilterOperator(
+        operator,
+        getFilterPropertyType(propertyId)
+      ),
+      propertyId,
+      values,
+    }))
 
   return {
     addDatabaseProperty: (
@@ -338,6 +400,9 @@ export function getDatabaseViewCommands({
     clearDatabaseSort: () => {
       saveDatabaseSorts([])
     },
+    clearDatabaseFilter: () => {
+      saveDatabaseFilters([])
+    },
     copyDatabaseViewLink: () => {
       if (!databaseId || typeof window === "undefined") {
         return
@@ -379,6 +444,27 @@ export function getDatabaseViewCommands({
       setShowSortPill(true)
       setSortPickerOpen(false)
     },
+    createDatabaseFilter: (field: string) => {
+      if (
+        activeDatabaseFilters.some((filter) => filter.propertyId === field)
+      ) {
+        setShowFilterPill(true)
+        setFilterPickerOpen(false)
+        return
+      }
+
+      saveDatabaseFilters([
+        ...getPlainDatabaseFilters(),
+        createDatabaseFilter(field),
+      ])
+      setShowFilterPill(true)
+      setFilterPickerOpen(false)
+    },
+    removeDatabaseFilter: (index: number) => {
+      saveDatabaseFilters(
+        getPlainDatabaseFilters().filter((_, filterIndex) => filterIndex !== index)
+      )
+    },
     removeDatabaseSort: (index: number) => {
       saveDatabaseSorts(
         activeDatabaseSorts.flatMap(({ column, direction }, sortIndex) =>
@@ -397,6 +483,7 @@ export function getDatabaseViewCommands({
         name,
       })
     },
+    saveDatabaseFilters,
     saveDatabaseSorts,
     saveDatabaseTitle: (nextTitle: string) => {
       if (!databaseId || nextTitle === payload?.database.name) {
@@ -492,6 +579,9 @@ export function getDatabaseViewCommands({
     toggleSortPillVisibility: () => {
       setShowSortPill((visible) => !visible)
     },
+    toggleFilterPillVisibility: () => {
+      setShowFilterPill((visible) => !visible)
+    },
     updateDatabasePropertyConfig: (
       databasePropertyId: string,
       config: unknown
@@ -515,5 +605,48 @@ export function getDatabaseViewCommands({
         )
       )
     },
+    updateDatabaseFilter: (index: number, patch: DatabaseFilterUpdatePatch) => {
+      saveDatabaseFilters(
+        getPlainDatabaseFilters().map((filter, filterIndex) => {
+          if (filterIndex !== index) {
+            return filter
+          }
+
+          if (patch.propertyId && patch.propertyId !== filter.propertyId) {
+            const propertyType = getFilterPropertyType(patch.propertyId)
+            const operator =
+              getDatabaseFilterOperatorsForType(propertyType)[0]?.value ?? "is"
+
+            return {
+              ...filter,
+              operator,
+              propertyId: patch.propertyId,
+              values: patch.values ?? [],
+            }
+          }
+
+          const propertyType = getFilterPropertyType(filter.propertyId)
+          const operator = patch.operator
+            ? getValidDatabaseFilterOperator(patch.operator, propertyType)
+            : filter.operator
+
+          return {
+            ...filter,
+            operator,
+            values: patch.values ?? filter.values,
+          }
+        })
+      )
+    },
   }
+}
+
+function createDatabaseFilterId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return `filter-${crypto.randomUUID()}`
+  }
+
+  return `filter-${Date.now().toString(36)}-${Math.random()
+    .toString(36)
+    .slice(2)}`
 }

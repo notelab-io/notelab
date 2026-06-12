@@ -14,16 +14,25 @@ import {
 import { getDatabasePropertyType } from "../constants"
 import { getPropertyValue, type DatabasePropertyValue } from "../utils"
 import {
+  getDatabaseFilterOperatorLabel,
+  getDatabaseFilters,
   getDatabaseSorts,
   getMergedDatabaseConfig,
   getNameColumnLabel,
   getNameColumnShowPageIcon,
   getPropertyHiddenForView,
+  getValidDatabaseFilterOperator,
+  isDatabaseFilterGroup,
+  type DatabaseFilterItemConfig,
+  type DatabasePropertyConfig,
+  type DatabasePropertyFilterConfig,
 } from "./database-view-config"
 import type { DatabaseSearchableMenuOption } from "./database-searchable-menu-items"
+import type { DatabaseActiveFilter } from "./database-filter-menu"
 import type { DatabaseActiveSort } from "./database-sort-menu"
 import { NameColumnGlyph } from "./name-column-glyph"
 import {
+  getFilteredDatabaseItems,
   getSortedDatabaseItems,
   hasViewHiddenPropertyIds,
 } from "./database-item-utils"
@@ -90,6 +99,7 @@ export function getDatabaseViewModel({
       )
   )
   const databaseSorts = getDatabaseSorts(activeViewConfig)
+  const databaseFilters = getDatabaseFilters(activeViewConfig)
   const groupProperty =
     activeViewConfig &&
     typeof activeViewConfig === "object" &&
@@ -116,8 +126,33 @@ export function getDatabaseViewModel({
     properties,
     propertyValues,
   })
-  const sortedItems = getSortedDatabaseItems(
+  const filterFieldOptions = sortFieldOptions
+  const activeDatabaseFilters = getActiveDatabaseFilters(
+    databaseFilters,
+    filterFieldOptions,
+    properties
+  )
+  const usedFilterFieldValues = new Set(
+    activeDatabaseFilters.map((filter) => filter.propertyId)
+  )
+  const addableFilterFieldOptions = filterFieldOptions.filter(
+    (option) => !usedFilterFieldValues.has(option.value)
+  )
+  const filterValueOptionsByField = getFilterValueOptionsByField({
     items,
+    personOptions,
+    properties,
+    propertyValuesByKey,
+  })
+  const filteredItems = getFilteredDatabaseItems(
+    items,
+    properties,
+    propertyValuesByKey,
+    activeDatabaseFilters,
+    personOptionsById
+  )
+  const sortedItems = getSortedDatabaseItems(
+    filteredItems,
     properties,
     propertyValuesByKey,
     activeDatabaseSorts,
@@ -125,13 +160,20 @@ export function getDatabaseViewModel({
   )
 
   return {
+    activeDatabaseFilters,
     activeDatabaseSorts,
     activeView,
     activeViewConfig,
     activeVisibilityConfig,
+    addableFilterFieldOptions,
     addableSortFieldOptions,
+    canAddDatabaseFilter: activeDatabaseFilters.length < filterFieldOptions.length,
     canAddDatabaseSort: activeDatabaseSorts.length < sortFieldOptions.length,
+    databaseFilters,
     databaseSorts,
+    filteredItems,
+    filterFieldOptions,
+    filterValueOptionsByField,
     groupOptions,
     groupProperty,
     groupableProperties,
@@ -221,6 +263,142 @@ function getActiveDatabaseSorts(
         ]
       : []
   })
+}
+
+function getActiveDatabaseFilters(
+  databaseFilters: DatabaseFilterItemConfig[],
+  filterFieldOptions: DatabaseSearchableMenuOption[],
+  properties: DatabaseProperty[]
+): DatabaseActiveFilter[] {
+  return databaseFilters.flatMap((filter) => {
+    if (isDatabaseFilterGroup(filter)) {
+      return []
+    }
+
+    const option = filterFieldOptions.find(
+      (filterOption) => filterOption.value === filter.propertyId
+    )
+
+    if (!option) {
+      return []
+    }
+
+    const propertyType = getFilterPropertyType(filter.propertyId, properties)
+    const operator = getValidDatabaseFilterOperator(
+      filter.operator,
+      propertyType
+    )
+
+    return [
+      {
+        ...filter,
+        label: option.label,
+        operator,
+        operatorLabel: getDatabaseFilterOperatorLabel(operator),
+        propertyType,
+      },
+    ]
+  })
+}
+
+function getFilterPropertyType(
+  propertyId: DatabasePropertyFilterConfig["propertyId"],
+  properties: DatabaseProperty[]
+) {
+  if (propertyId === "name") {
+    return "text"
+  }
+
+  return (
+    properties.find((property) => property.id === propertyId)?.property.type ??
+    "text"
+  )
+}
+
+function getFilterValueOptionsByField({
+  items,
+  personOptions,
+  properties,
+  propertyValuesByKey,
+}: {
+  items: DatabaseRow[]
+  personOptions: Array<{ id: string; name: string; suffix?: string }>
+  properties: DatabaseProperty[]
+  propertyValuesByKey: Record<string, DatabasePropertyValue>
+}) {
+  const optionsByField: Record<string, DatabaseSearchableMenuOption[]> = {}
+
+  for (const property of properties) {
+    const type = property.property.type
+
+    if (type === "checkbox") {
+      optionsByField[property.id] = [
+        { label: "Checked", value: "Checked" },
+        { label: "Unchecked", value: "Unchecked" },
+      ]
+      continue
+    }
+
+    if (type === "person") {
+      optionsByField[property.id] = getUniqueFilterOptions([
+        ...personOptions.map((person) => person.name),
+        ...getPropertyFilterValues(items, property, propertyValuesByKey).map(
+          (value) =>
+            personOptions.find((person) => person.id === value)?.name ?? value
+        ),
+      ])
+      continue
+    }
+
+    if (type === "select" || type === "status" || type === "multi_select") {
+      optionsByField[property.id] = getUniqueFilterOptions([
+        ...getConfiguredPropertyOptionNames(property.property.config),
+        ...getPropertyFilterValues(items, property, propertyValuesByKey),
+      ])
+    }
+  }
+
+  return optionsByField
+}
+
+function getPropertyFilterValues(
+  items: DatabaseRow[],
+  property: DatabaseProperty,
+  propertyValuesByKey: Record<string, DatabasePropertyValue>
+) {
+  return items.flatMap((item) => {
+    const value = propertyValuesByKey[`${item.pageId}:${property.property.id}`]
+
+    if (Array.isArray(value)) {
+      return value
+    }
+
+    return value?.trim() ? [value] : []
+  })
+}
+
+function getConfiguredPropertyOptionNames(config: unknown) {
+  if (!config || typeof config !== "object" || Array.isArray(config)) {
+    return []
+  }
+
+  const options = (config as DatabasePropertyConfig).options
+
+  return Array.isArray(options)
+    ? options.flatMap((option) =>
+        option && typeof option === "object" && typeof option.name === "string"
+          ? [option.name]
+          : []
+      )
+    : []
+}
+
+function getUniqueFilterOptions(values: string[]): DatabaseSearchableMenuOption[] {
+  return Array.from(
+    new Set(values.map((value) => value.trim()).filter(Boolean))
+  )
+    .sort((left, right) => left.localeCompare(right))
+    .map((value) => ({ label: value, value }))
 }
 
 function getPropertyValuesByKey({

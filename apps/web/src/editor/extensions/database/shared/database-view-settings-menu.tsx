@@ -47,6 +47,11 @@ import {
   type DatabaseSearchableMenuOption,
 } from "./database-searchable-menu-items"
 import {
+  DatabaseFilterSubmenu,
+  type DatabaseActiveFilter,
+  type DatabaseFilterUpdatePatch,
+} from "./database-filter-menu"
+import {
   DatabaseSortSubmenu,
   type DatabaseActiveSort,
   type DatabaseSortUpdatePatch,
@@ -131,56 +136,74 @@ function DataSourceMenuItem({
 }
 
 export function DatabaseViewSettingsMenu({
+  activeDatabaseFilters,
   activeDatabaseSorts,
   activeViewType,
+  addableFilterFieldOptions,
   addableSortFieldOptions,
+  canAddDatabaseFilter,
   canAddDatabaseSort,
   databaseId,
   databaseName,
   dataSources,
   draftViewTitle,
+  filterFieldOptions,
+  filterValueOptionsByField,
   groupProperties,
   groupPropertyId,
   linkedDataSources = [],
   titlePropertyLabel,
   organizationId,
   onCopyDatabaseViewLink,
+  onClearDatabaseFilter,
   onClearDatabaseSort,
+  onCreateDatabaseFilter,
   onCreateDatabaseSort,
   onDraftViewTitleChange,
+  onRemoveDatabaseFilter,
   onRemoveDatabaseSort,
   onSaveDatabaseViewTitle,
   onSetViewGroupProperty,
   onSetViewType,
   onTogglePropertyVisibility,
+  onUpdateDatabaseFilter,
   onUpdateDatabaseSort,
   properties,
   sortFieldOptions,
   viewConfig,
   visiblePropertyCount,
 }: {
+  activeDatabaseFilters: DatabaseActiveFilter[]
   activeDatabaseSorts: DatabaseActiveSort[]
   activeViewType?: string
+  addableFilterFieldOptions: DatabaseSearchableMenuOption[]
   addableSortFieldOptions: DatabaseSearchableMenuOption[]
+  canAddDatabaseFilter: boolean
   canAddDatabaseSort: boolean
   databaseId?: string
   databaseName?: string
   dataSources: DatabaseSourceMenuItem[]
   draftViewTitle: string
+  filterFieldOptions: DatabaseSearchableMenuOption[]
+  filterValueOptionsByField: Record<string, DatabaseSearchableMenuOption[]>
   groupProperties: DatabaseViewProperty[]
   groupPropertyId: string | null
   linkedDataSources?: DatabaseSourceMenuItem[]
   titlePropertyLabel: string
   organizationId?: string
   onCopyDatabaseViewLink: () => void
+  onClearDatabaseFilter: () => void
   onClearDatabaseSort: () => void
+  onCreateDatabaseFilter: (field: string) => void
   onCreateDatabaseSort: (field: string) => void
   onDraftViewTitleChange: (title: string) => void
+  onRemoveDatabaseFilter: (index: number) => void
   onRemoveDatabaseSort: (index: number) => void
   onSaveDatabaseViewTitle: (title: string) => void
   onSetViewGroupProperty: (groupPropertyId: string | null) => void
   onSetViewType: (type: "table" | "kanban") => void
   onTogglePropertyVisibility: (propertyId: string) => void
+  onUpdateDatabaseFilter: (index: number, patch: DatabaseFilterUpdatePatch) => void
   onUpdateDatabaseSort: (index: number, patch: DatabaseSortUpdatePatch) => void
   properties: DatabaseViewProperty[]
   sortFieldOptions: DatabaseSearchableMenuOption[]
@@ -342,15 +365,27 @@ export function DatabaseViewSettingsMenu({
             })}
           </DropDrawerSubContent>
         </DropDrawerSub>
-        <DropDrawerSub>
-          <DropDrawerSubTrigger>
-            <Filter />
-            <span>Filter</span>
-          </DropDrawerSubTrigger>
-          <DropDrawerSubContent>
-            <DropDrawerItem disabled>No filters yet</DropDrawerItem>
-          </DropDrawerSubContent>
-        </DropDrawerSub>
+        <DatabaseFilterSubmenu
+          activeDatabaseFilters={activeDatabaseFilters}
+          addableFilterFieldOptions={addableFilterFieldOptions}
+          canAddDatabaseFilter={canAddDatabaseFilter}
+          filterFieldOptions={filterFieldOptions}
+          filterValueOptionsByField={filterValueOptionsByField}
+          onClearDatabaseFilter={onClearDatabaseFilter}
+          onCreateDatabaseFilter={onCreateDatabaseFilter}
+          onRemoveDatabaseFilter={onRemoveDatabaseFilter}
+          onUpdateDatabaseFilter={onUpdateDatabaseFilter}
+        >
+          <ViewSettingsRow
+            icon={<Filter />}
+            label="Filter"
+            right={
+              activeDatabaseFilters.length > 0
+                ? activeDatabaseFilters.length
+                : undefined
+            }
+          />
+        </DatabaseFilterSubmenu>
         <DatabaseSortSubmenu
           activeDatabaseSorts={activeDatabaseSorts}
           addableSortFieldOptions={addableSortFieldOptions}

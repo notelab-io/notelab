@@ -180,6 +180,7 @@ function getRowGroupValue(row: any, groupProperty: any, propertyValuesByKey: any
 export function DatabaseTableView() {
   const {
     activePropertyValueKey,
+    activeDatabaseFilters,
     activeDatabaseSorts,
     addDatabaseProperty,
     addDraggedPageRow,
@@ -236,6 +237,7 @@ export function DatabaseTableView() {
   const activeEditingPropertyKey =
     getPropertyKeyFromHeaderEditingKey(editingPropertyKey)
   const isTableSorted = activeDatabaseSorts.length > 0
+  const isTableFiltered = activeDatabaseFilters.length > 0
   const isTableGrouped = Boolean(groupProperty)
   const renderedProperties = useMemo(
     () => visibleProperties,
@@ -246,7 +248,8 @@ export function DatabaseTableView() {
     [personOptions]
   )
   const activeInsertProperty = pendingInsertProperty
-  const canReorderRows = editable && !isTableSorted && !isTableGrouped
+  const canReorderRows =
+    editable && !isTableFiltered && !isTableSorted && !isTableGrouped
   const pendingInsertPropertyKey = activeInsertProperty
     ? `insert-property-${activeInsertProperty.sourceColumnKey}-${activeInsertProperty.side}`
     : null

@@ -129,7 +129,7 @@ export function DatabaseKanbanView() {
     addDatabaseRow,
     onOpenPage,
     personOptions,
-    items,
+    filteredItems: items,
     savePropertyValue,
     setActivePropertyValueKey,
     setDraftPropertyValues,
