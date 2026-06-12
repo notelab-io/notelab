@@ -533,8 +533,32 @@
     @apply flex w-72 shrink-0 flex-col rounded-md bg-muted/35;
   }
 
+  .database-kanban-new-column {
+    @apply border border-dashed border-border/70 bg-transparent;
+  }
+
   .database-kanban-column-header {
     @apply flex min-h-10 items-center gap-2 border-b border-border px-3 py-2;
+  }
+
+  .database-kanban-new-column-header {
+    @apply border-b-0;
+  }
+
+  .database-kanban-new-group-input {
+    @apply flex min-w-0 flex-1 cursor-text items-center gap-2 text-muted-foreground;
+  }
+
+  .database-kanban-new-group-input svg {
+    @apply size-4 shrink-0;
+  }
+
+  .database-kanban-new-group-input .database-input-cell-trigger {
+    @apply min-h-7 flex-1 rounded-sm px-0 py-0 text-muted-foreground hover:text-foreground;
+  }
+
+  .database-kanban-new-group-input .database-input-cell-trigger:empty::before {
+    content: "New group";
   }
 
   .database-kanban-count {

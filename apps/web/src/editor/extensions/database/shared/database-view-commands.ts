@@ -214,7 +214,10 @@ export function getDatabaseViewCommands({
       const currentProperties = payload?.properties ?? []
       const groupProperty =
         currentProperties.find((property) => property.property.type === "status") ??
-        currentProperties.find((property) => property.property.type === "select")
+        currentProperties.find((property) => property.property.type === "select") ??
+        currentProperties.find(
+          (property) => property.property.type === "multi_select"
+        )
       const addView = (
         groupPropertyId: string,
         hiddenPropertyIds: string[],

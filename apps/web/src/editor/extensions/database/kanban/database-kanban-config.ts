@@ -22,7 +22,11 @@ type DatabaseViewConfig = {
 }
 
 export function isKanbanGroupProperty(property: DatabasePropertyListItem) {
-  return property.property.type === "status" || property.property.type === "select"
+  return (
+    property.property.type === "status" ||
+    property.property.type === "select" ||
+    property.property.type === "multi_select"
+  )
 }
 
 export function getSelectOptions(config: unknown) {
@@ -87,6 +91,7 @@ export function getKanbanGroupProperty(
     configuredGroupProperty ??
     properties.find((property) => property.property.type === "status") ??
     properties.find((property) => property.property.type === "select") ??
+    properties.find((property) => property.property.type === "multi_select") ??
     null
   )
 }

@@ -1,11 +1,11 @@
 import {
   useCallback,
+  useEffect,
   useLayoutEffect,
   useMemo,
   useState,
   type CSSProperties,
   type RefObject,
-  type WheelEvent as ReactWheelEvent,
 } from "react"
 
 export type InlineDatabaseScrollLayout = {
@@ -20,6 +20,7 @@ type UseInlineDatabaseScrollOptions = {
   enabled?: boolean
   getContentWidth: () => number
   measureKey?: unknown
+  scrollRef?: RefObject<HTMLElement | null>
   wrapperRef: RefObject<HTMLElement | null>
 }
 
@@ -41,6 +42,7 @@ export function useInlineDatabaseScroll({
   enabled = true,
   getContentWidth,
   measureKey,
+  scrollRef,
   wrapperRef,
 }: UseInlineDatabaseScrollOptions) {
   const [layout, setLayout] = useState<InlineDatabaseScrollLayout | null>(null)
@@ -121,6 +123,22 @@ export function useInlineDatabaseScroll({
     }
   }, [contentRef, measureKey, measureLayout, wrapperRef])
 
+  useEffect(() => {
+    const scrollElement = scrollRef?.current
+
+    if (!enabled || !scrollElement) {
+      return
+    }
+
+    const onWheel = (event: WheelEvent) => {
+      handleInlineDatabaseScrollWheel(event, scrollElement)
+    }
+
+    scrollElement.addEventListener("wheel", onWheel, { passive: false })
+
+    return () => scrollElement.removeEventListener("wheel", onWheel)
+  }, [enabled, measureKey, scrollRef])
+
   const style = useMemo(
     () =>
       layout
@@ -142,8 +160,9 @@ export function useInlineDatabaseScroll({
   }
 }
 
-export function handleInlineDatabaseScrollWheel<TElement extends HTMLElement>(
-  event: ReactWheelEvent<TElement>
+function handleInlineDatabaseScrollWheel(
+  event: WheelEvent,
+  scrollElement: HTMLElement
 ) {
   const horizontalDelta =
     Math.abs(event.deltaX) > 0 ? event.deltaX : event.shiftKey ? event.deltaY : 0
@@ -152,12 +171,14 @@ export function handleInlineDatabaseScrollWheel<TElement extends HTMLElement>(
     return
   }
 
-  const scrollElement = event.currentTarget
   const maxScrollLeft = scrollElement.scrollWidth - scrollElement.clientWidth
 
   if (maxScrollLeft <= 1) {
     return
   }
+
+  event.preventDefault()
+  event.stopPropagation()
 
   const nextScrollLeft = Math.min(
     maxScrollLeft,
@@ -169,6 +190,4 @@ export function handleInlineDatabaseScrollWheel<TElement extends HTMLElement>(
   }
 
   scrollElement.scrollLeft = nextScrollLeft
-  event.preventDefault()
-  event.stopPropagation()
 }
