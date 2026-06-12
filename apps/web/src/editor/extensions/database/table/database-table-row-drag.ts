@@ -8,6 +8,87 @@ export type TableRowDragOverlay = {
   width: number
 }
 
+type RowIdItem = {
+  id: string
+}
+
+export function getReorderedRowIds(
+  sourceRows: RowIdItem[],
+  draggedRowId: string,
+  targetIndex: number
+) {
+  const sourceIndex = sourceRows.findIndex((row) => row.id === draggedRowId)
+
+  if (sourceIndex === -1) {
+    return null
+  }
+
+  const nextRows = [...sourceRows]
+  const [draggedRow] = nextRows.splice(sourceIndex, 1)
+  const nextTargetIndex = Math.min(
+    nextRows.length,
+    Math.max(0, targetIndex > sourceIndex ? targetIndex - 1 : targetIndex)
+  )
+
+  nextRows.splice(nextTargetIndex, 0, draggedRow)
+
+  const rowIds = nextRows.map((row) => row.id)
+
+  return rowIds.every((rowId, index) => rowId === sourceRows[index]?.id)
+    ? null
+    : rowIds
+}
+
+export function getFilteredReorderedRowIds(
+  allRows: RowIdItem[],
+  visibleRows: RowIdItem[],
+  draggedRowId: string,
+  targetIndex: number
+) {
+  const nextVisibleRowIds = getReorderedRowIds(
+    visibleRows,
+    draggedRowId,
+    targetIndex
+  )
+  const draggedRow = allRows.find((row) => row.id === draggedRowId)
+
+  if (!nextVisibleRowIds || !draggedRow) {
+    return null
+  }
+
+  const nextVisibleIndex = nextVisibleRowIds.indexOf(draggedRowId)
+  const nextAnchorId = nextVisibleRowIds[nextVisibleIndex + 1]
+  const previousAnchorId = nextVisibleRowIds[nextVisibleIndex - 1]
+  const nextRows = allRows.filter((row) => row.id !== draggedRowId)
+  let insertIndex = 0
+
+  if (nextAnchorId) {
+    insertIndex = nextRows.findIndex((row) => row.id === nextAnchorId)
+
+    if (insertIndex === -1) {
+      return null
+    }
+  } else if (previousAnchorId) {
+    const previousAnchorIndex = nextRows.findIndex(
+      (row) => row.id === previousAnchorId
+    )
+
+    if (previousAnchorIndex === -1) {
+      return null
+    }
+
+    insertIndex = previousAnchorIndex + 1
+  }
+
+  nextRows.splice(insertIndex, 0, draggedRow)
+
+  const rowIds = nextRows.map((row) => row.id)
+
+  return rowIds.every((rowId, index) => rowId === allRows[index]?.id)
+    ? null
+    : rowIds
+}
+
 export function hideNativeTableRowDragPreview(dataTransfer: DataTransfer) {
   const dragImage = document.createElement("span")
 

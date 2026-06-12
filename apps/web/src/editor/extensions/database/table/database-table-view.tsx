@@ -60,6 +60,8 @@ import { useDatabaseViewContext } from "../shared/database-view-context"
 import { useInlineDatabaseScroll } from "../shared/use-inline-database-scroll"
 import { databaseItemMatchesFilter } from "../shared/database-item-utils"
 import {
+  getFilteredReorderedRowIds,
+  getReorderedRowIds,
   hideNativeTableRowDragPreview,
   type TableRowDragOverlay,
 } from "./database-table-row-drag"
@@ -199,33 +201,6 @@ function getRowGroupValue(row: any, groupProperty: any, propertyValuesByKey: any
   return getRawGroupValue(value)
 }
 
-function getReorderedRowIds(
-  sourceRows: Array<{ id: string }>,
-  draggedRowId: string,
-  targetIndex: number
-) {
-  const sourceIndex = sourceRows.findIndex((row) => row.id === draggedRowId)
-
-  if (sourceIndex === -1) {
-    return null
-  }
-
-  const nextRows = [...sourceRows]
-  const [draggedRow] = nextRows.splice(sourceIndex, 1)
-  const nextTargetIndex = Math.min(
-    nextRows.length,
-    Math.max(0, targetIndex > sourceIndex ? targetIndex - 1 : targetIndex)
-  )
-
-  nextRows.splice(nextTargetIndex, 0, draggedRow)
-
-  const rowIds = nextRows.map((row) => row.id)
-
-  return rowIds.every((rowId, index) => rowId === sourceRows[index]?.id)
-    ? null
-    : rowIds
-}
-
 export function DatabaseTableView() {
   const {
     activeConditionalColors,
@@ -302,7 +277,16 @@ export function DatabaseTableView() {
     [personOptions]
   )
   const activeInsertProperty = pendingInsertProperty
-  const canReorderRows = editable && !isTableFiltered && !isTableGrouped
+  const canReorderRows = editable && !isTableGrouped
+  const rowDragTitle = !canReorderRows
+    ? "Manual row sorting is disabled while this view is grouped"
+    : isTableSorted && isTableFiltered
+      ? "Drag page. Clear sorting to save the new order; hidden rows keep their relative order."
+      : isTableSorted
+        ? "Drag page. Clear sorting to save the new order."
+        : isTableFiltered
+          ? "Drag page. Hidden rows keep their relative order."
+          : "Drag page"
   const pendingInsertPropertyKey = activeInsertProperty
     ? `insert-property-${activeInsertProperty.sourceColumnKey}-${activeInsertProperty.side}`
     : null
@@ -492,29 +476,36 @@ export function DatabaseTableView() {
 
     return targetIndex === -1 ? rowElements.length : targetIndex
   }
-  const reorderDraggedRow = (
-    sourceRows: Array<{ id: string }>,
-    rowId: string,
-    targetIndex: number
-  ) => {
+  const getDraggedRowReorderIds = () => {
+    if (!draggedRowId || rowDropTargetIndex === null || isTableGrouped) {
+      return null
+    }
+
+    if (isTableFiltered) {
+      return getFilteredReorderedRowIds(
+        rows,
+        sortedRows,
+        draggedRowId,
+        rowDropTargetIndex
+      )
+    }
+
+    return getReorderedRowIds(
+      isTableSorted ? sortedRows : rows,
+      draggedRowId,
+      rowDropTargetIndex
+    )
+  }
+  const moveDraggedRow = () => {
     if (!databaseId) {
       return
     }
 
-    const rowIds = getReorderedRowIds(sourceRows, rowId, targetIndex)
+    const rowIds = getDraggedRowReorderIds()
 
-    if (!rowIds) {
-      return
+    if (rowIds) {
+      reorderRows.mutate({ databaseId, rowIds })
     }
-
-    reorderRows.mutate({ databaseId, rowIds })
-  }
-  const moveDraggedRow = () => {
-    if (!draggedRowId || rowDropTargetIndex === null || isTableGrouped) {
-      return
-    }
-
-    reorderDraggedRow(rows, draggedRowId, rowDropTargetIndex)
   }
   const confirmSortedRowReorder = () => {
     if (!databaseId || !pendingSortedRowReorder) {
@@ -1106,13 +1097,9 @@ export function DatabaseTableView() {
           event.preventDefault()
           event.stopPropagation()
           if (draggedRowId) {
-            if (isTableSorted) {
-              const rowIds = getReorderedRowIds(
-                sortedRows,
-                draggedRowId,
-                rowDropTargetIndex
-              )
+            const rowIds = getDraggedRowReorderIds()
 
+            if (isTableSorted) {
               if (rowIds) {
                 setPendingSortedRowReorder({ rowIds })
               }
@@ -1192,13 +1179,7 @@ export function DatabaseTableView() {
                       onClick={(event) => event.preventDefault()}
                       onDragEnd={clearRowDrag}
                       onDragStart={(event) => startRowDrag(row, event)}
-                      title={
-                        canReorderRows
-                          ? isTableSorted
-                            ? "Drag page. Clear sorting to save the new order."
-                            : "Drag page"
-                          : "Manual row sorting is disabled while this view is filtered or grouped"
-                      }
+                      title={rowDragTitle}
                       type="button"
                     >
                       <GripVertical />
