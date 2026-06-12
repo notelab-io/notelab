@@ -459,12 +459,42 @@
     @apply size-4;
   }
 
-  .database-table-wrap {
+  .database-table-wrap,
+  .database-kanban-wrap {
     @apply relative mt-2 max-w-full overflow-visible;
   }
 
-  .database-table-scroll {
+  .database-inline-scroll {
     @apply max-w-full overflow-x-auto;
+    overscroll-behavior-x: contain;
+  }
+
+  .database-kanban-scroll {
+    @apply pb-2;
+  }
+
+  .database-inline-scroll-content {
+    @apply relative min-w-full;
+  }
+
+  .database-inline-scroll-wrap[data-inline-scroll="true"]
+    .database-inline-scroll {
+    width: var(--database-inline-scroll-viewport-width, 100%);
+    max-width: var(--database-inline-scroll-viewport-width, 100%);
+    margin-left: calc(var(--database-inline-scroll-offset, 0px) * -1);
+  }
+
+  .database-inline-scroll-wrap[data-inline-scroll="true"]
+    .database-inline-scroll-content {
+    box-sizing: border-box;
+    min-width: var(--database-inline-scroll-content-width, 100%);
+    padding-left: var(--database-inline-scroll-offset, 0px);
+  }
+
+  .database-table-wrap[data-inline-scroll="true"] .database-table,
+  .database-table-wrap[data-inline-scroll="true"] .database-page-create-row {
+    width: var(--database-inline-scroll-view-width, 100%);
+    min-width: var(--database-inline-scroll-view-width, 100%);
   }
 
   .database-table-groups {
@@ -479,16 +509,24 @@
     @apply mb-2 flex min-h-8 items-center gap-2 rounded-sm px-1 py-1 text-left text-foreground transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none;
   }
 
+  .database-table-wrap[data-inline-scroll="true"] .database-table-group-toggle {
+    position: sticky;
+    left: var(--database-inline-scroll-offset, 0px);
+    z-index: 20;
+    width: max-content;
+  }
+
   .database-table-group-count {
     @apply inline-flex min-w-5 justify-center rounded-sm bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground;
   }
 
-  .database-kanban-wrap {
-    @apply mt-2 max-w-full overflow-x-auto pb-2;
-  }
-
   .database-kanban-board {
     @apply flex min-h-72 w-max min-w-full gap-3;
+  }
+
+  .database-kanban-wrap[data-inline-scroll="true"] .database-kanban-board {
+    width: var(--database-inline-scroll-view-width, max-content);
+    min-width: var(--database-inline-scroll-view-width, 100%);
   }
 
   .database-kanban-column {
@@ -876,6 +914,10 @@
     transform: translateX(-3.5rem);
   }
 
+  .database-table-wrap[data-inline-scroll="true"] .database-row-drag-rail {
+    left: var(--database-inline-scroll-offset, 0px);
+  }
+
   .database-row-controls {
     @apply pointer-events-none absolute flex -translate-y-1/2 items-center gap-1 opacity-0 transition-opacity;
   }
@@ -910,6 +952,12 @@
   .database-row-drop-line {
     @apply pointer-events-none absolute left-0 right-0 z-30 h-0.5 bg-primary;
     transform: translateY(-1px);
+  }
+
+  .database-table-wrap[data-inline-scroll="true"] .database-row-drop-line {
+    left: var(--database-inline-scroll-offset, 0px);
+    right: auto;
+    width: var(--database-inline-scroll-view-width, 100%);
   }
 
   .database-row-drag-overlay {

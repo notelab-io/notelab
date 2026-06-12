@@ -370,6 +370,7 @@ export function Editor({
   const [pasteChoice, setPasteChoice] = useState<PasteChoiceState | null>(null)
   const [tocItems, setTocItems] = useState<TableOfContentDataItem[]>([])
   const pageContentClassName = fullWidth ? "" : "mx-auto max-w-5xl"
+  const pageContentMode = fullWidth ? "full" : "narrow"
   // Node views do not re-render just because extension options mutate.
   // Keep editability in a tiny external store so database cells follow editor mode changes.
   const editorRuntimeRef = useRef({
@@ -1146,6 +1147,7 @@ export function Editor({
     <div className="flex min-h-[calc(100svh-3rem)] w-full flex-col text-foreground">
       <section
         className="min-h-0 flex-1"
+        data-editor-surface
         ref={editorSurfaceRef}
         onPointerLeave={() => {
           if (dragHandleMenuOpen) {
@@ -1254,7 +1256,10 @@ export function Editor({
           title={title}
           workspaceId={workspaceId}
         />
-        <div className={pageContentClassName}>
+        <div
+          className={pageContentClassName}
+          data-editor-page-content={pageContentMode}
+        >
           <EditorContent editor={editor} />
         </div>
         {editable && mobileNodeTarget ? (

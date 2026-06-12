@@ -44,6 +44,7 @@ import {
   getPropertyWrapContent,
 } from "../shared/database-view-config"
 import { useDatabaseViewContext } from "../shared/database-view-context"
+import { useInlineDatabaseScroll } from "../shared/use-inline-database-scroll"
 import {
   hideNativeTableRowDragPreview,
   type TableRowDragOverlay,
@@ -277,6 +278,16 @@ export function DatabaseTableView() {
     (width, key) => width + getColumnWidth(columnWidths, key),
     0
   )
+  const getInlineTableContentWidth = useCallback(() => tableMinWidth, [
+    tableMinWidth,
+  ])
+  const {
+    isInlineScrollEnabled: isInlineTableScrollEnabled,
+    style: tableWrapStyle,
+  } = useInlineDatabaseScroll({
+    getContentWidth: getInlineTableContentWidth,
+    wrapperRef: tableWrapRef,
+  })
   const groupedSections = useMemo<GroupSection[]>(() => {
     if (!isTableGrouped || !groupProperty) {
       return []
@@ -632,7 +643,6 @@ export function DatabaseTableView() {
         collapsedGroups[section.id] === true ? [] : section.rows
       )
     : sortedRows
-
   const toggleSelectedRow = (rowId: string, checked: boolean) => {
     setSelectedRowIds((current) => {
       const next = new Set(current)
@@ -920,8 +930,10 @@ export function DatabaseTableView() {
 
   return (
     <div
-      className="database-table-wrap"
+      className="database-table-wrap database-inline-scroll-wrap"
+      data-inline-scroll={isInlineTableScrollEnabled ? "true" : undefined}
       ref={tableWrapRef}
+      style={tableWrapStyle}
       onMouseLeave={() => {
         if (!draggedRowId) {
           setHoveredRowId(null)
@@ -985,66 +997,6 @@ export function DatabaseTableView() {
         clearRowDrag()
       }}
     >
-      {editable ? (
-        <div className="database-row-drag-rail">
-          {visibleRows.map((row: any) => {
-            const rowCenter = rowLayout.centers[row.id]
-
-            if (rowCenter === undefined) {
-              return null
-            }
-
-            const isRowHandleVisible =
-              hoveredRowId === row.id || draggedRowId === row.id
-
-            return (
-              <div
-                className="database-row-controls"
-                data-visible={isRowHandleVisible ? "true" : undefined}
-                key={row.id}
-                onMouseEnter={() => {
-                  measureRows()
-                  setHoveredRowId(row.id)
-                }}
-                onMouseLeave={() => {
-                  if (!draggedRowId) {
-                    setHoveredRowId(null)
-                  }
-                }}
-                style={{ top: rowCenter }}
-              >
-                <Checkbox
-                  aria-label={`Select ${row.page.name.trim() || "Untitled"}`}
-                  checked={selectedRowIds.has(row.id)}
-                  className="database-row-checkbox"
-                  onCheckedChange={(checked) =>
-                    toggleSelectedRow(row.id, checked === true)
-                  }
-                />
-                <button
-                  aria-label={`Drag ${row.page.name.trim() || "Untitled"}`}
-                  className="database-row-drag-handle"
-                  data-database-row-drag-handle
-                  data-dragging={draggedRowId === row.id ? "true" : undefined}
-                  disabled={!canReorderRows}
-                  draggable={canReorderRows}
-                  onClick={(event) => event.preventDefault()}
-                  onDragEnd={clearRowDrag}
-                  onDragStart={(event) => startRowDrag(row, event)}
-                  title={
-                    canReorderRows
-                      ? "Drag page"
-                      : "Manual row sorting is disabled while this view is sorted or grouped"
-                  }
-                  type="button"
-                >
-                  <GripVertical />
-                </button>
-              </div>
-            )
-          })}
-        </div>
-      ) : null}
       {rowDragOverlay ? (
         <div
           aria-hidden="true"
@@ -1062,138 +1014,206 @@ export function DatabaseTableView() {
           </span>
         </div>
       ) : null}
-      {rowDropLineTop !== null ? (
-        <div
-          className="pointer-events-none absolute left-0 right-0 z-30 h-0.5 -translate-y-px bg-primary"
-          style={{ top: rowDropLineTop }}
-        />
-      ) : null}
-      <div className="database-table-scroll">
-        {isTableGrouped ? (
-          <div className="database-table-groups">
-            {groupedSections.map((section) => {
-              const isCollapsed = collapsedGroups[section.id] === true
+      <div className="database-table-scroll database-inline-scroll">
+        <div className="database-table-scroll-content database-inline-scroll-content">
+          {editable ? (
+            <div className="database-row-drag-rail">
+              {visibleRows.map((row: any) => {
+                const rowCenter = rowLayout.centers[row.id]
 
-              return (
-                <section className="database-table-group" key={section.id}>
-                  <button
-                    aria-expanded={!isCollapsed}
-                    className="database-table-group-toggle"
-                    onClick={() => toggleGroupCollapsed(section.id)}
-                    type="button"
+                if (rowCenter === undefined) {
+                  return null
+                }
+
+                const isRowHandleVisible =
+                  hoveredRowId === row.id || draggedRowId === row.id
+
+                return (
+                  <div
+                    className="database-row-controls"
+                    data-visible={isRowHandleVisible ? "true" : undefined}
+                    key={row.id}
+                    onMouseEnter={() => {
+                      measureRows()
+                      setHoveredRowId(row.id)
+                    }}
+                    onMouseLeave={() => {
+                      if (!draggedRowId) {
+                        setHoveredRowId(null)
+                      }
+                    }}
+                    style={{ top: rowCenter }}
                   >
-                    {isCollapsed ? (
-                      <ChevronRight className="size-4 shrink-0" />
-                    ) : (
-                      <ChevronDown className="size-4 shrink-0" />
-                    )}
-                    <span className={getColorTokenBadgeClassName(section.color)}>
-                      <span
-                        aria-hidden="true"
-                        className={getColorTokenDotClassName(section.color)}
-                      />
-                      {section.name}
-                    </span>
-                    <span className="database-table-group-count">
-                      {section.rows.length}
-                    </span>
-                  </button>
-                  {!isCollapsed ? (
-                    <>
-                      <table
-                        className="database-table"
-                        style={
-                          {
-                            "--database-table-min-width": `${tableMinWidth}px`,
-                          } as CSSProperties
-                        }
-                      >
-                        <colgroup>
-                          {columnKeys.map((key) => (
-                            <col
-                              key={key}
-                              style={{ width: getColumnWidth(columnWidths, key) }}
-                            />
-                          ))}
-                        </colgroup>
-                        {renderTableHeader(section.id)}
-                        {renderTableRows(section.rows)}
-                      </table>
-                      {editable && !section.isEmpty ? (
-                        <div
-                          className="database-page-create-row"
+                    <Checkbox
+                      aria-label={`Select ${row.page.name.trim() || "Untitled"}`}
+                      checked={selectedRowIds.has(row.id)}
+                      className="database-row-checkbox"
+                      onCheckedChange={(checked) =>
+                        toggleSelectedRow(row.id, checked === true)
+                      }
+                    />
+                    <button
+                      aria-label={`Drag ${row.page.name.trim() || "Untitled"}`}
+                      className="database-row-drag-handle"
+                      data-database-row-drag-handle
+                      data-dragging={
+                        draggedRowId === row.id ? "true" : undefined
+                      }
+                      disabled={!canReorderRows}
+                      draggable={canReorderRows}
+                      onClick={(event) => event.preventDefault()}
+                      onDragEnd={clearRowDrag}
+                      onDragStart={(event) => startRowDrag(row, event)}
+                      title={
+                        canReorderRows
+                          ? "Drag page"
+                          : "Manual row sorting is disabled while this view is sorted or grouped"
+                      }
+                      type="button"
+                    >
+                      <GripVertical />
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          ) : null}
+          {rowDropLineTop !== null ? (
+            <div
+              className="database-row-drop-line"
+              style={{ top: rowDropLineTop }}
+            />
+          ) : null}
+          {isTableGrouped ? (
+            <div className="database-table-groups">
+              {groupedSections.map((section) => {
+                const isCollapsed = collapsedGroups[section.id] === true
+
+                return (
+                  <section className="database-table-group" key={section.id}>
+                    <button
+                      aria-expanded={!isCollapsed}
+                      className="database-table-group-toggle"
+                      onClick={() => toggleGroupCollapsed(section.id)}
+                      type="button"
+                    >
+                      {isCollapsed ? (
+                        <ChevronRight className="size-4 shrink-0" />
+                      ) : (
+                        <ChevronDown className="size-4 shrink-0" />
+                      )}
+                      <span className={getColorTokenBadgeClassName(section.color)}>
+                        <span
+                          aria-hidden="true"
+                          className={getColorTokenDotClassName(section.color)}
+                        />
+                        {section.name}
+                      </span>
+                      <span className="database-table-group-count">
+                        {section.rows.length}
+                      </span>
+                    </button>
+                    {!isCollapsed ? (
+                      <>
+                        <table
+                          className="database-table"
                           style={
                             {
                               "--database-table-min-width": `${tableMinWidth}px`,
                             } as CSSProperties
                           }
                         >
-                          <button
-                            className="database-page-create database-page-create-full"
-                            disabled={!databaseId || isAddingDatabaseRow}
-                            onClick={() =>
-                              addDatabaseRow(section.groupValue, groupProperty)
+                          <colgroup>
+                            {columnKeys.map((key) => (
+                              <col
+                                key={key}
+                                style={{ width: getColumnWidth(columnWidths, key) }}
+                              />
+                            ))}
+                          </colgroup>
+                          {renderTableHeader(section.id)}
+                          {renderTableRows(section.rows)}
+                        </table>
+                        {editable && !section.isEmpty ? (
+                          <div
+                            className="database-page-create-row"
+                            style={
+                              {
+                                "--database-table-min-width": `${tableMinWidth}px`,
+                              } as CSSProperties
                             }
-                            type="button"
                           >
-                            {isAddingDatabaseRow ? (
-                              <Loader2 className="animate-spin" />
-                            ) : (
-                              <Plus />
-                            )}
-                            <span>New page</span>
-                          </button>
-                        </div>
-                      ) : null}
-                    </>
-                  ) : null}
-                </section>
-              )
-            })}
-          </div>
-        ) : (
-          <>
-            <table
-              className="database-table"
+                            <button
+                              className="database-page-create database-page-create-full"
+                              disabled={!databaseId || isAddingDatabaseRow}
+                              onClick={() =>
+                                addDatabaseRow(section.groupValue, groupProperty)
+                              }
+                              type="button"
+                            >
+                              {isAddingDatabaseRow ? (
+                                <Loader2 className="animate-spin" />
+                              ) : (
+                                <Plus />
+                              )}
+                              <span>New page</span>
+                            </button>
+                          </div>
+                        ) : null}
+                      </>
+                    ) : null}
+                  </section>
+                )
+              })}
+            </div>
+          ) : (
+            <>
+              <table
+                className="database-table"
+                style={
+                  {
+                    "--database-table-min-width": `${tableMinWidth}px`,
+                  } as CSSProperties
+                }
+              >
+                <colgroup>
+                  {columnKeys.map((key) => (
+                    <col
+                      key={key}
+                      style={{ width: getColumnWidth(columnWidths, key) }}
+                    />
+                  ))}
+                </colgroup>
+                {renderTableHeader()}
+                {renderTableRows(sortedRows)}
+              </table>
+            </>
+          )}
+          {editable && !isTableGrouped ? (
+            <div
+              className="database-page-create-row"
               style={
                 {
                   "--database-table-min-width": `${tableMinWidth}px`,
                 } as CSSProperties
               }
             >
-              <colgroup>
-                {columnKeys.map((key) => (
-                  <col
-                    key={key}
-                    style={{ width: getColumnWidth(columnWidths, key) }}
-                  />
-                ))}
-              </colgroup>
-              {renderTableHeader()}
-              {renderTableRows(sortedRows)}
-            </table>
-          </>
-        )}
-        {editable && !isTableGrouped ? (
-          <div
-            className="database-page-create-row"
-            style={
-              {
-                "--database-table-min-width": `${tableMinWidth}px`,
-              } as CSSProperties
-            }
-          >
-            <button
-              className="database-page-create database-page-create-full"
-              disabled={!databaseId || isAddingDatabaseRow}
-              onClick={() => addDatabaseRow()}
-              type="button"
-            >
-              {isAddingDatabaseRow ? <Loader2 className="animate-spin" /> : <Plus />}
-              <span>New page</span>
-            </button>
-          </div>
-        ) : null}
+              <button
+                className="database-page-create database-page-create-full"
+                disabled={!databaseId || isAddingDatabaseRow}
+                onClick={() => addDatabaseRow()}
+                type="button"
+              >
+                {isAddingDatabaseRow ? (
+                  <Loader2 className="animate-spin" />
+                ) : (
+                  <Plus />
+                )}
+                <span>New page</span>
+              </button>
+            </div>
+          ) : null}
+        </div>
       </div>
     </div>
   )
