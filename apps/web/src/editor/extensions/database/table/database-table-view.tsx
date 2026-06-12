@@ -17,7 +17,18 @@ import {
   Loader2,
   Plus,
 } from "lucide-react"
+import { toast } from "sonner"
 import { useReorderDatabaseRows } from "@notelab/features/databases"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
 import {
@@ -59,6 +70,10 @@ type PendingInsertProperty = {
   position: number
   side: InsertPropertySide
   sourceColumnKey: string
+}
+
+type PendingSortedRowReorder = {
+  rowIds: string[]
 }
 
 type GroupSection = {
@@ -184,6 +199,33 @@ function getRowGroupValue(row: any, groupProperty: any, propertyValuesByKey: any
   return getRawGroupValue(value)
 }
 
+function getReorderedRowIds(
+  sourceRows: Array<{ id: string }>,
+  draggedRowId: string,
+  targetIndex: number
+) {
+  const sourceIndex = sourceRows.findIndex((row) => row.id === draggedRowId)
+
+  if (sourceIndex === -1) {
+    return null
+  }
+
+  const nextRows = [...sourceRows]
+  const [draggedRow] = nextRows.splice(sourceIndex, 1)
+  const nextTargetIndex = Math.min(
+    nextRows.length,
+    Math.max(0, targetIndex > sourceIndex ? targetIndex - 1 : targetIndex)
+  )
+
+  nextRows.splice(nextTargetIndex, 0, draggedRow)
+
+  const rowIds = nextRows.map((row) => row.id)
+
+  return rowIds.every((rowId, index) => rowId === sourceRows[index]?.id)
+    ? null
+    : rowIds
+}
+
 export function DatabaseTableView() {
   const {
     activeConditionalColors,
@@ -210,6 +252,7 @@ export function DatabaseTableView() {
     properties,
     items: rows,
     savePropertyValue,
+    saveDatabaseSorts,
     setActivePropertyValueKey,
     setDraftPropertyValues,
     setViewGroupProperty,
@@ -234,6 +277,8 @@ export function DatabaseTableView() {
   )
   const [pendingInsertProperty, setPendingInsertProperty] =
     useState<PendingInsertProperty | null>(null)
+  const [pendingSortedRowReorder, setPendingSortedRowReorder] =
+    useState<PendingSortedRowReorder | null>(null)
   const [editingPropertyKey, setEditingPropertyKey] = useState<string | null>(
     null
   )
@@ -257,8 +302,7 @@ export function DatabaseTableView() {
     [personOptions]
   )
   const activeInsertProperty = pendingInsertProperty
-  const canReorderRows =
-    editable && !isTableFiltered && !isTableSorted && !isTableGrouped
+  const canReorderRows = editable && !isTableFiltered && !isTableGrouped
   const pendingInsertPropertyKey = activeInsertProperty
     ? `insert-property-${activeInsertProperty.sourceColumnKey}-${activeInsertProperty.side}`
     : null
@@ -448,39 +492,46 @@ export function DatabaseTableView() {
 
     return targetIndex === -1 ? rowElements.length : targetIndex
   }
-  const moveDraggedRow = () => {
-    if (
-      !databaseId ||
-      !draggedRowId ||
-      rowDropTargetIndex === null ||
-      isTableSorted ||
-      isTableGrouped
-    ) {
+  const reorderDraggedRow = (
+    sourceRows: Array<{ id: string }>,
+    rowId: string,
+    targetIndex: number
+  ) => {
+    if (!databaseId) {
       return
     }
 
-    const sourceIndex = rows.findIndex((row: any) => row.id === draggedRowId)
+    const rowIds = getReorderedRowIds(sourceRows, rowId, targetIndex)
 
-    if (sourceIndex === -1) {
-      return
-    }
-
-    const nextRows = [...rows]
-    const [draggedRow] = nextRows.splice(sourceIndex, 1)
-    const nextTargetIndex =
-      rowDropTargetIndex > sourceIndex
-        ? rowDropTargetIndex - 1
-        : rowDropTargetIndex
-
-    nextRows.splice(nextTargetIndex, 0, draggedRow)
-
-    const rowIds = nextRows.map((row: any) => row.id)
-
-    if (rowIds.every((rowId: string, index: number) => rowId === rows[index]?.id)) {
+    if (!rowIds) {
       return
     }
 
     reorderRows.mutate({ databaseId, rowIds })
+  }
+  const moveDraggedRow = () => {
+    if (!draggedRowId || rowDropTargetIndex === null || isTableGrouped) {
+      return
+    }
+
+    reorderDraggedRow(rows, draggedRowId, rowDropTargetIndex)
+  }
+  const confirmSortedRowReorder = () => {
+    if (!databaseId || !pendingSortedRowReorder) {
+      setPendingSortedRowReorder(null)
+      return
+    }
+
+    const { rowIds } = pendingSortedRowReorder
+
+    setPendingSortedRowReorder(null)
+    void saveDatabaseSorts([])
+      .then(() => {
+        reorderRows.mutate({ databaseId, rowIds })
+      })
+      .catch(() => {
+        toast.error("Couldn't clear sort")
+      })
   }
   const clearRowDrag = () => {
     setDraggedRowId(null)
@@ -993,74 +1044,87 @@ export function DatabaseTableView() {
   )
 
   return (
-    <div
-      className="database-table-wrap database-inline-scroll-wrap"
-      data-inline-scroll={isInlineTableScrollEnabled ? "true" : undefined}
-      ref={tableWrapRef}
-      style={tableWrapStyle}
-      onMouseLeave={() => {
-        if (!draggedRowId) {
-          setHoveredRowId(null)
-        }
-      }}
-      onDragLeave={(event) => {
-        if (
-          !event.currentTarget.contains(
-            event.relatedTarget as globalThis.Node | null
-          )
-        ) {
-          setRowDropTargetIndex(null)
-        }
-      }}
-      onDragOver={(event: ReactDragEvent<HTMLDivElement>) => {
-        if (isTableGrouped) {
-          return
-        }
+    <>
+      <div
+        className="database-table-wrap database-inline-scroll-wrap"
+        data-inline-scroll={isInlineTableScrollEnabled ? "true" : undefined}
+        ref={tableWrapRef}
+        style={tableWrapStyle}
+        onMouseLeave={() => {
+          if (!draggedRowId) {
+            setHoveredRowId(null)
+          }
+        }}
+        onDragLeave={(event) => {
+          if (
+            !event.currentTarget.contains(
+              event.relatedTarget as globalThis.Node | null
+            )
+          ) {
+            setRowDropTargetIndex(null)
+          }
+        }}
+        onDragOver={(event: ReactDragEvent<HTMLDivElement>) => {
+          if (isTableGrouped) {
+            return
+          }
 
-        const hasDragPayload = hasDatabasePageDragPayload(event.dataTransfer)
+          const hasDragPayload = hasDatabasePageDragPayload(event.dataTransfer)
 
-        if (!draggedRowId && !hasDragPayload) {
-          return
-        }
+          if (!draggedRowId && !hasDragPayload) {
+            return
+          }
 
-        event.preventDefault()
-        event.stopPropagation()
-        event.dataTransfer.dropEffect = "move"
-        if (draggedRowId) {
-          setRowDragOverlay((overlay: any) =>
-            overlay
-              ? {
-                  ...overlay,
-                  left: event.clientX - overlay.offsetX,
-                  top: event.clientY - overlay.offsetY,
-                }
-              : overlay
-          )
-        }
-        measureRows()
-        setRowDropTargetIndex(getRowDropTargetIndex(event.clientY))
-      }}
-      onDrop={(event) => {
-        if (isTableGrouped) {
-          return
-        }
+          event.preventDefault()
+          event.stopPropagation()
+          event.dataTransfer.dropEffect = "move"
+          if (draggedRowId) {
+            setRowDragOverlay((overlay: any) =>
+              overlay
+                ? {
+                    ...overlay,
+                    left: event.clientX - overlay.offsetX,
+                    top: event.clientY - overlay.offsetY,
+                  }
+                : overlay
+            )
+          }
+          measureRows()
+          setRowDropTargetIndex(getRowDropTargetIndex(event.clientY))
+        }}
+        onDrop={(event) => {
+          if (isTableGrouped) {
+            return
+          }
 
-        const dragPayload = getDatabasePageDragPayload(event.dataTransfer)
+          const dragPayload = getDatabasePageDragPayload(event.dataTransfer)
 
-        if ((!draggedRowId && !dragPayload) || rowDropTargetIndex === null) {
-          return
-        }
+          if ((!draggedRowId && !dragPayload) || rowDropTargetIndex === null) {
+            return
+          }
 
-        event.preventDefault()
-        event.stopPropagation()
-        if (draggedRowId) {
-          moveDraggedRow()
-        } else if (dragPayload) {
-          addDraggedPageRow(dragPayload, rowDropTargetIndex)
-        }
-        clearRowDrag()
-      }}
-    >
+          event.preventDefault()
+          event.stopPropagation()
+          if (draggedRowId) {
+            if (isTableSorted) {
+              const rowIds = getReorderedRowIds(
+                sortedRows,
+                draggedRowId,
+                rowDropTargetIndex
+              )
+
+              if (rowIds) {
+                setPendingSortedRowReorder({ rowIds })
+              }
+            } else {
+              moveDraggedRow()
+            }
+          } else if (dragPayload) {
+            addDraggedPageRow(dragPayload, rowDropTargetIndex)
+          }
+          clearRowDrag()
+        }}
+      >
       {rowDragOverlay ? (
         <div
           aria-hidden="true"
@@ -1130,8 +1194,10 @@ export function DatabaseTableView() {
                       onDragStart={(event) => startRowDrag(row, event)}
                       title={
                         canReorderRows
-                          ? "Drag page"
-                          : "Manual row sorting is disabled while this view is sorted or grouped"
+                          ? isTableSorted
+                            ? "Drag page. Clear sorting to save the new order."
+                            : "Drag page"
+                          : "Manual row sorting is disabled while this view is filtered or grouped"
                       }
                       type="button"
                     >
@@ -1279,6 +1345,31 @@ export function DatabaseTableView() {
           ) : null}
         </div>
       </div>
-    </div>
+      </div>
+      <AlertDialog
+        open={pendingSortedRowReorder !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingSortedRowReorder(null)
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear sorting to reorder?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Row order is manual. To save this move, Notelab needs to clear the
+              active sorting first.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmSortedRowReorder}>
+              Clear sorting
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }

@@ -94,10 +94,10 @@ export function getDatabaseViewCommands({
 
   const saveDatabaseSorts = (nextSorts: DatabaseSortConfig[]) => {
     if (!databaseId || !activeView?.id) {
-      return
+      return Promise.resolve()
     }
 
-    updateDatabaseView.mutate({
+    return updateDatabaseView.mutateAsync({
       config: getMergedDatabaseConfig(activeView.config, {
         sort: undefined,
         sorts: nextSorts.length > 0 ? nextSorts : undefined,

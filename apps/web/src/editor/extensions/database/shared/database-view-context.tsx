@@ -115,7 +115,7 @@ export type DatabaseViewContextValue = {
     nextConditionalColors: DatabaseConditionalColorConfig[]
   ) => void
   saveDatabaseFilters: (nextFilters: DatabasePropertyFilterConfig[]) => void
-  saveDatabaseSorts: (nextSorts: DatabaseSortConfig[]) => void
+  saveDatabaseSorts: (nextSorts: DatabaseSortConfig[]) => Promise<unknown>
   savePropertyValue: (
     rowId: string,
     propertyId: string,
