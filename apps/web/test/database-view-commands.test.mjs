@@ -195,6 +195,90 @@ export function register({ assert, loadModule, test }) {
     ])
   })
 
+  test("database view commands reorder filter config", async () => {
+    const { getDatabaseViewCommands } = await loadModule(
+      "/src/editor/extensions/database/shared/database-view-commands.ts"
+    )
+    const updateDatabaseView = createMutation()
+    const commands = getDatabaseViewCommands({
+      activeDatabaseFilters: [
+        {
+          id: "filter-a",
+          operator: "contains",
+          propertyId: "name",
+          values: ["alpha"],
+        },
+        {
+          id: "filter-b",
+          operator: "contains",
+          propertyId: "name",
+          values: ["beta"],
+        },
+        {
+          id: "filter-c",
+          operator: "contains",
+          propertyId: "name",
+          values: ["charlie"],
+        },
+      ],
+      activeDatabaseSorts: [],
+      activeView: {
+        config: { emoji: "pin" },
+        id: "view-1",
+        name: "Table",
+        type: "table",
+      },
+      databaseId,
+      editable: true,
+      isKanbanView: false,
+      items: [],
+      kanbanGroupProperty: null,
+      mutations: createMutations({ updateDatabaseView }),
+      payload: createPayload(),
+      properties: [],
+      setActiveViewId: () => {},
+      setFilterPickerOpen: () => {},
+      setShowFilterPill: () => {},
+      setShowSortPill: () => {},
+      setSortPickerOpen: () => {},
+    })
+
+    commands.reorderDatabaseFilters(["filter-c", "filter-a"])
+
+    assert.deepEqual(updateDatabaseView.calls, [
+      [
+        {
+          config: {
+            emoji: "pin",
+            filter: undefined,
+            filters: [
+              {
+                id: "filter-c",
+                operator: "contains",
+                propertyId: "name",
+                values: ["charlie"],
+              },
+              {
+                id: "filter-a",
+                operator: "contains",
+                propertyId: "name",
+                values: ["alpha"],
+              },
+              {
+                id: "filter-b",
+                operator: "contains",
+                propertyId: "name",
+                values: ["beta"],
+              },
+            ],
+          },
+          databaseId,
+          databaseViewId: "view-1",
+        },
+      ],
+    ])
+  })
+
   test("database view commands toggle property visibility from table defaults", async () => {
     const { getDatabaseViewCommands } = await loadModule(
       "/src/editor/extensions/database/shared/database-view-commands.ts"
