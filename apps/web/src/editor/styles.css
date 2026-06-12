@@ -530,7 +530,11 @@
   }
 
   .database-kanban-column {
-    @apply flex w-72 shrink-0 flex-col rounded-md bg-muted/35;
+    @apply flex w-72 shrink-0 flex-col rounded-md bg-muted/35 transition-colors;
+  }
+
+  .database-kanban-column[data-drag-over="true"] {
+    @apply bg-muted/70 ring-2 ring-primary/30;
   }
 
   .database-kanban-new-column {
@@ -570,7 +574,33 @@
   }
 
   .database-kanban-card {
-    @apply overflow-hidden rounded-md border bg-background shadow-xs;
+    @apply overflow-hidden rounded-md border bg-background shadow-xs transition-opacity;
+  }
+
+  .database-kanban-card[data-dragging="true"] {
+    @apply opacity-50;
+  }
+
+  .database-kanban-card-title {
+    @apply relative;
+  }
+
+  .database-kanban-card-title[data-can-drag="true"] .database-page-link {
+    @apply pl-9;
+  }
+
+  .database-kanban-card-drag-handle {
+    @apply absolute left-2 top-1/2 z-30 hidden size-6 -translate-y-1/2 cursor-grab items-center justify-center rounded-sm bg-background/90 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:cursor-grabbing focus-visible:flex focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none;
+  }
+
+  .database-kanban-card:hover .database-kanban-card-drag-handle,
+  .database-kanban-card:focus-within .database-kanban-card-drag-handle,
+  .database-kanban-card-drag-handle:active {
+    @apply flex;
+  }
+
+  .database-kanban-card-drag-handle svg {
+    @apply size-4;
   }
 
   .database-kanban-card .database-page-link {
@@ -1012,10 +1042,22 @@
     @apply min-w-0 truncate font-medium;
   }
 
+  .database-page-title-button {
+    @apply block max-w-full cursor-text rounded-sm bg-transparent p-0 text-left text-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40;
+  }
+
+  .database-page-title-input {
+    @apply h-6 min-w-0 flex-1 rounded-sm border border-border bg-background px-1 text-sm font-medium leading-5 text-foreground shadow-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30;
+  }
+
   .database-page-open {
     @apply absolute right-2 top-1/2 z-20 hidden h-6 -translate-y-1/2 items-center gap-1.5 rounded-md border bg-background/90 px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none;
   }
 
+  .database-page-link:hover .database-page-open,
+  .database-page-link:focus-within .database-page-open,
+  .database-kanban-card:hover .database-page-open,
+  .database-kanban-card:focus-within .database-page-open,
   .database-page-cell:hover .database-page-open,
   .database-page-cell:focus-within .database-page-open {
     @apply flex;

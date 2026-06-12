@@ -927,6 +927,7 @@ export function DatabaseTableView() {
             >
               <DatabaseTableCellContent wrapContent={nameColumnWrapContent}>
                 <DatabasePageLink
+                  editable={editable}
                   onOpen={onOpenPage}
                   pageId={row.pageId}
                   showPageIcon={nameColumnShowPageIcon}

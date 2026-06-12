@@ -3,8 +3,9 @@ import {
   useMemo,
   useRef,
   useState,
+  type DragEvent as ReactDragEvent,
 } from "react"
-import { Loader2, Plus } from "lucide-react"
+import { GripVertical, Loader2, Plus } from "lucide-react"
 import { toast } from "sonner"
 import {
   cyclingColorTokens,
@@ -12,7 +13,10 @@ import {
   getColorTokenDotClassName,
 } from "@/packages/editor/components/editor/toolbar-data"
 
-import { defaultStatusOptions } from "../constants"
+import {
+  DATABASE_PAGE_DRAG_MIME,
+  defaultStatusOptions,
+} from "../constants"
 import { DatabasePropertyInput } from "../database-property-input"
 import { DatabasePageLink } from "../shared/database-page-link"
 import { DatabasePropertyValue } from "../shared/database-property-value"
@@ -35,6 +39,7 @@ type DatabaseRow = {
   id: string
   page: {
     createdAt?: string
+    name?: string
     updatedAt?: string
   }
   pageId: string
@@ -42,6 +47,12 @@ type DatabaseRow = {
 }
 
 type SelectOptionSortValue = "manual" | "alphabetical" | "reverse_alphabetical"
+
+type DraggedKanbanCard = {
+  pageId: string
+  rowId: string
+  sourceGroupValue: string
+}
 
 function getKanbanBoardContentWidth(boardElement: HTMLDivElement) {
   const columns = Array.from(
@@ -117,6 +128,74 @@ function getKanbanGroupValues(
     : []
 }
 
+function getKanbanOptionGroupValue(option: DatabaseSelectOption) {
+  return option.id === "empty" ? "" : option.name
+}
+
+function isInteractiveKanbanDragTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) {
+    return false
+  }
+
+  if (target.closest(".database-kanban-card-drag-handle")) {
+    return false
+  }
+
+  return Boolean(
+    target.closest(
+      [
+        "a",
+        "button",
+        "input",
+        "select",
+        "textarea",
+        "[contenteditable='true']",
+        "[data-database-cell-input]",
+        ".database-checkbox-cell",
+        ".database-date-cell-trigger",
+        ".database-input-cell-trigger",
+        ".database-select-cell-trigger",
+      ].join(",")
+    )
+  )
+}
+
+function getKanbanMoveValue({
+  currentValue,
+  propertyType,
+  sourceGroupValue,
+  targetGroupValue,
+}: {
+  currentValue: DatabaseCellValue
+  propertyType: string
+  sourceGroupValue: string
+  targetGroupValue: string
+}): DatabaseCellValue {
+  if (sourceGroupValue === targetGroupValue) {
+    return currentValue
+  }
+
+  if (propertyType !== "multi_select") {
+    return targetGroupValue
+  }
+
+  if (!targetGroupValue) {
+    return []
+  }
+
+  const currentValues = getKanbanGroupValues(currentValue, propertyType)
+  const nextValues =
+    sourceGroupValue && currentValues.includes(sourceGroupValue)
+      ? currentValues.map((value) =>
+          value === sourceGroupValue ? targetGroupValue : value
+        )
+      : [...currentValues, targetGroupValue]
+
+  return nextValues.filter(
+    (value, index, values) => values.indexOf(value) === index
+  )
+}
+
 export function DatabaseKanbanView() {
   const {
     propertyValuesByKey,
@@ -142,6 +221,10 @@ export function DatabaseKanbanView() {
   const boardRef = useRef<HTMLDivElement | null>(null)
   const [newKanbanOptionName, setNewKanbanOptionName] = useState("")
   const [isCreatingKanbanOption, setIsCreatingKanbanOption] = useState(false)
+  const [draggedKanbanCard, setDraggedKanbanCard] =
+    useState<DraggedKanbanCard | null>(null)
+  const [dragOverKanbanOptionId, setDragOverKanbanOptionId] =
+    useState<string | null>(null)
   const kanbanOptions = useMemo(() => {
     if (!groupProperty) {
       return []
@@ -231,6 +314,111 @@ export function DatabaseKanbanView() {
 
   const onPropertyConfigChange = (databasePropertyId: string, config: unknown) =>
     updateDatabasePropertyConfig(databasePropertyId, config)
+  const getKanbanOptionItems = useCallback(
+    (option: DatabaseSelectOption) => {
+      if (!groupProperty) {
+        return []
+      }
+
+      const isEmptyOption = option.id === "empty"
+
+      return items.filter((item: DatabaseRow) => {
+        const key = `${item.pageId}:${groupProperty.property.id}`
+        const value = propertyValuesByKey[key] ?? ""
+        const groupValues = getKanbanGroupValues(
+          value,
+          groupProperty.property.type
+        )
+
+        return isEmptyOption
+          ? groupValues.length === 0
+          : groupValues.includes(option.name)
+      })
+    },
+    [groupProperty, items, propertyValuesByKey]
+  )
+  const clearKanbanCardDrag = () => {
+    setDraggedKanbanCard(null)
+    setDragOverKanbanOptionId(null)
+  }
+  const startKanbanCardDrag = (
+    row: DatabaseRow,
+    option: DatabaseSelectOption,
+    event: ReactDragEvent<HTMLElement>
+  ) => {
+    if (!editable || !databaseId || !groupProperty) {
+      event.preventDefault()
+      return
+    }
+
+    if (isInteractiveKanbanDragTarget(event.target)) {
+      event.preventDefault()
+      return
+    }
+
+    const title = row.page.name?.trim() || "Untitled"
+    const payload = {
+      pageId: row.pageId,
+      rowId: row.id,
+      sourceGroupValue: getKanbanOptionGroupValue(option),
+    }
+
+    event.stopPropagation()
+    event.dataTransfer.effectAllowed = "copyMove"
+    event.dataTransfer.setData(
+      DATABASE_PAGE_DRAG_MIME,
+      JSON.stringify({
+        databaseId,
+        pageId: row.pageId,
+        rowId: row.id,
+        title,
+      })
+    )
+    event.dataTransfer.setData("text/plain", title)
+    setDraggedKanbanCard(payload)
+    setDragOverKanbanOptionId(option.id)
+  }
+  const handleKanbanColumnDragOver = (
+    option: DatabaseSelectOption,
+    event: ReactDragEvent<HTMLElement>
+  ) => {
+    if (!editable || !groupProperty || !draggedKanbanCard) {
+      return
+    }
+
+    event.preventDefault()
+    event.stopPropagation()
+    event.dataTransfer.dropEffect = "move"
+    setDragOverKanbanOptionId(option.id)
+  }
+  const handleKanbanColumnDrop = (
+    option: DatabaseSelectOption,
+    event: ReactDragEvent<HTMLElement>
+  ) => {
+    if (!editable || !databaseId || !groupProperty || !draggedKanbanCard) {
+      return
+    }
+
+    event.preventDefault()
+    event.stopPropagation()
+
+    const key = `${draggedKanbanCard.pageId}:${groupProperty.property.id}`
+    const currentValue = propertyValuesByKey[key] ?? ""
+    const nextValue = getKanbanMoveValue({
+      currentValue,
+      propertyType: groupProperty.property.type,
+      sourceGroupValue: draggedKanbanCard.sourceGroupValue,
+      targetGroupValue: getKanbanOptionGroupValue(option),
+    })
+    savePropertyValue(
+      draggedKanbanCard.rowId,
+      groupProperty.property.id,
+      groupProperty.property.type,
+      currentValue,
+      nextValue
+    )
+    clearKanbanCardDrag()
+  }
   const renderCardProperty = (
     row: DatabaseRow,
     property: DatabasePropertyListItem,
@@ -281,21 +469,31 @@ export function DatabaseKanbanView() {
             <div className="database-kanban-board" ref={boardRef}>
               {kanbanOptions.map((option) => {
                 const isEmptyOption = option.id === "empty"
-                const optionItems = items.filter((item: DatabaseRow) => {
-                  const key = `${item.pageId}:${groupProperty.property.id}`
-                  const value = propertyValuesByKey[key] ?? ""
-                  const groupValues = getKanbanGroupValues(
-                    value,
-                    groupProperty.property.type
-                  )
-
-                  return isEmptyOption
-                    ? groupValues.length === 0
-                    : groupValues.includes(option.name)
-                })
+                const optionItems = getKanbanOptionItems(option)
 
                 return (
-                  <section className="database-kanban-column" key={option.id}>
+                  <section
+                    className="database-kanban-column"
+                    data-drag-over={
+                      dragOverKanbanOptionId === option.id
+                        ? "true"
+                        : undefined
+                    }
+                    key={option.id}
+                    onDragLeave={(event) => {
+                      if (
+                        !event.currentTarget.contains(
+                          event.relatedTarget as globalThis.Node | null
+                        )
+                      ) {
+                        setDragOverKanbanOptionId(null)
+                      }
+                    }}
+                    onDragOver={(event) =>
+                      handleKanbanColumnDragOver(option, event)
+                    }
+                    onDrop={(event) => handleKanbanColumnDrop(option, event)}
+                  >
                     <div className="database-kanban-column-header">
                       <span className={getColorTokenBadgeClassName(option.color)}>
                         <span
@@ -310,12 +508,53 @@ export function DatabaseKanbanView() {
                     </div>
                     <div className="database-kanban-cards">
                       {optionItems.map((item: DatabaseRow) => (
-                        <article className="database-kanban-card" key={item.id}>
-                          <DatabasePageLink
-                            onOpen={onOpenPage}
-                            pageId={item.pageId}
-                            showPageIcon={showPageIconInTitle}
-                          />
+                        <article
+                          className="database-kanban-card"
+                          data-dragging={
+                            draggedKanbanCard?.rowId === item.id
+                              ? "true"
+                              : undefined
+                          }
+                          draggable={editable}
+                          key={item.id}
+                          onDragEnd={clearKanbanCardDrag}
+                          onDragStart={(event) =>
+                            startKanbanCardDrag(item, option, event)
+                          }
+                        >
+                          <div
+                            className="database-kanban-card-title"
+                            data-can-drag={editable ? "true" : undefined}
+                          >
+                            {editable ? (
+                              <button
+                                aria-label="Drag page"
+                                className="database-kanban-card-drag-handle"
+                                draggable
+                                onClick={(event) => {
+                                  event.preventDefault()
+                                  event.stopPropagation()
+                                }}
+                                onDragEnd={clearKanbanCardDrag}
+                                onDragStart={(event) =>
+                                  startKanbanCardDrag(item, option, event)
+                                }
+                                onPointerDown={(event) =>
+                                  event.stopPropagation()
+                                }
+                                title="Drag page"
+                                type="button"
+                              >
+                                <GripVertical />
+                              </button>
+                            ) : null}
+                            <DatabasePageLink
+                              editable={editable}
+                              onOpen={onOpenPage}
+                              pageId={item.pageId}
+                              showPageIcon={showPageIconInTitle}
+                            />
+                          </div>
                           {visibleProperties.length > 0 ? (
                             <div className="database-kanban-card-properties">
                               {visibleProperties.map(
