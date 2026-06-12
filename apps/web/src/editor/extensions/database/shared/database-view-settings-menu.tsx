@@ -22,7 +22,7 @@ import {
   Trash2,
   X,
 } from "lucide-react"
-import { Reorder, useDragControls } from "framer-motion"
+import { Reorder } from "framer-motion"
 import { useMemo, useState, type ReactNode } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -57,7 +57,6 @@ import {
   getPropertyHiddenForView,
   getDatabaseFilterOperatorsForType,
   type DatabaseConditionalColorConfig,
-  type DatabasePropertyFilterOperator,
 } from "./database-view-config"
 import { DatabasePropertyEditSubmenu } from "./database-property-menu"
 import { hasDatabasePropertyEditSettings } from "./database-property-edit-submenu"
@@ -69,9 +68,8 @@ import {
   DatabaseFilterSubmenu,
   type DatabaseActiveFilter,
   type DatabaseFilterUpdatePatch,
-  DatabaseFilterValueControl,
-  getNextFilterValuesForOperator,
 } from "./database-filter-menu"
+import { DatabaseConditionEditor } from "./database-condition-editor"
 import {
   DatabaseSortSubmenu,
   type DatabaseActiveSort,
@@ -303,7 +301,6 @@ function ConditionalColorPropertyPicker({
 function ConditionalColorRuleItem({
   filterFieldOptions,
   filterValueOptionsByField,
-  index,
   isDragging,
   properties,
   setting,
@@ -315,7 +312,6 @@ function ConditionalColorRuleItem({
 }: {
   filterFieldOptions: DatabaseSearchableMenuOption[]
   filterValueOptionsByField: Record<string, DatabaseSearchableMenuOption[]>
-  index: number
   isDragging: boolean
   properties: DatabaseViewProperty[]
   setting: DatabaseActiveConditionalColor
@@ -325,9 +321,7 @@ function ConditionalColorRuleItem({
   onUpdateFilter: (patch: DatabaseFilterUpdatePatch) => void
   onUpdateSetting: (patch: Partial<DatabaseConditionalColorConfig>) => void
 }) {
-  const dragControls = useDragControls()
   const filter = setting.filter
-  const operatorOptions = getDatabaseFilterOperatorsForType(filter.propertyType)
   const color = getColorToken(setting.color)
   const applyTarget =
     conditionalColorApplyTargetOptions.find(
@@ -335,151 +329,90 @@ function ConditionalColorRuleItem({
     ) ?? conditionalColorApplyTargetOptions[0]
 
   return (
-    <Reorder.Item
-      as="div"
-      className={cn(
-        "rounded-md bg-muted/35 p-2 transition-colors",
-        isDragging && "relative z-10 bg-popover shadow-lg ring-1 ring-ring/50"
-      )}
-      dragControls={dragControls}
-      dragListener={false}
-      value={setting.id}
-      whileDrag={{ scale: 0.995 }}
-      onDragEnd={onDragEnd}
-      onDragStart={onDragStart}
-    >
-      <div className="mb-2 flex items-start gap-1.5">
-        <button
-          aria-label="Drag conditional color setting"
-          className="mt-2 inline-flex size-5 shrink-0 cursor-grab touch-none items-center justify-center text-muted-foreground active:cursor-grabbing"
-          onPointerDown={(event) => {
-            event.preventDefault()
-            event.stopPropagation()
-            dragControls.start(event)
-          }}
-          type="button"
-        >
-          <GripVertical className="size-4" />
-        </button>
-        <div className="grid min-w-0 flex-1 gap-2">
-          <Select
-            onValueChange={(field) => {
-              if (field === filter.propertyId) {
-                return
-              }
-
-              const propertyType = getFilterPropertyType(field, properties)
-
-              onUpdateFilter({
-                operator:
-                  getDatabaseFilterOperatorsForType(propertyType)[0]?.value ??
-                  "is",
-                propertyId: field,
-                values: [],
-              })
-            }}
-            value={filter.propertyId}
-          >
-            <SelectTrigger className="h-8 w-full text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent align="start">
-              {filterFieldOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select
-            onValueChange={(operator) => {
-              const nextOperator = operator as DatabasePropertyFilterOperator
-
-              onUpdateFilter({
-                operator: nextOperator,
-                values: getNextFilterValuesForOperator(filter, nextOperator),
-              })
-            }}
-            value={filter.operator}
-          >
-            <SelectTrigger className="h-8 w-full text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent align="start">
-              {operatorOptions.map((operator) => (
-                <SelectItem key={operator.value} value={operator.value}>
-                  {operator.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <div className="text-xs">
-            <DatabaseFilterValueControl
-              filter={filter}
-              index={index}
-              onUpdateDatabaseFilter={(_, patch) => onUpdateFilter(patch)}
-              valueOptions={filterValueOptionsByField[filter.propertyId] ?? []}
-            />
-          </div>
-        </div>
-        <button
-          aria-label="Delete conditional color setting"
-          className="mt-1 inline-flex size-7 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-background hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none"
-          onClick={onRemove}
-          type="button"
-        >
-          <Trash2 className="size-3.5" />
-        </button>
-      </div>
-      <div className="grid grid-cols-2 gap-2 pl-6">
-        <Select
-          onValueChange={(value) => onUpdateSetting({ color: value })}
-          value={setting.color}
-        >
-          <SelectTrigger className="h-8 text-xs">
-            <span
-              className={cn("size-3 rounded-sm border", color.backgroundClass)}
-            />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent align="start">
-            {cyclingColorTokens.map((option) => (
-              <SelectItem key={option.value} value={option.value ?? "default"}>
+    <DatabaseConditionEditor
+      condition={filter}
+      drag={{
+        ariaLabel: "Drag conditional color setting",
+        isDragging,
+        onDragEnd,
+        onDragStart,
+        value: setting.id,
+      }}
+      fieldOptions={filterFieldOptions}
+      footer={
+        <>
+          <div className="grid grid-cols-2 gap-2 pl-6">
+            <Select
+              onValueChange={(value) => onUpdateSetting({ color: value })}
+              value={setting.color}
+            >
+              <SelectTrigger className="h-8 text-xs">
                 <span
                   className={cn(
-                    "mr-2 inline-flex size-3 rounded-sm border align-middle",
-                    option.backgroundClass
+                    "size-3 rounded-sm border",
+                    color.backgroundClass
                   )}
                 />
-                {option.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select
-          onValueChange={(value) =>
-            onUpdateSetting({
-              applyTo: value as DatabaseConditionalColorConfig["applyTo"],
-            })
-          }
-          value={setting.applyTo}
-        >
-          <SelectTrigger className="h-8 text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent align="start">
-            {conditionalColorApplyTargetOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="mt-1.5 pl-6 text-[11px] text-muted-foreground">
-        {getConditionalColorLabel(setting.color)} - {applyTarget.label}
-      </div>
-    </Reorder.Item>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent align="start">
+                {cyclingColorTokens.map((option) => (
+                  <SelectItem
+                    key={option.value}
+                    value={option.value ?? "default"}
+                  >
+                    <span
+                      className={cn(
+                        "mr-2 inline-flex size-3 rounded-sm border align-middle",
+                        option.backgroundClass
+                      )}
+                    />
+                    {option.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              onValueChange={(value) =>
+                onUpdateSetting({
+                  applyTo: value as DatabaseConditionalColorConfig["applyTo"],
+                })
+              }
+              value={setting.applyTo}
+            >
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent align="start">
+                {conditionalColorApplyTargetOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="mt-1.5 pl-6 text-[11px] text-muted-foreground">
+            {getConditionalColorLabel(setting.color)} - {applyTarget.label}
+          </div>
+        </>
+      }
+      layout="stacked"
+      removeIcon={<Trash2 className="size-3.5" />}
+      removeLabel="Delete conditional color setting"
+      valueOptions={filterValueOptionsByField[filter.propertyId] ?? []}
+      onFieldChange={(field) => {
+        const propertyType = getFilterPropertyType(field, properties)
+
+        onUpdateFilter({
+          operator: getDatabaseFilterOperatorsForType(propertyType)[0]?.value ?? "is",
+          propertyId: field,
+          values: [],
+        })
+      }}
+      onRemove={onRemove}
+      onUpdate={onUpdateFilter}
+    />
   )
 }
 
@@ -596,11 +529,10 @@ function ConditionalColorPanel({
         values={settings.map((setting) => setting.id)}
         onReorder={reorderSettings}
       >
-        {settings.map((setting, index) => (
+        {settings.map((setting) => (
           <ConditionalColorRuleItem
             filterFieldOptions={filterFieldOptions}
             filterValueOptionsByField={filterValueOptionsByField}
-            index={index}
             isDragging={draggingSettingId === setting.id}
             key={setting.id}
             properties={properties}
@@ -664,6 +596,7 @@ export function DatabaseViewSettingsMenu({
   onDraftViewTitleChange,
   onRemoveDatabaseFilter,
   onRemoveDatabaseSort,
+  onReorderDatabaseFilters,
   onSaveDatabaseConditionalColors,
   onSaveDatabaseViewTitle,
   onSetViewGroupProperty,
@@ -703,6 +636,7 @@ export function DatabaseViewSettingsMenu({
   onDraftViewTitleChange: (title: string) => void
   onRemoveDatabaseFilter: (index: number) => void
   onRemoveDatabaseSort: (index: number) => void
+  onReorderDatabaseFilters: (filterIds: string[]) => void
   onSaveDatabaseConditionalColors: (
     settings: DatabaseConditionalColorConfig[]
   ) => void
@@ -881,6 +815,7 @@ export function DatabaseViewSettingsMenu({
           onClearDatabaseFilter={onClearDatabaseFilter}
           onCreateDatabaseFilter={onCreateDatabaseFilter}
           onRemoveDatabaseFilter={onRemoveDatabaseFilter}
+          onReorderDatabaseFilters={onReorderDatabaseFilters}
           onUpdateDatabaseFilter={onUpdateDatabaseFilter}
         >
           <ViewSettingsRow
