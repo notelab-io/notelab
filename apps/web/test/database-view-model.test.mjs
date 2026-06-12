@@ -74,7 +74,7 @@ export function register({ assert, loadModule, test }) {
     assert.equal(model.activeView?.id, "view-kanban")
     assert.equal(model.isKanbanView, true)
     assert.equal(model.titlePropertyLabel, "Task")
-    assert.equal(model.showPageIconInWHENTitle, false)
+    assert.equal(model.showPageIconInTitle, false)
     assert.deepEqual(
       model.activeDatabaseSorts.map(({ column, direction, label }) => ({
         column,
@@ -119,6 +119,144 @@ export function register({ assert, loadModule, test }) {
       "page-2:property-priority": "1",
       "page-2:property-status": "",
     })
+  })
+
+  test("database view model filters rows before sorting", async () => {
+    const { getDatabaseViewModel } = await loadModule(
+      "/src/editor/extensions/database/shared/database-view-model.tsx"
+    )
+    const statusProperty = createProperty(
+      "database-property-status",
+      "property-status",
+      "Status",
+      "status",
+      {
+        options: [
+          { id: "todo", name: "Not started" },
+          { id: "done", name: "Done" },
+        ],
+      }
+    )
+    const priorityProperty = createProperty(
+      "database-property-priority",
+      "property-priority",
+      "Priority",
+      "number"
+    )
+    const payload = {
+      database: {
+        config: {
+          nameColumn: { label: "Task" },
+        },
+        id: "database-1",
+        name: "Roadmap",
+      },
+      properties: [statusProperty, priorityProperty],
+      rows: [
+        createRow("row-1", "page-1", "Alpha", 0),
+        createRow("row-2", "page-2", "Beta", 1),
+        createRow("row-3", "page-3", "Gamma", 2),
+      ],
+      values: [
+        {
+          propertyId: "property-status",
+          value: "Done",
+          workspaceId: "page-1",
+        },
+        {
+          propertyId: "property-priority",
+          value: 3,
+          workspaceId: "page-1",
+        },
+        {
+          propertyId: "property-status",
+          value: "Not started",
+          workspaceId: "page-2",
+        },
+        {
+          propertyId: "property-priority",
+          value: 1,
+          workspaceId: "page-2",
+        },
+        {
+          propertyId: "property-status",
+          value: "Done",
+          workspaceId: "page-3",
+        },
+        {
+          propertyId: "property-priority",
+          value: 2,
+          workspaceId: "page-3",
+        },
+      ],
+      views: [
+        {
+          config: {
+            filters: [
+              {
+                id: "filter-status",
+                operator: "is",
+                propertyId: "database-property-status",
+                values: ["Done"],
+              },
+            ],
+            sorts: [
+              {
+                column: "database-property-priority",
+                direction: "descending",
+              },
+            ],
+          },
+          id: "view-table",
+          name: "Table",
+          type: "table",
+        },
+      ],
+    }
+
+    const model = getDatabaseViewModel({
+      activeViewId: "view-table",
+      payload,
+    })
+
+    assert.deepEqual(
+      model.activeDatabaseFilters.map(
+        ({ label, operator, operatorLabel, propertyId, values }) => ({
+          label,
+          operator,
+          operatorLabel,
+          propertyId,
+          values,
+        })
+      ),
+      [
+        {
+          label: "Status",
+          operator: "is",
+          operatorLabel: "Is",
+          propertyId: "database-property-status",
+          values: ["Done"],
+        },
+      ]
+    )
+    assert.deepEqual(
+      model.addableFilterFieldOptions.map((option) => option.value),
+      ["name", "database-property-priority"]
+    )
+    assert.deepEqual(
+      model.filterValueOptionsByField["database-property-status"].map(
+        (option) => option.value
+      ),
+      ["Done", "Not started"]
+    )
+    assert.deepEqual(
+      model.filteredItems.map((item) => item.id),
+      ["row-1", "row-3"]
+    )
+    assert.deepEqual(
+      model.sortedItems.map((item) => item.id),
+      ["row-1", "row-3"]
+    )
   })
 }
 

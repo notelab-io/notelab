@@ -9,6 +9,7 @@ export function register({ assert, loadModule, test }) {
     const showSortPillValues = []
     const sortPickerOpenValues = []
     const commands = getDatabaseViewCommands({
+      activeDatabaseFilters: [],
       activeDatabaseSorts: [{ column: "name", direction: "ascending" }],
       activeView: {
         config: { emoji: "📌", sort: { column: "legacy", direction: "descending" } },
@@ -25,6 +26,8 @@ export function register({ assert, loadModule, test }) {
       payload: createPayload(),
       properties: [],
       setActiveViewId: () => {},
+      setFilterPickerOpen: () => {},
+      setShowFilterPill: () => {},
       setShowSortPill: (value) => showSortPillValues.push(value),
       setSortPickerOpen: (value) => sortPickerOpenValues.push(value),
     })
@@ -51,6 +54,147 @@ export function register({ assert, loadModule, test }) {
     assert.deepEqual(sortPickerOpenValues, [false])
   })
 
+  test("database view commands create filter config", async () => {
+    const { getDatabaseViewCommands } = await loadModule(
+      "/src/editor/extensions/database/shared/database-view-commands.ts"
+    )
+    const updateDatabaseView = createMutation()
+    const showFilterPillValues = []
+    const filterPickerOpenValues = []
+    const properties = [
+      createProperty("database-property-status", "property-status", "Status", "status"),
+    ]
+    const commands = getDatabaseViewCommands({
+      activeDatabaseFilters: [],
+      activeDatabaseSorts: [],
+      activeView: {
+        config: {
+          emoji: "pin",
+          filter: {
+            id: "legacy-filter",
+            operator: "contains",
+            propertyId: "title",
+            values: ["roadmap"],
+          },
+        },
+        id: "view-1",
+        name: "Table",
+        type: "table",
+      },
+      databaseId,
+      editable: true,
+      isKanbanView: false,
+      items: [],
+      kanbanGroupProperty: null,
+      mutations: createMutations({ updateDatabaseView }),
+      payload: createPayload({ properties }),
+      properties,
+      setActiveViewId: () => {},
+      setFilterPickerOpen: (value) => filterPickerOpenValues.push(value),
+      setShowFilterPill: (value) => showFilterPillValues.push(value),
+      setShowSortPill: () => {},
+      setSortPickerOpen: () => {},
+    })
+
+    commands.createDatabaseFilter("database-property-status")
+
+    const filter = updateDatabaseView.calls[0][0].config.filters[0]
+
+    assert.match(filter.id, /^filter-/)
+    assert.deepEqual(
+      {
+        ...updateDatabaseView.calls[0][0],
+        config: {
+          ...updateDatabaseView.calls[0][0].config,
+          filters: [{ ...filter, id: "filter-id" }],
+        },
+      },
+      {
+        config: {
+          emoji: "pin",
+          filter: undefined,
+          filters: [
+            {
+              id: "filter-id",
+              operator: "is",
+              propertyId: "database-property-status",
+              values: [],
+            },
+          ],
+        },
+        databaseId,
+        databaseViewId: "view-1",
+      }
+    )
+    assert.deepEqual(showFilterPillValues, [true])
+    assert.deepEqual(filterPickerOpenValues, [false])
+  })
+
+  test("database view commands update filter config", async () => {
+    const { getDatabaseViewCommands } = await loadModule(
+      "/src/editor/extensions/database/shared/database-view-commands.ts"
+    )
+    const updateDatabaseView = createMutation()
+    const properties = [
+      createProperty("database-property-status", "property-status", "Status", "status"),
+    ]
+    const commands = getDatabaseViewCommands({
+      activeDatabaseFilters: [
+        {
+          id: "filter-name",
+          operator: "contains",
+          propertyId: "name",
+          values: ["roadmap"],
+        },
+      ],
+      activeDatabaseSorts: [],
+      activeView: {
+        config: { emoji: "pin" },
+        id: "view-1",
+        name: "Table",
+        type: "table",
+      },
+      databaseId,
+      editable: true,
+      isKanbanView: false,
+      items: [],
+      kanbanGroupProperty: null,
+      mutations: createMutations({ updateDatabaseView }),
+      payload: createPayload({ properties }),
+      properties,
+      setActiveViewId: () => {},
+      setFilterPickerOpen: () => {},
+      setShowFilterPill: () => {},
+      setShowSortPill: () => {},
+      setSortPickerOpen: () => {},
+    })
+
+    commands.updateDatabaseFilter(0, {
+      propertyId: "database-property-status",
+    })
+
+    assert.deepEqual(updateDatabaseView.calls, [
+      [
+        {
+          config: {
+            emoji: "pin",
+            filter: undefined,
+            filters: [
+              {
+                id: "filter-name",
+                operator: "is",
+                propertyId: "database-property-status",
+                values: [],
+              },
+            ],
+          },
+          databaseId,
+          databaseViewId: "view-1",
+        },
+      ],
+    ])
+  })
+
   test("database view commands toggle property visibility from table defaults", async () => {
     const { getDatabaseViewCommands } = await loadModule(
       "/src/editor/extensions/database/shared/database-view-commands.ts"
@@ -63,6 +207,7 @@ export function register({ assert, loadModule, test }) {
       }),
     ]
     const commands = getDatabaseViewCommands({
+      activeDatabaseFilters: [],
       activeDatabaseSorts: [],
       activeView: {
         config: {},
@@ -79,6 +224,8 @@ export function register({ assert, loadModule, test }) {
       payload: createPayload({ properties }),
       properties,
       setActiveViewId: () => {},
+      setFilterPickerOpen: () => {},
+      setShowFilterPill: () => {},
       setShowSortPill: () => {},
       setSortPickerOpen: () => {},
     })
@@ -98,6 +245,7 @@ export function register({ assert, loadModule, test }) {
     )
     const updateValue = createMutation()
     const commands = getDatabaseViewCommands({
+      activeDatabaseFilters: [],
       activeDatabaseSorts: [],
       activeView: null,
       databaseId,
@@ -109,6 +257,8 @@ export function register({ assert, loadModule, test }) {
       payload: createPayload(),
       properties: [],
       setActiveViewId: () => {},
+      setFilterPickerOpen: () => {},
+      setShowFilterPill: () => {},
       setShowSortPill: () => {},
       setSortPickerOpen: () => {},
     })
@@ -134,6 +284,7 @@ export function register({ assert, loadModule, test }) {
     )
     const updateDatabaseView = createMutation()
     const commands = getDatabaseViewCommands({
+      activeDatabaseFilters: [],
       activeDatabaseSorts: [],
       activeView: {
         config: { emoji: "📌" },
@@ -150,6 +301,8 @@ export function register({ assert, loadModule, test }) {
       payload: createPayload(),
       properties: [],
       setActiveViewId: () => {},
+      setFilterPickerOpen: () => {},
+      setShowFilterPill: () => {},
       setShowSortPill: () => {},
       setSortPickerOpen: () => {},
     })
@@ -184,6 +337,7 @@ export function register({ assert, loadModule, test }) {
       createProperty("database-property-1", "property-status", "Status", "status"),
     ]
     const commands = getDatabaseViewCommands({
+      activeDatabaseFilters: [],
       activeDatabaseSorts: [],
       activeView: {
         config: { emoji: "pin" },
@@ -200,6 +354,8 @@ export function register({ assert, loadModule, test }) {
       payload: createPayload({ properties }),
       properties,
       setActiveViewId: () => {},
+      setFilterPickerOpen: () => {},
+      setShowFilterPill: () => {},
       setShowSortPill: () => {},
       setSortPickerOpen: () => {},
     })
