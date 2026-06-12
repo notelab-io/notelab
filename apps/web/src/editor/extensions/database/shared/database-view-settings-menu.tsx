@@ -151,6 +151,7 @@ export function DatabaseViewSettingsMenu({
   onRemoveDatabaseSort,
   onSaveDatabaseViewTitle,
   onSetViewGroupProperty,
+  onSetViewType,
   onTogglePropertyVisibility,
   onUpdateDatabaseSort,
   properties,
@@ -178,6 +179,7 @@ export function DatabaseViewSettingsMenu({
   onRemoveDatabaseSort: (index: number) => void
   onSaveDatabaseViewTitle: (title: string) => void
   onSetViewGroupProperty: (groupPropertyId: string | null) => void
+  onSetViewType: (type: "table" | "kanban") => void
   onTogglePropertyVisibility: (propertyId: string) => void
   onUpdateDatabaseSort: (index: number, patch: DatabaseSortUpdatePatch) => void
   properties: DatabaseViewProperty[]
@@ -280,14 +282,20 @@ export function DatabaseViewSettingsMenu({
               right={viewTypeLabel}
             />
           </DropDrawerSubTrigger>
-          <DropDrawerSubContent>
-            <DropDrawerItem disabled>
+          <DropDrawerSubContent className="w-72">
+            <DropDrawerItem onSelect={() => onSetViewType("table")}>
               <Table2 />
               <span>Table</span>
+              {!isKanbanView ? (
+                <Check className="ml-auto text-foreground" />
+              ) : null}
             </DropDrawerItem>
-            <DropDrawerItem disabled>
+            <DropDrawerItem onSelect={() => onSetViewType("kanban")}>
               <Kanban />
               <span>Kanban</span>
+              {isKanbanView ? (
+                <Check className="ml-auto text-foreground" />
+              ) : null}
             </DropDrawerItem>
           </DropDrawerSubContent>
         </DropDrawerSub>

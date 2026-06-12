@@ -25,6 +25,7 @@ type UpdateDatabaseViewInput = {
   databaseId: string
   databaseViewId: string
   name?: string
+  type?: string
 }
 
 type AddDatabaseViewInput = {

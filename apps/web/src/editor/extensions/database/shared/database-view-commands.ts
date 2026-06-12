@@ -419,6 +419,23 @@ export function getDatabaseViewCommands({
         name: nextTitle,
       })
     },
+    setViewType: (type: "table" | "kanban") => {
+      if (!databaseId || !activeView?.id || type === activeView.type) {
+        return
+      }
+
+      updateDatabaseView.mutate({
+        config:
+          type === "kanban" && kanbanGroupProperty
+            ? getMergedDatabaseConfig(activeView.config, {
+                groupPropertyId: kanbanGroupProperty.property.id,
+              })
+            : activeView.config,
+        databaseId,
+        databaseViewId: activeView.id,
+        type,
+      })
+    },
     savePropertyValue: (
       rowId: string,
       propertyId: string,

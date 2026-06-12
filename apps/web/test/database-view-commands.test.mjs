@@ -174,6 +174,50 @@ export function register({ assert, loadModule, test }) {
       ],
     ])
   })
+
+  test("database view commands update active view type", async () => {
+    const { getDatabaseViewCommands } = await loadModule(
+      "/src/editor/extensions/database/shared/database-view-commands.ts"
+    )
+    const updateDatabaseView = createMutation()
+    const properties = [
+      createProperty("database-property-1", "property-status", "Status", "status"),
+    ]
+    const commands = getDatabaseViewCommands({
+      activeDatabaseSorts: [],
+      activeView: {
+        config: { emoji: "pin" },
+        id: "view-1",
+        name: "Table",
+        type: "table",
+      },
+      databaseId,
+      editable: true,
+      isKanbanView: false,
+      items: [],
+      kanbanGroupProperty: properties[0],
+      mutations: createMutations({ updateDatabaseView }),
+      payload: createPayload({ properties }),
+      properties,
+      setActiveViewId: () => {},
+      setShowSortPill: () => {},
+      setSortPickerOpen: () => {},
+    })
+
+    commands.setViewType("kanban")
+    commands.setViewType("table")
+
+    assert.deepEqual(updateDatabaseView.calls, [
+      [
+        {
+          config: { emoji: "pin", groupPropertyId: "property-status" },
+          databaseId,
+          databaseViewId: "view-1",
+          type: "kanban",
+        },
+      ],
+    ])
+  })
 }
 
 function createMutation() {

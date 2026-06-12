@@ -102,6 +102,7 @@ export type DatabaseViewContextValue = {
   >
   setDraftViewTitle: Dispatch<SetStateAction<string>>
   setViewGroupProperty: (groupPropertyId: string | null) => void
+  setViewType: (type: "table" | "kanban") => void
   setSortPickerOpen: Dispatch<SetStateAction<boolean>>
   showExpandButton: boolean
   showPageIconInTitle: boolean

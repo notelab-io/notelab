@@ -57,6 +57,7 @@ export function DatabaseViewToolbar() {
     setDraftDatabaseTitle,
     setDraftViewTitle,
     setViewGroupProperty,
+    setViewType,
     setSortPickerOpen,
     showExpandButton,
     showSortPill,
@@ -262,6 +263,7 @@ export function DatabaseViewToolbar() {
                 onRemoveDatabaseSort={removeDatabaseSort}
                 onSaveDatabaseViewTitle={saveDatabaseViewTitle}
                 onSetViewGroupProperty={setViewGroupProperty}
+                onSetViewType={setViewType}
                 onTogglePropertyVisibility={togglePropertyVisibility}
                 onUpdateDatabaseSort={updateDatabaseSort}
                 properties={properties}

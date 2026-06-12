@@ -229,6 +229,7 @@ export function useDatabaseViewController({
     setDraftDatabaseTitle,
     setDraftViewTitle,
     setViewGroupProperty: commands.setViewGroupProperty,
+    setViewType: commands.setViewType,
     setSortPickerOpen,
     showExpandButton,
     showSortPill,
