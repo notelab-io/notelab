@@ -557,11 +557,13 @@
     @apply size-4 shrink-0;
   }
 
-  .database-kanban-new-group-input .database-input-cell-trigger {
+  .database-kanban-new-group-input
+    :is(.database-input-cell-trigger, .database-date-cell-trigger) {
     @apply min-h-7 flex-1 rounded-sm px-0 py-0 text-muted-foreground hover:text-foreground;
   }
 
-  .database-kanban-new-group-input .database-input-cell-trigger:empty::before {
+  .database-kanban-new-group-input
+    :is(.database-input-cell-trigger, .database-date-cell-trigger):empty::before {
     content: "New group";
   }
 

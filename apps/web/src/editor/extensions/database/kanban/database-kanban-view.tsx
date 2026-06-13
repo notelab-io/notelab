@@ -33,6 +33,7 @@ import {
   DATABASE_PAGE_DRAG_MIME,
   defaultStatusOptions,
 } from "../constants"
+import { DatabasePropertyDate } from "../database-property-date"
 import { DatabasePropertyInput } from "../database-property-input"
 import { DatabasePageLink } from "../shared/database-page-link"
 import { DatabasePropertyValue } from "../shared/database-property-value"
@@ -103,6 +104,9 @@ type KanbanGroupOption = DatabaseSelectOption & {
   isEmpty?: boolean
   isTemporary?: boolean
 }
+
+const NEW_KANBAN_GROUP_TRIGGER_SELECTOR =
+  ".database-input-cell-trigger, .database-date-cell-trigger"
 
 function getKanbanBoardContentWidth(boardElement: HTMLDivElement) {
   const columns = Array.from(
@@ -461,8 +465,8 @@ export function DatabaseKanbanView() {
     wrapperRef: wrapRef,
   })
 
-  const createKanbanOption = async () => {
-    const optionName = newKanbanOptionName.trim()
+  const createKanbanOption = async (nextOptionName = newKanbanOptionName) => {
+    const optionName = nextOptionName.trim()
 
     if (
       !groupProperty ||
@@ -532,6 +536,16 @@ export function DatabaseKanbanView() {
       toast.error("Couldn't create group")
     } finally {
       setIsCreatingKanbanOption(false)
+    }
+  }
+
+  const createKanbanDateGroup = (value: DatabaseCellValue) => {
+    const nextValue = Array.isArray(value) ? value[0] ?? "" : value
+
+    setNewKanbanOptionName(nextValue)
+
+    if (nextValue.trim()) {
+      void createKanbanOption(nextValue)
     }
   }
 
@@ -1015,14 +1029,14 @@ export function DatabaseKanbanView() {
                       onClick={(event) => {
                         if (
                           event.target instanceof HTMLElement &&
-                          event.target.closest(".database-input-cell-trigger")
+                          event.target.closest(NEW_KANBAN_GROUP_TRIGGER_SELECTOR)
                         ) {
                           return
                         }
 
                         event.currentTarget
-                          .querySelector<HTMLButtonElement>(
-                            ".database-input-cell-trigger"
+                          .querySelector<HTMLElement>(
+                            NEW_KANBAN_GROUP_TRIGGER_SELECTOR
                           )
                           ?.click()
                       }}
@@ -1032,16 +1046,29 @@ export function DatabaseKanbanView() {
                       ) : (
                         <Plus aria-hidden="true" />
                       )}
-                      <DatabasePropertyInput
-                        editable={!isCreatingKanbanOption}
-                        label="New group"
-                        onChange={setNewKanbanOptionName}
-                        onCommit={() => {
-                          void createKanbanOption()
-                        }}
-                        type="text"
-                        value={newKanbanOptionName}
-                      />
+                      {groupProperty.property.type === "date" ? (
+                        <DatabasePropertyDate
+                          editable={!isCreatingKanbanOption}
+                          label="New group"
+                          onPropertyConfigChange={(config) =>
+                            onPropertyConfigChange(groupProperty.id, config)
+                          }
+                          onSelect={createKanbanDateGroup}
+                          propertyConfig={groupProperty.property.config}
+                          value={newKanbanOptionName}
+                        />
+                      ) : (
+                        <DatabasePropertyInput
+                          editable={!isCreatingKanbanOption}
+                          label="New group"
+                          onChange={setNewKanbanOptionName}
+                          onCommit={() => {
+                            void createKanbanOption()
+                          }}
+                          type="text"
+                          value={newKanbanOptionName}
+                        />
+                      )}
                     </div>
                   </div>
                   <div className="database-kanban-cards" />
