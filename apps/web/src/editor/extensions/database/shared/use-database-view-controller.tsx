@@ -38,6 +38,7 @@ export type DatabaseViewProps = {
   editable?: boolean
   fullPage?: boolean
   onOpenPage?: (pageId: string) => void
+  onShowTitleChange?: (showTitle: boolean) => void
   organizationId?: string | null
   showExpandButton?: boolean
   showTitle?: boolean
@@ -48,6 +49,7 @@ export function useDatabaseViewController({
   editable = true,
   fullPage = false,
   onOpenPage,
+  onShowTitleChange,
   organizationId,
   showExpandButton = false,
   showTitle = true,
@@ -360,6 +362,7 @@ export function useDatabaseViewController({
     showFilterPill,
     showSortPill,
     showTitle,
+    onShowTitleChange,
     sortFieldOptions,
     sortPickerOpen,
     sortedItems,

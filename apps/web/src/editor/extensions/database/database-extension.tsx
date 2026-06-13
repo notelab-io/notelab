@@ -29,9 +29,15 @@ function isDatabasePageDragEvent(event: Event) {
   )
 }
 
-function DatabaseBlockView({ editor, extension, node }: ReactNodeViewProps) {
+function DatabaseBlockView({
+  editor,
+  extension,
+  node,
+  updateAttributes,
+}: ReactNodeViewProps) {
   const options = extension.options as DatabaseBlockOptions
   const databaseId = node.attrs.databaseId as string | null
+  const showTitle = node.attrs.showTitle !== false
   // Subscribe through the editor-owned runtime so this node view updates when read-only mode changes.
   const isEditable = useSyncExternalStore(
     options.editorRuntime?.subscribe ?? (() => () => {}),
@@ -45,14 +51,19 @@ function DatabaseBlockView({ editor, extension, node }: ReactNodeViewProps) {
     <NodeViewWrapper
       className="database-block"
       data-database-id={databaseId ?? undefined}
+      data-show-title={showTitle ? undefined : "false"}
       data-type="databaseBlock"
     >
       <DatabaseView
         databaseId={databaseId}
         editable={isEditable}
         onOpenPage={options.onOpenPage}
+        onShowTitleChange={(nextShowTitle) =>
+          updateAttributes({ showTitle: nextShowTitle })
+        }
         organizationId={options.organizationId}
         showExpandButton
+        showTitle={showTitle}
       />
     </NodeViewWrapper>
   )
@@ -98,6 +109,13 @@ export const DatabaseBlock = Node.create<DatabaseBlockOptions>({
         parseHTML: (element) => element.getAttribute("data-database-id"),
         renderHTML: (attributes) =>
           attributes.databaseId ? { "data-database-id": attributes.databaseId } : {},
+      },
+      showTitle: {
+        default: true,
+        parseHTML: (element) =>
+          element.getAttribute("data-show-title") !== "false",
+        renderHTML: (attributes) =>
+          attributes.showTitle === false ? { "data-show-title": "false" } : {},
       },
     }
   },

@@ -118,6 +118,7 @@ export function DatabaseViewToolbar() {
     isAddingDatabaseRow,
     isAddingDatabaseView,
     linkedDatabaseViews,
+    onShowTitleChange,
     titlePropertyLabel,
     organizationId,
     properties,
@@ -241,7 +242,7 @@ export function DatabaseViewToolbar() {
   return (
     <div className="database-toolbar">
       {showTitle ? (
-        <div className="group/title flex min-w-0 items-center gap-1">
+        <div className="group/title flex min-w-0 items-center gap-0.5">
           {databaseEmojiPicker}
           {activeViewTab?.isLinked ? (
             <ArrowUpRightIcon
@@ -266,8 +267,8 @@ export function DatabaseViewToolbar() {
             <DropDrawerTrigger asChild>
               <Button
                 aria-label="Open database title actions"
-                className="shrink-0 text-muted-foreground opacity-0 transition-opacity group-focus-within/title:opacity-100 group-hover/title:opacity-100 data-[state=open]:opacity-100"
-                size="icon-sm"
+                className="-ml-1 shrink-0 text-muted-foreground opacity-0 transition-opacity group-focus-within/title:opacity-100 group-hover/title:opacity-100 data-[state=open]:opacity-100"
+                size="icon-xs"
                 type="button"
                 variant="ghost"
               >
@@ -310,7 +311,13 @@ export function DatabaseViewToolbar() {
                 </DropDrawerSubContent>
               </DropDrawerSub>
               <DropDrawerSeparator />
-              <DropDrawerItem disabled>
+              <DropDrawerItem
+                disabled={!editable || !onShowTitleChange}
+                onSelect={() => {
+                  onShowTitleChange?.(false)
+                  setTitleActionsOpen(false)
+                }}
+              >
                 <EyeOff />
                 <span>
                   {activeViewTab?.isLinked

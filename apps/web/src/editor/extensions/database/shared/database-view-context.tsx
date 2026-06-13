@@ -158,6 +158,7 @@ export type DatabaseViewContextValue = {
   showPageIconInTitle: boolean
   showSortPill: boolean
   showTitle: boolean
+  onShowTitleChange?: (showTitle: boolean) => void
   sortFieldOptions: DatabaseSearchableMenuOption[]
   sortPickerOpen: boolean
   sortedItems: SortableDatabaseItem[]
