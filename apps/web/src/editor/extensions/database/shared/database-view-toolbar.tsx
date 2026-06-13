@@ -46,7 +46,6 @@ import {
   DropDrawerSubTrigger,
   DropDrawerTrigger,
 } from "@/components/ui/dropdrawer"
-import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 import { getDatabaseEmoji } from "@notelab/features/databases"
@@ -166,7 +165,6 @@ export function DatabaseViewToolbar() {
       : draftDatabaseTitle || hostDatabaseName || "Untitled"
   const databaseEmoji = getDatabaseEmoji({ config: databaseConfig })
   const canEditDatabaseEmoji = editable && Boolean(databaseId)
-  const databaseTitleMeasureValue = draftDatabaseTitle || "New database"
   const focusDatabaseTitleInput = () => {
     window.setTimeout(() => {
       databaseTitleInputRef.current?.focus()
@@ -247,7 +245,7 @@ export function DatabaseViewToolbar() {
   return (
     <div className="database-toolbar">
       {showTitle ? (
-        <div className="group/title flex min-w-0 items-center gap-0">
+        <div className="group/title flex min-w-0 items-center gap-1">
           {databaseEmojiPicker}
           {activeViewTab?.isLinked ? (
             <ArrowUpRightIcon
@@ -255,31 +253,23 @@ export function DatabaseViewToolbar() {
               className="size-5 shrink-0 text-muted-foreground"
             />
           ) : null}
-          <span className="inline-grid w-fit min-w-[1ch] max-w-[44ch] shrink-0 overflow-hidden">
-            <span
-              aria-hidden="true"
-              className="invisible col-start-1 row-start-1 max-w-[44ch] overflow-hidden text-ellipsis whitespace-pre text-2xl font-semibold leading-tight md:text-2xl"
-            >
-              {databaseTitleMeasureValue}
-            </span>
-            <Input
-              aria-label="Database title"
-              className="col-start-1 row-start-1 h-auto w-full min-w-[1ch] max-w-[44ch] rounded-none border-0 bg-transparent px-0 py-0 text-2xl font-semibold leading-tight truncate text-foreground shadow-none placeholder:text-muted-foreground/40 focus-visible:border-transparent focus-visible:ring-0 md:text-2xl dark:bg-transparent"
-              disabled={!databaseId}
-              onBlur={(event) => saveDatabaseTitle(event.target.value)}
-              onChange={(event) => {
-                setDraftDatabaseTitle(event.target.value)
-              }}
-              placeholder="New database"
-              ref={databaseTitleInputRef}
-              value={draftDatabaseTitle}
-            />
-          </span>
+          <input
+            aria-label="Database title"
+            className="h-auto min-w-[1ch] max-w-[44ch] shrink-0 truncate border-0 bg-transparent px-0 py-0 text-2xl font-semibold leading-tight text-foreground shadow-none outline-none [field-sizing:content] placeholder:text-muted-foreground/40 focus-visible:ring-0 md:text-2xl"
+            disabled={!databaseId}
+            onBlur={(event) => saveDatabaseTitle(event.target.value)}
+            onChange={(event) => {
+              setDraftDatabaseTitle(event.target.value)
+            }}
+            placeholder="New database"
+            ref={databaseTitleInputRef}
+            value={draftDatabaseTitle}
+          />
           <DropDrawer open={titleActionsOpen} onOpenChange={setTitleActionsOpen}>
             <DropDrawerTrigger asChild>
               <Button
                 aria-label="Open database title actions"
-                className="-ml-0.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-focus-within/title:opacity-100 group-hover/title:opacity-100 data-[state=open]:opacity-100"
+                className="shrink-0 text-muted-foreground opacity-0 transition-opacity group-focus-within/title:opacity-100 group-hover/title:opacity-100 data-[state=open]:opacity-100"
                 size="icon-xs"
                 type="button"
                 variant="ghost"
