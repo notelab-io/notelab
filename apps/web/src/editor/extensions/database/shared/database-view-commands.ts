@@ -475,6 +475,18 @@ export function getDatabaseViewCommands({
     saveDatabaseFilters,
     saveDatabaseConditionalColors,
     saveDatabaseSorts,
+    saveDatabaseEmoji: (nextEmoji: string) => {
+      if (!editable || !databaseId) {
+        return
+      }
+
+      updateDatabase.mutate({
+        config: getMergedDatabaseConfig(payload?.database.config, {
+          emoji: nextEmoji,
+        }),
+        databaseId,
+      })
+    },
     saveDatabaseTitle: (nextTitle: string) => {
       if (!databaseId || nextTitle === payload?.database.name) {
         return

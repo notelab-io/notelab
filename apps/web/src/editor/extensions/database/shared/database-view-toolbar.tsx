@@ -1,23 +1,49 @@
-import { Link } from "@tanstack/react-router"
+import { useRef, useState, type ReactNode } from "react"
+import { Link, useNavigate } from "@tanstack/react-router"
 import {
   ArrowDownUp,
+  ArrowUpRightIcon,
+  Check,
+  Copy,
+  CopyPlus,
+  Database,
+  EyeOff,
   Filter,
   Kanban,
   Loader2,
   Maximize2,
+  MoreHorizontal,
+  Paintbrush,
+  Pencil,
   Plus,
+  Settings2,
+  Smile,
   Table2,
+  Trash2,
+  X,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
+  EmojiPicker,
+  EmojiPickerContent,
+  EmojiPickerFooter,
+  EmojiPickerSearch,
+} from "@/components/ui/emoji-picker"
+import {
   DropDrawer,
   DropDrawerContent,
   DropDrawerItem,
+  DropDrawerSeparator,
+  DropDrawerSub,
+  DropDrawerSubContent,
+  DropDrawerSubTrigger,
   DropDrawerTrigger,
 } from "@/components/ui/dropdrawer"
 import { Input } from "@/components/ui/input"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
+import { getDatabaseEmoji } from "@notelab/features/databases"
 
 import { DatabaseSearchableMenuItems } from "./database-searchable-menu-items"
 import { DatabaseFilterPopover } from "./database-filter-menu"
@@ -25,17 +51,46 @@ import { DatabaseSortPopover } from "./database-sort-menu"
 import { useDatabaseViewContext } from "./database-view-context"
 import { DatabaseViewSettingsMenu } from "./database-view-settings-menu"
 
+function ToolbarMenuRow({
+  icon,
+  label,
+  right,
+}: {
+  icon: ReactNode
+  label: string
+  right?: ReactNode
+}) {
+  return (
+    <div className="flex min-w-0 flex-1 items-center gap-2">
+      {icon}
+      <span className="truncate">{label}</span>
+      {right ? (
+        <span className="ml-auto flex min-w-0 shrink-0 items-center gap-1 text-muted-foreground">
+          {right}
+        </span>
+      ) : null}
+    </div>
+  )
+}
+
 export function DatabaseViewToolbar() {
+  const navigate = useNavigate()
+  const databaseTitleInputRef = useRef<HTMLInputElement | null>(null)
+  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false)
+  const [titleActionsOpen, setTitleActionsOpen] = useState(false)
+  const [viewSettingsOpen, setViewSettingsOpen] = useState(false)
   const {
     activeConditionalColors,
     activeDatabaseFilters,
     activeDatabaseSorts,
     activeView,
+    activeViewTabId,
     activeVisibilityConfig,
     addableFilterFieldOptions,
     addableSortFieldOptions,
     addDatabaseRow,
     addKanbanView,
+    addLinkedDatabaseView,
     addTableView,
     canAddDatabaseSort,
     canAddDatabaseFilter,
@@ -44,8 +99,8 @@ export function DatabaseViewToolbar() {
     copyDatabaseViewLink,
     createDatabaseFilter,
     createDatabaseSort,
+    databaseConfig,
     databaseId,
-    databaseName,
     databaseOrganizationId,
     draftDatabaseTitle,
     draftViewTitle,
@@ -55,9 +110,14 @@ export function DatabaseViewToolbar() {
     filterValueOptionsByField,
     groupProperty,
     groupableProperties,
+    hostDatabaseId,
+    hostDatabaseName,
+    hostDatabaseOrganizationId,
+    hostViews,
     isAddingDatabaseProperty,
     isAddingDatabaseRow,
     isAddingDatabaseView,
+    linkedDatabaseViews,
     titlePropertyLabel,
     organizationId,
     properties,
@@ -65,6 +125,7 @@ export function DatabaseViewToolbar() {
     removeDatabaseSort,
     reorderDatabaseFilters,
     saveDatabaseConditionalColors,
+    saveDatabaseEmoji,
     saveDatabaseTitle,
     saveDatabaseViewTitle,
     setActiveViewId,
@@ -86,53 +147,350 @@ export function DatabaseViewToolbar() {
     updateDatabaseFilter,
     updateDatabaseSort,
     visiblePropertyCount,
-    views,
+    viewTabs,
   } = useDatabaseViewContext()
+  const activeViewTab = viewTabs.find((view) => view.id === activeViewTabId)
+  const hostDisplayTitle =
+    activeViewTab?.isLinked
+      ? hostDatabaseName || "Untitled"
+      : draftDatabaseTitle || hostDatabaseName || "Untitled"
+  const databaseEmoji = getDatabaseEmoji({ config: databaseConfig })
+  const canEditDatabaseEmoji = editable && Boolean(databaseId)
+  const databaseTitleInputWidth = `${Math.max(
+    (draftDatabaseTitle || "New database").length + 1,
+    12
+  )}ch`
+  const focusDatabaseTitleInput = () => {
+    window.setTimeout(() => {
+      databaseTitleInputRef.current?.focus()
+      databaseTitleInputRef.current?.select()
+    }, 0)
+  }
+  const openDatabaseFullPage = (nextDatabaseId: string | null | undefined) => {
+    if (!nextDatabaseId) {
+      return
+    }
+
+    void navigate({
+      params: { databaseId: nextDatabaseId },
+      to: "/database/$databaseId",
+    })
+  }
+  const renderDatabaseEmojiPicker = (onSelect?: () => void) => (
+    <EmojiPicker
+      onEmojiSelect={({ emoji }) => {
+        saveDatabaseEmoji(emoji)
+        setEmojiPickerOpen(false)
+        onSelect?.()
+      }}
+    >
+      <EmojiPickerSearch autoFocus placeholder="Search emoji..." />
+      <EmojiPickerContent />
+      <EmojiPickerFooter />
+    </EmojiPicker>
+  )
+  const databaseEmojiPopoverContent = (
+    <PopoverContent
+      align="start"
+      className="w-auto gap-0 overflow-hidden p-0"
+      onMouseDown={(event) => event.stopPropagation()}
+      onPointerDown={(event) => event.stopPropagation()}
+      sideOffset={6}
+    >
+      {renderDatabaseEmojiPicker()}
+    </PopoverContent>
+  )
+  const databaseEmojiPicker = databaseEmoji ? (
+    canEditDatabaseEmoji ? (
+      <div className="group/icon relative shrink-0">
+        <Popover open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
+          <PopoverTrigger asChild>
+            <button
+              aria-label="Change database icon"
+              className="flex size-9 items-center justify-center rounded-md text-2xl leading-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none"
+              type="button"
+            >
+              {databaseEmoji}
+            </button>
+          </PopoverTrigger>
+          {databaseEmojiPopoverContent}
+        </Popover>
+        <button
+          aria-label="Remove database icon"
+          className="absolute -right-1 -top-1 hidden size-5 items-center justify-center rounded-full border bg-background text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none group-focus-within/icon:flex group-hover/icon:flex [&_svg]:size-3"
+          onClick={() => {
+            saveDatabaseEmoji("")
+            setEmojiPickerOpen(false)
+          }}
+          type="button"
+        >
+          <X />
+        </button>
+      </div>
+    ) : (
+      <span
+        aria-label="Database icon"
+        className="flex size-9 shrink-0 items-center justify-center rounded-md text-2xl leading-none"
+      >
+        {databaseEmoji}
+      </span>
+    )
+  ) : null
 
   return (
     <div className="database-toolbar">
       {showTitle ? (
-        <Input
-          aria-label="Database title"
-          className="database-title-input h-auto min-w-0 w-full rounded-none border-0 bg-transparent px-0 py-0 text-2xl font-semibold leading-tight text-foreground shadow-none placeholder:text-muted-foreground/40 focus-visible:border-transparent focus-visible:ring-0 md:text-2xl dark:bg-transparent"
-          disabled={!databaseId}
-          onBlur={(event) => saveDatabaseTitle(event.target.value)}
-          onChange={(event) => {
-            setDraftDatabaseTitle(event.target.value)
-          }}
-          placeholder="New database"
-          value={draftDatabaseTitle}
-        />
+        <div className="group/title flex min-w-0 items-center gap-2">
+          {databaseEmojiPicker}
+          {activeViewTab?.isLinked ? (
+            <ArrowUpRightIcon
+              aria-label={`Linked from ${activeViewTab.sourceDatabaseName ?? "another database"}`}
+              className="size-5 shrink-0 text-muted-foreground"
+            />
+          ) : null}
+          <Input
+            aria-label="Database title"
+            className="database-title-input h-auto min-w-0 max-w-full rounded-none border-0 bg-transparent px-0 py-0 text-2xl font-semibold leading-tight text-foreground shadow-none placeholder:text-muted-foreground/40 focus-visible:border-transparent focus-visible:ring-0 md:text-2xl dark:bg-transparent"
+            disabled={!databaseId}
+            onBlur={(event) => saveDatabaseTitle(event.target.value)}
+            onChange={(event) => {
+              setDraftDatabaseTitle(event.target.value)
+            }}
+            placeholder="New database"
+            ref={databaseTitleInputRef}
+            style={{ width: databaseTitleInputWidth }}
+            value={draftDatabaseTitle}
+          />
+          <DropDrawer open={titleActionsOpen} onOpenChange={setTitleActionsOpen}>
+            <DropDrawerTrigger asChild>
+              <button
+                aria-label="Open database title actions"
+                className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted/70 text-muted-foreground opacity-0 transition hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none group-focus-within/title:opacity-100 group-hover/title:opacity-100 data-[state=open]:opacity-100 [&_svg]:size-4"
+                type="button"
+              >
+                <MoreHorizontal />
+              </button>
+            </DropDrawerTrigger>
+            <DropDrawerContent align="start" className="w-64">
+              <DropDrawerItem
+                disabled={!databaseId}
+                onSelect={() =>
+                  openDatabaseFullPage(
+                    activeViewTab?.sourceDatabaseId ?? databaseId
+                  )
+                }
+              >
+                <ArrowUpRightIcon />
+                <span>
+                  {activeViewTab?.isLinked ? "View data source" : "View database"}
+                </span>
+              </DropDrawerItem>
+              <DropDrawerItem
+                disabled={!editable || !databaseId}
+                onSelect={focusDatabaseTitleInput}
+              >
+                <Pencil />
+                <span>Edit title</span>
+              </DropDrawerItem>
+              <DropDrawerSub>
+                <DropDrawerSubTrigger
+                  className={cn(
+                    (!canEditDatabaseEmoji || !databaseId) &&
+                      "pointer-events-none opacity-50"
+                  )}
+                >
+                  <Smile />
+                  <span>Edit icon</span>
+                </DropDrawerSubTrigger>
+                <DropDrawerSubContent className="w-auto overflow-hidden p-0">
+                  {renderDatabaseEmojiPicker(() => setTitleActionsOpen(false))}
+                </DropDrawerSubContent>
+              </DropDrawerSub>
+              <DropDrawerSeparator />
+              <DropDrawerItem disabled>
+                <EyeOff />
+                <span>
+                  {activeViewTab?.isLinked
+                    ? "Hide data source titles"
+                    : "Hide title"}
+                </span>
+              </DropDrawerItem>
+            </DropDrawerContent>
+          </DropDrawer>
+        </div>
       ) : null}
       <div className="flex min-w-0 items-center gap-2">
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2 overflow-x-auto">
-            {views.map(
-              (view: { id: string; name: string; type: string }) => {
-              const isActiveView = view.id === activeView?.id
+            {viewTabs.map((view) => {
+              const isActiveView = view.id === activeViewTabId
               const ViewIcon = view.type === "kanban" ? Kanban : Table2
+              const sourceDatabaseId =
+                view.sourceDatabaseId ?? hostDatabaseId ?? databaseId
+              const sourceDatabaseName =
+                view.sourceDatabaseName ?? hostDisplayTitle
+              const renameView = () => {
+                const currentTitle = isActiveView ? draftViewTitle : view.name
+                const nextTitle = window
+                  .prompt("Rename view", currentTitle)
+                  ?.trim()
+
+                if (!nextTitle || nextTitle === currentTitle) {
+                  return
+                }
+
+                setActiveViewId(view.id)
+                setDraftViewTitle(nextTitle)
+                window.setTimeout(() => saveDatabaseViewTitle(nextTitle), 0)
+              }
 
               return (
-                <button
-                  aria-pressed={isActiveView}
-                  className={cn(
-                    "inline-flex h-8 shrink-0 items-center rounded-full px-3 text-sm font-medium transition-colors",
-                    isActiveView
-                      ? "bg-secondary text-secondary-foreground"
-                      : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
-                  )}
-                  key={view.id}
-                  onClick={() => setActiveViewId(view.id)}
-                  type="button"
-                >
-                  <ViewIcon className="mr-2 size-4 shrink-0" />
-                  <span className="truncate">
-                    {isActiveView ? draftViewTitle : view.name}
-                  </span>
-                </button>
+                <DropDrawer key={view.id}>
+                  <DropDrawerTrigger asChild>
+                    <button
+                      aria-pressed={isActiveView}
+                      className={cn(
+                        "inline-flex h-8 shrink-0 items-center rounded-full px-3 text-sm font-medium transition-colors",
+                        isActiveView
+                          ? "bg-secondary text-secondary-foreground"
+                          : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                      onClick={() => setActiveViewId(view.id)}
+                      type="button"
+                    >
+                      <ViewIcon className="mr-2 size-4 shrink-0" />
+                      <span className="truncate">
+                        {isActiveView ? draftViewTitle : view.name}
+                      </span>
+                      {view.isLinked ? (
+                        <ArrowUpRightIcon
+                          aria-label={`Linked from ${view.sourceDatabaseName ?? "another database"}`}
+                          className="ml-2 size-3 shrink-0 text-muted-foreground"
+                        />
+                      ) : null}
+                    </button>
+                  </DropDrawerTrigger>
+                  <DropDrawerContent
+                    align="start"
+                    className="w-72"
+                    onCloseAutoFocus={(event) => event.preventDefault()}
+                  >
+                    <DropDrawerItem
+                      disabled={!editable || !databaseId}
+                      onSelect={renameView}
+                    >
+                      <Pencil />
+                      <span>Rename</span>
+                    </DropDrawerItem>
+                    <DropDrawerSub>
+                      <DropDrawerSubTrigger>
+                        <ToolbarMenuRow
+                          icon={<Paintbrush />}
+                          label="Display as"
+                        />
+                      </DropDrawerSubTrigger>
+                      <DropDrawerSubContent className="w-56">
+                        <DropDrawerItem
+                          disabled={!editable || view.type === "table"}
+                          onSelect={() => {
+                            setActiveViewId(view.id)
+                            setViewType("table")
+                          }}
+                        >
+                          <Table2 />
+                          <span>Table</span>
+                          {view.type === "table" ? (
+                            <Check className="ml-auto text-foreground" />
+                          ) : null}
+                        </DropDrawerItem>
+                        <DropDrawerItem
+                          disabled={!editable || view.type === "kanban"}
+                          onSelect={() => {
+                            setActiveViewId(view.id)
+                            setViewType("kanban")
+                          }}
+                        >
+                          <Kanban />
+                          <span>Board</span>
+                          {view.type === "kanban" ? (
+                            <Check className="ml-auto text-foreground" />
+                          ) : null}
+                        </DropDrawerItem>
+                      </DropDrawerSubContent>
+                    </DropDrawerSub>
+                    <DropDrawerItem
+                      onSelect={() => {
+                        setActiveViewId(view.id)
+                        setViewSettingsOpen(true)
+                      }}
+                    >
+                      <Settings2 />
+                      <span>Edit view</span>
+                    </DropDrawerItem>
+                    <DropDrawerSub>
+                      <DropDrawerSubTrigger>
+                        <ToolbarMenuRow
+                          icon={<Database />}
+                          label="Source"
+                          right={
+                            <>
+                              {view.isLinked ? (
+                                <ArrowUpRightIcon className="size-3" />
+                              ) : null}
+                              <span className="block max-w-28 truncate">
+                                {sourceDatabaseName}
+                              </span>
+                            </>
+                          }
+                        />
+                      </DropDrawerSubTrigger>
+                      <DropDrawerSubContent className="w-60">
+                        <DropDrawerItem
+                          disabled={!sourceDatabaseId}
+                          onSelect={() => openDatabaseFullPage(sourceDatabaseId)}
+                        >
+                          <ArrowUpRightIcon />
+                          <span>
+                            {view.isLinked
+                              ? "Open source database"
+                              : "Open database"}
+                          </span>
+                        </DropDrawerItem>
+                      </DropDrawerSubContent>
+                    </DropDrawerSub>
+                    <DropDrawerSeparator />
+                    <DropDrawerItem onSelect={copyDatabaseViewLink}>
+                      <Copy />
+                      <span>Copy link to view</span>
+                    </DropDrawerItem>
+                    <DropDrawerItem
+                      disabled={!sourceDatabaseId}
+                      onSelect={() => openDatabaseFullPage(sourceDatabaseId)}
+                    >
+                      <ArrowUpRightIcon />
+                      <span>
+                        {view.isLinked
+                          ? "Open source database"
+                          : "Open as full page"}
+                      </span>
+                    </DropDrawerItem>
+                    <DropDrawerItem disabled>
+                      <EyeOff />
+                      <span>Hide data source titles</span>
+                    </DropDrawerItem>
+                    <DropDrawerSeparator />
+                    <DropDrawerItem disabled>
+                      <CopyPlus />
+                      <span>Duplicate view</span>
+                    </DropDrawerItem>
+                    <DropDrawerItem disabled>
+                      <Trash2 />
+                      <span>Delete view</span>
+                    </DropDrawerItem>
+                  </DropDrawerContent>
+                </DropDrawer>
               )
-              }
-            )}
+            })}
             <DropDrawer>
               <DropDrawerTrigger asChild>
                 <Button
@@ -334,14 +692,14 @@ export function DatabaseViewToolbar() {
                 activeDatabaseFilters={activeDatabaseFilters}
                 addableFilterFieldOptions={addableFilterFieldOptions}
                 databaseId={databaseId ?? undefined}
-                databaseName={draftDatabaseTitle}
+                databaseName={hostDisplayTitle}
                 dataSources={
-                  databaseId
+                  hostDatabaseId
                     ? [
                         {
-                          id: databaseId,
-                          name: draftDatabaseTitle || databaseName || "Untitled",
-                          viewCount: views.length,
+                          id: hostDatabaseId,
+                          name: hostDisplayTitle,
+                          viewCount: hostViews.length,
                         },
                       ]
                     : []
@@ -352,14 +710,21 @@ export function DatabaseViewToolbar() {
                 canAddDatabaseFilter={canAddDatabaseFilter}
                 titlePropertyLabel={titlePropertyLabel}
                 organizationId={
-                  databaseOrganizationId ?? organizationId ?? undefined
+                  hostDatabaseOrganizationId ??
+                  databaseOrganizationId ??
+                  organizationId ??
+                  undefined
                 }
+                linkedViews={linkedDatabaseViews}
+                onAddLinkedDatabaseView={addLinkedDatabaseView}
+                open={viewSettingsOpen}
                 onCopyDatabaseViewLink={copyDatabaseViewLink}
                 onClearDatabaseFilter={clearDatabaseFilter}
                 onClearDatabaseSort={clearDatabaseSort}
                 onCreateDatabaseFilter={createDatabaseFilter}
                 onCreateDatabaseSort={createDatabaseSort}
                 onDraftViewTitleChange={setDraftViewTitle}
+                onOpenChange={setViewSettingsOpen}
                 onRemoveDatabaseFilter={removeDatabaseFilter}
                 onRemoveDatabaseSort={removeDatabaseSort}
                 onReorderDatabaseFilters={reorderDatabaseFilters}
@@ -374,6 +739,7 @@ export function DatabaseViewToolbar() {
                 filterFieldOptions={filterFieldOptions}
                 filterValueOptionsByField={filterValueOptionsByField}
                 sortFieldOptions={sortFieldOptions}
+                sourceDatabaseId={hostDatabaseId ?? undefined}
                 addableSortFieldOptions={addableSortFieldOptions}
                 canAddDatabaseSort={canAddDatabaseSort}
                 viewConfig={activeVisibilityConfig}

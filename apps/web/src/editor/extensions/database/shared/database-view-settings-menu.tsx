@@ -1,5 +1,6 @@
 import {
   ArrowDownUp,
+  ArrowUpRightIcon,
   ChevronLeft,
   CircleHelp,
   Check,
@@ -46,6 +47,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
+import { useDatabase } from "@notelab/features/databases"
 import { useWorkspaces } from "@notelab/features/workspaces"
 import {
   cyclingColorTokens,
@@ -54,9 +56,11 @@ import {
 
 import { getDatabasePropertyType } from "../constants"
 import {
+  getDatabaseLinkedViewKey,
   getPropertyHiddenForView,
   getDatabaseFilterOperatorsForType,
   type DatabaseConditionalColorConfig,
+  type DatabaseLinkedViewConfig,
 } from "./database-view-config"
 import { DatabasePropertyEditSubmenu } from "./database-property-menu"
 import { hasDatabasePropertyEditSettings } from "./database-property-edit-submenu"
@@ -96,6 +100,10 @@ type DatabaseSourceMenuItem = {
 
 type LinkableDatabaseOption = DatabaseSearchableMenuOption & {
   workspaceName: string
+}
+
+type LinkableDatabaseViewOption = DatabaseSearchableMenuOption & {
+  viewType: string
 }
 
 const DEFAULT_CONDITIONAL_COLOR = "green"
@@ -160,6 +168,32 @@ function DataSourceMenuItem({
           {viewLabel}
         </span>
         <MoreHorizontal className="text-muted-foreground" />
+      </div>
+    </DropDrawerItem>
+  )
+}
+
+function LinkedDataSourceMenuItem({
+  view,
+}: {
+  view: DatabaseLinkedViewConfig
+}) {
+  const ViewIcon = view.viewType === "kanban" ? Kanban : Table2
+
+  return (
+    <DropDrawerItem disabled>
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <ViewIcon className="text-muted-foreground" />
+        <div className="min-w-0 flex-1">
+          <div className="truncate">{view.viewName}</div>
+          <div className="truncate text-xs text-muted-foreground">
+            {view.databaseName}
+          </div>
+        </div>
+        <ArrowUpRightIcon
+          aria-label="Linked from another database"
+          className="size-3 text-muted-foreground"
+        />
       </div>
     </DropDrawerItem>
   )
@@ -585,10 +619,13 @@ export function DatabaseViewSettingsMenu({
   filterValueOptionsByField,
   groupProperties,
   groupPropertyId,
-  linkedDataSources = [],
+  linkedViews = [],
   titlePropertyLabel,
+  open: controlledOpen,
   organizationId,
+  onAddLinkedDatabaseView,
   onCopyDatabaseViewLink,
+  onOpenChange,
   onClearDatabaseFilter,
   onClearDatabaseSort,
   onCreateDatabaseFilter,
@@ -606,6 +643,7 @@ export function DatabaseViewSettingsMenu({
   onUpdateDatabaseSort,
   properties,
   sortFieldOptions,
+  sourceDatabaseId,
   viewConfig,
   visiblePropertyCount,
 }: {
@@ -625,10 +663,13 @@ export function DatabaseViewSettingsMenu({
   filterValueOptionsByField: Record<string, DatabaseSearchableMenuOption[]>
   groupProperties: DatabaseViewProperty[]
   groupPropertyId: string | null
-  linkedDataSources?: DatabaseSourceMenuItem[]
+  linkedViews?: DatabaseLinkedViewConfig[]
   titlePropertyLabel: string
+  open?: boolean
   organizationId?: string
+  onAddLinkedDatabaseView: (view: DatabaseLinkedViewConfig) => void
   onCopyDatabaseViewLink: () => void
+  onOpenChange?: (open: boolean) => void
   onClearDatabaseFilter: () => void
   onClearDatabaseSort: () => void
   onCreateDatabaseFilter: (field: string) => void
@@ -648,12 +689,28 @@ export function DatabaseViewSettingsMenu({
   onUpdateDatabaseSort: (index: number, patch: DatabaseSortUpdatePatch) => void
   properties: DatabaseViewProperty[]
   sortFieldOptions: DatabaseSearchableMenuOption[]
+  sourceDatabaseId?: string
   viewConfig?: unknown
   visiblePropertyCount: number
 }) {
-  const [open, setOpen] = useState(false)
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
+  const open = controlledOpen ?? uncontrolledOpen
+  const setOpen = (nextOpen: boolean) => {
+    if (controlledOpen === undefined) {
+      setUncontrolledOpen(nextOpen)
+    }
+
+    onOpenChange?.(nextOpen)
+  }
   const [manageDataSourcesOpen, setManageDataSourcesOpen] = useState(false)
   const [showLinkExistingPicker, setShowLinkExistingPicker] = useState(false)
+  const [selectedLinkDatabaseId, setSelectedLinkDatabaseId] = useState<
+    string | null
+  >(null)
+  const {
+    data: selectedLinkDatabasePayload,
+    isLoading: isLoadingSelectedLinkDatabase,
+  } = useDatabase(selectedLinkDatabaseId)
   const { data: workspaces = [], isLoading: isLoadingWorkspaces } =
     useWorkspaces(organizationId)
   const isKanbanView = activeViewType === "kanban"
@@ -665,6 +722,7 @@ export function DatabaseViewSettingsMenu({
 
   const linkableDatabaseOptions = workspaces.flatMap((workspace) =>
     (workspace.databases ?? [])
+      .filter((database) => database.id !== sourceDatabaseId)
       .map<LinkableDatabaseOption>((database) => ({
         icon: <Database />,
         label: database.name,
@@ -673,6 +731,26 @@ export function DatabaseViewSettingsMenu({
         workspaceName: workspace.name,
       }))
   )
+  const selectedDatabaseOption = selectedLinkDatabaseId
+    ? linkableDatabaseOptions.find(
+        (option) => option.value === selectedLinkDatabaseId
+      )
+    : null
+  const linkedViewKeys = new Set(
+    linkedViews.map((linkedView) => getDatabaseLinkedViewKey(linkedView))
+  )
+  const linkableDatabaseViewOptions =
+    selectedLinkDatabasePayload?.views.map<LinkableDatabaseViewOption>((view) => {
+      const ViewIcon = view.type === "kanban" ? Kanban : Table2
+
+      return {
+        icon: <ViewIcon />,
+        label: view.name,
+        searchText: `${view.name} ${selectedLinkDatabasePayload.database.name}`.trim(),
+        value: view.id,
+        viewType: view.type,
+      }
+    }) ?? []
 
   const handleOpenChange = (nextOpen: boolean) => {
     setOpen(nextOpen)
@@ -680,6 +758,7 @@ export function DatabaseViewSettingsMenu({
     if (!nextOpen) {
       setManageDataSourcesOpen(false)
       setShowLinkExistingPicker(false)
+      setSelectedLinkDatabaseId(null)
     }
   }
 
@@ -1027,6 +1106,7 @@ export function DatabaseViewSettingsMenu({
 
             if (!nextOpen) {
               setShowLinkExistingPicker(false)
+              setSelectedLinkDatabaseId(null)
             }
           }}
           open={manageDataSourcesOpen}
@@ -1041,14 +1121,78 @@ export function DatabaseViewSettingsMenu({
                 <DropDrawerItem
                   onSelect={(event) => {
                     event.preventDefault()
-                    setShowLinkExistingPicker(false)
+                    if (selectedLinkDatabaseId) {
+                      setSelectedLinkDatabaseId(null)
+                    } else {
+                      setShowLinkExistingPicker(false)
+                    }
                   }}
                 >
                   <ChevronLeft />
                   <span>Back</span>
                 </DropDrawerItem>
                 <DropDrawerSeparator />
-                {isLoadingWorkspaces ? (
+                {selectedLinkDatabaseId ? (
+                  isLoadingSelectedLinkDatabase ? (
+                    <DropDrawerItem disabled>Loading views...</DropDrawerItem>
+                  ) : selectedLinkDatabasePayload ? (
+                    <DatabaseSearchableMenuItems
+                      emptyMessage="No views available."
+                      inputAriaLabel="Search database views"
+                      inputIcon={<Search className="size-4" />}
+                      inputPlaceholder="Search views..."
+                      open={
+                        manageDataSourcesOpen &&
+                        showLinkExistingPicker &&
+                        Boolean(selectedLinkDatabaseId)
+                      }
+                      options={linkableDatabaseViewOptions}
+                      renderOption={(option) => {
+                        const viewOption = option as LinkableDatabaseViewOption
+                        const linkedView = {
+                          databaseId: selectedLinkDatabasePayload.database.id,
+                          databaseName:
+                            selectedLinkDatabasePayload.database.name ||
+                            selectedDatabaseOption?.label ||
+                            "Untitled database",
+                          viewId: viewOption.value,
+                          viewName: viewOption.label,
+                          viewType: viewOption.viewType,
+                        }
+                        const alreadyLinked = linkedViewKeys.has(
+                          getDatabaseLinkedViewKey(linkedView)
+                        )
+
+                        return (
+                          <DropDrawerItem
+                            disabled={alreadyLinked}
+                            key={viewOption.value}
+                            onSelect={(event) => {
+                              event.preventDefault()
+                              onAddLinkedDatabaseView(linkedView)
+                              setOpen(false)
+                            }}
+                          >
+                            {viewOption.icon}
+                            <div className="min-w-0 flex-1">
+                              <div className="truncate">{viewOption.label}</div>
+                              <div className="truncate text-xs text-muted-foreground">
+                                {selectedLinkDatabasePayload.database.name ||
+                                  selectedDatabaseOption?.label ||
+                                  "Untitled database"}
+                              </div>
+                            </div>
+                            {alreadyLinked ? (
+                              <Check className="ml-auto text-foreground" />
+                            ) : null}
+                          </DropDrawerItem>
+                        )
+                      }}
+                    />
+                  ) : (
+                    <DropDrawerItem disabled>Database unavailable.</DropDrawerItem>
+                  )
+                ) : isLoadingWorkspaces ? (
                   <DropDrawerItem disabled>Loading databases...</DropDrawerItem>
                 ) : (
                   <DatabaseSearchableMenuItems
@@ -1056,13 +1200,23 @@ export function DatabaseViewSettingsMenu({
                     inputAriaLabel="Search databases"
                     inputIcon={<Search className="size-4" />}
                     inputPlaceholder="Search databases..."
-                    open={manageDataSourcesOpen && showLinkExistingPicker}
+                    open={
+                      manageDataSourcesOpen &&
+                      showLinkExistingPicker &&
+                      !selectedLinkDatabaseId
+                    }
                     options={linkableDatabaseOptions}
                     renderOption={(option) => {
                       const databaseOption = option as LinkableDatabaseOption
 
                       return (
-                        <DropDrawerItem disabled key={databaseOption.value}>
+                        <DropDrawerItem
+                          key={databaseOption.value}
+                          onSelect={(event) => {
+                            event.preventDefault()
+                            setSelectedLinkDatabaseId(databaseOption.value)
+                          }}
+                        >
                           <div className="flex min-w-0 flex-1 items-start gap-2">
                             {databaseOption.icon}
                             <div className="min-w-0">
@@ -1097,9 +1251,12 @@ export function DatabaseViewSettingsMenu({
                 </DropDrawerItem>
                 <DropDrawerSeparator />
                 <DataSourceSectionLabel>Linked</DataSourceSectionLabel>
-                {linkedDataSources.length > 0 ? (
-                  linkedDataSources.map((source) => (
-                    <DataSourceMenuItem item={source} key={source.id} />
+                {linkedViews.length > 0 ? (
+                  linkedViews.map((view) => (
+                    <LinkedDataSourceMenuItem
+                      key={getDatabaseLinkedViewKey(view)}
+                      view={view}
+                    />
                   ))
                 ) : null}
                 <DropDrawerItem

@@ -26,6 +26,12 @@ import type { DatabaseViewContextValue } from "./database-view-context"
 import { type DatabasePropertyValue } from "../utils"
 import { getDatabaseViewCommands } from "./database-view-commands"
 import { getDatabaseViewModel } from "./database-view-model"
+import {
+  getDatabaseLinkedViewKey,
+  getDatabaseLinkedViews,
+  getMergedDatabaseConfig,
+  type DatabaseLinkedViewConfig,
+} from "./database-view-config"
 
 export type DatabaseViewProps = {
   databaseId: string | null | undefined
@@ -57,10 +63,6 @@ export function useDatabaseViewController({
   const addRow = useAddDatabaseRow(organizationId)
   const updateValue = useUpdateDatabasePropertyValue()
   const { data: payload, isLoading } = useDatabase(databaseId)
-  const { data: session } = useSession()
-  const { data: accessTargets } = useWorkspacePersonAccessTargets(
-    payload?.database.pageId
-  )
   const [draftDatabaseTitle, setDraftDatabaseTitle] = useState("New database")
   const [draftViewTitle, setDraftViewTitle] = useState("Table")
   const [activeViewId, setActiveViewId] = useState<string | null>(null)
@@ -69,16 +71,60 @@ export function useDatabaseViewController({
   const [showSortPill, setShowSortPill] = useState(true)
   const [filterPickerOpen, setFilterPickerOpen] = useState(false)
   const [sortPickerOpen, setSortPickerOpen] = useState(false)
+  const linkedDatabaseViews = useMemo(
+    () => getDatabaseLinkedViews(payload?.database.config),
+    [payload?.database.config]
+  )
+  const activeLinkedDatabaseView = useMemo(
+    () =>
+      linkedDatabaseViews.find(
+        (linkedView) => getDatabaseLinkedViewKey(linkedView) === activeViewId
+      ) ?? null,
+    [activeViewId, linkedDatabaseViews]
+  )
+  const {
+    data: linkedPayload,
+    isLoading: isLoadingLinkedPayload,
+  } = useDatabase(activeLinkedDatabaseView?.databaseId)
+  const activePayload = activeLinkedDatabaseView ? linkedPayload : payload
+  const activeDatabaseId = activeLinkedDatabaseView?.databaseId ?? databaseId
+  const activeViewLookupId = activeLinkedDatabaseView?.viewId ?? activeViewId
+  const { data: session } = useSession()
+  const { data: accessTargets } = useWorkspacePersonAccessTargets(
+    activePayload?.database.pageId
+  )
+  const activeViewTabId = activeLinkedDatabaseView
+    ? getDatabaseLinkedViewKey(activeLinkedDatabaseView)
+    : activeViewId
+  const viewTabs = useMemo(
+    () => [
+      ...(payload?.views ?? []).map((view) => ({
+        id: view.id,
+        name: view.name,
+        type: view.type,
+      })),
+      ...linkedDatabaseViews.map((linkedView) => ({
+        id: getDatabaseLinkedViewKey(linkedView),
+        isLinked: true,
+        name: linkedView.viewName,
+        sourceDatabaseId: linkedView.databaseId,
+        sourceDatabaseName: linkedView.databaseName,
+        sourceViewId: linkedView.viewId,
+        type: linkedView.viewType,
+      })),
+    ],
+    [linkedDatabaseViews, payload?.views]
+  )
 
   const viewModel = useMemo(
     () =>
       getDatabaseViewModel({
         accessTargets,
-        activeViewId,
+        activeViewId: activeViewLookupId,
         currentUserId: session?.user?.id,
-        payload,
+        payload: activePayload,
       }),
-    [accessTargets, activeViewId, payload, session?.user?.id]
+    [accessTargets, activePayload, activeViewLookupId, session?.user?.id]
   )
   const {
     activeConditionalColors,
@@ -111,27 +157,36 @@ export function useDatabaseViewController({
     visiblePropertyCount,
   } = viewModel
   useEffect(() => {
-    if (payload?.database.name) {
-      setDraftDatabaseTitle(payload.database.name)
+    const nextDatabaseTitle =
+      activePayload?.database.name ?? activeLinkedDatabaseView?.databaseName
+
+    if (nextDatabaseTitle) {
+      setDraftDatabaseTitle(nextDatabaseTitle)
     }
-  }, [payload?.database.id, payload?.database.name])
+  }, [
+    activeLinkedDatabaseView?.databaseName,
+    activePayload?.database.id,
+    activePayload?.database.name,
+  ])
 
   useEffect(() => {
-    if (!payload?.views.length) {
+    if (viewTabs.length === 0) {
       setActiveViewId(null)
       return
     }
 
-    if (!activeViewId || !payload.views.some((view) => view.id === activeViewId)) {
-      setActiveViewId(payload.views[0].id)
+    if (!activeViewId || !viewTabs.some((view) => view.id === activeViewId)) {
+      setActiveViewId(viewTabs[0]?.id ?? null)
     }
-  }, [activeViewId, payload?.views])
+  }, [activeViewId, viewTabs])
 
   useEffect(() => {
-    if (activeView?.name) {
-      setDraftViewTitle(activeView.name)
+    const nextViewTitle = activeView?.name ?? activeLinkedDatabaseView?.viewName
+
+    if (nextViewTitle) {
+      setDraftViewTitle(nextViewTitle)
     }
-  }, [activeView?.id, activeView?.name])
+  }, [activeLinkedDatabaseView?.viewName, activeView?.id, activeView?.name])
 
   useEffect(() => {
     if (activeDatabaseSorts.length === 0) {
@@ -145,11 +200,40 @@ export function useDatabaseViewController({
     }
   }, [activeDatabaseFilters.length])
 
+  const addLinkedDatabaseView = (linkedView: DatabaseLinkedViewConfig) => {
+    if (!databaseId) {
+      return
+    }
+
+    const linkedViewKey = getDatabaseLinkedViewKey(linkedView)
+
+    if (
+      linkedDatabaseViews.some(
+        (existingView) => getDatabaseLinkedViewKey(existingView) === linkedViewKey
+      )
+    ) {
+      setActiveViewId(linkedViewKey)
+      return
+    }
+
+    updateDatabase.mutate(
+      {
+        config: getMergedDatabaseConfig(payload?.database.config, {
+          linkedDatabaseViews: [...linkedDatabaseViews, linkedView],
+        }),
+        databaseId,
+      },
+      {
+        onSuccess: () => setActiveViewId(linkedViewKey),
+      }
+    )
+  }
+
   const commands = getDatabaseViewCommands({
     activeDatabaseFilters,
     activeDatabaseSorts,
     activeView,
-    databaseId,
+    databaseId: activeDatabaseId,
     editable,
     isKanbanView,
     items,
@@ -163,7 +247,7 @@ export function useDatabaseViewController({
       updateProperty,
       updateValue,
     },
-    payload,
+    payload: activePayload,
     properties,
     setActiveViewId,
     setFilterPickerOpen,
@@ -201,12 +285,14 @@ export function useDatabaseViewController({
     activeDatabaseFilters,
     activeDatabaseSorts,
     activeView,
+    activeViewTabId,
     activeVisibilityConfig,
     addableFilterFieldOptions,
     addableSortFieldOptions,
     addDatabaseProperty: commands.addDatabaseProperty,
     addDraggedPageRow: commands.addDraggedPageRow,
     addKanbanView: commands.addKanbanView,
+    addLinkedDatabaseView,
     addDatabaseRow: commands.addDatabaseRow,
     addTableView: commands.addTableView,
     canAddDatabaseFilter,
@@ -217,10 +303,10 @@ export function useDatabaseViewController({
     copyDatabaseViewLink: commands.copyDatabaseViewLink,
     createDatabaseFilter: commands.createDatabaseFilter,
     createDatabaseSort: commands.createDatabaseSort,
-    databaseConfig: payload?.database.config,
-    databaseId,
-    databaseName: payload?.database.name,
-    databaseOrganizationId: payload?.database.organizationId,
+    databaseConfig: activePayload?.database.config,
+    databaseId: activeDatabaseId,
+    databaseName: activePayload?.database.name,
+    databaseOrganizationId: activePayload?.database.organizationId,
     draftPropertyValues,
     draftDatabaseTitle,
     draftViewTitle,
@@ -234,9 +320,14 @@ export function useDatabaseViewController({
     groupProperty,
     groupableProperties,
     hasDatabasePageDragPayload,
+    hostDatabaseId: databaseId,
+    hostDatabaseName: payload?.database.name,
+    hostDatabaseOrganizationId: payload?.database.organizationId,
+    hostViews: payload?.views ?? [],
     isAddingDatabaseProperty: addProperty.isPending,
     isAddingDatabaseRow: addRow.isPending,
     isAddingDatabaseView: addDatabaseView.isPending,
+    linkedDatabaseViews,
     titlePropertyLabel,
     showPageIconInTitle,
     onOpenPage,
@@ -250,6 +341,7 @@ export function useDatabaseViewController({
     reorderDatabaseFilters: commands.reorderDatabaseFilters,
     items,
     savePropertyValue: commands.savePropertyValue,
+    saveDatabaseEmoji: commands.saveDatabaseEmoji,
     saveDatabaseTitle: commands.saveDatabaseTitle,
     saveDatabaseConditionalColors: commands.saveDatabaseConditionalColors,
     saveDatabaseFilters: commands.saveDatabaseFilters,
@@ -279,7 +371,8 @@ export function useDatabaseViewController({
     updateDatabaseSort: commands.updateDatabaseSort,
     visibleProperties,
     visiblePropertyCount,
-    views: payload?.views ?? [],
+    viewTabs,
+    views: activePayload?.views ?? [],
   }
 
   return {
@@ -290,8 +383,8 @@ export function useDatabaseViewController({
     databaseId,
     handleDatabaseBlockDragOver,
     handleDatabaseBlockDrop,
-    isLoading,
-    payload,
+    isLoading: isLoading || Boolean(activeLinkedDatabaseView && isLoadingLinkedPayload),
+    payload: activePayload,
     viewType: activeView?.type,
   }
 }

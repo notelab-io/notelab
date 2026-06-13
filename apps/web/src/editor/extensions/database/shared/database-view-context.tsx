@@ -33,6 +33,7 @@ import type {
 import type {
   DatabasePropertyFilterConfig,
   DatabaseConditionalColorConfig,
+  DatabaseLinkedViewConfig,
   DatabaseSortConfig,
 } from "./database-view-config"
 import type {
@@ -49,12 +50,23 @@ export type DatabaseActiveConditionalColor = Omit<
   filter: DatabaseActiveFilter
 }
 
+export type DatabaseViewTab = {
+  id: string
+  isLinked?: boolean
+  name: string
+  sourceDatabaseId?: string
+  sourceDatabaseName?: string
+  sourceViewId?: string
+  type: string
+}
+
 export type DatabaseViewContextValue = {
   activeConditionalColors: DatabaseActiveConditionalColor[]
   activeDatabaseFilters: DatabaseActiveFilter[]
   activeDatabaseSorts: DatabaseActiveSort[]
   activePropertyValueKey: string | null
   activeView: DatabaseView | null
+  activeViewTabId: string | null
   activeVisibilityConfig: unknown
   addableFilterFieldOptions: DatabaseSearchableMenuOption[]
   addableSortFieldOptions: DatabaseSearchableMenuOption[]
@@ -68,6 +80,7 @@ export type DatabaseViewContextValue = {
     position: number
   ) => void
   addKanbanView: () => void
+  addLinkedDatabaseView: (view: DatabaseLinkedViewConfig) => void
   addTableView: () => void
   canAddDatabaseFilter: boolean
   canAddDatabaseSort: boolean
@@ -95,10 +108,15 @@ export type DatabaseViewContextValue = {
   groupProperty: DatabasePropertyListItem | null
   groupableProperties: DatabasePropertyListItem[]
   hasDatabasePageDragPayload: (dataTransfer: DataTransfer | null) => boolean
+  hostDatabaseId: string | null | undefined
+  hostDatabaseName?: string
+  hostDatabaseOrganizationId?: string
+  hostViews: DatabaseView[]
   isAddingDatabaseProperty: boolean
   isAddingDatabaseRow: boolean
   isAddingDatabaseView: boolean
   items: DatabaseRow[]
+  linkedDatabaseViews: DatabaseLinkedViewConfig[]
   onOpenPage?: (pageId: string) => void
   options: DatabaseSelectOption[]
   organizationId?: string | null
@@ -110,6 +128,7 @@ export type DatabaseViewContextValue = {
   renameDatabaseProperty: (databasePropertyId: string, name: string) => void
   reorderDatabaseFilters: (filterIds: string[]) => void
   saveDatabaseTitle: (nextTitle: string) => void
+  saveDatabaseEmoji: (nextEmoji: string) => void
   saveDatabaseViewTitle: (nextTitle: string) => void
   saveDatabaseConditionalColors: (
     nextConditionalColors: DatabaseConditionalColorConfig[]
@@ -154,6 +173,7 @@ export type DatabaseViewContextValue = {
   updateDatabaseSort: (index: number, patch: DatabaseSortUpdatePatch) => void
   visibleProperties: DatabaseProperty[]
   visiblePropertyCount: number
+  viewTabs: DatabaseViewTab[]
   views: DatabaseView[]
 }
 
