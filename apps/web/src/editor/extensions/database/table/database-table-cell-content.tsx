@@ -3,19 +3,27 @@ import {
   type WheelEvent as ReactWheelEvent,
 } from "react"
 
+import {
+  getDatabaseHorizontalWheelDelta,
+  preserveDatabaseScrollLeftOnVerticalWheel,
+} from "../shared/database-wheel-scroll"
+
 function handleDatabaseCellWheel(event: ReactWheelEvent<HTMLDivElement>) {
-  const horizontalDelta =
-    Math.abs(event.deltaX) > 0 ? event.deltaX : event.shiftKey ? event.deltaY : 0
-
-  if (!horizontalDelta) {
-    return
-  }
-
+  const horizontalDelta = getDatabaseHorizontalWheelDelta(event)
   const scrollElement = event.currentTarget
-  const maxScrollLeft = scrollElement.scrollWidth - scrollElement.clientWidth
   const tableScrollElement = scrollElement.closest<HTMLDivElement>(
     ".database-table-scroll"
   )
+
+  if (!horizontalDelta) {
+    preserveDatabaseScrollLeftOnVerticalWheel(event, [
+      scrollElement,
+      tableScrollElement,
+    ])
+    return
+  }
+
+  const maxScrollLeft = scrollElement.scrollWidth - scrollElement.clientWidth
 
   const scrollTable = (delta: number) => {
     if (!tableScrollElement) {

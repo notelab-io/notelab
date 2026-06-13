@@ -8,6 +8,11 @@ import {
   type RefObject,
 } from "react"
 
+import {
+  getDatabaseHorizontalWheelDelta,
+  preserveDatabaseScrollLeftOnVerticalWheel,
+} from "./database-wheel-scroll"
+
 export type InlineDatabaseScrollLayout = {
   contentWidth: number
   offset: number
@@ -164,10 +169,14 @@ function handleInlineDatabaseScrollWheel(
   event: WheelEvent,
   scrollElement: HTMLElement
 ) {
-  const horizontalDelta =
-    Math.abs(event.deltaX) > 0 ? event.deltaX : event.shiftKey ? event.deltaY : 0
+  if (isNestedDatabaseCellScroll(event, scrollElement)) {
+    return
+  }
+
+  const horizontalDelta = getDatabaseHorizontalWheelDelta(event)
 
   if (!horizontalDelta) {
+    preserveDatabaseScrollLeftOnVerticalWheel(event, [scrollElement])
     return
   }
 
@@ -190,4 +199,17 @@ function handleInlineDatabaseScrollWheel(
   }
 
   scrollElement.scrollLeft = nextScrollLeft
+}
+
+function isNestedDatabaseCellScroll(
+  event: WheelEvent,
+  scrollElement: HTMLElement
+) {
+  const target = event.target
+
+  return (
+    target instanceof HTMLElement &&
+    scrollElement.contains(target) &&
+    Boolean(target.closest("[data-database-cell-scroll]"))
+  )
 }

@@ -313,6 +313,7 @@ export function DatabaseTableView() {
     null
   )
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({})
+  const tableScrollRef = useRef<HTMLDivElement | null>(null)
   const tableWrapRef = useRef<HTMLDivElement | null>(null)
   const [rowLayout, setRowLayout] = useState<{
     centers: Record<string, number>
@@ -399,6 +400,7 @@ export function DatabaseTableView() {
     style: tableWrapStyle,
   } = useInlineDatabaseScroll({
     getContentWidth: getInlineTableContentWidth,
+    scrollRef: tableScrollRef,
     wrapperRef: tableWrapRef,
   })
   const groupedSections = useMemo<GroupSection[]>(() => {
@@ -1336,7 +1338,10 @@ export function DatabaseTableView() {
           </span>
         </div>
       ) : null}
-      <div className="database-table-scroll database-inline-scroll">
+      <div
+        className="database-table-scroll database-inline-scroll"
+        ref={tableScrollRef}
+      >
         <div className="database-table-scroll-content database-inline-scroll-content">
           {editable ? (
             <div className="database-row-drag-rail">
