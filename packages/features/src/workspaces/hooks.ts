@@ -13,11 +13,12 @@ import {
   workspaceAccessQueryOptions,
   workspaceAccessLevelQueryOptions,
   workspaceAccessTargetsQueryOptions,
-  workspaceCommentsQueryKey,
   workspaceCommentsQueryOptions,
   workspacePersonAccessTargetsQueryOptions,
   workspacePropertiesQueryKey,
   workspacePropertiesQueryOptions,
+  workspaceThreadsQueryKey,
+  workspaceThreadsQueryOptions,
   workspacesQueryKey,
   workspacesQueryOptions,
   type AccessLevel,
@@ -74,6 +75,7 @@ type UpdateWorkspaceCommentReactionInput = {
 
 type ResolveWorkspaceCommentThreadInput = {
   workspaceId: string
+  threadId?: string
 }
 
 type UpsertWorkspaceAccessInput = {
@@ -143,11 +145,31 @@ export function useWorkspaceProperties(workspaceId: string | null | undefined) {
 
 export function useWorkspaceComments(
   workspaceId: string | null | undefined,
+  threadIdOrEnabled?: string | null | boolean,
   enabled = true,
 ) {
   const { apiFetch } = useNotelabFeatures()
 
-  return useQuery(workspaceCommentsQueryOptions(apiFetch, workspaceId, enabled))
+  let threadId: string | null | undefined
+  let isEnabled = enabled
+
+  if (typeof threadIdOrEnabled === "boolean") {
+    isEnabled = threadIdOrEnabled
+    threadId = undefined
+  } else if (threadIdOrEnabled !== undefined) {
+    threadId = threadIdOrEnabled
+  }
+
+  return useQuery(workspaceCommentsQueryOptions(apiFetch, workspaceId, threadId, isEnabled))
+}
+
+export function useWorkspaceThreads(
+  workspaceId: string | null | undefined,
+  enabled = true,
+) {
+  const { apiFetch } = useNotelabFeatures()
+
+  return useQuery(workspaceThreadsQueryOptions(apiFetch, workspaceId, enabled))
 }
 
 export function useCreateWorkspace() {
@@ -402,11 +424,13 @@ export function useCreateWorkspaceComment() {
           body: JSON.stringify({ body }),
         },
       ),
-    onSuccess: (payload, variables) => {
-      queryClient.setQueryData(
-        workspaceCommentsQueryKey(variables.workspaceId),
-        payload,
-      )
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["workspace-comments", variables.workspaceId],
+      })
+      queryClient.invalidateQueries({
+        queryKey: workspaceThreadsQueryKey(variables.workspaceId),
+      })
     },
   })
 }
@@ -427,11 +451,13 @@ export function useUpdateWorkspaceComment() {
           body: JSON.stringify({ body }),
         },
       ),
-    onSuccess: (payload, variables) => {
-      queryClient.setQueryData(
-        workspaceCommentsQueryKey(variables.workspaceId),
-        payload,
-      )
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["workspace-comments", variables.workspaceId],
+      })
+      queryClient.invalidateQueries({
+        queryKey: workspaceThreadsQueryKey(variables.workspaceId),
+      })
     },
   })
 }
@@ -447,11 +473,13 @@ export function useDeleteWorkspaceComment() {
           method: "DELETE",
         },
       ),
-    onSuccess: (payload, variables) => {
-      queryClient.setQueryData(
-        workspaceCommentsQueryKey(variables.workspaceId),
-        payload,
-      )
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["workspace-comments", variables.workspaceId],
+      })
+      queryClient.invalidateQueries({
+        queryKey: workspaceThreadsQueryKey(variables.workspaceId),
+      })
     },
   })
 }
@@ -472,11 +500,13 @@ export function useAddWorkspaceCommentReaction() {
           body: JSON.stringify({ emoji }),
         },
       ),
-    onSuccess: (payload, variables) => {
-      queryClient.setQueryData(
-        workspaceCommentsQueryKey(variables.workspaceId),
-        payload,
-      )
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["workspace-comments", variables.workspaceId],
+      })
+      queryClient.invalidateQueries({
+        queryKey: workspaceThreadsQueryKey(variables.workspaceId),
+      })
     },
   })
 }
@@ -497,11 +527,13 @@ export function useRemoveWorkspaceCommentReaction() {
           body: JSON.stringify({ emoji }),
         },
       ),
-    onSuccess: (payload, variables) => {
-      queryClient.setQueryData(
-        workspaceCommentsQueryKey(variables.workspaceId),
-        payload,
-      )
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["workspace-comments", variables.workspaceId],
+      })
+      queryClient.invalidateQueries({
+        queryKey: workspaceThreadsQueryKey(variables.workspaceId),
+      })
     },
   })
 }
@@ -510,18 +542,44 @@ export function useResolveWorkspaceCommentThread() {
   const { apiFetch, queryClient } = useNotelabFeatures()
 
   return useMutation({
-    mutationFn: async ({ workspaceId }: ResolveWorkspaceCommentThreadInput) =>
+    mutationFn: async ({ workspaceId, threadId }: ResolveWorkspaceCommentThreadInput) =>
       apiFetch<WorkspaceCommentsPayload>(
         `/workspaces/${workspaceId}/comments/thread/resolve`,
         {
           method: "PATCH",
+          body: JSON.stringify(threadId ? { threadId } : {}),
         },
       ),
-    onSuccess: (payload, variables) => {
-      queryClient.setQueryData(
-        workspaceCommentsQueryKey(variables.workspaceId),
-        payload,
-      )
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["workspace-comments", variables.workspaceId],
+      })
+      queryClient.invalidateQueries({
+        queryKey: workspaceThreadsQueryKey(variables.workspaceId),
+      })
+    },
+  })
+}
+
+export function useUnresolveWorkspaceCommentThread() {
+  const { apiFetch, queryClient } = useNotelabFeatures()
+
+  return useMutation({
+    mutationFn: async ({ workspaceId, threadId }: ResolveWorkspaceCommentThreadInput) =>
+      apiFetch<WorkspaceCommentsPayload>(
+        `/workspaces/${workspaceId}/comments/thread/unresolve`,
+        {
+          method: "PATCH",
+          body: JSON.stringify(threadId ? { threadId } : {}),
+        },
+      ),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["workspace-comments", variables.workspaceId],
+      })
+      queryClient.invalidateQueries({
+        queryKey: workspaceThreadsQueryKey(variables.workspaceId),
+      })
     },
   })
 }

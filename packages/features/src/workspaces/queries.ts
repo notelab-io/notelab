@@ -143,6 +143,10 @@ export type WorkspaceCommentsPayload = {
   thread: WorkspaceCommentThread | null
 }
 
+export type WorkspaceThreadsPayload = {
+  threads: WorkspaceCommentsPayload[]
+}
+
 export type AccessLevel = "view" | "edit" | "full"
 
 export type AccessTargetType = "public" | "user" | "team"
@@ -196,7 +200,12 @@ export const workspacePropertiesQueryKey = (
 
 export const workspaceCommentsQueryKey = (
   workspaceId: string | null | undefined,
-) => ["workspace-comments", workspaceId ?? "none"] as const
+  threadId?: string | null,
+) => ["workspace-comments", workspaceId ?? "none", threadId ?? "active"] as const
+
+export const workspaceThreadsQueryKey = (
+  workspaceId: string | null | undefined,
+) => ["workspace-threads", workspaceId ?? "none"] as const
 
 export const workspaceAccessQueryKey = (
   workspaceId: string | null | undefined,
@@ -414,18 +423,40 @@ export const workspacePropertiesQueryOptions = (
 export const workspaceCommentsQueryOptions = (
   apiFetch: ApiFetcher,
   workspaceId: string | null | undefined,
+  threadId?: string | null,
   enabled = true,
 ) =>
   queryOptions({
-    queryKey: workspaceCommentsQueryKey(workspaceId),
+    queryKey: workspaceCommentsQueryKey(workspaceId, threadId),
     enabled: Boolean(workspaceId) && enabled,
     queryFn: async () => {
       if (!workspaceId) {
         return { comments: [], thread: null }
       }
 
-      return apiFetch<WorkspaceCommentsPayload>(
-        `/workspaces/${workspaceId}/comments`,
+      const url = threadId
+        ? `/workspaces/${workspaceId}/comments?threadId=${encodeURIComponent(threadId)}`
+        : `/workspaces/${workspaceId}/comments`
+
+      return apiFetch<WorkspaceCommentsPayload>(url, { method: "GET" })
+    },
+  })
+
+export const workspaceThreadsQueryOptions = (
+  apiFetch: ApiFetcher,
+  workspaceId: string | null | undefined,
+  enabled = true,
+) =>
+  queryOptions({
+    queryKey: workspaceThreadsQueryKey(workspaceId),
+    enabled: Boolean(workspaceId) && enabled,
+    queryFn: async () => {
+      if (!workspaceId) {
+        return { threads: [] }
+      }
+
+      return apiFetch<WorkspaceThreadsPayload>(
+        `/workspaces/${workspaceId}/threads`,
         { method: "GET" },
       )
     },
