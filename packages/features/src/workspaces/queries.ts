@@ -100,6 +100,49 @@ export type WorkspacePropertiesPayload = {
   values: WorkspacePropertyValue[]
 }
 
+export type CommentAuthor = {
+  email: string
+  id: string
+  image?: string | null
+  name: string
+}
+
+export type WorkspaceCommentThread = {
+  id: string
+  organizationId: string
+  workspaceId: string
+  createdById?: string | null
+  resolvedAt?: string | null
+  resolvedById?: string | null
+  deletedAt?: string | null
+  createdAt: string
+  updatedAt: string
+  lastActivityAt: string
+}
+
+export type WorkspaceCommentReaction = {
+  count: number
+  emoji: string
+  reactedByMe: boolean
+}
+
+export type WorkspaceCommentMessage = {
+  id: string
+  threadId: string
+  authorId?: string | null
+  author?: CommentAuthor | null
+  body: string
+  editedAt?: string | null
+  reactions: WorkspaceCommentReaction[]
+  createdAt: string
+  updatedAt: string
+}
+
+export type WorkspaceCommentsPayload = {
+  comments: WorkspaceCommentMessage[]
+  thread: WorkspaceCommentThread | null
+}
+
 export type AccessLevel = "view" | "edit" | "full"
 
 export type AccessTargetType = "public" | "user" | "team"
@@ -150,6 +193,10 @@ export const workspaceQueryKey = (workspaceId: string | null | undefined) =>
 export const workspacePropertiesQueryKey = (
   workspaceId: string | null | undefined,
 ) => ["workspace-properties", workspaceId ?? "none"] as const
+
+export const workspaceCommentsQueryKey = (
+  workspaceId: string | null | undefined,
+) => ["workspace-comments", workspaceId ?? "none"] as const
 
 export const workspaceAccessQueryKey = (
   workspaceId: string | null | undefined,
@@ -359,6 +406,26 @@ export const workspacePropertiesQueryOptions = (
 
       return apiFetch<WorkspacePropertiesPayload>(
         `/workspaces/${workspaceId}/properties`,
+        { method: "GET" },
+      )
+    },
+  })
+
+export const workspaceCommentsQueryOptions = (
+  apiFetch: ApiFetcher,
+  workspaceId: string | null | undefined,
+  enabled = true,
+) =>
+  queryOptions({
+    queryKey: workspaceCommentsQueryKey(workspaceId),
+    enabled: Boolean(workspaceId) && enabled,
+    queryFn: async () => {
+      if (!workspaceId) {
+        return { comments: [], thread: null }
+      }
+
+      return apiFetch<WorkspaceCommentsPayload>(
+        `/workspaces/${workspaceId}/comments`,
         { method: "GET" },
       )
     },

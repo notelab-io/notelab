@@ -13,6 +13,8 @@ import {
   workspaceAccessQueryOptions,
   workspaceAccessLevelQueryOptions,
   workspaceAccessTargetsQueryOptions,
+  workspaceCommentsQueryKey,
+  workspaceCommentsQueryOptions,
   workspacePersonAccessTargetsQueryOptions,
   workspacePropertiesQueryKey,
   workspacePropertiesQueryOptions,
@@ -21,6 +23,7 @@ import {
   type AccessLevel,
   type AccessTargetType,
   type Workspace,
+  type WorkspaceCommentsPayload,
   type WorkspaceMetadata,
   type WorkspacePropertiesPayload,
 } from "./queries"
@@ -44,6 +47,32 @@ type UpdateWorkspaceInput = {
 type UpdateWorkspacePropertyValueInput = {
   propertyId: string
   value: unknown
+  workspaceId: string
+}
+
+type CreateWorkspaceCommentInput = {
+  body: string
+  workspaceId: string
+}
+
+type UpdateWorkspaceCommentInput = {
+  body: string
+  messageId: string
+  workspaceId: string
+}
+
+type DeleteWorkspaceCommentInput = {
+  messageId: string
+  workspaceId: string
+}
+
+type UpdateWorkspaceCommentReactionInput = {
+  emoji: string
+  messageId: string
+  workspaceId: string
+}
+
+type ResolveWorkspaceCommentThreadInput = {
   workspaceId: string
 }
 
@@ -110,6 +139,15 @@ export function useWorkspaceProperties(workspaceId: string | null | undefined) {
   const { apiFetch } = useNotelabFeatures()
 
   return useQuery(workspacePropertiesQueryOptions(apiFetch, workspaceId))
+}
+
+export function useWorkspaceComments(
+  workspaceId: string | null | undefined,
+  enabled = true,
+) {
+  const { apiFetch } = useNotelabFeatures()
+
+  return useQuery(workspaceCommentsQueryOptions(apiFetch, workspaceId, enabled))
 }
 
 export function useCreateWorkspace() {
@@ -343,6 +381,145 @@ export function useUpdateWorkspacePropertyValue() {
     onSuccess: (payload, variables) => {
       queryClient.setQueryData(
         workspacePropertiesQueryKey(variables.workspaceId),
+        payload,
+      )
+    },
+  })
+}
+
+export function useCreateWorkspaceComment() {
+  const { apiFetch, queryClient } = useNotelabFeatures()
+
+  return useMutation({
+    mutationFn: async ({
+      body,
+      workspaceId,
+    }: CreateWorkspaceCommentInput) =>
+      apiFetch<WorkspaceCommentsPayload>(
+        `/workspaces/${workspaceId}/comments`,
+        {
+          method: "POST",
+          body: JSON.stringify({ body }),
+        },
+      ),
+    onSuccess: (payload, variables) => {
+      queryClient.setQueryData(
+        workspaceCommentsQueryKey(variables.workspaceId),
+        payload,
+      )
+    },
+  })
+}
+
+export function useUpdateWorkspaceComment() {
+  const { apiFetch, queryClient } = useNotelabFeatures()
+
+  return useMutation({
+    mutationFn: async ({
+      body,
+      messageId,
+      workspaceId,
+    }: UpdateWorkspaceCommentInput) =>
+      apiFetch<WorkspaceCommentsPayload>(
+        `/workspaces/${workspaceId}/comments/${messageId}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({ body }),
+        },
+      ),
+    onSuccess: (payload, variables) => {
+      queryClient.setQueryData(
+        workspaceCommentsQueryKey(variables.workspaceId),
+        payload,
+      )
+    },
+  })
+}
+
+export function useDeleteWorkspaceComment() {
+  const { apiFetch, queryClient } = useNotelabFeatures()
+
+  return useMutation({
+    mutationFn: async ({ messageId, workspaceId }: DeleteWorkspaceCommentInput) =>
+      apiFetch<WorkspaceCommentsPayload>(
+        `/workspaces/${workspaceId}/comments/${messageId}`,
+        {
+          method: "DELETE",
+        },
+      ),
+    onSuccess: (payload, variables) => {
+      queryClient.setQueryData(
+        workspaceCommentsQueryKey(variables.workspaceId),
+        payload,
+      )
+    },
+  })
+}
+
+export function useAddWorkspaceCommentReaction() {
+  const { apiFetch, queryClient } = useNotelabFeatures()
+
+  return useMutation({
+    mutationFn: async ({
+      emoji,
+      messageId,
+      workspaceId,
+    }: UpdateWorkspaceCommentReactionInput) =>
+      apiFetch<WorkspaceCommentsPayload>(
+        `/workspaces/${workspaceId}/comments/${messageId}/reactions`,
+        {
+          method: "POST",
+          body: JSON.stringify({ emoji }),
+        },
+      ),
+    onSuccess: (payload, variables) => {
+      queryClient.setQueryData(
+        workspaceCommentsQueryKey(variables.workspaceId),
+        payload,
+      )
+    },
+  })
+}
+
+export function useRemoveWorkspaceCommentReaction() {
+  const { apiFetch, queryClient } = useNotelabFeatures()
+
+  return useMutation({
+    mutationFn: async ({
+      emoji,
+      messageId,
+      workspaceId,
+    }: UpdateWorkspaceCommentReactionInput) =>
+      apiFetch<WorkspaceCommentsPayload>(
+        `/workspaces/${workspaceId}/comments/${messageId}/reactions`,
+        {
+          method: "DELETE",
+          body: JSON.stringify({ emoji }),
+        },
+      ),
+    onSuccess: (payload, variables) => {
+      queryClient.setQueryData(
+        workspaceCommentsQueryKey(variables.workspaceId),
+        payload,
+      )
+    },
+  })
+}
+
+export function useResolveWorkspaceCommentThread() {
+  const { apiFetch, queryClient } = useNotelabFeatures()
+
+  return useMutation({
+    mutationFn: async ({ workspaceId }: ResolveWorkspaceCommentThreadInput) =>
+      apiFetch<WorkspaceCommentsPayload>(
+        `/workspaces/${workspaceId}/comments/thread/resolve`,
+        {
+          method: "PATCH",
+        },
+      ),
+    onSuccess: (payload, variables) => {
+      queryClient.setQueryData(
+        workspaceCommentsQueryKey(variables.workspaceId),
         payload,
       )
     },
