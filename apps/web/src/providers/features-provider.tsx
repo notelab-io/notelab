@@ -11,6 +11,7 @@ import type {
 import type {
   SessionResponse,
   SignInWithOtpInput,
+  SignInWithPasswordInput,
   SignUpInput,
   VerifyEmailOtpInput,
 } from "@notelab/features/auth"
@@ -28,6 +29,8 @@ export const webAuthClient: NotelabAuthClient = {
     }),
   signInWithOtp: (input: SignInWithOtpInput) =>
     authFetch<{ token: string; user: unknown }>("/sign-in/email-otp", input),
+  signInWithPassword: (input: SignInWithPasswordInput) =>
+    authFetch<{ token: string; user: unknown }>("/sign-in/email", input),
   signUp: (input: SignUpInput) =>
     authFetch<{ user: unknown }>("/sign-up/email", {
       ...input,

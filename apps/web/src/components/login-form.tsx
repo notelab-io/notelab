@@ -13,8 +13,7 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { getApiErrorMessage } from "@/lib/api"
-import { useRequestSignInOtp } from "@notelab/features/auth"
-import { useAuthFlowStore } from "@/stores/auth-flow-store"
+import { useSignInWithPassword } from "@notelab/features/auth"
 import { GalleryVerticalEndIcon } from "lucide-react"
 
 export function LoginForm({
@@ -22,20 +21,23 @@ export function LoginForm({
   ...props
 }: React.ComponentProps<"div">) {
   const navigate = useNavigate()
-  const requestOtp = useRequestSignInOtp()
-  const setAuthFlow = useAuthFlowStore((state) => state.setAuthFlow)
+  const signInWithPassword = useSignInWithPassword()
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
     const formData = new FormData(event.currentTarget)
     const email = String(formData.get("email") ?? "").trim().toLowerCase()
+    const password = String(formData.get("password") ?? "")
     const returnTo = new URLSearchParams(window.location.search).get("returnTo")
 
     try {
-      await requestOtp.mutateAsync(email)
-      setAuthFlow({ email, purpose: "sign-in", returnTo })
-      void navigate({ to: "/otp" })
+      await signInWithPassword.mutateAsync({ email, password })
+      if (returnTo) {
+        window.location.assign(returnTo)
+      } else {
+        void navigate({ to: "/dashboard" })
+      }
     } catch {
       // React Query owns the visible error state.
     }
@@ -68,16 +70,29 @@ export function LoginForm({
               type="email"
               placeholder="m@example.com"
               autoComplete="email"
-              disabled={requestOtp.isPending}
+              disabled={signInWithPassword.isPending}
               required
             />
           </Field>
-          {requestOtp.isError && (
-            <FieldError>{getApiErrorMessage(requestOtp.error)}</FieldError>
+          <Field>
+            <FieldLabel htmlFor="password">Password</FieldLabel>
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              disabled={signInWithPassword.isPending}
+              required
+            />
+          </Field>
+          {signInWithPassword.isError && (
+            <FieldError>
+              {getApiErrorMessage(signInWithPassword.error)}
+            </FieldError>
           )}
           <Field>
-            <Button type="submit" disabled={requestOtp.isPending}>
-              {requestOtp.isPending ? "Sending code..." : "Login"}
+            <Button type="submit" disabled={signInWithPassword.isPending}>
+              {signInWithPassword.isPending ? "Signing in..." : "Login"}
             </Button>
           </Field>
           <FieldSeparator>Or</FieldSeparator>

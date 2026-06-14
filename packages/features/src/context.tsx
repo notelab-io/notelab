@@ -4,6 +4,7 @@ import { createContext, useContext } from "react"
 import type {
   SessionResponse,
   SignInWithOtpInput,
+  SignInWithPasswordInput,
   SignUpInput,
   VerifyEmailOtpInput,
 } from "./auth/queries"
@@ -14,6 +15,9 @@ export type NotelabAuthClient = {
   getSession: () => Promise<SessionResponse>
   requestSignInOtp: (email: string) => Promise<{ success: boolean }>
   signInWithOtp: (input: SignInWithOtpInput) => Promise<{ token: string; user: unknown }>
+  signInWithPassword: (
+    input: SignInWithPasswordInput,
+  ) => Promise<{ token: string; user: unknown }>
   signUp: (input: SignUpInput) => Promise<{ user: unknown }>
   requestEmailVerificationOtp: (email: string) => Promise<{ success: boolean }>
   verifyEmailOtp: (input: VerifyEmailOtpInput) => Promise<{ user: unknown }>

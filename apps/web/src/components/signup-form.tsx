@@ -100,6 +100,7 @@ export function SignupForm({
             type="password"
             autoComplete="new-password"
             disabled={isPending}
+            minLength={8}
             required
           />
           <FieldDescription>
@@ -114,6 +115,7 @@ export function SignupForm({
             type="password"
             autoComplete="new-password"
             disabled={isPending}
+            minLength={8}
             required
           />
           <FieldDescription>Please confirm your password.</FieldDescription>

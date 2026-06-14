@@ -22,6 +22,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { getApiErrorMessage } from "@/lib/api"
 import {
   useChangePassword,
+  useSetPassword,
   useSession,
   useUpdateUserProfile,
 } from "@notelab/features/auth"
@@ -42,7 +43,10 @@ export default function ProfileSettingsPage() {
           initialName={sessionData?.user?.name ?? ""}
           isReady={Boolean(sessionData?.user)}
         />
-        <PasswordCard isReady={Boolean(sessionData?.user)} />
+        <PasswordCard
+          hasPassword={sessionData?.user?.hasPassword ?? true}
+          isReady={Boolean(sessionData?.user)}
+        />
       </div>
     </main>
   )
@@ -169,16 +173,26 @@ function ProfileDetailsCard({
   )
 }
 
-function PasswordCard({ isReady }: { isReady: boolean }) {
+function PasswordCard({
+  hasPassword,
+  isReady,
+}: {
+  hasPassword: boolean
+  isReady: boolean
+}) {
   const changePassword = useChangePassword()
+  const setPassword = useSetPassword()
   const [currentPassword, setCurrentPassword] = React.useState("")
   const [newPassword, setNewPassword] = React.useState("")
   const [confirmPassword, setConfirmPassword] = React.useState("")
   const [error, setError] = React.useState("")
+  const isPending = changePassword.isPending || setPassword.isPending
 
   const canSubmit =
-    Boolean(currentPassword && newPassword && confirmPassword) &&
-    !changePassword.isPending
+    Boolean(
+      (hasPassword ? currentPassword : true) && newPassword && confirmPassword,
+    ) &&
+    !isPending
 
   const updatePassword = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -188,12 +202,31 @@ function PasswordCard({ isReady }: { isReady: boolean }) {
       return
     }
 
-    if (newPassword === currentPassword) {
+    if (hasPassword && newPassword === currentPassword) {
       setError("Choose a new password that is different from the current one.")
       return
     }
 
     setError("")
+
+    if (!hasPassword) {
+      setPassword.mutate(
+        { newPassword },
+        {
+          onSuccess: () => {
+            setCurrentPassword("")
+            setNewPassword("")
+            setConfirmPassword("")
+            toast.success("Password set.")
+          },
+          onError: (mutationError) => {
+            setError(getApiErrorMessage(mutationError))
+          },
+        },
+      )
+      return
+    }
+
     changePassword.mutate(
       {
         currentPassword,
@@ -218,37 +251,44 @@ function PasswordCard({ isReady }: { isReady: boolean }) {
       <CardHeader>
         <CardTitle>Password</CardTitle>
         <CardDescription>
-          Change the password associated with your account.
+          {hasPassword
+            ? "Change the password associated with your account."
+            : "Set a password for signing in to your account."}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form className="grid gap-4" onSubmit={updatePassword}>
           <FieldGroup>
-            <Field data-invalid={Boolean(error)}>
-              <FieldLabel htmlFor="profile-current-password">
-                Current password
-              </FieldLabel>
-              <Input
-                autoComplete="current-password"
-                disabled={!isReady || changePassword.isPending}
-                id="profile-current-password"
-                onChange={(event) => {
-                  setCurrentPassword(event.target.value)
-                  if (error) {
-                    setError("")
-                  }
-                }}
-                type="password"
-                value={currentPassword}
-              />
-            </Field>
+            {hasPassword && (
+              <Field data-invalid={Boolean(error)}>
+                <FieldLabel htmlFor="profile-current-password">
+                  Current password
+                </FieldLabel>
+                <Input
+                  autoComplete="current-password"
+                  disabled={!isReady || isPending}
+                  id="profile-current-password"
+                  onChange={(event) => {
+                    setCurrentPassword(event.target.value)
+                    if (error) {
+                      setError("")
+                    }
+                  }}
+                  type="password"
+                  value={currentPassword}
+                />
+              </Field>
+            )}
 
             <Field>
-              <FieldLabel htmlFor="profile-new-password">New password</FieldLabel>
+              <FieldLabel htmlFor="profile-new-password">
+                {hasPassword ? "New password" : "Password"}
+              </FieldLabel>
               <Input
                 autoComplete="new-password"
-                disabled={!isReady || changePassword.isPending}
+                disabled={!isReady || isPending}
                 id="profile-new-password"
+                minLength={8}
                 onChange={(event) => {
                   setNewPassword(event.target.value)
                   if (error) {
@@ -266,8 +306,9 @@ function PasswordCard({ isReady }: { isReady: boolean }) {
               </FieldLabel>
               <Input
                 autoComplete="new-password"
-                disabled={!isReady || changePassword.isPending}
+                disabled={!isReady || isPending}
                 id="profile-confirm-password"
+                minLength={8}
                 onChange={(event) => {
                   setConfirmPassword(event.target.value)
                   if (error) {
@@ -289,8 +330,8 @@ function PasswordCard({ isReady }: { isReady: boolean }) {
             disabled={!isReady || !canSubmit}
             type="submit"
           >
-            {changePassword.isPending ? <Spinner /> : null}
-            Update password
+            {isPending ? <Spinner /> : null}
+            {hasPassword ? "Update password" : "Set password"}
           </Button>
         </form>
       </CardContent>

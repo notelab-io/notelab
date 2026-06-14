@@ -7,6 +7,7 @@ export type SessionUser = {
   name: string
   email: string
   emailVerified: boolean
+  hasPassword: boolean
   image?: string | null
 }
 
@@ -26,6 +27,11 @@ export type SessionResponse = {
 export type SignInWithOtpInput = {
   email: string
   otp: string
+}
+
+export type SignInWithPasswordInput = {
+  email: string
+  password: string
 }
 
 export type SignUpInput = {

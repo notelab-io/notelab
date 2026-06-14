@@ -7,6 +7,7 @@ import {
   type SessionResponse,
   type SessionUser,
   type SignInWithOtpInput,
+  type SignInWithPasswordInput,
   type SignUpInput,
   type VerifyEmailOtpInput,
 } from "./queries"
@@ -40,6 +41,19 @@ export function useSignInWithOtp() {
 
   return useMutation({
     mutationFn: (input: SignInWithOtpInput) => auth.signInWithOtp(input),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: sessionQueryKey })
+      await refreshSessionQuery(auth, queryClient)
+    },
+  })
+}
+
+export function useSignInWithPassword() {
+  const { auth, queryClient } = useNotelabFeatures()
+
+  return useMutation({
+    mutationFn: (input: SignInWithPasswordInput) =>
+      auth.signInWithPassword(input),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: sessionQueryKey })
       await refreshSessionQuery(auth, queryClient)
@@ -120,6 +134,22 @@ export function useChangePassword() {
         token: string | null
         user: SessionUser
       }>("/api/auth/change-password", {
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: sessionQueryKey })
+      await refreshSessionQuery(auth, queryClient)
+    },
+  })
+}
+
+export function useSetPassword() {
+  const { apiFetch, auth, queryClient } = useNotelabFeatures()
+
+  return useMutation({
+    mutationFn: (input: { newPassword: string }) =>
+      apiFetch<{ status: boolean }>("/api/auth/set-password", {
         method: "POST",
         body: JSON.stringify(input),
       }),
