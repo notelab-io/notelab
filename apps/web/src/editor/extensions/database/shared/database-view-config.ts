@@ -12,6 +12,8 @@ export type DatabaseSelectOption = {
 }
 
 type FilesLimitValue = "one_file" | "no_limit"
+export type NumberDecimalPlacesValue = "default" | 0 | 1 | 2 | 3 | 4 | 5
+export type DatabaseNumberDisplayStyle = "number" | "bar" | "ring"
 type PersonLimitValue = "one_person" | "no_limit"
 type PersonDefaultValue = "no_default" | "created_by"
 type PersonNotificationsValue = "users_and_groups" | "users_only" | "none"
@@ -42,6 +44,12 @@ export type DatabasePropertyConfig = {
   filesLimit?: FilesLimitValue
   formula?: string
   hidden?: boolean
+  numberDecimalPlaces?: NumberDecimalPlacesValue
+  numberDisplayColor?: string
+  numberDisplayDivideBy?: number
+  numberDisplayShowNumber?: boolean
+  numberDisplayStyle?: DatabaseNumberDisplayStyle
+  numberFormat?: string
   personDefault?: PersonDefaultValue
   personLimit?: PersonLimitValue
   personNotifications?: PersonNotificationsValue
@@ -452,6 +460,82 @@ export function getPersonLimit(config: unknown) {
   return personLimit === "one_person" ? "one_person" : "no_limit"
 }
 
+export function getNumberFormat(config: unknown) {
+  if (!config || typeof config !== "object" || Array.isArray(config)) {
+    return "number"
+  }
+
+  const numberFormat = (config as DatabasePropertyConfig).numberFormat
+
+  return typeof numberFormat === "string" && numberFormat.trim().length > 0
+    ? numberFormat
+    : "number"
+}
+
+export function getNumberDecimalPlaces(
+  config: unknown
+): NumberDecimalPlacesValue {
+  if (!config || typeof config !== "object" || Array.isArray(config)) {
+    return "default"
+  }
+
+  const numberDecimalPlaces = (config as DatabasePropertyConfig).numberDecimalPlaces
+
+  return isNumberDecimalPlacesValue(numberDecimalPlaces)
+    ? numberDecimalPlaces
+    : "default"
+}
+
+export function getNumberDisplayStyle(
+  config: unknown
+): DatabaseNumberDisplayStyle {
+  if (!config || typeof config !== "object" || Array.isArray(config)) {
+    return "number"
+  }
+
+  const numberDisplayStyle = (config as DatabasePropertyConfig).numberDisplayStyle
+
+  return isDatabaseNumberDisplayStyle(numberDisplayStyle)
+    ? numberDisplayStyle
+    : "number"
+}
+
+export function getNumberDisplayColor(config: unknown) {
+  if (!config || typeof config !== "object" || Array.isArray(config)) {
+    return "green"
+  }
+
+  const numberDisplayColor = (config as DatabasePropertyConfig).numberDisplayColor
+
+  return typeof numberDisplayColor === "string" && numberDisplayColor.length > 0
+    ? numberDisplayColor
+    : "green"
+}
+
+export function getNumberDisplayDivideBy(config: unknown) {
+  if (!config || typeof config !== "object" || Array.isArray(config)) {
+    return 100
+  }
+
+  const numberDisplayDivideBy = (config as DatabasePropertyConfig).numberDisplayDivideBy
+
+  return typeof numberDisplayDivideBy === "number" &&
+    Number.isFinite(numberDisplayDivideBy) &&
+    numberDisplayDivideBy > 0
+    ? numberDisplayDivideBy
+    : 100
+}
+
+export function getNumberDisplayShowNumber(config: unknown) {
+  if (!config || typeof config !== "object" || Array.isArray(config)) {
+    return true
+  }
+
+  const numberDisplayShowNumber = (config as DatabasePropertyConfig).numberDisplayShowNumber
+
+  return numberDisplayShowNumber !== false
+}
+
 export function getNameColumnLabel(config: unknown) {
   const label = getNameColumnConfig(config).label
 
@@ -476,6 +560,18 @@ function isDatabaseSortDirection(
   value: unknown
 ): value is DatabaseSortDirection {
   return value === "ascending" || value === "descending"
+}
+
+function isNumberDecimalPlacesValue(
+  value: unknown
+): value is NumberDecimalPlacesValue {
+  return value === "default" || [0, 1, 2, 3, 4, 5].includes(value as number)
+}
+
+function isDatabaseNumberDisplayStyle(
+  value: unknown
+): value is DatabaseNumberDisplayStyle {
+  return value === "number" || value === "bar" || value === "ring"
 }
 
 function isDatabaseSortConfig(value: unknown): value is DatabaseSortConfig {

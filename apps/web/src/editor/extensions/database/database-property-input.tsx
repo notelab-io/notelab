@@ -3,6 +3,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type ReactNode,
   type FormEvent,
 } from "react"
 
@@ -11,6 +12,16 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { getColorToken } from "@/packages/editor/components/editor/toolbar-data"
+
+import {
+  getNumberDecimalPlaces,
+  getNumberDisplayColor,
+  getNumberDisplayDivideBy,
+  getNumberDisplayShowNumber,
+  getNumberDisplayStyle,
+  getNumberFormat,
+} from "./shared/database-view-config"
 
 export function DatabaseInputCell({
   editable = true,
@@ -250,6 +261,10 @@ function getActionLinkProps(type: string) {
 function getDisplayValue(type: string, value: string, config: unknown) {
   const displayValue = stripActionScheme(type, value)
 
+  if (type === "number") {
+    return getNumberDisplayValue(displayValue, config)
+  }
+
   if (type !== "url" || getShowFullUrl(config)) {
     return displayValue
   }
@@ -264,6 +279,127 @@ function getDisplayValue(type: string, value: string, config: unknown) {
   const pathname = url.pathname === "/" ? "" : url.pathname.replace(/\/$/, "")
 
   return `${url.hostname}${pathname}`
+}
+
+function getNumberDisplayValue(value: string, config: unknown): ReactNode {
+  const trimmedValue = value.trim()
+
+  if (!trimmedValue) {
+    return ""
+  }
+
+  if (!isValidNumber(trimmedValue)) {
+    return value
+  }
+
+  const numberValue = Number(trimmedValue)
+
+  if (!Number.isFinite(numberValue)) {
+    return value
+  }
+
+  const formattedValue = formatNumberValue(trimmedValue, numberValue, config)
+  const displayStyle = getNumberDisplayStyle(config)
+
+  if (displayStyle === "number") {
+    return formattedValue
+  }
+
+  const divideBy = getNumberDisplayDivideBy(config)
+  const ratio = Math.max(0, Math.min(1, divideBy === 0 ? 0 : numberValue / divideBy))
+  const showNumber = getNumberDisplayShowNumber(config)
+  const colorToken = getColorToken(getNumberDisplayColor(config))
+
+  if (displayStyle === "bar") {
+    return (
+      <span className="flex w-full min-w-0 items-center justify-between gap-3">
+        {showNumber ? (
+          <span className="min-w-0 flex-1 truncate tabular-nums">
+            {formattedValue}
+          </span>
+        ) : (
+          <span className="flex-1" />
+        )}
+        <span className="h-2 w-22 shrink-0 overflow-hidden rounded-full bg-muted">
+          <span
+            className={`block h-full rounded-full bg-current ${colorToken.textClass}`}
+            style={{ width: `${ratio * 100}%` }}
+          />
+        </span>
+      </span>
+    )
+  }
+
+  const circumference = 2 * Math.PI * 8
+  const strokeDashoffset = circumference * (1 - ratio)
+
+  return (
+    <span className="flex w-full min-w-0 items-center justify-between gap-3">
+      {showNumber ? (
+        <span className="min-w-0 flex-1 truncate tabular-nums">{formattedValue}</span>
+      ) : (
+        <span className="flex-1" />
+      )}
+      <span className={`relative inline-flex size-8 shrink-0 ${colorToken.textClass}`}>
+        <svg aria-hidden="true" className="size-6" viewBox="0 0 24 24">
+          <circle
+            cx="12"
+            cy="12"
+            fill="none"
+            r="8"
+            stroke="currentColor"
+            strokeOpacity="0.2"
+            strokeWidth="3"
+          />
+          <circle
+            cx="12"
+            cy="12"
+            fill="none"
+            r="8"
+            stroke="currentColor"
+            strokeDasharray={circumference}
+            strokeDashoffset={strokeDashoffset}
+            strokeLinecap="round"
+            strokeWidth="3"
+            transform="rotate(-90 12 12)"
+          />
+        </svg>
+      </span>
+    </span>
+  )
+}
+
+function formatNumberValue(value: string, numberValue: number, config: unknown) {
+  const numberFormat = getNumberFormat(config).trim().toLowerCase()
+  const decimalPlaces = getNumberDecimalPlaces(config)
+  const options: Intl.NumberFormatOptions = {
+    useGrouping: numberFormat !== "number",
+  }
+  const currencyCode = getNumberCurrencyCode(numberFormat)
+
+  if (decimalPlaces !== "default") {
+    options.minimumFractionDigits = decimalPlaces
+    options.maximumFractionDigits = decimalPlaces
+  }
+
+  if (numberFormat === "number" && decimalPlaces === "default") {
+    return value
+  }
+
+  if (numberFormat === "percent") {
+    options.style = "percent"
+  } else if (currencyCode) {
+    options.currency = currencyCode
+    options.style = "currency"
+  }
+
+  return new Intl.NumberFormat(undefined, options).format(numberValue)
+}
+
+function getNumberCurrencyCode(format: string) {
+  const normalizedFormat = format.toUpperCase()
+
+  return /^[A-Z]{3}$/.test(normalizedFormat) ? normalizedFormat : null
 }
 
 function getShowFullUrl(config: unknown) {
