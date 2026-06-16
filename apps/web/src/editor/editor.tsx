@@ -28,10 +28,19 @@ import TaskList from "@tiptap/extension-task-list"
 import TextAlign from "@tiptap/extension-text-align"
 import { BackgroundColor, Color, TextStyle } from "@tiptap/extension-text-style"
 import Typography from "@tiptap/extension-typography"
-import type { Content } from "@tiptap/core"
+import {
+  createNodeFromContent,
+  getSchema,
+  type Content,
+  type Extensions,
+} from "@tiptap/core"
+import Collaboration from "@tiptap/extension-collaboration"
+import CollaborationCaret from "@tiptap/extension-collaboration-caret"
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model"
 import type { EditorView } from "@tiptap/pm/view"
 import StarterKit from "@tiptap/starter-kit"
+import { prosemirrorToYDoc } from "@tiptap/y-tiptap"
+import * as Y from "yjs"
 
 import { cn } from "@/lib/utils"
 import { ColumnControls } from "@/packages/editor/components/editor/column-controls"
@@ -107,6 +116,7 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card"
+import { useWorkspaceCollaboration } from "./use-workspace-collaboration"
 
 const starterContent = `
   <h1>Draft your next workspace doc</h1>
@@ -452,6 +462,7 @@ export function Editor({
     },
     [addDatabaseRow]
   )
+  const collaborationEnabled = editable && Boolean(workspaceId)
   const handleProviderLinkPaste = useCallback(
     (view: EditorView, event: ClipboardEvent) => {
       if (!editable) {
@@ -498,13 +509,29 @@ export function Editor({
     },
     [editable]
   )
+  const onContentChangeRef = useRef(onContentChange)
+  const dropPageOnDatabaseRef = useRef(dropPageOnDatabase)
+  const handleProviderLinkPasteRef = useRef(handleProviderLinkPaste)
 
-  const editor = useEditor({
-    extensions: [
+  useEffect(() => {
+    onContentChangeRef.current = onContentChange
+  }, [onContentChange])
+
+  useEffect(() => {
+    dropPageOnDatabaseRef.current = dropPageOnDatabase
+  }, [dropPageOnDatabase])
+
+  useEffect(() => {
+    handleProviderLinkPasteRef.current = handleProviderLinkPaste
+  }, [handleProviderLinkPaste])
+
+  const baseExtensions = useMemo<Extensions>(
+    () => [
       StarterKit.configure({
         codeBlock: false,
         // The app configures Link below; StarterKit's bundled Link would register a duplicate extension name.
         link: false,
+        ...(collaborationEnabled ? { undoRedo: false as const } : {}),
       }),
       Placeholder.configure({
         placeholder: ({ node }) => {
@@ -604,14 +631,74 @@ export function Editor({
         onOpenPage,
       }),
     ],
-    content: normalizeEditorContent(content),
-    editable,
+    [
+      collaborationEnabled,
+      createEditorDatabase,
+      databaseEditorRuntime,
+      editable,
+      onCreatePage,
+      onOpenPage,
+      organizationId,
+      workspaceId,
+    ],
+  )
+  const seedUpdate = useMemo(
+    () =>
+      collaborationEnabled
+        ? createCollaborationSeedUpdate(content, baseExtensions)
+        : null,
+    [baseExtensions, collaborationEnabled, content],
+  )
+  const collaboration = useWorkspaceCollaboration({
+    enabled: collaborationEnabled,
+    seedUpdate,
+    workspaceId,
+  })
+  const collaborationReady = Boolean(
+    collaboration.provider && collaboration.user && collaboration.ydoc,
+  )
+  const editorExtensions = useMemo<Extensions>(() => {
+    if (
+      !collaboration.provider ||
+      !collaboration.user ||
+      !collaboration.ydoc
+    ) {
+      return baseExtensions
+    }
+
+    return [
+      ...baseExtensions,
+      Collaboration.configure({
+        document: collaboration.ydoc,
+      }),
+      CollaborationCaret.configure({
+        provider: collaboration.provider,
+        user: collaboration.user,
+        render: renderCollaborationCaret,
+        selectionRender: renderCollaborationSelection,
+      }),
+    ]
+  }, [
+    baseExtensions,
+    collaboration.provider,
+    collaboration.user,
+    collaboration.ydoc,
+  ])
+  const editorEditable = editable && (!collaborationEnabled || collaborationReady)
+  const editorLifecycleKey = `${workspaceId ?? "draft"}:${
+    collaborationReady ? "collaboration" : "plain"
+  }`
+
+  const editor = useEditor({
+    extensions: editorExtensions,
+    content: collaborationReady ? undefined : normalizeEditorContent(content),
+    editable: editorEditable,
     onUpdate: ({ editor }) => {
-      if (!editable) {
+      if (!editorEditable) {
         return
       }
 
-      onContentChange?.(editor.getJSON())
+      onContentChangeRef.current?.(editor.getJSON())
     },
     editorProps: {
       attributes: {
@@ -619,7 +706,7 @@ export function Editor({
         "aria-label": "Document editor",
       },
       handleDrop: (view, event) =>
-        dropPageOnDatabase(event) ||
+        dropPageOnDatabaseRef.current(event) ||
         (() => {
           const draggedBlock = getDraggedEditorBlockPayload(event.dataTransfer)
           const isListBlock =
@@ -638,7 +725,8 @@ export function Editor({
         })() ||
         insertDraggedDatabasePage(view, event) ||
         preparePlaneBlockDrop(view, event),
-      handlePaste: handleProviderLinkPaste,
+      handlePaste: (view, event) =>
+        handleProviderLinkPasteRef.current(view, event),
       transformPastedHTML: normalizePastedEditorHTML,
       handleDOMEvents: {
         dragover: (_view, event) => {
@@ -704,7 +792,9 @@ export function Editor({
         },
       },
     },
-  })
+  }, [
+    editorLifecycleKey,
+  ])
 
   const replacePastedUrl = useCallback(
     (content: Content) => {
@@ -808,20 +898,20 @@ export function Editor({
   }, [editor, pasteChoice])
 
   useEffect(() => {
-    if (!editor) {
+    if (!editor || editor.isDestroyed || !editor.extensionManager) {
       return
     }
 
     for (const extension of editor.extensionManager.extensions) {
       if (extension.name === "databaseBlock") {
         extension.options.currentPageId = workspaceId
-        extension.options.editable = editable
+        extension.options.editable = editorEditable
         extension.options.editorRuntime = databaseEditorRuntime
         extension.options.onOpenPage = onOpenPage
       }
 
       if (extension.name === "taskItem") {
-        extension.options.editable = editable
+        extension.options.editable = editorEditable
       }
 
       if (extension.name === "pageBlock" || extension.name === "slashCommand") {
@@ -829,10 +919,10 @@ export function Editor({
       }
     }
 
-    editor.setEditable(editable)
-    editorRuntimeRef.current.editable = editable
+    editor.setEditable(editorEditable)
+    editorRuntimeRef.current.editable = editorEditable
     editorRuntimeRef.current.listeners.forEach((listener) => listener())
-  }, [databaseEditorRuntime, editable, editor, onOpenPage, workspaceId])
+  }, [databaseEditorRuntime, editor, editorEditable, onOpenPage, workspaceId])
 
   useEffect(() => {
     if (!editor) {
@@ -1373,6 +1463,84 @@ function normalizeEditorContent(content: unknown) {
   }
 
   return emptyContent
+}
+
+function createCollaborationSeedUpdate(
+  content: unknown,
+  extensions: Extensions,
+) {
+  try {
+    const schema = getSchema(extensions)
+    const nodeOrFragment = createNodeFromContent(
+      normalizeEditorContent(content),
+      schema,
+      { errorOnInvalidContent: false },
+    )
+    const doc =
+      "type" in nodeOrFragment
+        ? nodeOrFragment
+        : schema.topNodeType.create(null, nodeOrFragment)
+    const ydoc = prosemirrorToYDoc(doc, "default")
+    const update = Y.encodeStateAsUpdate(ydoc)
+
+    ydoc.destroy()
+
+    return update
+  } catch (error) {
+    console.error("Failed to seed collaboration document", error)
+    return null
+  }
+}
+
+function renderCollaborationCaret(user: Record<string, any>) {
+  const color = typeof user.color === "string" ? user.color : "#2563eb"
+  const name = typeof user.name === "string" ? user.name : "Collaborator"
+  const cursor = document.createElement("span")
+  const label = document.createElement("span")
+
+  cursor.style.borderLeft = `2px solid ${color}`
+  cursor.style.marginLeft = "-1px"
+  cursor.style.marginRight = "-1px"
+  cursor.style.pointerEvents = "none"
+  cursor.style.position = "relative"
+
+  label.textContent = name
+  label.style.background = color
+  label.style.borderRadius = "4px"
+  label.style.color = "#fff"
+  label.style.fontSize = "11px"
+  label.style.fontWeight = "500"
+  label.style.left = "-1px"
+  label.style.lineHeight = "1"
+  label.style.padding = "3px 5px"
+  label.style.position = "absolute"
+  label.style.top = "-1.35rem"
+  label.style.whiteSpace = "nowrap"
+
+  cursor.append(label)
+
+  return cursor
+}
+
+function renderCollaborationSelection(user: Record<string, any>) {
+  const color = typeof user.color === "string" ? user.color : "#2563eb"
+
+  return {
+    nodeName: "span",
+    style: `background-color: ${toTransparentColor(color, 0.22)}`,
+  }
+}
+
+function toTransparentColor(color: string, alpha: number) {
+  if (/^#[0-9a-f]{6}$/i.test(color)) {
+    const red = Number.parseInt(color.slice(1, 3), 16)
+    const green = Number.parseInt(color.slice(3, 5), 16)
+    const blue = Number.parseInt(color.slice(5, 7), 16)
+
+    return `rgba(${red}, ${green}, ${blue}, ${alpha})`
+  }
+
+  return color
 }
 
 type EditorTableType = "columns" | "table" | "unknown"
