@@ -176,7 +176,7 @@ export type AiProviderModel = {
 export type AiProviderCatalogItem = {
   id: string
   name: string
-  kind: "workers-ai" | "openai-compatible"
+  kind: "openai"
   baseUrl?: string
   models: AiProviderModel[]
   requiresApiKey: boolean

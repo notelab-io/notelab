@@ -67,6 +67,11 @@ export default defineConfig(async () => ({
         target: backendTarget,
         changeOrigin: true,
       },
+      "/agents": {
+        target: backendTarget,
+        changeOrigin: true,
+        ws: true,
+      },
       "/session": {
         target: backendTarget,
         changeOrigin: true,

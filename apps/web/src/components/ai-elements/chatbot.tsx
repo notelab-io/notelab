@@ -46,7 +46,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { toApiUrl } from "@/lib/api";
+import { useSession } from "@notelab/features/auth";
 import {
   useActiveOrganizationId,
   useIntegrations,
@@ -54,7 +54,8 @@ import {
 } from "@notelab/features/integrations";
 import type { OrganizationAiChatModel } from "@notelab/features/integrations";
 import { integrationIcons } from "@/lib/integration-icons";
-import { useChat } from "@ai-sdk/react";
+import { useAgent } from "agents/react";
+import { useAgentChat } from "@cloudflare/ai-chat/react";
 import {
   GmailToolOutput,
   isGmailToolName,
@@ -81,7 +82,6 @@ import {
 } from "@notelab/connectors/slack/ui";
 import {
   type ChatStatus,
-  DefaultChatTransport,
   type UIMessage,
   isToolUIPart,
 } from "ai";
@@ -95,44 +95,20 @@ import { toast } from "sonner";
 
 const fallbackModels: OrganizationAiChatModel[] = [
   {
-    chef: "Cloudflare Workers AI",
-    chefSlug: "cloudflare-workers-ai",
-    gatewayId: "@cf/openai/gpt-oss-120b",
-    id: "@cf/openai/gpt-oss-120b",
-    name: "GPT OSS 120B",
-    providers: ["cloudflare-workers-ai"],
+    chef: "OpenAI",
+    chefSlug: "openai",
+    gatewayId: "gpt-4o-mini",
+    id: "gpt-4o-mini",
+    name: "GPT-4o Mini",
+    providers: ["openai"],
   },
   {
-    chef: "Cloudflare Workers AI",
-    chefSlug: "cloudflare-workers-ai",
-    gatewayId: "@cf/openai/gpt-oss-20b",
-    id: "@cf/openai/gpt-oss-20b",
-    name: "GPT OSS 20B",
-    providers: ["cloudflare-workers-ai"],
-  },
-  {
-    chef: "Cloudflare Workers AI",
-    chefSlug: "cloudflare-workers-ai",
-    gatewayId: "@cf/moonshotai/kimi-k2.5",
-    id: "@cf/moonshotai/kimi-k2.5",
-    name: "Kimi K2.5",
-    providers: ["cloudflare-workers-ai"],
-  },
-  {
-    chef: "Cloudflare Workers AI",
-    chefSlug: "cloudflare-workers-ai",
-    gatewayId: "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
-    id: "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
-    name: "Llama 3.3 70B",
-    providers: ["cloudflare-workers-ai"],
-  },
-  {
-    chef: "Cloudflare Workers AI",
-    chefSlug: "cloudflare-workers-ai",
-    gatewayId: "@cf/zai-org/glm-4.7-flash",
-    id: "@cf/zai-org/glm-4.7-flash",
-    name: "GLM 4.7 Flash",
-    providers: ["cloudflare-workers-ai"],
+    chef: "OpenAI",
+    chefSlug: "openai",
+    gatewayId: "gpt-4o",
+    id: "gpt-4o",
+    name: "GPT-4o",
+    providers: ["openai"],
   },
 ];
 
@@ -542,47 +518,6 @@ function getProviderLogoSlug(provider: string) {
   return providerLogoSlugs[provider] ?? provider;
 }
 
-async function fetchWithJsonErrors(input: RequestInfo | URL, init?: RequestInit) {
-  const response = await fetch(input, init);
-
-  if (response.ok) {
-    return response;
-  }
-
-  let message = `Ask AI request failed with status ${response.status}`;
-
-  try {
-    const body = await response.clone().json();
-
-    if (typeof body?.message === "string") {
-      message = body.message;
-    }
-  } catch {
-    const text = await response.text();
-
-    if (text) {
-      message = text;
-    }
-  }
-
-  throw new Error(message);
-}
-
-function withOrganizationHeader(
-  init: RequestInit | undefined,
-  organizationId: string | null | undefined,
-) {
-  if (!organizationId) {
-    return init;
-  }
-
-  const headers = new Headers(init?.headers);
-
-  headers.set("x-notelab-organization-id", organizationId);
-
-  return { ...init, headers };
-}
-
 const ShellScrollButton = ({
   targetRef,
 }: {
@@ -770,11 +705,7 @@ const SourceSelector = ({
           )}
         </DropdownMenuContent>
       </DropdownMenu>
-      {!selectedSources.length ? (
-        <span className="text-muted-foreground/70 text-xs">
-          No source selected: all enabled sources can be used.
-        </span>
-      ) : null}
+ 
     </div>
   );
 };
@@ -1245,25 +1176,39 @@ const Chatbot = ({ isSidebar = false }: { isSidebar?: boolean }) => {
     );
   }, [enabledSources]);
 
-  const transport = useMemo(
-    () =>
-      new DefaultChatTransport({
-        api: toApiUrl("/api/ai/ask"),
-        credentials: "include",
-        fetch: (input, init) =>
-          fetchWithJsonErrors(input, withOrganizationHeader(init, organizationId)),
-      }),
-    [organizationId]
-  );
+  const { data: session } = useSession();
+  const userId = session?.user?.id ?? null;
+  const isAgentReady = Boolean(organizationId && userId);
+  const query = organizationId ? { organizationId } : undefined;
+  const agent = useAgent({
+    agent: "ChatAgent",
+    name: isAgentReady
+      ? `org-${organizationId}-user-${userId}`
+      : "chat-not-ready",
+    query,
+  });
 
-  const { clearError, error, messages, sendMessage, status } = useChat({
-    experimental_throttle: 80,
+  const {
+    clearError,
+    error,
+    messages,
+    sendMessage,
+    status,
+    stop,
+  } = useAgentChat({
+    agent,
+    body: () => ({
+      model,
+      sources: selectedSources,
+      ...(organizationId ? { organizationId } : {}),
+      ...(userId ? { userId } : {}),
+    }),
     onError: (chatError) => {
       toast.error("Ask AI failed", {
         description: chatError.message,
       });
     },
-    transport,
+    resume: true,
   });
 
   useEffect(() => {
@@ -1286,17 +1231,19 @@ const Chatbot = ({ isSidebar = false }: { isSidebar?: boolean }) => {
         return;
       }
 
+      if (!isAgentReady) {
+        toast.error("Ask AI failed", {
+          description: "Sign in and select an active organization before using AI.",
+        });
+        return;
+      }
+
       void sendMessage({
         text: content.trim(),
-      }, {
-        body: {
-          model,
-          sources: selectedSources,
-        },
       });
       setText("");
     },
-    [sendMessage, model, selectedSources, setText]
+    [sendMessage, setText, isAgentReady]
   );
 
   const handleSubmit = useCallback(
@@ -1456,8 +1403,9 @@ const Chatbot = ({ isSidebar = false }: { isSidebar?: boolean }) => {
                 </ModelSelector>
               </PromptInputTools>
               <PromptInputSubmit
-                disabled={isBusy}
+                disabled={!isBusy && !text.trim()}
                 status={status as ChatStatus}
+                onStop={stop}
               />
             </PromptInputFooter>
           </PromptInput>
