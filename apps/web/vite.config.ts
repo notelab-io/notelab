@@ -99,6 +99,10 @@ export default defineConfig(async () => ({
         target: backendTarget,
         changeOrigin: true,
       },
+      "/images": {
+        target: backendTarget,
+        changeOrigin: true,
+      },
       "/user-settings": {
         target: backendTarget,
         changeOrigin: true,

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { createHash } from "node:crypto"
-import { mkdtemp, readdir, rm } from "node:fs/promises"
+import { access, mkdtemp, readdir, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { basename, dirname, join } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
@@ -8,6 +8,7 @@ import { build } from "esbuild"
 
 const testDir = dirname(fileURLToPath(import.meta.url))
 const appDir = join(testDir, "..")
+const srcDir = join(appDir, "src")
 const tempDir = await mkdtemp(join(tmpdir(), "notelab-web-tests-"))
 const loadedModules = new Map()
 
@@ -53,6 +54,12 @@ async function loadModule(path) {
 
   await build({
     bundle: true,
+    define: {
+      "import.meta.env": JSON.stringify({
+        DEV: false,
+        VITE_API_URL: "https://api.notelab.test",
+      }),
+    },
     entryPoints: [sourcePath],
     external: ["@notelab/features", "@notelab/features/*"],
     format: "esm",
@@ -60,10 +67,35 @@ async function loadModule(path) {
     logLevel: "silent",
     outfile,
     platform: "node",
+    plugins: [aliasPlugin()],
   })
 
   const module = await import(pathToFileURL(outfile).href)
   loadedModules.set(cacheKey, module)
 
   return module
+}
+
+function aliasPlugin() {
+  return {
+    name: "notelab-test-alias",
+    setup(build) {
+      build.onResolve({ filter: /^@\// }, async (args) => ({
+        path: await resolveAliasPath(join(srcDir, args.path.slice(2))),
+      }))
+    },
+  }
+}
+
+async function resolveAliasPath(path) {
+  for (const candidate of [path, `${path}.ts`, `${path}.tsx`]) {
+    try {
+      await access(candidate)
+      return candidate
+    } catch {
+      // Try the next candidate.
+    }
+  }
+
+  return path
 }

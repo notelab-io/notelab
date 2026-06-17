@@ -11,6 +11,7 @@ import {
   Search,
   Sparkles,
   Upload,
+  Loader2,
 } from "lucide-react"
 import { useRef, useState } from "react"
 
@@ -24,6 +25,8 @@ import {
 } from "@/components/ui/popover"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
+import { getApiErrorMessage } from "@/lib/api"
+import { uploadWorkspaceImage } from "@/lib/image-upload"
 
 const minImageWidth = 160
 
@@ -35,7 +38,13 @@ const aiImageOptions = [
   { label: "Mockup", icon: FileImage },
 ]
 
-function ImageBlockView({ editor, node, updateAttributes }: ReactNodeViewProps) {
+function ImageBlockView({
+  editor,
+  extension,
+  node,
+  updateAttributes,
+}: ReactNodeViewProps) {
+  const options = extension.options as ImageBlockOptions
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const resizeStateRef = useRef<{
     startX: number
@@ -44,6 +53,8 @@ function ImageBlockView({ editor, node, updateAttributes }: ReactNodeViewProps) 
   } | null>(null)
   const [open, setOpen] = useState(false)
   const [linkUrl, setLinkUrl] = useState(node.attrs.src ?? "")
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const src = node.attrs.src as string | null
   const alt = (node.attrs.alt as string | null) ?? "Image"
@@ -58,8 +69,36 @@ function ImageBlockView({ editor, node, updateAttributes }: ReactNodeViewProps) 
     setOpen(false)
   }
 
-  const readFile = (file: File | undefined) => {
+  const readFile = async (file: File | undefined) => {
     if (!file || !file.type.startsWith("image/")) {
+      return
+    }
+
+    setUploadError(null)
+
+    if (options.organizationId && options.workspaceId) {
+      setIsUploading(true)
+
+      try {
+        const uploaded = await uploadWorkspaceImage({
+          file,
+          organizationId: options.organizationId,
+          workspaceId: options.workspaceId,
+        })
+
+        updateAttributes({
+          src: uploaded.url,
+          alt: file.name,
+          title: file.name,
+        })
+        setLinkUrl(uploaded.url)
+        setOpen(false)
+      } catch (error) {
+        setUploadError(getApiErrorMessage(error))
+      } finally {
+        setIsUploading(false)
+      }
+
       return
     }
 
@@ -181,6 +220,7 @@ function ImageBlockView({ editor, node, updateAttributes }: ReactNodeViewProps) 
             <TabsContent className="space-y-4" value="add">
               <Button
                 className="h-40 w-full flex-col gap-2 border-dashed"
+                disabled={isUploading}
                 onClick={() => fileInputRef.current?.click()}
                 onDragOver={(event) => {
                   event.preventDefault()
@@ -193,12 +233,15 @@ function ImageBlockView({ editor, node, updateAttributes }: ReactNodeViewProps) 
                 type="button"
                 variant="outline"
               >
-                <ImageIcon />
-                <span>Upload image</span>
+                {isUploading ? <Loader2 className="animate-spin" /> : <ImageIcon />}
+                <span>{isUploading ? "Uploading image" : "Upload image"}</span>
                 <span className="text-muted-foreground">
                   Or drag and drop here
                 </span>
               </Button>
+              {uploadError ? (
+                <div className="text-sm text-destructive">{uploadError}</div>
+              ) : null}
               <input
                 accept="image/*"
                 className="sr-only"
@@ -321,7 +364,12 @@ function ImageBlockView({ editor, node, updateAttributes }: ReactNodeViewProps) 
   )
 }
 
-export const ImageBlock = Node.create({
+type ImageBlockOptions = {
+  organizationId?: string | null
+  workspaceId?: string | null
+}
+
+export const ImageBlock = Node.create<ImageBlockOptions>({
   name: "imageBlock",
 
   group: "block",
@@ -331,6 +379,13 @@ export const ImageBlock = Node.create({
   draggable: true,
 
   selectable: true,
+
+  addOptions() {
+    return {
+      organizationId: null,
+      workspaceId: null,
+    }
+  },
 
   addAttributes() {
     return {

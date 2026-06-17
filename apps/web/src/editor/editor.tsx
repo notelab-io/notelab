@@ -584,7 +584,10 @@ export function Editor({
           class: "editor-details-content",
         },
       }),
-      ImageBlock,
+      ImageBlock.configure({
+        organizationId,
+        workspaceId,
+      }),
       VideoBlock,
       EmbedBlock,
       FileBlock,

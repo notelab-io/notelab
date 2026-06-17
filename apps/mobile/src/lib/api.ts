@@ -35,18 +35,10 @@ export async function apiFetch<T>(
   path: string,
   { auth = true, headers, body, ...init }: ApiFetchOptions = {}
 ) {
-  const requestHeaders = new Headers(headers);
+  const requestHeaders = getApiRequestHeaders(headers, auth);
 
   if (body && !requestHeaders.has('content-type')) {
     requestHeaders.set('content-type', 'application/json');
-  }
-
-  if (auth) {
-    const cookie = authClient.getCookie();
-
-    if (cookie) {
-      requestHeaders.set('cookie', cookie);
-    }
   }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -64,6 +56,20 @@ export async function apiFetch<T>(
   }
 
   return data as T;
+}
+
+export function getApiRequestHeaders(headers?: HeadersInit, auth = true) {
+  const requestHeaders = new Headers(headers);
+
+  if (auth) {
+    const cookie = authClient.getCookie();
+
+    if (cookie) {
+      requestHeaders.set('cookie', cookie);
+    }
+  }
+
+  return requestHeaders;
 }
 
 function parseJson(value: string) {

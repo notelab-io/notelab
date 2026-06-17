@@ -1,8 +1,10 @@
-import { File as FileIcon, Link as LinkIcon, Plus, X } from "lucide-react"
+import { File as FileIcon, Link as LinkIcon, Loader2, Plus, X } from "lucide-react"
 import { useRef, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { getApiErrorMessage } from "@/lib/api"
+import { uploadWorkspaceImage } from "@/lib/image-upload"
 import {
   Popover,
   PopoverContent,
@@ -17,19 +19,27 @@ export function DatabasePropertyFiles({
   label,
   onOpenChange,
   onSelect,
+  organizationId,
   propertyConfig,
   value,
+  workspaceId,
+  databaseId,
 }: {
+  databaseId?: string | null
   editable?: boolean
   label: string
   onOpenChange?: (open: boolean) => void
   onSelect: (value: string | string[]) => void
+  organizationId?: string | null
   propertyConfig?: unknown
   value: string | string[]
+  workspaceId?: string | null
 }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [isOpen, setIsOpen] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
   const [linkUrl, setLinkUrl] = useState("")
+  const [uploadError, setUploadError] = useState<string | null>(null)
   const filesLimit = getFilesLimit(propertyConfig)
   const files = getFilesValue(value)
 
@@ -68,8 +78,31 @@ export function DatabasePropertyFiles({
     onSelect(filesLimit === "one_file" ? (nextFiles[0] ?? "") : nextFiles)
   }
 
-  const readFile = (file: File | undefined) => {
+  const readFile = async (file: File | undefined) => {
     if (!file) {
+      return
+    }
+
+    setUploadError(null)
+
+    if (file.type.startsWith("image/") && organizationId && workspaceId) {
+      setIsUploading(true)
+
+      try {
+        const uploaded = await uploadWorkspaceImage({
+          databaseId,
+          file,
+          organizationId,
+          workspaceId,
+        })
+
+        addFile(uploaded.url)
+      } catch (error) {
+        setUploadError(getApiErrorMessage(error))
+      } finally {
+        setIsUploading(false)
+      }
+
       return
     }
 
@@ -172,11 +205,16 @@ export function DatabasePropertyFiles({
             </div>
             <Button
               className="w-full"
+              disabled={isUploading}
               onClick={() => fileInputRef.current?.click()}
               type="button"
             >
-              Choose a file
+              {isUploading ? <Loader2 className="animate-spin" /> : null}
+              {isUploading ? "Uploading" : "Choose a file"}
             </Button>
+            {uploadError ? (
+              <div className="text-sm text-destructive">{uploadError}</div>
+            ) : null}
             <input
               className="sr-only"
               onChange={(event) => {

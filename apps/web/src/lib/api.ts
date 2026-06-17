@@ -40,15 +40,10 @@ export async function apiFetch<T>(
   path: string,
   { auth = true, headers, body, ...init }: ApiFetchOptions = {},
 ) {
-  const requestHeaders = new Headers(headers)
-  const mobileViewerCookie = readEmbeddedMobileAuthCookie()
+  const requestHeaders = getApiRequestHeaders(headers)
 
   if (body && !requestHeaders.has("content-type")) {
     requestHeaders.set("content-type", "application/json")
-  }
-
-  if (mobileViewerCookie && !requestHeaders.has("x-mobile-auth-cookie")) {
-    requestHeaders.set("x-mobile-auth-cookie", mobileViewerCookie)
   }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -66,6 +61,17 @@ export async function apiFetch<T>(
   }
 
   return data as T
+}
+
+export function getApiRequestHeaders(headers?: HeadersInit) {
+  const requestHeaders = new Headers(headers)
+  const mobileViewerCookie = readEmbeddedMobileAuthCookie()
+
+  if (mobileViewerCookie && !requestHeaders.has("x-mobile-auth-cookie")) {
+    requestHeaders.set("x-mobile-auth-cookie", mobileViewerCookie)
+  }
+
+  return requestHeaders
 }
 
 export function authFetch<T>(path: string, body?: unknown, init?: RequestInit) {

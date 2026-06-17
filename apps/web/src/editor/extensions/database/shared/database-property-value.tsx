@@ -12,6 +12,7 @@ import { DatabasePropertySelect } from "../database-property-select"
 import { DatabaseFormulaValue } from "../formula"
 import { type DatabasePropertyValue } from "../utils"
 import { formatDatabaseDateValue } from "./database-date-config"
+import { useDatabaseViewContext } from "./database-view-context"
 import { getPersonLimit } from "./database-view-config"
 import { type DatabasePropertyListItem } from "../kanban/database-kanban-config"
 
@@ -106,6 +107,7 @@ export function DatabasePropertyValue({
   titlePropertyLabel,
   value,
 }: DatabasePropertyValueProps) {
+  const databaseContext = useDatabaseViewContext()
   const workspaceProperty = property.property
   const key = `${row.pageId}:${workspaceProperty.id}`
   const isSelectProperty =
@@ -220,6 +222,7 @@ export function DatabasePropertyValue({
     />
   ) : isFilesProperty ? (
     <DatabasePropertyFiles
+      databaseId={databaseContext.databaseId}
       editable={editable}
       label={workspaceProperty.name}
       onOpenChange={(open) => onActiveValueChange(open ? key : null)}
@@ -232,8 +235,14 @@ export function DatabasePropertyValue({
           nextValue
         )
       }
+      organizationId={
+        databaseContext.organizationId ??
+        databaseContext.databaseOrganizationId ??
+        databaseContext.hostDatabaseOrganizationId
+      }
       propertyConfig={workspaceProperty.config}
       value={value}
+      workspaceId={row.pageId}
     />
   ) : (
     <DatabasePropertyInput
