@@ -1,4 +1,3 @@
-import * as decoding from "lib0/decoding"
 import { useEffect, useRef, useState } from "react"
 
 import { useNotelabFeatures } from "../context"
@@ -8,14 +7,10 @@ import {
   normalizeWorkspaceRealtimeMessageData,
   parseWorkspaceRealtimeEvent,
   parseWorkspaceRealtimeFrame,
-  workspaceRealtimeMessageType,
-  type WorkspaceRealtimeMultiplexProvider,
 } from "./realtime-utils"
 
 type WorkspaceRealtimeOptions = {
   enabled?: boolean
-  multiplexOnly?: boolean
-  multiplexProvider?: WorkspaceRealtimeMultiplexProvider | null
   organizationId?: string | null
 }
 
@@ -23,8 +18,6 @@ export function useWorkspaceRealtime(
   workspaceId: string | null | undefined,
   {
     enabled = true,
-    multiplexOnly = false,
-    multiplexProvider = null,
     organizationId = null,
   }: WorkspaceRealtimeOptions = {},
 ) {
@@ -47,75 +40,6 @@ export function useWorkspaceRealtime(
       queryClient,
       workspaceId,
     })
-
-    if (multiplexOnly && !multiplexProvider) {
-      setStatus("offline")
-      return
-    }
-
-    if (multiplexProvider) {
-      let disposed = false
-
-      const handleStatus = ([payload]: [
-        { status: "connected" | "disconnected" | "connecting" },
-      ]) => {
-        if (disposed) {
-          return
-        }
-
-        setStatus(payload.status)
-
-        if (payload.status === "connected" && reconnectAttemptRef.current > 0) {
-          subscription.scheduleReconnectRefetch()
-          reconnectAttemptRef.current = 0
-        }
-
-        if (payload.status === "disconnected") {
-          reconnectAttemptRef.current += 1
-        }
-      }
-
-      const previousHandler =
-        multiplexProvider.messageHandlers[workspaceRealtimeMessageType]
-
-      multiplexProvider.messageHandlers[workspaceRealtimeMessageType] = (
-        _encoder,
-        decoder,
-        _provider,
-        _emitSynced,
-        _messageType,
-      ) => {
-        try {
-          const payload = decoding.readVarUint8Array(decoder)
-          const message = parseWorkspaceRealtimeEvent(
-            new TextDecoder().decode(payload),
-          )
-
-          if (message) {
-            subscription.handleEvent(message)
-          }
-        } catch {
-          return
-        }
-      }
-
-      multiplexProvider.on("status", handleStatus)
-
-      return () => {
-        disposed = true
-        setStatus("offline")
-        subscription.dispose()
-
-        if (previousHandler) {
-          multiplexProvider.messageHandlers[workspaceRealtimeMessageType] =
-            previousHandler
-        } else {
-          delete multiplexProvider.messageHandlers[workspaceRealtimeMessageType]
-        }
-
-        multiplexProvider.off("status", handleStatus)
-      }
-    }
 
     let disposed = false
 
@@ -188,15 +112,7 @@ export function useWorkspaceRealtime(
       socketRef.current?.close()
       socketRef.current = null
     }
-  }, [
-    enabled,
-    multiplexOnly,
-    multiplexProvider,
-    organizationId,
-    queryClient,
-    realtimeBaseUrl,
-    workspaceId,
-  ])
+  }, [enabled, organizationId, queryClient, realtimeBaseUrl, workspaceId])
 
   return { status }
 }

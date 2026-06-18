@@ -37,31 +37,6 @@ export type WorkspaceRealtimeEvent =
   | WorkspaceChangedEvent
   | WorkspaceCommentsChangedEvent
 
-export type WorkspaceRealtimeMultiplexProvider = {
-  messageHandlers: Array<
-    | ((
-        encoder: unknown,
-        decoder: decoding.Decoder,
-        provider: unknown,
-        emitSynced: boolean,
-        messageType: number,
-      ) => void)
-    | undefined
-  >
-  off: (
-    event: "status",
-    handler: (payload: [
-      { status: "connected" | "disconnected" | "connecting" },
-    ]) => void,
-  ) => void
-  on: (
-    event: "status",
-    handler: (payload: [
-      { status: "connected" | "disconnected" | "connecting" },
-    ]) => void,
-  ) => void
-}
-
 export function getWorkspaceRealtimeUrl(
   workspaceId: string,
   realtimeBaseUrl: string | undefined,
