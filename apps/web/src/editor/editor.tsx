@@ -144,9 +144,11 @@ type PasteChoiceState = {
 
 type EditorProps = {
   content?: unknown
+  editorContentRef?: React.MutableRefObject<(() => unknown) | null>
   emoji?: string
   editable?: boolean
   fullWidth?: boolean
+  onCollaborationReadyChange?: (ready: boolean) => void
   onContentChange?: (content: unknown) => void
   onCreatePage?: () => Promise<CreatedPage>
   onEmojiChange?: (emoji: string) => void
@@ -155,6 +157,7 @@ type EditorProps = {
   organizationId?: string | null
   title?: string
   workspaceId?: string | null
+  workspaceUpdatedAt?: string | null
 }
 
 type NodePlacement = {
@@ -356,9 +359,11 @@ function isMobileViewport() {
 
 export function Editor({
   content = starterContent,
+  editorContentRef,
   editable = true,
   emoji,
   fullWidth = true,
+  onCollaborationReadyChange,
   onContentChange,
   onCreatePage,
   onEmojiChange,
@@ -367,6 +372,7 @@ export function Editor({
   organizationId,
   title,
   workspaceId,
+  workspaceUpdatedAt,
 }: EditorProps = {}) {
   const editorId = useId()
   const editorSurfaceRef = useRef<HTMLElement | null>(null)
@@ -656,6 +662,7 @@ export function Editor({
     enabled: collaborationEnabled,
     seedUpdate,
     workspaceId,
+    workspaceUpdatedAt,
   })
   const collaborationReady = Boolean(
     collaboration.provider && collaboration.user && collaboration.ydoc,
@@ -691,6 +698,10 @@ export function Editor({
   const editorLifecycleKey = `${workspaceId ?? "draft"}:${
     collaborationReady ? "collaboration" : "plain"
   }`
+
+  useEffect(() => {
+    onCollaborationReadyChange?.(collaborationReady)
+  }, [collaborationReady, onCollaborationReadyChange])
 
   const editor = useEditor({
     extensions: editorExtensions,
@@ -798,6 +809,20 @@ export function Editor({
   }, [
     editorLifecycleKey,
   ])
+
+  useEffect(() => {
+    if (!editorContentRef) {
+      return
+    }
+
+    editorContentRef.current = editor
+      ? () => editor.getJSON()
+      : null
+
+    return () => {
+      editorContentRef.current = null
+    }
+  }, [editor, editorContentRef])
 
   const replacePastedUrl = useCallback(
     (content: Content) => {

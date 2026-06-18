@@ -1,7 +1,7 @@
 export type WorkspaceChangedEvent = {
   type: "workspace.changed"
   actorId: string
-  changed: Array<"metadata" | "name">
+  changed: Array<"metadata" | "name" | "content">
   committedAt: string
   mutationId: string
   organizationId: string

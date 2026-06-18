@@ -24,6 +24,7 @@ type UseWorkspaceCollaborationOptions = {
   enabled: boolean
   seedUpdate?: Uint8Array | null
   workspaceId?: string | null
+  workspaceUpdatedAt?: string | null
 }
 
 const collaboratorColors = [
@@ -37,10 +38,13 @@ const collaboratorColors = [
   "#be123c",
 ]
 
+const postgresNewerThresholdMs = 5_000
+
 export function useWorkspaceCollaboration({
   enabled,
   seedUpdate,
   workspaceId,
+  workspaceUpdatedAt,
 }: UseWorkspaceCollaborationOptions): WorkspaceCollaborationState {
   const { data: session } = useSession()
   const user = useMemo(() => {
@@ -64,6 +68,7 @@ export function useWorkspaceCollaboration({
     session?.user?.name,
   ])
   const seedUpdateRef = useRef<Uint8Array | null>(null)
+  const workspaceUpdatedAtRef = useRef(workspaceUpdatedAt ?? null)
   const [state, setState] = useState<WorkspaceCollaborationState>({
     provider: null,
     status: "offline",
@@ -74,6 +79,10 @@ export function useWorkspaceCollaboration({
   useEffect(() => {
     seedUpdateRef.current = seedUpdate ?? null
   }, [seedUpdate])
+
+  useEffect(() => {
+    workspaceUpdatedAtRef.current = workspaceUpdatedAt ?? null
+  }, [workspaceUpdatedAt])
 
   useEffect(() => {
     if (!state.provider || !user) {
@@ -152,7 +161,31 @@ export function useWorkspaceCollaboration({
     }
     const connect = async () => {
       try {
-        await initializeRoom(workspaceId, seed)
+        const status = await fetchCollaborationStatus(workspaceId)
+
+        if (disposed) {
+          return
+        }
+
+        if (!status.hasDocument) {
+          await initializeRoom(workspaceId, seed)
+        } else {
+          const workspaceUpdatedAtMs = Date.parse(
+            workspaceUpdatedAtRef.current ?? "",
+          )
+          const doUpdatedAtMs = status.doUpdatedAt ?? 0
+
+          if (
+            Number.isFinite(workspaceUpdatedAtMs) &&
+            workspaceUpdatedAtMs - doUpdatedAtMs > postgresNewerThresholdMs
+          ) {
+            console.warn(
+              "Postgres workspace content is newer than collaboration room; reinitializing",
+              { doUpdatedAtMs, workspaceId, workspaceUpdatedAtMs },
+            )
+            await reinitializeRoom(workspaceId, seed)
+          }
+        }
 
         if (disposed) {
           return
@@ -195,9 +228,27 @@ export function useWorkspaceCollaboration({
   return state
 }
 
+async function fetchCollaborationStatus(workspaceId: string) {
+  return apiFetch<{
+    doUpdatedAt: number | null
+    hasDocument: boolean
+    workspaceUpdatedAt: string
+  }>(`/workspaces/${encodeURIComponent(workspaceId)}/collaboration/status`)
+}
+
 async function initializeRoom(workspaceId: string, update: Uint8Array) {
   await apiFetch<{ applied: boolean; initialized: boolean }>(
     `/workspaces/${encodeURIComponent(workspaceId)}/collaboration/initialize`,
+    {
+      body: JSON.stringify({ update: encodeBase64(update) }),
+      method: "POST",
+    },
+  )
+}
+
+async function reinitializeRoom(workspaceId: string, update: Uint8Array) {
+  await apiFetch<{ applied: boolean; reinitialized: boolean }>(
+    `/workspaces/${encodeURIComponent(workspaceId)}/collaboration/reinitialize`,
     {
       body: JSON.stringify({ update: encodeBase64(update) }),
       method: "POST",

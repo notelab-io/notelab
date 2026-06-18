@@ -27,6 +27,7 @@ import {
 import { useSession } from "@notelab/features/auth"
 import { useUserSettings } from "@notelab/features/user-settings"
 import { Editor } from "@/packages/editor"
+import { useWorkspaceContentSnapshot } from "@/packages/editor/use-workspace-content-snapshot"
 
 type WorkspaceEditorPaneProps = {
   className?: string
@@ -270,6 +271,8 @@ export function WorkspaceEditorPane({
   const updateWorkspace = useUpdateWorkspace()
   const contentSaveTimeoutRef = useRef<number | null>(null)
   const pendingContentRef = useRef<unknown>(null)
+  const editorContentRef = useRef<(() => unknown) | null>(null)
+  const [collaborationReady, setCollaborationReady] = useState(false)
   const [name, setName] = useState("")
   const [emoji, setEmoji] = useState("")
   const fullWidth = resolveWorkspaceFullWidth(
@@ -280,6 +283,12 @@ export function WorkspaceEditorPane({
   useWorkspaceRealtime(workspaceId, {
     enabled: Boolean(session?.user && workspace),
     organizationId: workspace?.organizationId,
+  })
+
+  const { scheduleSnapshot } = useWorkspaceContentSnapshot({
+    enabled: collaborationReady,
+    getContent: () => editorContentRef.current?.() ?? null,
+    workspaceId: workspace?.id,
   })
 
   const flushContentSaveTimeout = useCallback(() => {
@@ -371,6 +380,11 @@ export function WorkspaceEditorPane({
         return
       }
 
+      if (collaborationReady) {
+        scheduleSnapshot()
+        return
+      }
+
       clearContentSaveTimeout()
       pendingContentRef.current = content
 
@@ -380,7 +394,15 @@ export function WorkspaceEditorPane({
         pendingContentRef.current = null
       }, 800)
     },
-    [accessLevel, clearContentSaveTimeout, readOnly, updateWorkspace, workspace],
+    [
+      accessLevel,
+      clearContentSaveTimeout,
+      collaborationReady,
+      readOnly,
+      scheduleSnapshot,
+      updateWorkspace,
+      workspace,
+    ],
   )
 
   const createNestedPage = useCallback(async () => {
@@ -426,9 +448,11 @@ export function WorkspaceEditorPane({
       <Editor
         key={workspace.id}
         content={workspace.content ?? ""}
+        editorContentRef={editorContentRef}
         editable={!readOnly && (accessLevel === "edit" || accessLevel === "full")}
         emoji={emoji}
         fullWidth={fullWidth}
+        onCollaborationReadyChange={setCollaborationReady}
         onContentChange={updateContent}
         onCreatePage={createNestedPage}
         onEmojiChange={updateEmoji}
@@ -437,6 +461,7 @@ export function WorkspaceEditorPane({
         organizationId={workspace.organizationId}
         title={name}
         workspaceId={workspace.id}
+        workspaceUpdatedAt={workspace.updatedAt}
       />
     </section>
   )
