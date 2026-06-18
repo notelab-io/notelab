@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button"
 import { isEmbeddedMobileViewer } from "@/lib/embedded-view"
 import { cn } from "@/lib/utils"
 import {
+  getWorkspaceCover,
   getWorkspaceEmoji,
   resolveWorkspaceFullWidth,
   type WorkspaceMetadata,
@@ -274,6 +275,7 @@ export function WorkspaceEditorPane({
   const editorContentRef = useRef<(() => unknown) | null>(null)
   const [collaborationReady, setCollaborationReady] = useState(false)
   const [name, setName] = useState("")
+  const [cover, setCover] = useState("")
   const [emoji, setEmoji] = useState("")
   const fullWidth = resolveWorkspaceFullWidth(
     workspace,
@@ -318,6 +320,7 @@ export function WorkspaceEditorPane({
     pendingContentRef.current = null
   }, [])
 
+  const workspaceCover = workspace ? getWorkspaceCover(workspace) ?? "" : ""
   const workspaceEmoji = workspace ? getWorkspaceEmoji(workspace) ?? "" : ""
 
   useEffect(() => {
@@ -326,8 +329,9 @@ export function WorkspaceEditorPane({
     }
 
     setName(workspace.name)
+    setCover(workspaceCover)
     setEmoji(workspaceEmoji)
-  }, [workspace, workspace?.name, workspace?.updatedAt, workspaceEmoji])
+  }, [workspace, workspace?.name, workspace?.updatedAt, workspaceCover, workspaceEmoji])
 
   useEffect(() => {
     return flushContentSaveTimeout
@@ -349,6 +353,26 @@ export function WorkspaceEditorPane({
 
     return () => window.clearTimeout(timeout)
   }, [accessLevel, name, readOnly, updateWorkspace, workspace])
+
+  const updateCover = (nextCover: string) => {
+    setCover(nextCover)
+
+    if (
+      readOnly ||
+      !workspace ||
+      (accessLevel !== "edit" && accessLevel !== "full")
+    ) {
+      return
+    }
+
+    updateWorkspace.mutate({
+      id: workspace.id,
+      metadata: {
+        ...((workspace.metadata ?? {}) as WorkspaceMetadata),
+        cover: nextCover,
+      },
+    })
+  }
 
   const updateEmoji = (nextEmoji: string) => {
     setEmoji(nextEmoji)
@@ -450,12 +474,14 @@ export function WorkspaceEditorPane({
       <Editor
         key={workspace.id}
         content={workspace.content ?? ""}
+        cover={cover}
         editorContentRef={editorContentRef}
         editable={!readOnly && (accessLevel === "edit" || accessLevel === "full")}
         emoji={emoji}
         fullWidth={fullWidth}
         onCollaborationReadyChange={setCollaborationReady}
         onContentChange={updateContent}
+        onCoverChange={updateCover}
         onCreatePage={createNestedPage}
         onEmojiChange={updateEmoji}
         onOpenPage={onOpenPage}

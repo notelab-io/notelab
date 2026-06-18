@@ -3,6 +3,7 @@ import { queryOptions } from "@tanstack/react-query"
 import type { ApiFetcher } from "../context"
 
 export type WorkspaceMetadata = {
+  cover?: string | null
   emoji?: string | null
   fullWidth?: boolean | null
   parentWorkspaceId?: string | null
@@ -464,4 +465,8 @@ export const workspaceThreadsQueryOptions = (
 
 export function getWorkspaceEmoji(workspace: Pick<Workspace, "metadata">) {
   return workspace.metadata?.emoji ?? null
+}
+
+export function getWorkspaceCover(workspace: Pick<Workspace, "metadata">) {
+  return workspace.metadata?.cover ?? null
 }

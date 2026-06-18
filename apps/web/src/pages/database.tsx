@@ -11,7 +11,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { getDatabaseEmoji } from "@notelab/features/databases"
+import { getDatabaseCover, getDatabaseEmoji } from "@notelab/features/databases"
 import {
   useUpdateWorkspace,
   useWorkspace,
@@ -220,6 +220,7 @@ function DatabaseMainPane({
   const updateDatabase = useUpdateDatabase()
   const updateWorkspace = useUpdateWorkspace()
   const [title, setTitle] = useState("")
+  const [cover, setCover] = useState("")
   const [emoji, setEmoji] = useState("")
   const editable = !readOnly && (accessLevel === "edit" || accessLevel === "full")
 
@@ -228,7 +229,14 @@ function DatabaseMainPane({
   }, [payload?.database.id, payload?.database.name])
 
   useEffect(() => {
-    setEmoji(payload ? getDatabaseEmoji(payload.database) ?? "" : "")
+    if (!payload) {
+      setCover("")
+      setEmoji("")
+      return
+    }
+
+    setCover(getDatabaseCover(payload.database) ?? "")
+    setEmoji(getDatabaseEmoji(payload.database) ?? "")
   }, [payload])
 
   useEffect(() => {
@@ -252,6 +260,22 @@ function DatabaseMainPane({
     return () => window.clearTimeout(timeout)
   }, [editable, payload, title, updateDatabase, updateWorkspace, workspace])
 
+  const updateCover = (nextCover: string) => {
+    setCover(nextCover)
+
+    if (!payload || !editable) {
+      return
+    }
+
+    updateDatabase.mutate({
+      databaseId: payload.database.id,
+      config: {
+        ...((payload.database.config ?? {}) as Record<string, unknown>),
+        cover: nextCover,
+      },
+    })
+  }
+
   const updateEmoji = (nextEmoji: string) => {
     setEmoji(nextEmoji)
 
@@ -271,11 +295,15 @@ function DatabaseMainPane({
   return (
     <section className={cn(className, "animate-in fade-in-0 duration-300")}>
       <WorkspaceMetadataView
+        cover={cover}
+        databaseId={databaseId}
         editable={editable}
         enableComments={false}
         icon={emoji}
+        onCoverChange={updateCover}
         onIconChange={updateEmoji}
         onTitleChange={setTitle}
+        organizationId={payload?.database.organizationId}
         title={title}
         workspaceId={databasePageId}
       />

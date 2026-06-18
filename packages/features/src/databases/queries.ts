@@ -30,6 +30,20 @@ export function getDatabaseEmoji(database: Pick<DatabaseRecord, "config">) {
   return typeof emoji === "string" && emoji.length > 0 ? emoji : null
 }
 
+export function getDatabaseCover(database: Pick<DatabaseRecord, "config">) {
+  if (
+    !database.config ||
+    typeof database.config !== "object" ||
+    Array.isArray(database.config)
+  ) {
+    return null
+  }
+
+  const cover = (database.config as { cover?: unknown }).cover
+
+  return typeof cover === "string" && cover.length > 0 ? cover : null
+}
+
 export type DatabaseProperty = {
   id: string
   databaseId: string
