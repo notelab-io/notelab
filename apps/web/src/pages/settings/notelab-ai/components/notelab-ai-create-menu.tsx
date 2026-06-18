@@ -11,7 +11,7 @@ import {
   DropDrawerTrigger,
 } from "@/components/ui/dropdrawer"
 import { Input } from "@/components/ui/input"
-import { Item, ItemContent, ItemMedia, ItemTitle } from "@/components/ui/item"
+
 import { getApiErrorMessage } from "@/lib/api"
 import { WorkspacePageIcon } from "@/lib/workspace-icon"
 import { useNotelabFeatures } from "@notelab/features"
@@ -106,12 +106,10 @@ export function NotelabAiCreateMenu({
   existingWorkspaceIds,
   mode,
   organizationId,
-  trigger,
 }: {
   existingWorkspaceIds: string[]
   mode: NotelabAiMode
   organizationId: string | null
-  trigger: "header" | "list"
 }) {
   const navigate = useNavigate()
   const { apiFetch, queryClient } = useNotelabFeatures()
@@ -222,34 +220,13 @@ export function NotelabAiCreateMenu({
   return (
     <DropDrawer onOpenChange={setOpen} open={open}>
       <DropDrawerTrigger asChild>
-        {trigger === "header" ? (
-          <Button disabled={!organizationId || isBusy} size="sm" type="button">
-            {isBusy ? <Loader2Icon className="animate-spin" /> : <PlusIcon />}
-            {config.buttonLabel}
-          </Button>
-        ) : (
-          <Item
-            asChild
-            className="cursor-pointer border-dashed hover:bg-muted/50"
-            variant="outline"
-          >
-            <button disabled={!organizationId || isBusy} type="button">
-              <ItemMedia className="size-10 rounded-lg border border-dashed bg-background">
-                {isBusy ? (
-                  <Loader2Icon className="size-4 animate-spin" />
-                ) : (
-                  <PlusIcon className="size-4" />
-                )}
-              </ItemMedia>
-              <ItemContent>
-                <ItemTitle>{config.buttonLabel}</ItemTitle>
-              </ItemContent>
-            </button>
-          </Item>
-        )}
+        <Button disabled={!organizationId || isBusy} size="sm" type="button">
+          {isBusy ? <Loader2Icon className="animate-spin" /> : <PlusIcon />}
+          {config.buttonLabel}
+        </Button>
       </DropDrawerTrigger>
       <DropDrawerContent
-        align={trigger === "header" ? "end" : "start"}
+        align="end"
         className="w-80 overflow-hidden p-0"
       >
         <div className="flex flex-col">

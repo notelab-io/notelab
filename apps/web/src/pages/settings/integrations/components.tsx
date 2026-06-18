@@ -2,22 +2,8 @@ import * as React from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Item,
-  ItemActions,
-  ItemContent,
-  ItemDescription,
-  ItemGroup,
-  ItemMedia,
-  ItemTitle,
-} from "@/components/ui/item";
+import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import {
   ArrowLeftIcon,
   CheckCircle2Icon,
@@ -36,30 +22,30 @@ export function RefreshIntegrationsCard({
   onRefresh: () => void;
 }) {
   return (
-    <Card>
-      <CardHeader className="items-start gap-4 sm:flex-row sm:justify-between">
-        <div className="space-y-1">
-          <CardTitle>Connections</CardTitle>
-          <CardDescription>
-            Review connected tools and refresh their current status.
-          </CardDescription>
-        </div>
-        <Button
-          disabled={isLoading}
-          onClick={onRefresh}
-          size="sm"
-          type="button"
-          variant="outline"
-        >
-          {isLoading ? (
-            <Loader2Icon className="animate-spin" />
-          ) : (
-            <RotateCwIcon />
-          )}
-          Refresh
-        </Button>
-      </CardHeader>
-    </Card>
+    <div className="flex items-start justify-between gap-4">
+      <div className="min-w-0 space-y-1">
+        <h3 className="font-heading text-base leading-snug font-medium">
+          Connections
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          Review connected tools and refresh their current status.
+        </p>
+      </div>
+      <Button
+        disabled={isLoading}
+        onClick={onRefresh}
+        size="sm"
+        type="button"
+        variant="outline"
+      >
+        {isLoading ? (
+          <Loader2Icon className="animate-spin" />
+        ) : (
+          <RotateCwIcon />
+        )}
+        Refresh
+      </Button>
+    </div>
   );
 }
 
@@ -73,48 +59,62 @@ export function IntegrationSection({
   title: string;
 }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ItemGroup className="gap-2">{children}</ItemGroup>
-      </CardContent>
-    </Card>
+    <section className="grid gap-3">
+      <div className="min-w-0 space-y-1">
+        <h3 className="font-heading text-base leading-snug font-medium">
+          {title}
+        </h3>
+        <p className="text-sm text-muted-foreground">{description}</p>
+      </div>
+      <Card className="gap-0 overflow-hidden py-0">
+        <CardContent className="p-0">
+          <div className="divide-y divide-border">{children}</div>
+        </CardContent>
+      </Card>
+    </section>
   );
 }
 
 export function IntegrationGridCard({
   integration,
+  isFirst,
+  isLast,
 }: {
   integration: IntegrationSummary;
+  isFirst: boolean;
+  isLast: boolean;
 }) {
   const isConnected = integration.connected === true;
 
   return (
-    <Item className="min-h-16" variant="outline">
-      <ItemMedia className="size-10 rounded-lg border bg-background">
+    <div
+      className={cn(
+        "flex min-h-16 items-center gap-3 px-4 py-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+        isFirst && "rounded-t-none",
+        isLast && "rounded-b-none",
+      )}
+    >
+      <span className="flex size-5 shrink-0 items-center justify-center">
         <img
           alt=""
           aria-hidden="true"
           className="size-5"
           src={integration.icon}
         />
-      </ItemMedia>
-      <ItemContent className="min-w-0">
+      </span>
+      <div className="min-w-0 flex-1">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <ItemTitle className="truncate">{integration.name}</ItemTitle>
+          <span className="truncate font-medium">{integration.name}</span>
           <ConnectionBadge
             connected={integration.connected}
             status={integration.status}
           />
         </div>
-        <ItemDescription className="line-clamp-2">
+        <p className="line-clamp-2 text-sm text-muted-foreground">
           {integration.detail}
-        </ItemDescription>
-      </ItemContent>
-      <ItemActions>
+        </p>
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
         <Button
           disabled={isConnected || integration.connectDisabled}
           onClick={integration.onConnect}
@@ -139,8 +139,8 @@ export function IntegrationGridCard({
         >
           Manage
         </Button>
-      </ItemActions>
-    </Item>
+      </div>
+    </div>
   );
 }
 

@@ -220,9 +220,11 @@ export default function OrganizationIntegrationsSettingsPage() {
                 (integration) =>
                   integration.category === "AI enterprise search",
               )
-              .map((integration) => (
+              .map((integration, index, integrations) => (
                 <IntegrationGridCard
                   integration={integration}
+                  isFirst={index === 0}
+                  isLast={index === integrations.length - 1}
                   key={integration.id}
                 />
               ))}

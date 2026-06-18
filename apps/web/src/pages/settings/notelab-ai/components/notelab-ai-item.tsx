@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Link } from "@tanstack/react-router"
+import { useNavigate } from "@tanstack/react-router"
 import { Loader2Icon, XIcon } from "lucide-react"
 import { toast } from "sonner"
 
@@ -14,14 +14,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
-import {
-  Item,
-  ItemActions,
-  ItemContent,
-  ItemGroup,
-  ItemMedia,
-  ItemTitle,
-} from "@/components/ui/item"
+import { cn } from "@/lib/utils"
 import { getApiErrorMessage } from "@/lib/api"
 import { WorkspacePageIcon } from "@/lib/workspace-icon"
 import { useNotelabFeatures } from "@notelab/features"
@@ -40,18 +33,30 @@ const modeLabels: Record<NotelabAiMode, string> = {
 }
 
 export function NotelabAiItem({
+  isFirst,
+  isLast,
   mode,
   workspace,
   workspaceRecord,
 }: {
+  isFirst: boolean
+  isLast: boolean
   mode: NotelabAiMode
   workspace: NotelabAiWorkspaceSummary
   workspaceRecord?: Workspace
 }) {
+  const navigate = useNavigate()
   const { apiFetch, queryClient } = useNotelabFeatures()
   const updateWorkspace = useUpdateWorkspace()
   const [confirmOpen, setConfirmOpen] = React.useState(false)
   const isRemoving = updateWorkspace.isPending
+
+  const openWorkspace = () => {
+    void navigate({
+      params: { workspaceId: workspace.id },
+      to: "/workspace/$workspaceId",
+    })
+  }
 
   const remove = async () => {
     let metadata: WorkspaceMetadata = {}
@@ -92,8 +97,23 @@ export function NotelabAiItem({
 
   return (
     <>
-      <Item variant="outline">
-        <ItemMedia className="flex size-10 items-center justify-center rounded-lg border bg-background">
+      <div
+        className={cn(
+          "flex cursor-pointer items-center gap-3 px-4 py-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+          isFirst && "rounded-t-none",
+          isLast && "rounded-b-none",
+        )}
+        onClick={openWorkspace}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault()
+            openWorkspace()
+          }
+        }}
+        role="link"
+        tabIndex={0}
+      >
+        <span className="flex size-5 shrink-0 items-center justify-center">
           <WorkspacePageIcon
             workspace={
               workspaceRecord ?? {
@@ -102,35 +122,29 @@ export function NotelabAiItem({
               }
             }
           />
-        </ItemMedia>
-        <ItemContent className="min-w-0">
-          <ItemTitle className="truncate">
-            <Link
-              className="hover:underline"
-              params={{ workspaceId: workspace.id }}
-              to="/workspace/$workspaceId"
-            >
-              {workspace.name || "Untitled"}
-            </Link>
-          </ItemTitle>
-        </ItemContent>
-        <ItemActions>
-          <Button
-            aria-label={`Remove as ${modeLabels[mode]}`}
-            disabled={isRemoving}
-            onClick={() => setConfirmOpen(true)}
-            size="icon-sm"
-            type="button"
-            variant="ghost"
-          >
-            {isRemoving ? (
-              <Loader2Icon className="animate-spin" />
-            ) : (
-              <XIcon />
-            )}
-          </Button>
-        </ItemActions>
-      </Item>
+        </span>
+        <span className="min-w-0 flex-1 truncate font-medium">
+          {workspace.name || "Untitled"}
+        </span>
+        <Button
+          aria-label={`Remove as ${modeLabels[mode]}`}
+          className="shrink-0 text-muted-foreground hover:text-foreground"
+          disabled={isRemoving}
+          onClick={(event) => {
+            event.stopPropagation()
+            setConfirmOpen(true)
+          }}
+          size="icon-sm"
+          type="button"
+          variant="ghost"
+        >
+          {isRemoving ? (
+            <Loader2Icon className="animate-spin" />
+          ) : (
+            <XIcon />
+          )}
+        </Button>
+      </div>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
@@ -153,10 +167,12 @@ export function NotelabAiItem({
   )
 }
 
-export function NotelabAiItemGroup({
+export function NotelabAiItemList({
   children,
 }: {
   children: React.ReactNode
 }) {
-  return <ItemGroup className="gap-2">{children}</ItemGroup>
+  return (
+    <div className="divide-y divide-border">{children}</div>
+  )
 }

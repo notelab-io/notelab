@@ -3,13 +3,7 @@ import { toast } from "sonner"
 
 import { SettingsHeader } from "@/components/settings-header"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import {
   Field,
   FieldDescription,
@@ -37,7 +31,7 @@ export default function ProfileSettingsPage() {
         description="Update your personal details and account preferences."
       />
 
-      <div className="mx-auto grid w-full max-w-4xl gap-4">
+      <div className="mx-auto grid w-full max-w-4xl gap-6">
         <ProfileDetailsCard
           initialEmail={sessionData?.user?.email ?? ""}
           initialName={sessionData?.user?.name ?? ""}
@@ -109,14 +103,17 @@ function ProfileDetailsCard({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Personal details</CardTitle>
-        <CardDescription>
+    <section className="grid gap-3">
+      <div className="min-w-0 space-y-1">
+        <h3 className="font-heading text-base leading-snug font-medium">
+          Personal details
+        </h3>
+        <p className="text-sm text-muted-foreground">
           Update the name and email tied to your account.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+        </p>
+      </div>
+      <Card>
+        <CardContent>
         <form className="grid gap-4" onSubmit={saveProfile}>
           <FieldGroup>
             <Field>
@@ -168,8 +165,9 @@ function ProfileDetailsCard({
             Save changes
           </Button>
         </form>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </section>
   )
 }
 
@@ -247,16 +245,19 @@ function PasswordCard({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Password</CardTitle>
-        <CardDescription>
+    <section className="grid gap-3">
+      <div className="min-w-0 space-y-1">
+        <h3 className="font-heading text-base leading-snug font-medium">
+          Password
+        </h3>
+        <p className="text-sm text-muted-foreground">
           {hasPassword
             ? "Change the password associated with your account."
             : "Set a password for signing in to your account."}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+        </p>
+      </div>
+      <Card>
+        <CardContent>
         <form className="grid gap-4" onSubmit={updatePassword}>
           <FieldGroup>
             {hasPassword && (
@@ -334,8 +335,9 @@ function PasswordCard({
             {hasPassword ? "Update password" : "Set password"}
           </Button>
         </form>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </section>
   )
 }
 
