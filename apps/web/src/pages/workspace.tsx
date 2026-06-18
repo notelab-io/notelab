@@ -318,14 +318,16 @@ export function WorkspaceEditorPane({
     pendingContentRef.current = null
   }, [])
 
+  const workspaceEmoji = workspace ? getWorkspaceEmoji(workspace) ?? "" : ""
+
   useEffect(() => {
     if (!workspace) {
       return
     }
 
     setName(workspace.name)
-    setEmoji(getWorkspaceEmoji(workspace) ?? "")
-  }, [workspace])
+    setEmoji(workspaceEmoji)
+  }, [workspace, workspace?.name, workspace?.updatedAt, workspaceEmoji])
 
   useEffect(() => {
     return flushContentSaveTimeout

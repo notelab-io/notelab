@@ -106,13 +106,5 @@ function resolveRealtimeBaseUrl() {
     return API_BASE_URL
   }
 
-  if (
-    import.meta.env.DEV &&
-    typeof window !== "undefined" &&
-    ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname)
-  ) {
-    return `${window.location.protocol}//${window.location.hostname}:3000`
-  }
-
   return undefined
 }

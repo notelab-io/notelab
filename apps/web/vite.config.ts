@@ -99,6 +99,7 @@ export default defineConfig(async () => ({
       "/workspaces": {
         target: backendTarget,
         changeOrigin: true,
+        ws: true,
       },
       "/databases": {
         target: backendTarget,

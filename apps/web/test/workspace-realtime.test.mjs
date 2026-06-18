@@ -71,4 +71,25 @@ export function register({ assert, loadModule, test }) {
       event,
     )
   })
+
+  test("workspace realtime frame codec round-trips events", async () => {
+    const {
+      encodeWorkspaceRealtimeFrame,
+      parseWorkspaceRealtimeFrame,
+    } = await loadModule(featuresRealtimeUtilsPath)
+    const event = {
+      actorId: "user-1",
+      changed: ["content"],
+      committedAt: "2026-06-17T00:00:00.000Z",
+      mutationId: "mutation-1",
+      organizationId: "organization-1",
+      type: "workspace.changed",
+      workspaceId: "workspace-1",
+    }
+
+    const frame = encodeWorkspaceRealtimeFrame(event)
+
+    assert.deepEqual(parseWorkspaceRealtimeFrame(frame), event)
+    assert.equal(parseWorkspaceRealtimeFrame(new Uint8Array([0])), null)
+  })
 }

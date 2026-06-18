@@ -667,6 +667,7 @@ export function Editor({
   const collaborationReady = Boolean(
     collaboration.provider && collaboration.user && collaboration.ydoc,
   )
+
   const editorExtensions = useMemo<Extensions>(() => {
     if (
       !collaboration.provider ||
@@ -694,7 +695,12 @@ export function Editor({
     collaboration.user,
     collaboration.ydoc,
   ])
-  const editorEditable = editable && (!collaborationEnabled || collaborationReady)
+  const editorEditable =
+    editable &&
+    (!collaborationEnabled ||
+      collaborationReady ||
+      collaboration.status === "offline" ||
+      collaboration.status === "disconnected")
   const editorLifecycleKey = `${workspaceId ?? "draft"}:${
     collaborationReady ? "collaboration" : "plain"
   }`

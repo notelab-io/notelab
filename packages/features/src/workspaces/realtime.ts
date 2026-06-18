@@ -1,35 +1,38 @@
+import * as decoding from "lib0/decoding"
 import { useEffect, useRef, useState } from "react"
 
 import { useNotelabFeatures } from "../context"
-import {
-  workspaceCommentsQueryKey,
-  workspaceQueryKey,
-  workspaceThreadsQueryKey,
-  workspacesQueryKey,
-} from "./queries"
+import { createWorkspaceRealtimeSubscription } from "./realtime-subscription"
 import {
   getWorkspaceRealtimeUrl,
+  normalizeWorkspaceRealtimeMessageData,
   parseWorkspaceRealtimeEvent,
+  parseWorkspaceRealtimeFrame,
+  workspaceRealtimeMessageType,
+  type WorkspaceRealtimeMultiplexProvider,
 } from "./realtime-utils"
 
 type WorkspaceRealtimeOptions = {
   enabled?: boolean
+  multiplexOnly?: boolean
+  multiplexProvider?: WorkspaceRealtimeMultiplexProvider | null
   organizationId?: string | null
 }
 
-const refetchDebounceMs = 120
-
 export function useWorkspaceRealtime(
   workspaceId: string | null | undefined,
-  { enabled = true, organizationId = null }: WorkspaceRealtimeOptions = {},
+  {
+    enabled = true,
+    multiplexOnly = false,
+    multiplexProvider = null,
+    organizationId = null,
+  }: WorkspaceRealtimeOptions = {},
 ) {
   const { queryClient, realtimeBaseUrl } = useNotelabFeatures()
   const [status, setStatus] = useState<
     "connected" | "connecting" | "disconnected" | "offline"
   >("offline")
   const socketRef = useRef<WebSocket | null>(null)
-  const workspaceRefetchTimeoutRef = useRef<number | null>(null)
-  const commentsRefetchTimeoutRef = useRef<number | null>(null)
   const reconnectTimeoutRef = useRef<number | null>(null)
   const reconnectAttemptRef = useRef(0)
 
@@ -39,52 +42,82 @@ export function useWorkspaceRealtime(
       return
     }
 
-    let disposed = false
+    const subscription = createWorkspaceRealtimeSubscription({
+      organizationId,
+      queryClient,
+      workspaceId,
+    })
 
-    const scheduleWorkspaceRefetch = (eventOrganizationId?: string | null) => {
-      if (workspaceRefetchTimeoutRef.current !== null) {
-        window.clearTimeout(workspaceRefetchTimeoutRef.current)
-      }
-
-      workspaceRefetchTimeoutRef.current = window.setTimeout(() => {
-        void Promise.all([
-          queryClient.invalidateQueries({
-            queryKey: workspaceQueryKey(workspaceId),
-          }),
-          queryClient.invalidateQueries({
-            queryKey: workspacesQueryKey(eventOrganizationId ?? organizationId),
-          }),
-          queryClient.invalidateQueries({ queryKey: ["database"] }),
-        ])
-      }, refetchDebounceMs)
+    if (multiplexOnly && !multiplexProvider) {
+      setStatus("offline")
+      return
     }
 
-    const scheduleCommentsRefetch = (threadId?: string | null) => {
-      if (commentsRefetchTimeoutRef.current !== null) {
-        window.clearTimeout(commentsRefetchTimeoutRef.current)
-      }
+    if (multiplexProvider) {
+      let disposed = false
 
-      commentsRefetchTimeoutRef.current = window.setTimeout(() => {
-        const invalidations = [
-          queryClient.invalidateQueries({
-            queryKey: workspaceCommentsQueryKey(workspaceId),
-          }),
-          queryClient.invalidateQueries({
-            queryKey: workspaceThreadsQueryKey(workspaceId),
-          }),
-        ]
-
-        if (threadId) {
-          invalidations.push(
-            queryClient.invalidateQueries({
-              queryKey: workspaceCommentsQueryKey(workspaceId, threadId),
-            }),
-          )
+      const handleStatus = ([payload]: [
+        { status: "connected" | "disconnected" | "connecting" },
+      ]) => {
+        if (disposed) {
+          return
         }
 
-        void Promise.all(invalidations)
-      }, refetchDebounceMs)
+        setStatus(payload.status)
+
+        if (payload.status === "connected" && reconnectAttemptRef.current > 0) {
+          subscription.scheduleReconnectRefetch()
+          reconnectAttemptRef.current = 0
+        }
+
+        if (payload.status === "disconnected") {
+          reconnectAttemptRef.current += 1
+        }
+      }
+
+      const previousHandler =
+        multiplexProvider.messageHandlers[workspaceRealtimeMessageType]
+
+      multiplexProvider.messageHandlers[workspaceRealtimeMessageType] = (
+        _encoder,
+        decoder,
+        _provider,
+        _emitSynced,
+        _messageType,
+      ) => {
+        try {
+          const payload = decoding.readVarUint8Array(decoder)
+          const message = parseWorkspaceRealtimeEvent(
+            new TextDecoder().decode(payload),
+          )
+
+          if (message) {
+            subscription.handleEvent(message)
+          }
+        } catch {
+          return
+        }
+      }
+
+      multiplexProvider.on("status", handleStatus)
+
+      return () => {
+        disposed = true
+        setStatus("offline")
+        subscription.dispose()
+
+        if (previousHandler) {
+          multiplexProvider.messageHandlers[workspaceRealtimeMessageType] =
+            previousHandler
+        } else {
+          delete multiplexProvider.messageHandlers[workspaceRealtimeMessageType]
+        }
+
+        multiplexProvider.off("status", handleStatus)
+      }
     }
+
+    let disposed = false
 
     const connect = () => {
       if (disposed) {
@@ -101,6 +134,7 @@ export function useWorkspaceRealtime(
         ),
       )
 
+      socket.binaryType = "arraybuffer"
       socketRef.current = socket
 
       socket.addEventListener("open", () => {
@@ -111,28 +145,14 @@ export function useWorkspaceRealtime(
         setStatus("connected")
 
         if (reconnectAttemptRef.current > 0) {
-          scheduleWorkspaceRefetch()
-          scheduleCommentsRefetch()
+          subscription.scheduleReconnectRefetch()
         }
 
         reconnectAttemptRef.current = 0
       })
 
       socket.addEventListener("message", (event) => {
-        const message = parseWorkspaceRealtimeEvent(event.data)
-
-        if (!message || message.workspaceId !== workspaceId) {
-          return
-        }
-
-        if (message.type === "workspace.changed") {
-          scheduleWorkspaceRefetch(message.organizationId)
-          return
-        }
-
-        if (message.type === "comments.changed") {
-          scheduleCommentsRefetch(message.threadId)
-        }
+        void handleRealtimeSocketMessage(event.data, subscription)
       })
 
       socket.addEventListener("close", () => {
@@ -159,14 +179,7 @@ export function useWorkspaceRealtime(
     return () => {
       disposed = true
       setStatus("offline")
-
-      if (workspaceRefetchTimeoutRef.current !== null) {
-        window.clearTimeout(workspaceRefetchTimeoutRef.current)
-      }
-
-      if (commentsRefetchTimeoutRef.current !== null) {
-        window.clearTimeout(commentsRefetchTimeoutRef.current)
-      }
+      subscription.dispose()
 
       if (reconnectTimeoutRef.current !== null) {
         window.clearTimeout(reconnectTimeoutRef.current)
@@ -175,7 +188,35 @@ export function useWorkspaceRealtime(
       socketRef.current?.close()
       socketRef.current = null
     }
-  }, [enabled, organizationId, queryClient, realtimeBaseUrl, workspaceId])
+  }, [
+    enabled,
+    multiplexOnly,
+    multiplexProvider,
+    organizationId,
+    queryClient,
+    realtimeBaseUrl,
+    workspaceId,
+  ])
 
   return { status }
+}
+
+async function handleRealtimeSocketMessage(
+  data: unknown,
+  subscription: ReturnType<typeof createWorkspaceRealtimeSubscription>,
+) {
+  const normalized = await normalizeWorkspaceRealtimeMessageData(data)
+
+  if (!normalized) {
+    return
+  }
+
+  const message =
+    typeof normalized === "string"
+      ? parseWorkspaceRealtimeEvent(normalized)
+      : parseWorkspaceRealtimeFrame(normalized)
+
+  if (message) {
+    subscription.handleEvent(message)
+  }
 }

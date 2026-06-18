@@ -3,6 +3,9 @@
   "private": true,
   "type": "module",
   "version": "0.0.0",
+  "dependencies": {
+    "lib0": "^0.2.117"
+  },
   "peerDependencies": {
     "@tanstack/react-query": "^5.100.14",
     "react": "^19.1.0"

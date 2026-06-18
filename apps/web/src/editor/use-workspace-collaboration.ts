@@ -38,8 +38,6 @@ const collaboratorColors = [
   "#be123c",
 ]
 
-const postgresNewerThresholdMs = 5_000
-
 export function useWorkspaceCollaboration({
   enabled,
   seedUpdate,
@@ -120,13 +118,13 @@ export function useWorkspaceCollaboration({
 
     provider.awareness.setLocalStateField("user", user)
     setState({
-      provider: null,
+      provider,
       status: "connecting",
       user,
-      ydoc: null,
+      ydoc,
     })
 
-    const exposeProvider = () => {
+    const markCollaborationSynced = () => {
       if (disposed || didExposeProvider) {
         return
       }
@@ -156,7 +154,7 @@ export function useWorkspaceCollaboration({
     }
     const handleSync = (synced: boolean) => {
       if (synced) {
-        exposeProvider()
+        markCollaborationSynced()
       }
     }
     const connect = async () => {
@@ -169,22 +167,6 @@ export function useWorkspaceCollaboration({
 
         if (!status.hasDocument) {
           await initializeRoom(workspaceId, seed)
-        } else {
-          const workspaceUpdatedAtMs = Date.parse(
-            workspaceUpdatedAtRef.current ?? "",
-          )
-          const doUpdatedAtMs = status.doUpdatedAt ?? 0
-
-          if (
-            Number.isFinite(workspaceUpdatedAtMs) &&
-            workspaceUpdatedAtMs - doUpdatedAtMs > postgresNewerThresholdMs
-          ) {
-            console.warn(
-              "Postgres workspace content is newer than collaboration room; reinitializing",
-              { doUpdatedAtMs, workspaceId, workspaceUpdatedAtMs },
-            )
-            await reinitializeRoom(workspaceId, seed)
-          }
         }
 
         if (disposed) {
@@ -196,7 +178,7 @@ export function useWorkspaceCollaboration({
         provider.connect()
 
         if (provider.synced) {
-          exposeProvider()
+          markCollaborationSynced()
         }
       } catch {
         if (disposed) {
@@ -246,16 +228,6 @@ async function initializeRoom(workspaceId: string, update: Uint8Array) {
   )
 }
 
-async function reinitializeRoom(workspaceId: string, update: Uint8Array) {
-  await apiFetch<{ applied: boolean; reinitialized: boolean }>(
-    `/workspaces/${encodeURIComponent(workspaceId)}/collaboration/reinitialize`,
-    {
-      body: JSON.stringify({ update: encodeBase64(update) }),
-      method: "POST",
-    },
-  )
-}
-
 function getCollaborationServerUrl(workspaceId: string) {
   const baseUrl = getCollaborationBaseUrl()
   const url = new URL(baseUrl, window.location.origin)
@@ -272,17 +244,7 @@ function getCollaborationBaseUrl() {
     return API_BASE_URL
   }
 
-  if (import.meta.env.DEV && isLocalDevelopmentHost(window.location.hostname)) {
-    return `${window.location.protocol}//${window.location.hostname}:3000`
-  }
-
   return window.location.origin
-}
-
-function isLocalDevelopmentHost(hostname: string) {
-  return (
-    hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1"
-  )
 }
 
 function encodeBase64(update: Uint8Array) {
