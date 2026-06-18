@@ -129,6 +129,7 @@ export type DatabaseViewContextValue = {
   propertyValuesByKey: Record<string, DatabasePropertyValue>
   removeDatabaseFilter: (index: number) => void
   removeDatabaseSort: (index: number) => void
+  realtimeStatus: "connected" | "connecting" | "disconnected" | "offline"
   renameDatabaseProperty: (databasePropertyId: string, name: string) => void
   reorderDatabaseFilters: (filterIds: string[]) => void
   saveDatabaseTitle: (nextTitle: string) => void

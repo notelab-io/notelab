@@ -104,6 +104,7 @@ export default defineConfig(async () => ({
       "/databases": {
         target: backendTarget,
         changeOrigin: true,
+        ws: true,
       },
       "/images": {
         target: backendTarget,

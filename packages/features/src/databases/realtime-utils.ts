@@ -16,10 +16,21 @@ export type DatabasePresenceCollaborator = {
   }
 }
 
+export type DatabaseChangedArea =
+  | "database"
+  | "views"
+  | "properties"
+  | "rows"
+  | "values"
+
 export type DatabaseChangedEvent = {
   type: "database.changed"
+  actorId: string
+  changed: DatabaseChangedArea[]
   clientMutationId?: string
+  committedAt: string
   databaseId: string
+  mutationId: string
   version: number
 }
 
@@ -63,6 +74,28 @@ export function getDatabaseRealtimeUrl(
   return url.toString()
 }
 
+export async function normalizeDatabaseRealtimeMessageData(
+  data: unknown,
+): Promise<string | null> {
+  if (typeof data === "string") {
+    return data
+  }
+
+  if (data instanceof ArrayBuffer) {
+    return new TextDecoder().decode(data)
+  }
+
+  if (data instanceof Uint8Array) {
+    return new TextDecoder().decode(data)
+  }
+
+  if (typeof Blob !== "undefined" && data instanceof Blob) {
+    return new TextDecoder().decode(await data.arrayBuffer())
+  }
+
+  return null
+}
+
 export function parseDatabaseRealtimeEvent(
   data: unknown,
 ): DatabaseRealtimeEvent | null {
@@ -79,6 +112,18 @@ export function parseDatabaseRealtimeEvent(
   } catch {
     return null
   }
+}
+
+export async function parseDatabaseRealtimeMessage(
+  data: unknown,
+): Promise<DatabaseRealtimeEvent | null> {
+  const normalized = await normalizeDatabaseRealtimeMessageData(data)
+
+  if (!normalized) {
+    return null
+  }
+
+  return parseDatabaseRealtimeEvent(normalized)
 }
 
 export function getDatabaseChangedRefetchDecision({

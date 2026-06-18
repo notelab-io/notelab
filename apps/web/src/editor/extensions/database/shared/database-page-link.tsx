@@ -15,12 +15,14 @@ import {
 
 export function DatabasePageLink({
   editable = false,
+  fallbackTitle,
   onActiveChange,
   onOpen,
   pageId,
   showPageIcon = true,
 }: {
   editable?: boolean
+  fallbackTitle?: string
   onActiveChange?: (active: boolean) => void
   onOpen?: (pageId: string) => void
   pageId: string
@@ -34,16 +36,17 @@ export function DatabasePageLink({
   const [draftTitle, setDraftTitle] = useState("")
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const isOpen = sidePane?.sidePaneWorkspaceId === pageId
-  const title = page?.name.trim() || "Untitled"
+  const title =
+    page?.name.trim() || fallbackTitle?.trim() || "Untitled"
   const emoji = page ? getWorkspaceEmoji(page) : null
   const actionLabel = isOpen ? "Close" : "Open"
   const canEditTitle = editable && Boolean(page)
 
   useEffect(() => {
     if (!isEditingTitle) {
-      setDraftTitle(page?.name ?? "")
+      setDraftTitle(page?.name ?? fallbackTitle ?? "")
     }
-  }, [isEditingTitle, page?.name])
+  }, [fallbackTitle, isEditingTitle, page?.name])
 
   useEffect(() => {
     if (!isEditingTitle) {

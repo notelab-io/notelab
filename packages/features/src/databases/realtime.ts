@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 
 import { useNotelabFeatures } from "../context"
+import { workspaceQueryKey } from "../workspaces/queries"
 import {
   databaseQueryKey,
   type DatabasePayload,
@@ -11,7 +12,7 @@ import {
   createCellPresenceByKey,
   getDatabaseChangedRefetchDecision,
   getDatabaseRealtimeUrl,
-  parseDatabaseRealtimeEvent,
+  parseDatabaseRealtimeMessage,
   type DatabasePresenceCollaborator,
 } from "./realtime-utils"
 
@@ -76,11 +77,21 @@ export function useDatabaseRealtime(
       }
 
       refetchTimeoutRef.current = window.setTimeout(() => {
+        const currentPayload = queryClient.getQueryData<DatabasePayload | null>(
+          databaseQueryKey(databaseId),
+        )
+        const rowPageInvalidations = (currentPayload?.rows ?? []).map((row) =>
+          queryClient.invalidateQueries({
+            queryKey: workspaceQueryKey(row.pageId),
+          }),
+        )
+
         void Promise.all([
           queryClient.invalidateQueries({
             queryKey: databaseQueryKey(databaseId),
           }),
           queryClient.invalidateQueries({ queryKey: ["workspace"] }),
+          ...rowPageInvalidations,
         ])
       }, refetchDebounceMs)
     }
@@ -96,6 +107,7 @@ export function useDatabaseRealtime(
         getDatabaseRealtimeUrl(databaseId, realtimeBaseUrl, window.location.origin),
       )
 
+      socket.binaryType = "arraybuffer"
       socketRef.current = socket
 
       socket.addEventListener("open", () => {
@@ -125,57 +137,37 @@ export function useDatabaseRealtime(
       })
 
       socket.addEventListener("message", (event) => {
-        const message = parseDatabaseRealtimeEvent(event.data)
+        void handleDatabaseRealtimeSocketMessage(event.data, databaseId, {
+          currentVersion: latestVersionRef.current,
+          onPresenceClear: (sessionId) => {
+            setCollaboratorsBySession((current) => {
+              const next = { ...current }
 
-        if (!message || message.databaseId !== databaseId) {
-          return
-        }
+              delete next[sessionId]
 
-        if (message.type === "database.changed") {
-          const decision = getDatabaseChangedRefetchDecision({
-            clientMutationId: message.clientMutationId,
-            currentVersion: latestVersionRef.current,
-            isOwnMutation: isRecentDatabaseClientMutationId,
-            version: message.version,
-          })
-
-          latestVersionRef.current = decision.latestVersion
-
-          if (decision.shouldRefetch) {
-            scheduleRefetch()
-          }
-
-          return
-        }
-
-        if (message.type === "realtime.ready") {
-          setCollaboratorsBySession(
-            Object.fromEntries(
-              message.peers.map((collaborator) => [
-                collaborator.sessionId,
-                addCollaboratorColor(collaborator),
-              ]),
-            ),
-          )
-          return
-        }
-
-        if (message.type === "presence.update") {
-          setCollaboratorsBySession((current) => ({
-            ...current,
-            [message.collaborator.sessionId]: addCollaboratorColor(
-              message.collaborator,
-            ),
-          }))
-          return
-        }
-
-        setCollaboratorsBySession((current) => {
-          const next = { ...current }
-
-          delete next[message.sessionId]
-
-          return next
+              return next
+            })
+          },
+          onPresenceUpdate: (collaborator) => {
+            setCollaboratorsBySession((current) => ({
+              ...current,
+              [collaborator.sessionId]: addCollaboratorColor(collaborator),
+            }))
+          },
+          onReady: (peers) => {
+            setCollaboratorsBySession(
+              Object.fromEntries(
+                peers.map((collaborator) => [
+                  collaborator.sessionId,
+                  addCollaboratorColor(collaborator),
+                ]),
+              ),
+            )
+          },
+          scheduleRefetch,
+          setLatestVersion: (version) => {
+            latestVersionRef.current = version
+          },
         })
       })
 
@@ -280,4 +272,56 @@ export function useDatabaseRealtime(
     collaborators,
     status,
   }
+}
+
+async function handleDatabaseRealtimeSocketMessage(
+  data: unknown,
+  databaseId: string,
+  handlers: {
+    currentVersion: number | null
+    onPresenceClear: (sessionId: string) => void
+    onPresenceUpdate: (
+      collaborator: Omit<DatabasePresenceCollaborator, "color">,
+    ) => void
+    onReady: (
+      peers: Array<Omit<DatabasePresenceCollaborator, "color">>,
+    ) => void
+    scheduleRefetch: () => void
+    setLatestVersion: (version: number | null) => void
+  },
+) {
+  const message = await parseDatabaseRealtimeMessage(data)
+
+  if (!message || message.databaseId !== databaseId) {
+    return
+  }
+
+  if (message.type === "database.changed") {
+    const decision = getDatabaseChangedRefetchDecision({
+      clientMutationId: message.clientMutationId,
+      currentVersion: handlers.currentVersion,
+      isOwnMutation: isRecentDatabaseClientMutationId,
+      version: message.version,
+    })
+
+    handlers.setLatestVersion(decision.latestVersion)
+
+    if (decision.shouldRefetch) {
+      handlers.scheduleRefetch()
+    }
+
+    return
+  }
+
+  if (message.type === "realtime.ready") {
+    handlers.onReady(message.peers)
+    return
+  }
+
+  if (message.type === "presence.update") {
+    handlers.onPresenceUpdate(message.collaborator)
+    return
+  }
+
+  handlers.onPresenceClear(message.sessionId)
 }

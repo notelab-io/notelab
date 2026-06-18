@@ -980,6 +980,7 @@ export function DatabaseKanbanView() {
                             ) : null}
                             <DatabasePageLink
                               editable={editable}
+                              fallbackTitle={item.page.name}
                               onOpen={onOpenPage}
                               pageId={item.pageId}
                               showPageIcon={showPageIconInTitle}

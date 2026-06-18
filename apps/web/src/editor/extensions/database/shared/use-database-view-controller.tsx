@@ -181,13 +181,16 @@ export function useDatabaseViewController({
       activeRowId: row?.id ?? null,
     }
   }, [activePayload?.rows, activePropertyValueKey])
-  const { cellPresenceByKey } = useDatabaseRealtime(activeDatabaseId, {
-    activePropertyId: activePresenceCell.activePropertyId,
-    activeRowId: activePresenceCell.activeRowId,
-    activeViewId: activeView?.id ?? null,
-    enabled: Boolean(activeDatabaseId && activePayload),
-    localVersion: activePayload?.database.version ?? null,
-  })
+  const { cellPresenceByKey, status: realtimeStatus } = useDatabaseRealtime(
+    activeDatabaseId,
+    {
+      activePropertyId: activePresenceCell.activePropertyId,
+      activeRowId: activePresenceCell.activeRowId,
+      activeViewId: activeView?.id ?? null,
+      enabled: Boolean(activeDatabaseId && activePayload),
+      localVersion: activePayload?.database.version ?? null,
+    },
+  )
   useEffect(() => {
     const nextDatabaseTitle =
       activePayload?.database.name ?? activeLinkedDatabaseView?.databaseName
@@ -487,6 +490,7 @@ export function useDatabaseViewController({
     properties,
     removeDatabaseFilter: commands.removeDatabaseFilter,
     removeDatabaseSort: commands.removeDatabaseSort,
+    realtimeStatus,
     renameDatabaseProperty: commands.renameDatabaseProperty,
     reorderDatabaseFilters: commands.reorderDatabaseFilters,
     items,

@@ -145,6 +145,38 @@ export function register({ assert, loadModule, test }) {
     assert.equal(parseDatabaseRealtimeEvent("{bad json"), null)
     assert.equal(parseDatabaseRealtimeEvent(new ArrayBuffer(0)), null)
   })
+
+  test("database realtime normalizes binary websocket frames", async () => {
+    const {
+      normalizeDatabaseRealtimeMessageData,
+      parseDatabaseRealtimeMessage,
+    } = await loadModule(featuresRealtimeUtilsPath)
+    const payload = JSON.stringify({
+      actorId: "user-1",
+      changed: ["values"],
+      committedAt: "2026-06-19T00:00:00.000Z",
+      databaseId: "database-1",
+      mutationId: "mutation-1",
+      type: "database.changed",
+      version: 8,
+    })
+    const bytes = new TextEncoder().encode(payload)
+
+    assert.equal(
+      await normalizeDatabaseRealtimeMessageData(bytes.buffer),
+      payload,
+    )
+    assert.deepEqual(await parseDatabaseRealtimeMessage(bytes.buffer), {
+      actorId: "user-1",
+      changed: ["values"],
+      committedAt: "2026-06-19T00:00:00.000Z",
+      databaseId: "database-1",
+      mutationId: "mutation-1",
+      type: "database.changed",
+      version: 8,
+    })
+    assert.equal(await parseDatabaseRealtimeMessage(new Uint8Array([0])), null)
+  })
 }
 
 function createCollaborator({
