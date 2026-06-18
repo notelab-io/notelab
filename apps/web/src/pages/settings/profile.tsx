@@ -3,7 +3,7 @@ import { toast } from "sonner"
 
 import { SettingsHeader } from "@/components/settings-header"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+
 import {
   Field,
   FieldDescription,
@@ -12,6 +12,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { Separator } from "@/components/ui/separator"
 import { Spinner } from "@/components/ui/spinner"
 import { getApiErrorMessage } from "@/lib/api"
 import {
@@ -37,6 +38,7 @@ export default function ProfileSettingsPage() {
           initialName={sessionData?.user?.name ?? ""}
           isReady={Boolean(sessionData?.user)}
         />
+        <Separator />
         <PasswordCard
           hasPassword={sessionData?.user?.hasPassword ?? true}
           isReady={Boolean(sessionData?.user)}
@@ -104,69 +106,71 @@ function ProfileDetailsCard({
 
   return (
     <section className="grid gap-3">
-      <div className="min-w-0 space-y-1">
-        <h3 className="font-heading text-base leading-snug font-medium">
-          Personal details
-        </h3>
-        <p className="text-sm text-muted-foreground">
-          Update the name and email tied to your account.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 space-y-1">
+          <h3 className="font-heading text-base leading-snug font-medium">
+            Personal details
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Update the name and email tied to your account.
+          </p>
+        </div>
+        <Button
+          className="shrink-0"
+          disabled={!isReady || !hasChanges || updateUserProfile.isPending}
+          form="profile-details-form"
+          type="submit"
+        >
+          {updateUserProfile.isPending ? <Spinner /> : null}
+          Save changes
+        </Button>
       </div>
-      <Card>
-        <CardContent>
-        <form className="grid gap-4" onSubmit={saveProfile}>
-          <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="profile-name">Name</FieldLabel>
-              <Input
-                autoComplete="name"
-                disabled={!isReady || updateUserProfile.isPending}
-                id="profile-name"
-                onChange={(event) => {
-                  setName(event.target.value)
-                  if (error) {
-                    setError("")
-                  }
-                }}
-                placeholder="Your name"
-                value={name}
-              />
-            </Field>
+      <form
+        className="grid gap-4"
+        id="profile-details-form"
+        onSubmit={saveProfile}
+      >
+        <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor="profile-name">Name</FieldLabel>
+            <Input
+              autoComplete="name"
+              disabled={!isReady || updateUserProfile.isPending}
+              id="profile-name"
+              onChange={(event) => {
+                setName(event.target.value)
+                if (error) {
+                  setError("")
+                }
+              }}
+              placeholder="Your name"
+              value={name}
+            />
+          </Field>
 
-            <Field data-invalid={Boolean(error)}>
-              <FieldLabel htmlFor="profile-email">Email</FieldLabel>
-              <Input
-                autoComplete="email"
-                disabled={!isReady || updateUserProfile.isPending}
-                id="profile-email"
-                onChange={(event) => {
-                  setEmail(event.target.value)
-                  if (error) {
-                    setError("")
-                  }
-                }}
-                placeholder="you@example.com"
-                type="email"
-                value={email}
-              />
-              <FieldDescription>
-                This address is used for sign-in and workspace invitations.
-              </FieldDescription>
-              <FieldError>{error}</FieldError>
-            </Field>
-          </FieldGroup>
-
-          <Button
-            className="w-fit"
-            disabled={!isReady || !hasChanges || updateUserProfile.isPending}
-            type="submit"
-          >
-            {updateUserProfile.isPending ? <Spinner /> : null}
-            Save changes
-          </Button>
-        </form>
-        </CardContent>
-      </Card>
+          <Field data-invalid={Boolean(error)}>
+            <FieldLabel htmlFor="profile-email">Email</FieldLabel>
+            <Input
+              autoComplete="email"
+              disabled={!isReady || updateUserProfile.isPending}
+              id="profile-email"
+              onChange={(event) => {
+                setEmail(event.target.value)
+                if (error) {
+                  setError("")
+                }
+              }}
+              placeholder="you@example.com"
+              type="email"
+              value={email}
+            />
+            <FieldDescription>
+              This address is used for sign-in and workspace invitations.
+            </FieldDescription>
+            <FieldError>{error}</FieldError>
+          </Field>
+        </FieldGroup>
+      </form>
     </section>
   )
 }
@@ -244,99 +248,103 @@ function PasswordCard({
     )
   }
 
+  const passwordActionLabel = hasPassword ? "Update password" : "Set password"
+
   return (
     <section className="grid gap-3">
-      <div className="min-w-0 space-y-1">
-        <h3 className="font-heading text-base leading-snug font-medium">
-          Password
-        </h3>
-        <p className="text-sm text-muted-foreground">
-          {hasPassword
-            ? "Change the password associated with your account."
-            : "Set a password for signing in to your account."}
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 space-y-1">
+          <h3 className="font-heading text-base leading-snug font-medium">
+            Password
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            {hasPassword
+              ? "Change the password associated with your account."
+              : "Set a password for signing in to your account."}
+          </p>
+        </div>
+        <Button
+          className="shrink-0"
+          disabled={!isReady || !canSubmit}
+          form="profile-password-form"
+          type="submit"
+        >
+          {isPending ? <Spinner /> : null}
+          {passwordActionLabel}
+        </Button>
       </div>
-      <Card>
-        <CardContent>
-        <form className="grid gap-4" onSubmit={updatePassword}>
-          <FieldGroup>
-            {hasPassword && (
-              <Field data-invalid={Boolean(error)}>
-                <FieldLabel htmlFor="profile-current-password">
-                  Current password
-                </FieldLabel>
-                <Input
-                  autoComplete="current-password"
-                  disabled={!isReady || isPending}
-                  id="profile-current-password"
-                  onChange={(event) => {
-                    setCurrentPassword(event.target.value)
-                    if (error) {
-                      setError("")
-                    }
-                  }}
-                  type="password"
-                  value={currentPassword}
-                />
-              </Field>
-            )}
-
-            <Field>
-              <FieldLabel htmlFor="profile-new-password">
-                {hasPassword ? "New password" : "Password"}
-              </FieldLabel>
-              <Input
-                autoComplete="new-password"
-                disabled={!isReady || isPending}
-                id="profile-new-password"
-                minLength={8}
-                onChange={(event) => {
-                  setNewPassword(event.target.value)
-                  if (error) {
-                    setError("")
-                  }
-                }}
-                type="password"
-                value={newPassword}
-              />
-            </Field>
-
+      <form
+        className="grid gap-4"
+        id="profile-password-form"
+        onSubmit={updatePassword}
+      >
+        <FieldGroup>
+          {hasPassword && (
             <Field data-invalid={Boolean(error)}>
-              <FieldLabel htmlFor="profile-confirm-password">
-                Confirm new password
+              <FieldLabel htmlFor="profile-current-password">
+                Current password
               </FieldLabel>
               <Input
-                autoComplete="new-password"
+                autoComplete="current-password"
                 disabled={!isReady || isPending}
-                id="profile-confirm-password"
-                minLength={8}
+                id="profile-current-password"
                 onChange={(event) => {
-                  setConfirmPassword(event.target.value)
+                  setCurrentPassword(event.target.value)
                   if (error) {
                     setError("")
                   }
                 }}
                 type="password"
-                value={confirmPassword}
+                value={currentPassword}
               />
-              <FieldDescription>
-                Use a password you have not used elsewhere.
-              </FieldDescription>
-              <FieldError>{error}</FieldError>
             </Field>
-          </FieldGroup>
+          )}
 
-          <Button
-            className="w-fit"
-            disabled={!isReady || !canSubmit}
-            type="submit"
-          >
-            {isPending ? <Spinner /> : null}
-            {hasPassword ? "Update password" : "Set password"}
-          </Button>
-        </form>
-        </CardContent>
-      </Card>
+          <Field>
+            <FieldLabel htmlFor="profile-new-password">
+              {hasPassword ? "New password" : "Password"}
+            </FieldLabel>
+            <Input
+              autoComplete="new-password"
+              disabled={!isReady || isPending}
+              id="profile-new-password"
+              minLength={8}
+              onChange={(event) => {
+                setNewPassword(event.target.value)
+                if (error) {
+                  setError("")
+                }
+              }}
+              type="password"
+              value={newPassword}
+            />
+          </Field>
+
+          <Field data-invalid={Boolean(error)}>
+            <FieldLabel htmlFor="profile-confirm-password">
+              Confirm new password
+            </FieldLabel>
+            <Input
+              autoComplete="new-password"
+              disabled={!isReady || isPending}
+              id="profile-confirm-password"
+              minLength={8}
+              onChange={(event) => {
+                setConfirmPassword(event.target.value)
+                if (error) {
+                  setError("")
+                }
+              }}
+              type="password"
+              value={confirmPassword}
+            />
+            <FieldDescription>
+              Use a password you have not used elsewhere.
+            </FieldDescription>
+            <FieldError>{error}</FieldError>
+          </Field>
+        </FieldGroup>
+      </form>
     </section>
   )
 }

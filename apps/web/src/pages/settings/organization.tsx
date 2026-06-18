@@ -4,13 +4,6 @@ import { toast } from "sonner"
 import { SettingsHeader } from "@/components/settings-header"
 import { Button } from "@/components/ui/button"
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import {
   Field,
   FieldDescription,
   FieldError,
@@ -40,14 +33,14 @@ export default function OrganizationSettingsPage() {
         description="Manage workspace details, billing identity, and defaults."
       />
 
-      <div className="mx-auto grid w-full max-w-4xl gap-4">
-        <OrganizationDetailsCard organization={organization} />
+      <div className="mx-auto grid w-full max-w-4xl gap-6">
+        <OrganizationDetailsSection organization={organization} />
       </div>
     </main>
   )
 }
 
-function OrganizationDetailsCard({
+function OrganizationDetailsSection({
   organization,
 }: {
   organization: {
@@ -127,101 +120,107 @@ function OrganizationDetailsCard({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Workspace details</CardTitle>
-        <CardDescription>
-          Update the fields used to identify this organization across Notelab.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form className="grid gap-4" onSubmit={saveOrganization}>
-          <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="organization-name">Organization name</FieldLabel>
-              <Input
-                disabled={!organization || updateOrganization.isPending}
-                id="organization-name"
-                onChange={(event) => {
-                  setName(event.target.value)
-                  if (error) {
-                    setError("")
-                  }
-                }}
-                placeholder="Acme Labs"
-                value={name}
-              />
-            </Field>
+    <section className="grid gap-3">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 space-y-1">
+          <h3 className="font-heading text-base leading-snug font-medium">
+            Workspace details
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Update the fields used to identify this organization across Notelab.
+          </p>
+        </div>
+        <Button
+          className="shrink-0"
+          disabled={!organization || !hasChanges || updateOrganization.isPending}
+          form="organization-details-form"
+          type="submit"
+        >
+          {updateOrganization.isPending ? <Spinner /> : null}
+          Save organization
+        </Button>
+      </div>
+      <form
+        className="grid gap-4"
+        id="organization-details-form"
+        onSubmit={saveOrganization}
+      >
+        <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor="organization-name">Organization name</FieldLabel>
+            <Input
+              disabled={!organization || updateOrganization.isPending}
+              id="organization-name"
+              onChange={(event) => {
+                setName(event.target.value)
+                if (error) {
+                  setError("")
+                }
+              }}
+              placeholder="Acme Labs"
+              value={name}
+            />
+          </Field>
 
-            <Field data-invalid={Boolean(error)}>
-              <FieldLabel htmlFor="organization-slug">Slug</FieldLabel>
-              <Input
-                disabled={!organization || updateOrganization.isPending}
-                id="organization-slug"
-                onChange={(event) => {
-                  setSlug(event.target.value)
-                  if (error) {
-                    setError("")
-                  }
-                }}
-                placeholder="acme-labs"
-                value={slug}
-              />
-              <FieldDescription>
-                Lowercase, numbers, and hyphens only.
-              </FieldDescription>
-            </Field>
+          <Field data-invalid={Boolean(error)}>
+            <FieldLabel htmlFor="organization-slug">Slug</FieldLabel>
+            <Input
+              disabled={!organization || updateOrganization.isPending}
+              id="organization-slug"
+              onChange={(event) => {
+                setSlug(event.target.value)
+                if (error) {
+                  setError("")
+                }
+              }}
+              placeholder="acme-labs"
+              value={slug}
+            />
+            <FieldDescription>
+              Lowercase, numbers, and hyphens only.
+            </FieldDescription>
+          </Field>
 
-            <Field>
-              <FieldLabel htmlFor="organization-logo">Logo URL</FieldLabel>
-              <Input
-                disabled={!organization || updateOrganization.isPending}
-                id="organization-logo"
-                onChange={(event) => {
-                  setLogo(event.target.value)
-                  if (error) {
-                    setError("")
-                  }
-                }}
-                placeholder="https://example.com/logo.png"
-                type="url"
-                value={logo}
-              />
-            </Field>
+          <Field>
+            <FieldLabel htmlFor="organization-logo">Logo URL</FieldLabel>
+            <Input
+              disabled={!organization || updateOrganization.isPending}
+              id="organization-logo"
+              onChange={(event) => {
+                setLogo(event.target.value)
+                if (error) {
+                  setError("")
+                }
+              }}
+              placeholder="https://example.com/logo.png"
+              type="url"
+              value={logo}
+            />
+          </Field>
 
-            <Field data-invalid={Boolean(error)}>
-              <FieldLabel htmlFor="organization-metadata">Metadata</FieldLabel>
-              <Textarea
-                disabled={!organization || updateOrganization.isPending}
-                id="organization-metadata"
-                onChange={(event) => {
-                  setMetadata(event.target.value)
-                  if (error) {
-                    setError("")
-                  }
-                }}
-                placeholder="Add any organization-specific notes or identifiers."
-                rows={5}
-                value={metadata}
-              />
-              <FieldDescription>
-                Optional notes or internal descriptors for this workspace.
-              </FieldDescription>
-              <FieldError>{error}</FieldError>
-            </Field>
-          </FieldGroup>
-
-          <Button
-            className="w-fit"
-            disabled={!organization || !hasChanges || updateOrganization.isPending}
-            type="submit"
-          >
-            {updateOrganization.isPending ? <Spinner /> : null}
-            Save organization
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+          <Field data-invalid={Boolean(error)}>
+            <FieldLabel htmlFor="organization-metadata">Metadata</FieldLabel>
+            <Textarea
+              disabled={!organization || updateOrganization.isPending}
+              id="organization-metadata"
+              onChange={(event) => {
+                setMetadata(event.target.value)
+                if (error) {
+                  setError("")
+                }
+              }}
+              placeholder="Add any organization-specific notes or identifiers."
+              rows={5}
+              value={metadata}
+            />
+            <FieldDescription>
+              Optional notes or internal descriptors for this workspace.
+            </FieldDescription>
+            <FieldError>{error}</FieldError>
+          </Field>
+        </FieldGroup>
+      </form>
+    </section>
   )
 }
 
