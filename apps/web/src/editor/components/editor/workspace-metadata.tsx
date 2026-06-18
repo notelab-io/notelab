@@ -24,6 +24,8 @@ import {
   WorkspaceCommentThread,
 } from "@/components/workspace-comments"
 
+import { ImageSourcePicker } from "@/packages/editor/components/image-source-picker"
+
 import { DatabasePropertyDate } from "../../extensions/database/database-property-date"
 import { DatabasePropertyButton } from "../../extensions/database/database-property-button"
 import { DatabasePropertyFiles } from "../../extensions/database/database-property-files"
@@ -41,27 +43,36 @@ import {
 
 type WorkspaceMetadataProps = {
   contentClassName?: string
+  cover?: string
+  databaseId?: string | null
   editable?: boolean
   enableComments?: boolean
   icon?: string
+  onCoverChange?: (cover: string) => void
   onIconChange?: (icon: string) => void
   onTitleChange?: (title: string) => void
+  organizationId?: string | null
   title?: string
   workspaceId?: string | null
 }
 
 export function WorkspaceMetadata({
   contentClassName,
+  cover: coverProp,
+  databaseId,
   editable = true,
   enableComments = true,
   icon: iconProp,
+  onCoverChange,
   onIconChange,
   onTitleChange,
+  organizationId,
   title: titleProp,
   workspaceId,
 }: WorkspaceMetadataProps) {
-  const [coverVisible, setCoverVisible] = useState(false)
+  const [coverOpen, setCoverOpen] = useState(false)
   const [iconOpen, setIconOpen] = useState(false)
+  const [localCover, setLocalCover] = useState("")
   const [localIcon, setLocalIcon] = useState("")
   const [localTitle, setLocalTitle] = useState("")
   const [commentsOpen, setCommentsOpen] = useState(false)
@@ -76,6 +87,7 @@ export function WorkspaceMetadata({
   )
   const { data: threadsData } = useWorkspaceThreads(workspaceId, commentsEnabled)
   const updatePropertyValue = useUpdateWorkspacePropertyValue()
+  const cover = coverProp ?? localCover
   const icon = iconProp ?? localIcon
   const title = titleProp ?? localTitle
   const unresolvedThreads = useMemo(
@@ -155,6 +167,18 @@ export function WorkspaceMetadata({
       setCommentsOpen(true)
     }
   }, [editorCommentsOpenRequest])
+
+  const updateCover = (nextCover: string) => {
+    if (!editable) {
+      return
+    }
+
+    onCoverChange?.(nextCover)
+
+    if (coverProp === undefined) {
+      setLocalCover(nextCover)
+    }
+  }
 
   const updateIcon = (nextIcon: string) => {
     if (!editable) {
@@ -271,19 +295,22 @@ export function WorkspaceMetadata({
 
   return (
     <section contentEditable={false}>
-      {coverVisible ? (
-        <div className="relative h-40 bg-gradient-to-r from-stone-200 via-neutral-300 to-zinc-200 dark:from-stone-800 dark:via-neutral-700 dark:to-zinc-800">
-          <Button
-            aria-label="Remove cover"
-            className="absolute right-3 top-3 bg-background/80 shadow-sm backdrop-blur"
-            disabled={!editable}
-            onClick={() => setCoverVisible(false)}
-            size="icon-sm"
-            type="button"
-            variant="outline"
-          >
-            <X />
-          </Button>
+      {cover ? (
+        <div className="relative h-40 w-full overflow-hidden bg-muted">
+          <img alt="Cover" className="size-full object-cover" src={cover} />
+          {editable ? (
+            <Button
+              aria-label="Remove cover"
+              className="absolute right-3 top-3 bg-background/80 shadow-sm backdrop-blur"
+              disabled={!editable}
+              onClick={() => updateCover("")}
+              size="icon-sm"
+              type="button"
+              variant="outline"
+            >
+              <X />
+            </Button>
+          ) : null}
         </div>
       ) : null}
 
@@ -292,18 +319,39 @@ export function WorkspaceMetadata({
       >
         <div className="mb-3 flex flex-wrap items-center gap-2">
           {!icon ? iconPicker : null}
-          {!coverVisible && editable ? (
-            <Button
-              className="text-muted-foreground"
-              disabled={!editable}
-              onClick={() => setCoverVisible(true)}
-              size="sm"
-              type="button"
-              variant="ghost"
-            >
-              <ImagePlus />
-              Add cover
-            </Button>
+          {!cover && editable ? (
+            <Popover onOpenChange={setCoverOpen} open={coverOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  className="text-muted-foreground"
+                  disabled={!editable}
+                  size="sm"
+                  type="button"
+                  variant="ghost"
+                >
+                  <ImagePlus />
+                  Add cover
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                align="start"
+                className="w-[min(42rem,calc(100vw-2rem))] p-4"
+                onMouseDown={(event) => event.stopPropagation()}
+                onPointerDown={(event) => event.stopPropagation()}
+                side="bottom"
+                sideOffset={8}
+              >
+                <ImageSourcePicker
+                  databaseId={databaseId}
+                  onSelect={(url) => {
+                    updateCover(url)
+                    setCoverOpen(false)
+                  }}
+                  organizationId={organizationId}
+                  workspaceId={workspaceId}
+                />
+              </PopoverContent>
+            </Popover>
           ) : null}
           {commentsEnabled &&
           !showCommentsSection &&

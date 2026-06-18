@@ -144,12 +144,14 @@ type PasteChoiceState = {
 
 type EditorProps = {
   content?: unknown
+  cover?: string
   editorContentRef?: React.MutableRefObject<(() => unknown) | null>
   emoji?: string
   editable?: boolean
   fullWidth?: boolean
   onCollaborationReadyChange?: (ready: boolean) => void
   onContentChange?: (content: unknown) => void
+  onCoverChange?: (cover: string) => void
   onCreatePage?: () => Promise<CreatedPage>
   onEmojiChange?: (emoji: string) => void
   onOpenPage?: (pageId: string) => void
@@ -359,12 +361,14 @@ function isMobileViewport() {
 
 export function Editor({
   content = starterContent,
+  cover,
   editorContentRef,
   editable = true,
   emoji,
   fullWidth = true,
   onCollaborationReadyChange,
   onContentChange,
+  onCoverChange,
   onCreatePage,
   onEmojiChange,
   onOpenPage,
@@ -1373,10 +1377,13 @@ export function Editor({
           : null}
         <WorkspaceMetadata
           contentClassName={pageContentClassName}
+          cover={cover}
           editable={editable}
           icon={emoji}
+          onCoverChange={onCoverChange}
           onIconChange={onEmojiChange}
           onTitleChange={onTitleChange}
+          organizationId={organizationId}
           title={title}
           workspaceId={workspaceId}
         />
