@@ -23,6 +23,7 @@ import {
   ItemTitle,
 } from "@/components/ui/item"
 import { getApiErrorMessage } from "@/lib/api"
+import { WorkspacePageIcon } from "@/lib/workspace-icon"
 import { useNotelabFeatures } from "@notelab/features"
 import {
   useUpdateWorkspace,
@@ -41,9 +42,11 @@ const modeLabels: Record<NotelabAiMode, string> = {
 export function NotelabAiItem({
   mode,
   workspace,
+  workspaceRecord,
 }: {
   mode: NotelabAiMode
   workspace: NotelabAiWorkspaceSummary
+  workspaceRecord?: Workspace
 }) {
   const { apiFetch, queryClient } = useNotelabFeatures()
   const updateWorkspace = useUpdateWorkspace()
@@ -90,8 +93,15 @@ export function NotelabAiItem({
   return (
     <>
       <Item variant="outline">
-        <ItemMedia className="size-10 rounded-lg border bg-background text-lg">
-          {workspace.metadata.emoji ?? "📄"}
+        <ItemMedia className="flex size-10 items-center justify-center rounded-lg border bg-background">
+          <WorkspacePageIcon
+            workspace={
+              workspaceRecord ?? {
+                content: undefined,
+                metadata: workspace.metadata,
+              }
+            }
+          />
         </ItemMedia>
         <ItemContent className="min-w-0">
           <ItemTitle className="truncate">

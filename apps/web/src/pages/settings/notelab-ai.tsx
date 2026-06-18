@@ -2,7 +2,10 @@ import * as React from "react"
 
 import { SettingsHeader } from "@/components/settings-header"
 import { useActiveOrganizationId } from "@notelab/features/integrations"
-import { useNotelabAiWorkspaces } from "@notelab/features/workspaces"
+import {
+  useNotelabAiWorkspaces,
+  useWorkspaces,
+} from "@notelab/features/workspaces"
 
 import { NotelabAiSection } from "./notelab-ai/components/notelab-ai-section"
 
@@ -10,6 +13,11 @@ export default function NotelabAiSettingsPage() {
   const organizationId = useActiveOrganizationId()
   const { data: aiWorkspaces = [], isLoading } =
     useNotelabAiWorkspaces(organizationId)
+  const { data: workspaces = [] } = useWorkspaces(organizationId)
+  const workspacesById = React.useMemo(
+    () => new Map(workspaces.map((workspace) => [workspace.id, workspace])),
+    [workspaces],
+  )
 
   const instructions = React.useMemo(
     () =>
@@ -40,12 +48,14 @@ export default function NotelabAiSettingsPage() {
           items={instructions}
           mode="instruction"
           organizationId={organizationId ?? null}
+          workspacesById={workspacesById}
         />
         <NotelabAiSection
           isLoading={isLoading}
           items={skills}
           mode="skill"
           organizationId={organizationId ?? null}
+          workspacesById={workspacesById}
         />
       </div>
     </main>

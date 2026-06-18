@@ -1,6 +1,6 @@
 import * as React from "react"
 import { useNavigate } from "@tanstack/react-router"
-import { FileTextIcon, Loader2Icon, PlusIcon, SearchIcon } from "lucide-react"
+import { Loader2Icon, PlusIcon, SearchIcon } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Item, ItemContent, ItemMedia, ItemTitle } from "@/components/ui/item"
 import { getApiErrorMessage } from "@/lib/api"
+import { WorkspacePageIcon } from "@/lib/workspace-icon"
 import { useNotelabFeatures } from "@notelab/features"
 import {
   useCreateWorkspace,
@@ -44,11 +45,11 @@ const modeConfig: Record<
 }
 
 type LinkablePageOption = {
-  icon: React.ReactNode
   label: string
   path: string
   searchText: string
   value: string
+  workspace: Workspace
 }
 
 function buildWorkspacePath(
@@ -90,20 +91,13 @@ function buildLinkablePageOptions(
     .map<LinkablePageOption>((workspace) => {
       const label = workspace.name.trim() || "Untitled"
       const path = buildWorkspacePath(workspacesById, workspace.id)
-      const emoji = workspace.metadata?.emoji
 
       return {
-        icon: emoji ? (
-          <span className="flex size-4 items-center justify-center text-base leading-none">
-            {emoji}
-          </span>
-        ) : (
-          <FileTextIcon className="size-4 text-muted-foreground" />
-        ),
         label,
         path,
         searchText: `${label} ${path}`.trim(),
         value: workspace.id,
+        workspace,
       }
     })
 }
@@ -292,7 +286,9 @@ export function NotelabAiCreateMenu({
                   }}
                 >
                   <div className="flex min-w-0 flex-1 items-start gap-2">
-                    {pageOption.icon}
+                    <span className="flex size-4 shrink-0 items-center justify-center">
+                      <WorkspacePageIcon workspace={pageOption.workspace} />
+                    </span>
                     <div className="min-w-0">
                       <div className="truncate">{pageOption.label}</div>
                       {pageOption.path !== pageOption.label ? (

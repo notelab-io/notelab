@@ -20,6 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import type {
   NotelabAiMode,
   NotelabAiWorkspaceSummary,
+  Workspace,
 } from "@notelab/features/workspaces"
 
 import { NotelabAiCreateMenu } from "./notelab-ai-create-menu"
@@ -58,11 +59,13 @@ export function NotelabAiSection({
   items,
   mode,
   organizationId,
+  workspacesById,
 }: {
   isLoading: boolean
   items: NotelabAiWorkspaceSummary[]
   mode: NotelabAiMode
   organizationId: string | null
+  workspacesById: Map<string, Workspace>
 }) {
   const config = sectionConfig[mode]
   const existingWorkspaceIds = items.map((workspace) => workspace.id)
@@ -98,7 +101,12 @@ export function NotelabAiSection({
         ) : (
           <NotelabAiItemGroup>
             {items.map((workspace) => (
-              <NotelabAiItem key={workspace.id} mode={mode} workspace={workspace} />
+              <NotelabAiItem
+                key={workspace.id}
+                mode={mode}
+                workspace={workspace}
+                workspaceRecord={workspacesById.get(workspace.id)}
+              />
             ))}
             <NotelabAiCreateMenu
               existingWorkspaceIds={existingWorkspaceIds}
