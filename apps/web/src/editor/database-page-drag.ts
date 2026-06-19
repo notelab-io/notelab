@@ -1,0 +1,171 @@
+import type { EditorView } from "@tiptap/pm/view"
+import {
+  deleteDraggedEditorBlockSource,
+  getDraggedEditorBlockPayload,
+  type BlockDragPayload,
+} from "@/packages/editor/components/editor/block-drag"
+import { DATABASE_PAGE_DRAG_MIME } from "@/packages/editor/extensions/database"
+import type { DatabasePageDropPayload } from "./types"
+
+const parsePageId = (payload: string) => {
+  try {
+    const pageId = (JSON.parse(payload) as { pageId?: unknown }).pageId
+    return typeof pageId === "string" && pageId ? pageId : null
+  } catch {
+    return null
+  }
+}
+
+const insertPageBlockAt = (view: EditorView, event: DragEvent, pageId: string) => {
+  const coords = view.posAtCoords({ left: event.clientX, top: event.clientY })
+  const pageBlockType = view.state.schema.nodes.pageBlock
+  if (!coords || !pageBlockType) return false
+
+  const pageBlock = pageBlockType.create({ pageId })
+  const tryInsert = (pos: number) => {
+    view.dispatch(view.state.tr.insert(pos, pageBlock).scrollIntoView())
+    view.focus()
+    event.preventDefault()
+    return true
+  }
+
+  try {
+    return tryInsert(coords.pos)
+  } catch {
+    const $pos = view.state.doc.resolve(coords.pos)
+    try {
+      return tryInsert($pos.depth > 0 ? $pos.after(1) : coords.pos)
+    } catch {
+      return false
+    }
+  }
+}
+
+export const insertDraggedDatabasePage = (view: EditorView, event: DragEvent) => {
+  const payload = event.dataTransfer?.getData(DATABASE_PAGE_DRAG_MIME)
+  if (!payload) return false
+  const pageId = parsePageId(payload)
+  return pageId ? insertPageBlockAt(view, event, pageId) : false
+}
+
+export const getDraggedDatabasePagePayload = (
+  event: DragEvent
+): DatabasePageDropPayload | null => {
+  const payload = event.dataTransfer?.getData(DATABASE_PAGE_DRAG_MIME)
+  if (!payload) return null
+
+  try {
+    const parsed = JSON.parse(payload) as { pageId?: unknown; title?: unknown }
+    if (typeof parsed.pageId !== "string" || !parsed.pageId) return null
+    return {
+      pageId: parsed.pageId,
+      title: typeof parsed.title === "string" ? parsed.title : undefined,
+    }
+  } catch {
+    return null
+  }
+}
+
+export const getDraggedPageBlockPayload = (
+  event: DragEvent
+): DatabasePageDropPayload | null => {
+  const blockPayload = getDraggedEditorBlockPayload(event.dataTransfer)
+  if (blockPayload?.typeName !== "pageBlock") return null
+
+  const pageId = (blockPayload.node as { attrs?: { pageId?: unknown } }).attrs?.pageId
+  if (typeof pageId !== "string" || !pageId) return null
+
+  return {
+    blockPayload,
+    pageId,
+    title: blockPayload.textContent || undefined,
+  }
+}
+
+export const getDatabasePageDropPayload = (
+  event: DragEvent
+): DatabasePageDropPayload | null =>
+  getDraggedPageBlockPayload(event) ?? getDraggedDatabasePagePayload(event)
+
+export const getDropDatabaseElement = (event: DragEvent) =>
+  event.target instanceof HTMLElement
+    ? event.target.closest<HTMLElement>(".database-block[data-database-id]")
+    : null
+
+export const getDatabaseDropPosition = (
+  databaseElement: HTMLElement,
+  event: DragEvent
+) => {
+  const rows = Array.from(
+    databaseElement.querySelectorAll<HTMLTableRowElement>(
+      ".database-table tbody tr[data-database-row-id]"
+    )
+  )
+  if (rows.length === 0) return 0
+
+  const targetIndex = rows.findIndex(
+    (row) => event.clientY < row.getBoundingClientRect().top + row.offsetHeight / 2
+  )
+  return targetIndex === -1 ? rows.length : targetIndex
+}
+
+export const hasDraggedDatabasePage = (event: DragEvent) =>
+  Array.from(event.dataTransfer?.types ?? []).includes(DATABASE_PAGE_DRAG_MIME)
+
+export const hasDraggedPageBlock = (event: DragEvent) =>
+  getDraggedPageBlockPayload(event) !== null
+
+export const dropPageOnDatabase = (
+  event: DragEvent,
+  options: {
+    addDatabaseRow: {
+      isPending: boolean
+      mutate: (
+        vars: {
+          databaseId: string
+          pageId: string
+          position: number
+          title?: string
+        },
+        opts: {
+          onError: (error: unknown) => void
+          onSuccess: () => void
+        }
+      ) => void
+    }
+    onError: (message: string) => void
+  }
+) => {
+  const databaseElement = getDropDatabaseElement(event)
+  const databaseId = databaseElement?.dataset.databaseId
+  if (!databaseElement || !databaseId) return false
+
+  const dropPayload = getDatabasePageDropPayload(event)
+  if (!dropPayload) return false
+
+  event.preventDefault()
+  event.stopPropagation()
+  if (options.addDatabaseRow.isPending) return true
+
+  options.addDatabaseRow.mutate(
+    {
+      databaseId,
+      pageId: dropPayload.pageId,
+      position: getDatabaseDropPosition(databaseElement, event),
+      title: dropPayload.title,
+    },
+    {
+      onError: (error) =>
+        options.onError(
+          error instanceof Error ? error.message : "Could not move page."
+        ),
+      onSuccess: () => {
+        if (dropPayload.blockPayload) {
+          deleteDraggedEditorBlockSource(dropPayload.blockPayload as BlockDragPayload)
+        }
+      },
+    }
+  )
+
+  return true
+}
