@@ -1658,7 +1658,7 @@ const Chatbot = ({
             </div>
           ) : null}
           <PromptInput
-            inputGroupClassName="h-auto items-stretch overflow-visible"
+            inputGroupClassName="h-auto items-stretch overflow-visible focus-within:border-input focus-within:ring-0 has-[[data-slot=input-group-control]:focus-visible]:border-input has-[[data-slot=input-group-control]:focus-visible]:ring-0"
             onSubmit={handleSubmit}
           >
             <ContextAttachChips
@@ -1682,7 +1682,7 @@ const Chatbot = ({
                 />
               ) : null}
               <PromptInputTextarea
-                className="w-full"
+                className="w-full px-2 focus-visible:border-transparent focus-visible:ring-0"
                 onChange={handleTextChange}
                 onClick={syncTextCursor}
                 onKeyDown={handleTextareaKeyDown}
@@ -1741,7 +1741,6 @@ const Chatbot = ({
                 </ModelSelector>
               </PromptInputTools>
               <PromptInputSubmit
-                disabled={!isBusy && !text.trim()}
                 status={status as ChatStatus}
                 onStop={stop}
               />

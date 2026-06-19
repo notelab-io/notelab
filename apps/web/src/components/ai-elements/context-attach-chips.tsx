@@ -11,7 +11,7 @@ function AttachmentChip({
   onRemove: () => void
 }) {
   return (
-    <span className="inline-flex h-7 max-w-full items-center gap-1.5 rounded-full border bg-background px-2 text-muted-foreground text-xs">
+    <span className="inline-flex h-7 max-w-full items-center gap-1.5 rounded-full border bg-background px-2 text-foreground text-xs">
       {attachment.type === "database" ? (
         attachment.emoji ? (
           <span className="text-sm leading-none">{attachment.emoji}</span>
@@ -57,7 +57,7 @@ export function ContextAttachChips({
   }
 
   return (
-    <div className="flex min-w-0 flex-wrap items-center gap-2 px-2 pb-2">
+    <div className="flex min-w-0 flex-wrap items-center gap-2 p-2">
       {primaryAttachment ? (
         <AttachmentChip
           attachment={primaryAttachment}

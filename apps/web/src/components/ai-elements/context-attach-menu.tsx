@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { DatabaseIcon, FileTextIcon } from "lucide-react"
 
 import {
@@ -347,17 +347,44 @@ function AttachMenuItemIcon({
   )
 }
 
+function AttachMenuExpandItem({
+  hiddenCount,
+  onExpand,
+}: {
+  hiddenCount: number
+  onExpand: () => void
+}) {
+  return (
+    <button
+      className="relative flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm text-muted-foreground outline-hidden transition-colors select-none hover:bg-muted hover:text-foreground"
+      onMouseDown={(event) => {
+        event.preventDefault()
+        onExpand()
+      }}
+      type="button"
+    >
+      <span className="truncate">
+        ... {hiddenCount} more result{hiddenCount === 1 ? "" : "s"}
+      </span>
+    </button>
+  )
+}
+
 function AttachMenuGroup({
   allItems,
   category,
+  isExpanded,
   items,
+  onExpand,
   onSelect,
   selectedIndex,
   selectedItemRef,
 }: {
   allItems: AttachMenuItem[]
   category: AttachMenuCategory
+  isExpanded: boolean
   items: AttachMenuItem[]
+  onExpand: () => void
   onSelect: (attachment: ContextAttachment) => void
   selectedIndex: number
   selectedItemRef: React.RefObject<HTMLDivElement | null>
@@ -366,8 +393,10 @@ function AttachMenuGroup({
     return null
   }
 
-  const visibleItems = items.slice(0, MAX_VISIBLE_PER_GROUP)
-  const hiddenCount = items.length - visibleItems.length
+  const visibleItems = isExpanded
+    ? items
+    : items.slice(0, MAX_VISIBLE_PER_GROUP)
+  const hiddenCount = isExpanded ? 0 : items.length - visibleItems.length
 
   return (
     <PromptInputCommandGroup heading={categoryHeadings[category]}>
@@ -402,9 +431,7 @@ function AttachMenuGroup({
         )
       })}
       {hiddenCount > 0 ? (
-        <div className="px-2 py-1.5 text-xs text-muted-foreground">
-          ... {hiddenCount} more result{hiddenCount === 1 ? "" : "s"}
-        </div>
+        <AttachMenuExpandItem hiddenCount={hiddenCount} onExpand={onExpand} />
       ) : null}
     </PromptInputCommandGroup>
   )
@@ -438,6 +465,9 @@ export function ContextAttachMenu({
     isLoading,
   } = useWorkspaces(organizationId)
   const selectedItemRef = useRef<HTMLDivElement | null>(null)
+  const [expandedCategories, setExpandedCategories] = useState<
+    Set<AttachMenuCategory>
+  >(new Set())
 
   const items = useMemo(
     () =>
@@ -475,16 +505,45 @@ export function ContextAttachMenu({
     return groups
   }, [items])
 
-  const selectedItem = items[selectedIndex]
+  const navigableItems = useMemo(() => {
+    const nextItems: AttachMenuItem[] = []
+
+    for (const category of categoryOrder) {
+      const groupItems = groupedResults[category]
+      const isExpanded = expandedCategories.has(category)
+
+      nextItems.push(
+        ...(isExpanded
+          ? groupItems
+          : groupItems.slice(0, MAX_VISIBLE_PER_GROUP)),
+      )
+    }
+
+    return nextItems
+  }, [expandedCategories, groupedResults])
+
+  const selectedItem = navigableItems[selectedIndex]
   const isLoadingResults = (isLoading || isFetching) && workspaces.length === 0
+
+  useEffect(() => {
+    setExpandedCategories(new Set())
+  }, [open, query])
 
   useEffect(() => {
     selectedItemRef.current?.scrollIntoView({ block: "nearest" })
   }, [selectedIndex])
 
   useEffect(() => {
-    onItemsChange?.(items.map((item) => item.attachment))
-  }, [items, onItemsChange])
+    onItemsChange?.(navigableItems.map((item) => item.attachment))
+  }, [navigableItems, onItemsChange])
+
+  const handleExpandCategory = (category: AttachMenuCategory) => {
+    setExpandedCategories((current) => {
+      const next = new Set(current)
+      next.add(category)
+      return next
+    })
+  }
 
   if (!open) {
     return null
@@ -494,7 +553,7 @@ export function ContextAttachMenu({
     <div className="absolute bottom-full left-0 z-50 mb-2 w-full max-w-md overflow-hidden rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10">
       <PromptInputCommand
         onValueChange={(value) => {
-          const nextIndex = items.findIndex((item) => item.key === value)
+          const nextIndex = navigableItems.findIndex((item) => item.key === value)
 
           if (nextIndex >= 0) {
             setSelectedIndex(nextIndex)
@@ -513,10 +572,12 @@ export function ContextAttachMenu({
           ) : (
             categoryOrder.map((category) => (
               <AttachMenuGroup
-                allItems={items}
+                allItems={navigableItems}
                 category={category}
+                isExpanded={expandedCategories.has(category)}
                 items={groupedResults[category]}
                 key={category}
+                onExpand={() => handleExpandCategory(category)}
                 onSelect={onSelect}
                 selectedIndex={selectedIndex}
                 selectedItemRef={selectedItemRef}
