@@ -100,7 +100,15 @@ export function useWorkspaceContentSnapshot({
         window.clearTimeout(timeoutRef.current)
       }
 
-      void flushSnapshot()
+      const content = getContentRef.current()
+
+      if (
+        content !== null &&
+        content !== undefined &&
+        !isEmptyEditorContent(content)
+      ) {
+        void flushSnapshot()
+      }
     }
   }, [flushSnapshot])
 
@@ -124,4 +132,35 @@ export function useWorkspaceContentSnapshot({
   }, [flushPendingSnapshot])
 
   return { flushPendingSnapshot, scheduleSnapshot }
+}
+
+function isEmptyEditorContent(content: unknown) {
+  if (typeof content === "string") {
+    return content.trim().length === 0
+  }
+
+  if (!content || typeof content !== "object") {
+    return true
+  }
+
+  const doc = content as {
+    content?: Array<{ content?: unknown[]; type?: string }>
+    type?: string
+  }
+
+  if (doc.type !== "doc" || !Array.isArray(doc.content)) {
+    return false
+  }
+
+  if (doc.content.length === 0) {
+    return true
+  }
+
+  return doc.content.every((node) => {
+    if (node.type !== "paragraph" && node.type !== "heading") {
+      return false
+    }
+
+    return !Array.isArray(node.content) || node.content.length === 0
+  })
 }

@@ -11,6 +11,7 @@ import {
   workspaceQueryKey,
   workspaceQueryOptions,
   getWorkspaceFromDetail,
+  readParentItemId,
   workspaceAccessQueryKey,
   workspaceAccessQueryOptions,
   workspaceAccessTargetsQueryOptions,
@@ -257,10 +258,21 @@ export function useCreateWorkspace() {
       return result.workspace
     },
     onSuccess: async (workspace) => {
+      const parentItemId = readParentItemId(workspace.metadata)
+      const parentDetail = parentItemId
+        ? queryClient.getQueryData<WorkspaceDetail | null>(
+            workspaceQueryKey(parentItemId),
+          )
+        : null
+      const inheritedAccessLevel =
+        parentDetail?.accessLevel && parentDetail.accessLevel !== "none"
+          ? parentDetail.accessLevel
+          : ("full" as AccessLevel)
+
       queryClient.setQueryData<WorkspaceDetail | null>(
         workspaceQueryKey(workspace.id),
         (current) => ({
-          accessLevel: current?.accessLevel ?? null,
+          accessLevel: current?.accessLevel ?? inheritedAccessLevel,
           workspace: {
             ...(current?.workspace ?? {}),
             ...workspace,

@@ -703,12 +703,7 @@ export function Editor({
     collaboration.user,
     collaboration.ydoc,
   ])
-  const editorEditable =
-    editable &&
-    (!collaborationEnabled ||
-      collaborationReady ||
-      collaboration.status === "offline" ||
-      collaboration.status === "disconnected")
+  const editorEditable = editable
   const editorLifecycleKey = `${workspaceId ?? "draft"}:${
     collaborationReady ? "collaboration" : "plain"
   }`

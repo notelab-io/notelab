@@ -118,10 +118,10 @@ export function useWorkspaceCollaboration({
 
     provider.awareness.setLocalStateField("user", user)
     setState({
-      provider,
+      provider: null,
       status: "connecting",
       user,
-      ydoc,
+      ydoc: null,
     })
 
     const markCollaborationSynced = () => {
