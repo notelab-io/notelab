@@ -95,8 +95,16 @@ export function useDatabaseViewController({
   const activeDatabaseId = activeLinkedDatabaseView?.databaseId ?? databaseId
   const activeViewLookupId = activeLinkedDatabaseView?.viewId ?? activeViewId
   const { data: session } = useSession()
+  const needsPersonAccessTargets = useMemo(
+    () =>
+      (activePayload?.properties ?? []).some(
+        (property) => property.property.type === "person",
+      ),
+    [activePayload?.properties],
+  )
   const { data: accessTargets } = useWorkspacePersonAccessTargets(
-    activePayload?.database.pageId
+    activePayload?.database.pageId,
+    { enabled: needsPersonAccessTargets },
   )
   const activeViewTabId = activeLinkedDatabaseView
     ? getDatabaseLinkedViewKey(activeLinkedDatabaseView)

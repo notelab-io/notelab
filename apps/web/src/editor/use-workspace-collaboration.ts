@@ -210,12 +210,35 @@ export function useWorkspaceCollaboration({
   return state
 }
 
+const collaborationStatusRequests = new Map<
+  string,
+  Promise<{
+    doUpdatedAt: number | null
+    hasDocument: boolean
+    workspaceUpdatedAt: string
+  }>
+>()
+
 async function fetchCollaborationStatus(workspaceId: string) {
-  return apiFetch<{
+  const existing = collaborationStatusRequests.get(workspaceId)
+
+  if (existing) {
+    return existing
+  }
+
+  const request = apiFetch<{
     doUpdatedAt: number | null
     hasDocument: boolean
     workspaceUpdatedAt: string
   }>(`/workspaces/${encodeURIComponent(workspaceId)}/collaboration/status`)
+
+  collaborationStatusRequests.set(workspaceId, request)
+
+  try {
+    return await request
+  } finally {
+    collaborationStatusRequests.delete(workspaceId)
+  }
 }
 
 async function initializeRoom(workspaceId: string, update: Uint8Array) {

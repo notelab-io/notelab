@@ -55,6 +55,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useSession } from "@notelab/features/auth"
+import { useActiveOrganizationId } from "@notelab/features/integrations"
 import {
   useCreateWorkspace,
   useDeleteWorkspaceAccess,
@@ -123,9 +124,12 @@ export function NavActions({
   const navigate = useNavigate()
   const [isOpen, setIsOpen] = React.useState(false)
   const { data: databasePayload } = useDatabase(databaseId)
+  const organizationId = useActiveOrganizationId()
   const actionWorkspaceId = workspaceId ?? databasePayload?.database.pageId
-  const { data: workspace } = useWorkspace(actionWorkspaceId)
-  const { data: workspaces = [] } = useWorkspaces(workspace?.organizationId)
+  const { data: workspace } = useWorkspace(actionWorkspaceId, {
+    refetchOnMount: false,
+  })
+  const { data: workspaces = [] } = useWorkspaces(organizationId)
   const createWorkspace = useCreateWorkspace()
   const updateWorkspace = useUpdateWorkspace()
   const setFavorite = useSetWorkspaceFavorite()
@@ -211,7 +215,7 @@ export function NavActions({
         metadata,
         name: getDuplicateWorkspaceName(workspace.name),
         organizationId: workspace.organizationId,
-        parentWorkspaceId: metadata.parentWorkspaceId ?? undefined,
+        parentItemId: metadata.parentItemId ?? undefined,
       })
 
       setIsOpen(false)
@@ -511,11 +515,34 @@ function cloneWorkspaceContent(content: unknown) {
 }
 
 function WorkspaceShareDialog({ workspaceId }: { workspaceId: string }) {
+  const [open, setOpen] = React.useState(false)
+
+  return (
+    <Dialog onOpenChange={setOpen} open={open}>
+      <DialogTrigger asChild>
+        <Button className="h-8 gap-2" size="sm" variant="outline">
+          <LockIcon />
+          Share
+        </Button>
+      </DialogTrigger>
+      {open ? (
+        <WorkspaceShareDialogContent workspaceId={workspaceId} />
+      ) : null}
+    </Dialog>
+  )
+}
+
+function WorkspaceShareDialogContent({
+  workspaceId,
+}: {
+  workspaceId: string
+}) {
+  const organizationId = useActiveOrganizationId()
   const { data: session } = useSession()
   const { data: workspace } = useWorkspace(workspaceId)
   const { data: accessLevel } = useWorkspaceAccessLevel(workspaceId)
   const { data: accessPayload } = useWorkspaceAccess(workspaceId)
-  const { data: targets } = useWorkspaceAccessTargets(workspace?.organizationId)
+  const { data: targets } = useWorkspaceAccessTargets(organizationId)
   const upsertAccess = useUpsertWorkspaceAccess()
   const deleteAccess = useDeleteWorkspaceAccess()
   const setPublished = useSetWorkspacePublished()
@@ -613,14 +640,10 @@ function WorkspaceShareDialog({ workspaceId }: { workspaceId: string }) {
   }
 
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button className="h-8 gap-2" size="sm" variant="outline">
-          <LockIcon />
-          Share
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent
+        className="sm:max-w-xl"
+        onOpenAutoFocus={(event) => event.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>Share workspace</DialogTitle>
           <DialogDescription>
@@ -800,7 +823,6 @@ function WorkspaceShareDialog({ workspaceId }: { workspaceId: string }) {
           </TabsContent>
         </Tabs>
       </DialogContent>
-    </Dialog>
   )
 }
 

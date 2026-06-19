@@ -80,12 +80,24 @@ export function WorkspaceMetadata({
   const titleRef = useRef<HTMLTextAreaElement | null>(null)
   const { editorCommentsOpenRequest } = useWorkspaceEditorComments()
   const { data: propertyPayload } = useWorkspaceProperties(workspaceId)
-  const { data: accessTargets } = useWorkspacePersonAccessTargets(workspaceId)
+  const needsPersonAccessTargets = useMemo(
+    () =>
+      (propertyPayload?.properties ?? []).some(
+        (property) => property.type === "person",
+      ),
+    [propertyPayload?.properties],
+  )
+  const { data: accessTargets } = useWorkspacePersonAccessTargets(workspaceId, {
+    enabled: needsPersonAccessTargets,
+  })
   const { data: session } = useSession()
   const commentsEnabled = Boolean(
     enableComments && workspaceId && session?.user,
   )
-  const { data: threadsData } = useWorkspaceThreads(workspaceId, commentsEnabled)
+  const { data: threadsData } = useWorkspaceThreads(
+    workspaceId,
+    commentsEnabled && (commentsOpen || editorCommentsOpenRequest > 0),
+  )
   const updatePropertyValue = useUpdateWorkspacePropertyValue()
   const cover = coverProp ?? localCover
   const icon = iconProp ?? localIcon

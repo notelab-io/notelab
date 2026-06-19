@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { useQueryClient } from "@tanstack/react-query"
+import { type QueryClient, useQueryClient } from "@tanstack/react-query"
 
 import { useWorkspaceEditorRegistry } from "@/contexts/workspace-editor-registry"
 import { useNotelabFeatures } from "@notelab/features"
@@ -9,10 +9,13 @@ import {
   type DatabasePayload,
 } from "@notelab/features/databases"
 import {
+  ensureWorkspaceDetail,
+  getWorkspaceFromDetail,
+  readParentItemId,
   workspaceQueryKey,
-  workspaceQueryOptions,
   workspacesQueryKey,
   type Workspace,
+  type WorkspaceDetail,
 } from "@notelab/features/workspaces"
 import {
   buildContextMarkdown,
@@ -51,16 +54,37 @@ function buildWorkspacePath(
     visited.add(current.id)
     parts.unshift(current.name.trim() || "Untitled")
 
-    const parentWorkspaceId = current.metadata?.parentWorkspaceId
+    const parentItemId = readParentItemId(current.metadata)
 
-    if (!parentWorkspaceId) {
+    if (!parentItemId) {
       break
     }
 
-    current = workspacesById.get(parentWorkspaceId)
+    current = workspacesById.get(parentItemId)
   }
 
   return parts.join(" / ")
+}
+
+async function resolveWorkspaceForContext(
+  workspaceId: string,
+  queryClient: QueryClient,
+  apiFetch: ReturnType<typeof useNotelabFeatures>["apiFetch"],
+  getEditorContent: (workspaceId: string) => unknown,
+) {
+  const cached = getWorkspaceFromDetail(
+    queryClient.getQueryData<WorkspaceDetail | null>(
+      workspaceQueryKey(workspaceId),
+    ),
+  )
+
+  if (cached || getEditorContent(workspaceId) != null) {
+    return cached
+  }
+
+  return getWorkspaceFromDetail(
+    await ensureWorkspaceDetail(queryClient, apiFetch, workspaceId),
+  )
 }
 
 async function resolveDatabaseContext(
@@ -193,8 +217,10 @@ export function useWorkspaceAiContext({
     }
 
     if (primarySource?.type === "page") {
-      const workspace = queryClient.getQueryData<Workspace | null>(
-        workspaceQueryKey(primarySource.id),
+      const workspace = getWorkspaceFromDetail(
+        queryClient.getQueryData<WorkspaceDetail | null>(
+          workspaceQueryKey(primarySource.id),
+        ),
       )
       const content =
         getEditorContent(primarySource.id) ?? workspace?.content ?? null
@@ -240,15 +266,12 @@ export function useWorkspaceAiContext({
       const sections: ContextSection[] = []
 
       if (primarySource?.type === "page") {
-        const workspace =
-          queryClient.getQueryData<Workspace | null>(
-            workspaceQueryKey(primarySource.id),
-          ) ??
-          (
-            await queryClient.fetchQuery(
-              workspaceQueryOptions(apiFetch, primarySource.id),
-            )
-          )
+        const workspace = await resolveWorkspaceForContext(
+          primarySource.id,
+          queryClient,
+          apiFetch,
+          getEditorContent,
+        )
 
         const content =
           getEditorContent(primarySource.id) ?? workspace?.content ?? null
@@ -300,8 +323,11 @@ export function useWorkspaceAiContext({
         }
 
         if (attachment.type === "page") {
-          const workspace = await queryClient.fetchQuery(
-            workspaceQueryOptions(apiFetch, attachment.id),
+          const workspace = await resolveWorkspaceForContext(
+            attachment.id,
+            queryClient,
+            apiFetch,
+            getEditorContent,
           )
 
           sections.push({

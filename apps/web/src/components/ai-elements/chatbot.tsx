@@ -1181,7 +1181,9 @@ const Chatbot = ({
     return null;
   }, [databaseId, workspaceId]);
   const effectivePrimarySource = primaryDismissed ? null : primarySource;
-  const { data: workspaces = [] } = useWorkspaces(organizationId);
+  const { data: workspaces = [] } = useWorkspaces(organizationId, {
+    enabled: isSidebar && Boolean(organizationId),
+  });
   const { data: databasePayload } = useDatabase(databaseId);
   const primaryAttachment = useMemo(() => {
     if (!effectivePrimarySource) {

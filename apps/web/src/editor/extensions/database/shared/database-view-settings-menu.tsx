@@ -712,7 +712,9 @@ export function DatabaseViewSettingsMenu({
     isLoading: isLoadingSelectedLinkDatabase,
   } = useDatabase(selectedLinkDatabaseId)
   const { data: workspaces = [], isLoading: isLoadingWorkspaces } =
-    useWorkspaces(organizationId)
+    useWorkspaces(organizationId, {
+      enabled: manageDataSourcesOpen || showLinkExistingPicker,
+    })
   const isKanbanView = activeViewType === "kanban"
   const ViewTypeIcon = isKanbanView ? Kanban : Table2
   const viewTypeLabel = isKanbanView ? "Kanban" : "Table"
