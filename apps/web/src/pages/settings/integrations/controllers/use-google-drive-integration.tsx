@@ -1,18 +1,16 @@
 import * as React from "react";
 
-import {
-  useDisconnectIntegration,
-  useStartIntegrationOAuth,
-  useUpdateGoogleDriveIntegrationSettings,
-} from "@notelab/features/integrations";
+import { useUpdateGoogleDriveIntegrationSettings } from "@notelab/features/integrations";
 import type { GoogleDriveIntegrationStatus } from "@notelab/features/integrations";
-import { getApiErrorMessage } from "@/lib/api";
 import { integrationIcons } from "@/lib/integration-icons";
-import { toast } from "sonner";
 
 import { GoogleDriveIntegrationCard } from "../cards/google-drive";
 import type { IntegrationSummary } from "../types";
-import { integrationEndpointById, readDisconnectIntegrationId } from "./shared";
+import {
+  toastEmailMatchToggle,
+  useIntegrationBusyState,
+  useIntegrationOAuthActions,
+} from "./use-integration-oauth-actions";
 import type { IntegrationControllerContext } from "./types";
 
 export function useGoogleDriveIntegrationController({
@@ -24,99 +22,40 @@ export function useGoogleDriveIntegrationController({
 }: IntegrationControllerContext & {
   status: GoogleDriveIntegrationStatus | null;
 }) {
-  const startOAuth = useStartIntegrationOAuth();
-  const disconnectIntegration = useDisconnectIntegration();
   const updateSettings = useUpdateGoogleDriveIntegrationSettings();
-  const isBusy =
-    isLoadingIntegrations ||
-    (startOAuth.isPending && startOAuth.variables?.id === "google-drive") ||
-    (disconnectIntegration.isPending &&
-      readDisconnectIntegrationId(disconnectIntegration.variables) ===
-        "google-drive") ||
-    updateSettings.isPending;
-
-  const connectPersonal = React.useCallback(async () => {
-    setIntegrationsError(null);
-
-    try {
-      const response = await startOAuth.mutateAsync({
-        id: integrationEndpointById.googleDrive,
-        input: { mode: "personal" },
-      });
-      window.location.assign(response.url);
-    } catch (error) {
-      setIntegrationsError(getApiErrorMessage(error));
-    }
-  }, [setIntegrationsError, startOAuth]);
-
-  const connectWorkspace = React.useCallback(
-    async (enforceEmailMatch: boolean) => {
-      setIntegrationsError(null);
-
-      try {
-        const response = await startOAuth.mutateAsync({
-          id: integrationEndpointById.googleDrive,
-          input: { enforceEmailMatch, mode: "workspace" },
-        });
-        window.location.assign(response.url);
-      } catch (error) {
-        setIntegrationsError(getApiErrorMessage(error));
-      }
-    },
-    [setIntegrationsError, startOAuth],
-  );
-
-  const disconnectWorkspace = React.useCallback(async () => {
-    setIntegrationsError(null);
-
-    try {
-      await disconnectIntegration.mutateAsync({
-        id: "google-drive",
-        mode: "workspace",
-      });
-      toast.success("Google Drive workspace disconnected.");
-    } catch (error) {
-      setIntegrationsError(getApiErrorMessage(error));
-    }
-  }, [disconnectIntegration, setIntegrationsError]);
-
-  const disconnectPersonal = React.useCallback(async () => {
-    setIntegrationsError(null);
-
-    try {
-      await disconnectIntegration.mutateAsync({
-        id: "google-drive",
-        mode: "personal",
-      });
-      toast.success("Google Drive account disconnected.");
-    } catch (error) {
-      setIntegrationsError(getApiErrorMessage(error));
-    }
-  }, [disconnectIntegration, setIntegrationsError]);
+  const {
+    connectPersonal,
+    connectWorkspace,
+    disconnectIntegration,
+    disconnectPersonal,
+    disconnectWorkspace,
+    endpointId,
+    runWithIntegrationError,
+    startOAuth,
+  } = useIntegrationOAuthActions({
+    integrationId: "googleDrive",
+    setIntegrationsError,
+  });
+  const isBusy = useIntegrationBusyState({
+    disconnectIntegration,
+    endpointId,
+    isLoadingIntegrations,
+    settingsPending: updateSettings.isPending,
+    startOAuth,
+  });
 
   const toggleEmailMatch = React.useCallback(
     async (enforceEmailMatch: boolean) => {
-      setIntegrationsError(null);
-
-      try {
+      await runWithIntegrationError(async () => {
         const result = await updateSettings.mutateAsync({ enforceEmailMatch });
-
-        if (enforceEmailMatch && result.removedPersonalConnections > 0) {
-          toast.success(
-            `Google Drive email matching enabled. Removed ${result.removedPersonalConnections} mismatched Google Drive connection${result.removedPersonalConnections === 1 ? "" : "s"}.`,
-          );
-        } else {
-          toast.success(
-            enforceEmailMatch
-              ? "Google Drive email matching enabled."
-              : "Google Drive email matching disabled.",
-          );
-        }
-      } catch (error) {
-        setIntegrationsError(getApiErrorMessage(error));
-      }
+        toastEmailMatchToggle({
+          enabled: enforceEmailMatch,
+          integrationName: "Google Drive",
+          removedPersonalConnections: result.removedPersonalConnections,
+        });
+      });
     },
-    [setIntegrationsError, updateSettings],
+    [runWithIntegrationError, updateSettings],
   );
 
   const summary: IntegrationSummary = {
@@ -137,7 +76,9 @@ export function useGoogleDriveIntegrationController({
     name: "Google Drive",
     onConnect: () =>
       canManageWorkspace
-        ? void connectWorkspace(status?.workspace.enforceEmailMatch ?? true)
+        ? void connectWorkspace({
+            enforceEmailMatch: status?.workspace.enforceEmailMatch ?? true,
+          })
         : void connectPersonal(),
     onManage: () => setSelectedIntegrationId("googleDrive"),
   };
@@ -147,9 +88,15 @@ export function useGoogleDriveIntegrationController({
       canManageWorkspace={canManageWorkspace}
       isBusy={isBusy}
       onConnectPersonal={() => void connectPersonal()}
-      onConnectWorkspace={(enabled) => void connectWorkspace(enabled)}
-      onDisconnectPersonal={() => void disconnectPersonal()}
-      onDisconnectWorkspace={() => void disconnectWorkspace()}
+      onConnectWorkspace={(enabled) =>
+        void connectWorkspace({ enforceEmailMatch: enabled })
+      }
+      onDisconnectPersonal={() =>
+        void disconnectPersonal("Google Drive account disconnected.")
+      }
+      onDisconnectWorkspace={() =>
+        void disconnectWorkspace("Google Drive workspace disconnected.")
+      }
       onToggleEmailMatch={(enabled) => void toggleEmailMatch(enabled)}
       status={status}
     />

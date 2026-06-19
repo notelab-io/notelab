@@ -1,13 +1,21 @@
 import * as React from "react";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import type { GoogleCalendarIntegrationStatus } from "@notelab/features/integrations";
 import { integrationIcons } from "@/lib/integration-icons";
-import { Loader2Icon, PlugIcon, UnplugIcon } from "lucide-react";
 
-import { ConnectionBadge, IntegrationDetail } from "../components";
+import {
+  IntegrationDetail,
+  IntegrationEmailMatchSetting,
+  IntegrationOAuthNotConfiguredAlert,
+  IntegrationPersonalAccountCard,
+  IntegrationSectionCard,
+  IntegrationSectionHeader,
+  IntegrationSectionLayout,
+  IntegrationSettingToggle,
+  IntegrationWorkspaceActions,
+  IntegrationWorkspacePendingAlert,
+  isIntegrationConnectBlocked,
+} from "../integration-card-sections";
 import { useIntegrationConnectionState } from "../use-integration-connection-state";
 
 export function GoogleCalendarIntegrationCard({
@@ -38,7 +46,6 @@ export function GoogleCalendarIntegrationCard({
     enforceEmailMatch,
     isPersonalConnected,
     isWorkspaceConnected,
-    pendingEmailMatch,
     setPendingEmailMatch,
   } = useIntegrationConnectionState(status);
   const [pendingCoworkerAccess, setPendingCoworkerAccess] =
@@ -49,29 +56,65 @@ export function GoogleCalendarIntegrationCard({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-xs">
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div className="flex min-w-0 gap-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-md border bg-background">
-              <img
-                alt=""
-                aria-hidden="true"
-                className="size-5"
-                src={integrationIcons.googleCalendar}
+      <IntegrationSectionCard>
+        <IntegrationSectionLayout
+          actions={
+            <IntegrationWorkspaceActions
+              canManageWorkspace={canManageWorkspace}
+              connectDisabled={isIntegrationConnectBlocked(status)}
+              connectLabel="Connect workspace"
+              isBusy={isBusy}
+              isWorkspaceConnected={isWorkspaceConnected}
+              onConnectWorkspace={() =>
+                onConnectWorkspace({
+                  coworkerCalendarAccessEnabled: coworkerAccessEnabled,
+                  enforceEmailMatch,
+                })
+              }
+              onDisconnectWorkspace={onDisconnectWorkspace}
+            />
+          }
+          footer={
+            <>
+              <IntegrationEmailMatchSetting
+                canManageWorkspace={canManageWorkspace}
+                checked={enforceEmailMatch}
+                disabled={isBusy}
+                integrationName="Google"
+                isWorkspaceConnected={isWorkspaceConnected}
+                onApply={onToggleEmailMatch}
+                onPendingChange={setPendingEmailMatch}
               />
-            </div>
-            <div className="min-w-0 space-y-2">
-              <div className="space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h4 className="font-medium">Google Calendar workspace</h4>
-                  <ConnectionBadge connected={status?.workspace.connected} />
-                </div>
-                <p className="max-w-xl text-sm text-muted-foreground">
-                  Admin-managed Google Workspace domain and calendar policy for
-                  personal calendar accounts.
-                </p>
-              </div>
-              <div className="grid gap-2 text-sm md:grid-cols-2">
+              <IntegrationSettingToggle
+                checked={coworkerAccessEnabled}
+                description="Allow AI to check free/busy blocks for other organization calendars."
+                disabled={isBusy || !canManageWorkspace}
+                onCheckedChange={(checked) => {
+                  if (isWorkspaceConnected) {
+                    onToggleCoworkerAccess(checked);
+                  } else {
+                    setPendingCoworkerAccess(checked);
+                  }
+                }}
+                title="Coworker calendar availability"
+              />
+              <IntegrationWorkspacePendingAlert
+                canManageWorkspace={canManageWorkspace}
+                isWorkspaceConnected={isWorkspaceConnected}
+                memberMessage="Google Calendar workspace is not connected. Ask an admin to connect it before linking your calendar account."
+              />
+              <IntegrationOAuthNotConfiguredAlert
+                message="Google OAuth is not configured on the backend."
+                status={status}
+              />
+            </>
+          }
+        >
+          <IntegrationSectionHeader
+            connected={status?.workspace.connected}
+            description="Admin-managed Google Workspace domain and calendar policy for personal calendar accounts."
+            details={
+              <>
                 <IntegrationDetail
                   label="Domain"
                   value={status?.workspace.hostedDomain || "Not connected"}
@@ -92,195 +135,52 @@ export function GoogleCalendarIntegrationCard({
                       : "Personal calendar only"
                   }
                 />
-              </div>
-            </div>
-          </div>
-          {canManageWorkspace ? (
-            <div className="flex shrink-0 gap-2 md:justify-end">
-              {isWorkspaceConnected ? (
-                <Button
-                  disabled={isBusy}
-                  onClick={onDisconnectWorkspace}
-                  type="button"
-                  variant="destructive"
-                >
-                  {isBusy ? (
-                    <Loader2Icon className="animate-spin" />
-                  ) : (
-                    <UnplugIcon />
-                  )}
-                  Disconnect
-                </Button>
-              ) : (
-                <Button
-                  disabled={
-                    isBusy ||
-                    status?.configured === false ||
-                    status?.needsMigration === true
-                  }
-                  onClick={() =>
-                    onConnectWorkspace({
-                      coworkerCalendarAccessEnabled: coworkerAccessEnabled,
-                      enforceEmailMatch,
-                    })
-                  }
-                  type="button"
-                >
-                  {isBusy ? <Loader2Icon className="animate-spin" /> : <PlugIcon />}
-                  Connect workspace
-                </Button>
-              )}
-            </div>
-          ) : null}
-        </div>
-        <div className="mt-4 flex items-center justify-between gap-4 rounded-md border bg-background px-3 py-2">
-          <div className="space-y-0.5">
-            <div className="text-sm font-medium">Require matching email</div>
-            <div className="text-xs text-muted-foreground">
-              Members must connect a Google account using their Notelab
-              organization email.
-            </div>
-          </div>
-          <Switch
-            checked={enforceEmailMatch}
-            disabled={isBusy || !canManageWorkspace}
-            onCheckedChange={(checked) => {
-              if (isWorkspaceConnected) {
-                onToggleEmailMatch(checked);
-              } else {
-                setPendingEmailMatch(checked);
-              }
-            }}
+              </>
+            }
+            iconSrc={integrationIcons.googleCalendar}
+            title="Google Calendar workspace"
           />
-        </div>
-        <div className="mt-4 flex items-center justify-between gap-4 rounded-md border bg-background px-3 py-2">
-          <div className="space-y-0.5">
-            <div className="text-sm font-medium">
-              Coworker calendar availability
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Allow AI to check free/busy blocks for other organization
-              calendars.
-            </div>
-          </div>
-          <Switch
-            checked={coworkerAccessEnabled}
-            disabled={isBusy || !canManageWorkspace}
-            onCheckedChange={(checked) => {
-              if (isWorkspaceConnected) {
-                onToggleCoworkerAccess(checked);
-              } else {
-                setPendingCoworkerAccess(checked);
-              }
-            }}
-          />
-        </div>
-        {!isWorkspaceConnected && !canManageWorkspace ? (
-          <Alert className="mt-4">
-            <AlertDescription>
-              Google Calendar workspace is not connected. Ask an admin to
-              connect it before linking your calendar account.
-            </AlertDescription>
-          </Alert>
-        ) : null}
-        {status?.configured === false ? (
-          <Alert className="mt-4" variant="destructive">
-            <AlertDescription>
-              Google OAuth is not configured on the backend.
-            </AlertDescription>
-          </Alert>
-        ) : null}
-      </div>
+        </IntegrationSectionLayout>
+      </IntegrationSectionCard>
 
-      <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-xs">
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div className="flex min-w-0 gap-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-md border bg-background">
-              <img
-                alt=""
-                aria-hidden="true"
-                className="size-5"
-                src={integrationIcons.googleCalendar}
-              />
-            </div>
-            <div className="min-w-0 space-y-2">
-              <div className="space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h4 className="font-medium">My Google Calendar account</h4>
-                  <ConnectionBadge connected={status?.personal.connected} />
-                </div>
-                <p className="max-w-xl text-sm text-muted-foreground">
-                  Connect your Calendar identity so AI can read events visible
-                  to your Google account.
-                </p>
-              </div>
-              <div className="grid gap-2 text-sm md:grid-cols-2">
-                <IntegrationDetail
-                  label="Account"
-                  value={status?.personal.email || "Not connected"}
-                />
-                <IntegrationDetail
-                  label="Domain"
-                  value={status?.personal.hostedDomain || "Not verified"}
-                />
-                <IntegrationDetail
-                  label="Workspace"
-                  value={
-                    status?.workspace.hostedDomain ||
-                    "Workspace not connected"
-                  }
-                />
-                <IntegrationDetail
-                  label="Access"
-                  value={
-                    isPersonalConnected
-                      ? "Calendar account linked"
-                      : "Not connected"
-                  }
-                />
-              </div>
-            </div>
-          </div>
-          <div className="flex shrink-0 gap-2 md:justify-end">
-            {isPersonalConnected ? (
-              <Button
-                disabled={isBusy}
-                onClick={onDisconnectPersonal}
-                type="button"
-                variant="destructive"
-              >
-                {isBusy ? (
-                  <Loader2Icon className="animate-spin" />
-                ) : (
-                  <UnplugIcon />
-                )}
-                Disconnect
-              </Button>
-            ) : (
-              <Button
-                disabled={
-                  isBusy ||
-                  !isWorkspaceConnected ||
-                  status?.configured === false ||
-                  status?.needsMigration === true
-                }
-                onClick={onConnectPersonal}
-                type="button"
-              >
-                {isBusy ? <Loader2Icon className="animate-spin" /> : <PlugIcon />}
-                Connect account
-              </Button>
-            )}
-          </div>
-        </div>
-        {!isWorkspaceConnected ? (
-          <Alert className="mt-4">
-            <AlertDescription>
-              Google Calendar workspace is not connected yet.
-            </AlertDescription>
-          </Alert>
-        ) : null}
-      </div>
+      <IntegrationPersonalAccountCard
+        description="Connect your Calendar identity so AI can read events visible to your Google account."
+        details={
+          <>
+            <IntegrationDetail
+              label="Account"
+              value={status?.personal.email || "Not connected"}
+            />
+            <IntegrationDetail
+              label="Domain"
+              value={status?.personal.hostedDomain || "Not verified"}
+            />
+            <IntegrationDetail
+              label="Workspace"
+              value={
+                status?.workspace.hostedDomain || "Workspace not connected"
+              }
+            />
+            <IntegrationDetail
+              label="Access"
+              value={
+                isPersonalConnected
+                  ? "Calendar account linked"
+                  : "Not connected"
+              }
+            />
+          </>
+        }
+        iconSrc={integrationIcons.googleCalendar}
+        integrationName="Google Calendar workspace"
+        isBusy={isBusy}
+        isPersonalConnected={isPersonalConnected}
+        isWorkspaceConnected={isWorkspaceConnected}
+        onConnectPersonal={onConnectPersonal}
+        onDisconnectPersonal={onDisconnectPersonal}
+        status={status}
+        title="My Google Calendar account"
+      />
     </div>
   );
 }

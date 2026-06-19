@@ -1,18 +1,16 @@
 import * as React from "react";
 
-import {
-  useDisconnectIntegration,
-  useStartIntegrationOAuth,
-  useUpdateSlackIntegrationSettings,
-} from "@notelab/features/integrations";
+import { useUpdateSlackIntegrationSettings } from "@notelab/features/integrations";
 import type { SlackIntegrationStatus } from "@notelab/features/integrations";
-import { getApiErrorMessage } from "@/lib/api";
 import { integrationIcons } from "@/lib/integration-icons";
-import { toast } from "sonner";
 
 import { SlackIntegrationCard } from "../cards/slack";
 import type { IntegrationSummary } from "../types";
-import { integrationEndpointById, readDisconnectIntegrationId } from "./shared";
+import {
+  toastEmailMatchToggle,
+  useIntegrationBusyState,
+  useIntegrationOAuthActions,
+} from "./use-integration-oauth-actions";
 import type { IntegrationControllerContext } from "./types";
 
 export function useSlackIntegrationController({
@@ -24,99 +22,40 @@ export function useSlackIntegrationController({
 }: IntegrationControllerContext & {
   status: SlackIntegrationStatus | null;
 }) {
-  const startOAuth = useStartIntegrationOAuth();
-  const disconnectIntegration = useDisconnectIntegration();
   const updateSettings = useUpdateSlackIntegrationSettings();
-  const isBusy =
-    isLoadingIntegrations ||
-    (startOAuth.isPending && startOAuth.variables?.id === "slack") ||
-    (disconnectIntegration.isPending &&
-      readDisconnectIntegrationId(disconnectIntegration.variables) ===
-        "slack") ||
-    updateSettings.isPending;
-
-  const connectWorkspace = React.useCallback(
-    async (enforceEmailMatch: boolean) => {
-      setIntegrationsError(null);
-
-      try {
-        const response = await startOAuth.mutateAsync({
-          id: integrationEndpointById.slack,
-          input: { enforceEmailMatch, mode: "workspace" },
-        });
-        window.location.assign(response.url);
-      } catch (error) {
-        setIntegrationsError(getApiErrorMessage(error));
-      }
-    },
-    [setIntegrationsError, startOAuth],
-  );
-
-  const connectPersonal = React.useCallback(async () => {
-    setIntegrationsError(null);
-
-    try {
-      const response = await startOAuth.mutateAsync({
-        id: integrationEndpointById.slack,
-        input: { mode: "personal" },
-      });
-      window.location.assign(response.url);
-    } catch (error) {
-      setIntegrationsError(getApiErrorMessage(error));
-    }
-  }, [setIntegrationsError, startOAuth]);
-
-  const disconnectWorkspace = React.useCallback(async () => {
-    setIntegrationsError(null);
-
-    try {
-      await disconnectIntegration.mutateAsync({
-        id: "slack",
-        mode: "workspace",
-      });
-      toast.success("Slack workspace disconnected.");
-    } catch (error) {
-      setIntegrationsError(getApiErrorMessage(error));
-    }
-  }, [disconnectIntegration, setIntegrationsError]);
-
-  const disconnectPersonal = React.useCallback(async () => {
-    setIntegrationsError(null);
-
-    try {
-      await disconnectIntegration.mutateAsync({
-        id: "slack",
-        mode: "personal",
-      });
-      toast.success("Slack account disconnected.");
-    } catch (error) {
-      setIntegrationsError(getApiErrorMessage(error));
-    }
-  }, [disconnectIntegration, setIntegrationsError]);
+  const {
+    connectPersonal,
+    connectWorkspace,
+    disconnectIntegration,
+    disconnectPersonal,
+    disconnectWorkspace,
+    endpointId,
+    runWithIntegrationError,
+    startOAuth,
+  } = useIntegrationOAuthActions({
+    integrationId: "slack",
+    setIntegrationsError,
+  });
+  const isBusy = useIntegrationBusyState({
+    disconnectIntegration,
+    endpointId,
+    isLoadingIntegrations,
+    settingsPending: updateSettings.isPending,
+    startOAuth,
+  });
 
   const toggleEmailMatch = React.useCallback(
     async (enforceEmailMatch: boolean) => {
-      setIntegrationsError(null);
-
-      try {
+      await runWithIntegrationError(async () => {
         const result = await updateSettings.mutateAsync({ enforceEmailMatch });
-
-        if (enforceEmailMatch && result.removedPersonalConnections > 0) {
-          toast.success(
-            `Slack email matching enabled. Removed ${result.removedPersonalConnections} mismatched Slack connection${result.removedPersonalConnections === 1 ? "" : "s"}.`,
-          );
-        } else {
-          toast.success(
-            enforceEmailMatch
-              ? "Slack email matching enabled."
-              : "Slack email matching disabled.",
-          );
-        }
-      } catch (error) {
-        setIntegrationsError(getApiErrorMessage(error));
-      }
+        toastEmailMatchToggle({
+          enabled: enforceEmailMatch,
+          integrationName: "Slack",
+          removedPersonalConnections: result.removedPersonalConnections,
+        });
+      });
     },
-    [setIntegrationsError, updateSettings],
+    [runWithIntegrationError, updateSettings],
   );
 
   const summary: IntegrationSummary = {
@@ -138,7 +77,9 @@ export function useSlackIntegrationController({
     name: "Slack",
     onConnect: () =>
       canManageWorkspace
-        ? void connectWorkspace(status?.workspace.enforceEmailMatch ?? true)
+        ? void connectWorkspace({
+            enforceEmailMatch: status?.workspace.enforceEmailMatch ?? true,
+          })
         : void connectPersonal(),
     onManage: () => setSelectedIntegrationId("slack"),
   };
@@ -148,9 +89,15 @@ export function useSlackIntegrationController({
       canManageWorkspace={canManageWorkspace}
       isBusy={isBusy}
       onConnectPersonal={() => void connectPersonal()}
-      onConnectWorkspace={(enabled) => void connectWorkspace(enabled)}
-      onDisconnectPersonal={() => void disconnectPersonal()}
-      onDisconnectWorkspace={() => void disconnectWorkspace()}
+      onConnectWorkspace={(enabled) =>
+        void connectWorkspace({ enforceEmailMatch: enabled })
+      }
+      onDisconnectPersonal={() =>
+        void disconnectPersonal("Slack account disconnected.")
+      }
+      onDisconnectWorkspace={() =>
+        void disconnectWorkspace("Slack workspace disconnected.")
+      }
       onToggleEmailMatch={(enabled) => void toggleEmailMatch(enabled)}
       status={status}
     />

@@ -1,18 +1,16 @@
 import * as React from "react";
 
-import {
-  useDisconnectIntegration,
-  useStartIntegrationOAuth,
-  useUpdateGmailIntegrationSettings,
-} from "@notelab/features/integrations";
+import { useUpdateGmailIntegrationSettings } from "@notelab/features/integrations";
 import type { GmailIntegrationStatus } from "@notelab/features/integrations";
-import { getApiErrorMessage } from "@/lib/api";
 import { integrationIcons } from "@/lib/integration-icons";
-import { toast } from "sonner";
 
 import { GmailIntegrationCard } from "../cards/gmail";
 import type { IntegrationSummary } from "../types";
-import { integrationEndpointById, readDisconnectIntegrationId } from "./shared";
+import {
+  toastEmailMatchToggle,
+  useIntegrationBusyState,
+  useIntegrationOAuthActions,
+} from "./use-integration-oauth-actions";
 import type { IntegrationControllerContext } from "./types";
 
 export function useGmailIntegrationController({
@@ -24,104 +22,45 @@ export function useGmailIntegrationController({
 }: IntegrationControllerContext & {
   status: GmailIntegrationStatus | null;
 }) {
-  const startOAuth = useStartIntegrationOAuth();
-  const disconnectIntegration = useDisconnectIntegration();
   const updateSettings = useUpdateGmailIntegrationSettings();
-  const isBusy =
-    isLoadingIntegrations ||
-    (startOAuth.isPending && startOAuth.variables?.id === "gmail") ||
-    (disconnectIntegration.isPending &&
-      readDisconnectIntegrationId(disconnectIntegration.variables) ===
-        "gmail") ||
-    updateSettings.isPending;
-
-  const connectPersonal = React.useCallback(async () => {
-    setIntegrationsError(null);
-
-    try {
-      const response = await startOAuth.mutateAsync({
-        id: integrationEndpointById.gmail,
-        input: { mode: "personal" },
-      });
-      window.location.assign(response.url);
-    } catch (error) {
-      setIntegrationsError(getApiErrorMessage(error));
-    }
-  }, [setIntegrationsError, startOAuth]);
-
-  const connectWorkspace = React.useCallback(
-    async (enforceEmailMatch: boolean) => {
-      setIntegrationsError(null);
-
-      try {
-        const response = await startOAuth.mutateAsync({
-          id: integrationEndpointById.gmail,
-          input: { enforceEmailMatch, mode: "workspace" },
-        });
-        window.location.assign(response.url);
-      } catch (error) {
-        setIntegrationsError(getApiErrorMessage(error));
-      }
-    },
-    [setIntegrationsError, startOAuth],
-  );
-
-  const disconnectWorkspace = React.useCallback(async () => {
-    setIntegrationsError(null);
-
-    try {
-      await disconnectIntegration.mutateAsync({
-        id: "gmail",
-        mode: "workspace",
-      });
-      toast.success("Gmail workspace disconnected.");
-    } catch (error) {
-      setIntegrationsError(getApiErrorMessage(error));
-    }
-  }, [disconnectIntegration, setIntegrationsError]);
-
-  const disconnectPersonal = React.useCallback(async () => {
-    setIntegrationsError(null);
-
-    try {
-      await disconnectIntegration.mutateAsync({
-        id: "gmail",
-        mode: "personal",
-      });
-      toast.success("Gmail account disconnected.");
-    } catch (error) {
-      setIntegrationsError(getApiErrorMessage(error));
-    }
-  }, [disconnectIntegration, setIntegrationsError]);
+  const {
+    connectPersonal,
+    connectWorkspace,
+    disconnectIntegration,
+    disconnectPersonal,
+    disconnectWorkspace,
+    endpointId,
+    runWithIntegrationError,
+    startOAuth,
+  } = useIntegrationOAuthActions({
+    integrationId: "gmail",
+    setIntegrationsError,
+  });
+  const isBusy = useIntegrationBusyState({
+    disconnectIntegration,
+    endpointId,
+    isLoadingIntegrations,
+    settingsPending: updateSettings.isPending,
+    startOAuth,
+  });
 
   const toggleEmailMatch = React.useCallback(
     async (enforceEmailMatch: boolean) => {
-      setIntegrationsError(null);
-
-      try {
+      await runWithIntegrationError(async () => {
         const result = await updateSettings.mutateAsync({ enforceEmailMatch });
-
-        if (enforceEmailMatch && result.removedPersonalConnections > 0) {
-          toast.success(
-            `Gmail email matching enabled. Removed ${result.removedPersonalConnections} mismatched Gmail connection${result.removedPersonalConnections === 1 ? "" : "s"}.`,
-          );
-        } else {
-          toast.success(
-            enforceEmailMatch
-              ? "Gmail email matching enabled."
-              : "Gmail email matching disabled.",
-          );
-        }
-      } catch (error) {
-        setIntegrationsError(getApiErrorMessage(error));
-      }
+        toastEmailMatchToggle({
+          enabled: enforceEmailMatch,
+          integrationName: "Gmail",
+          removedPersonalConnections: result.removedPersonalConnections,
+        });
+      });
     },
-    [setIntegrationsError, updateSettings],
+    [runWithIntegrationError, updateSettings],
   );
 
   const summary: IntegrationSummary = {
     about:
-      "Gmail gives Notelab read-only access to organization messages for AI search and workspace context. Workspace license verification helps keep access limited to approved business domains.",
+      "Gmail lets Notelab read messages visible to the connected Google account so AI answers can include email context.",
     category: "AI enterprise search",
     connected: status?.workspace.connected,
     connectDisabled:
@@ -130,17 +69,18 @@ export function useGmailIntegrationController({
     detail:
       status?.workspace.hostedDomain ||
       status?.personal.email ||
-      "Read organization email through the AI interface.",
+      "Read Gmail messages for AI workspace research.",
     id: "gmail",
     icon: integrationIcons.gmail,
     isBusy,
     name: "Gmail",
     onConnect: () =>
       canManageWorkspace
-        ? void connectWorkspace(status?.workspace.enforceEmailMatch ?? true)
+        ? void connectWorkspace({
+            enforceEmailMatch: status?.workspace.enforceEmailMatch ?? true,
+          })
         : void connectPersonal(),
     onManage: () => setSelectedIntegrationId("gmail"),
-    status,
   };
 
   const card = (
@@ -148,9 +88,15 @@ export function useGmailIntegrationController({
       canManageWorkspace={canManageWorkspace}
       isBusy={isBusy}
       onConnectPersonal={() => void connectPersonal()}
-      onConnectWorkspace={(enabled) => void connectWorkspace(enabled)}
-      onDisconnectPersonal={() => void disconnectPersonal()}
-      onDisconnectWorkspace={() => void disconnectWorkspace()}
+      onConnectWorkspace={(enabled) =>
+        void connectWorkspace({ enforceEmailMatch: enabled })
+      }
+      onDisconnectPersonal={() =>
+        void disconnectPersonal("Gmail account disconnected.")
+      }
+      onDisconnectWorkspace={() =>
+        void disconnectWorkspace("Gmail workspace disconnected.")
+      }
       onToggleEmailMatch={(enabled) => void toggleEmailMatch(enabled)}
       status={status}
     />

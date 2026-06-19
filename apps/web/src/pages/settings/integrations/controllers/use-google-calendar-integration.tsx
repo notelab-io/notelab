@@ -1,18 +1,17 @@
 import * as React from "react";
 
-import {
-  useDisconnectIntegration,
-  useStartIntegrationOAuth,
-  useUpdateGoogleCalendarIntegrationSettings,
-} from "@notelab/features/integrations";
+import { useUpdateGoogleCalendarIntegrationSettings } from "@notelab/features/integrations";
 import type { GoogleCalendarIntegrationStatus } from "@notelab/features/integrations";
-import { getApiErrorMessage } from "@/lib/api";
 import { integrationIcons } from "@/lib/integration-icons";
 import { toast } from "sonner";
 
 import { GoogleCalendarIntegrationCard } from "../cards/google-calendar";
 import type { IntegrationSummary } from "../types";
-import { integrationEndpointById, readDisconnectIntegrationId } from "./shared";
+import {
+  toastEmailMatchToggle,
+  useIntegrationBusyState,
+  useIntegrationOAuthActions,
+} from "./use-integration-oauth-actions";
 import type { IntegrationControllerContext } from "./types";
 
 export function useGoogleCalendarIntegrationController({
@@ -24,84 +23,27 @@ export function useGoogleCalendarIntegrationController({
 }: IntegrationControllerContext & {
   status: GoogleCalendarIntegrationStatus | null;
 }) {
-  const startOAuth = useStartIntegrationOAuth();
-  const disconnectIntegration = useDisconnectIntegration();
   const updateSettings = useUpdateGoogleCalendarIntegrationSettings();
-  const isBusy =
-    isLoadingIntegrations ||
-    (startOAuth.isPending &&
-      startOAuth.variables?.id === "google-calendar") ||
-    (disconnectIntegration.isPending &&
-      readDisconnectIntegrationId(disconnectIntegration.variables) ===
-        "google-calendar") ||
-    updateSettings.isPending;
-
-  const connectPersonal = React.useCallback(async () => {
-    setIntegrationsError(null);
-
-    try {
-      const response = await startOAuth.mutateAsync({
-        id: integrationEndpointById.googleCalendar,
-        input: { mode: "personal" },
-      });
-      window.location.assign(response.url);
-    } catch (error) {
-      setIntegrationsError(getApiErrorMessage(error));
-    }
-  }, [setIntegrationsError, startOAuth]);
-
-  const connectWorkspace = React.useCallback(
-    async (input: {
-      coworkerCalendarAccessEnabled: boolean;
-      enforceEmailMatch: boolean;
-    }) => {
-      setIntegrationsError(null);
-
-      try {
-        const response = await startOAuth.mutateAsync({
-          id: integrationEndpointById.googleCalendar,
-          input: {
-            coworkerCalendarAccessEnabled:
-              input.coworkerCalendarAccessEnabled,
-            enforceEmailMatch: input.enforceEmailMatch,
-            mode: "workspace",
-          },
-        });
-        window.location.assign(response.url);
-      } catch (error) {
-        setIntegrationsError(getApiErrorMessage(error));
-      }
-    },
-    [setIntegrationsError, startOAuth],
-  );
-
-  const disconnectWorkspace = React.useCallback(async () => {
-    setIntegrationsError(null);
-
-    try {
-      await disconnectIntegration.mutateAsync({
-        id: "google-calendar",
-        mode: "workspace",
-      });
-      toast.success("Google Calendar workspace disconnected.");
-    } catch (error) {
-      setIntegrationsError(getApiErrorMessage(error));
-    }
-  }, [disconnectIntegration, setIntegrationsError]);
-
-  const disconnectPersonal = React.useCallback(async () => {
-    setIntegrationsError(null);
-
-    try {
-      await disconnectIntegration.mutateAsync({
-        id: "google-calendar",
-        mode: "personal",
-      });
-      toast.success("Google Calendar account disconnected.");
-    } catch (error) {
-      setIntegrationsError(getApiErrorMessage(error));
-    }
-  }, [disconnectIntegration, setIntegrationsError]);
+  const {
+    connectPersonal,
+    connectWorkspace,
+    disconnectIntegration,
+    disconnectPersonal,
+    disconnectWorkspace,
+    endpointId,
+    runWithIntegrationError,
+    startOAuth,
+  } = useIntegrationOAuthActions({
+    integrationId: "googleCalendar",
+    setIntegrationsError,
+  });
+  const isBusy = useIntegrationBusyState({
+    disconnectIntegration,
+    endpointId,
+    isLoadingIntegrations,
+    settingsPending: updateSettings.isPending,
+    startOAuth,
+  });
 
   const toggleCoworkerAccess = React.useCallback(
     async (enabled: boolean) => {
@@ -113,9 +55,7 @@ export function useGoogleCalendarIntegrationController({
         return;
       }
 
-      setIntegrationsError(null);
-
-      try {
+      await runWithIntegrationError(async () => {
         await updateSettings.mutateAsync({
           coworkerCalendarAccessEnabled: enabled,
         });
@@ -124,38 +64,25 @@ export function useGoogleCalendarIntegrationController({
             ? "Coworker calendar availability enabled."
             : "Coworker calendar availability disabled.",
         );
-      } catch (error) {
-        setIntegrationsError(getApiErrorMessage(error));
-      }
+      });
     },
-    [connectWorkspace, setIntegrationsError, status, updateSettings],
+    [connectWorkspace, runWithIntegrationError, status, updateSettings],
   );
 
   const toggleEmailMatch = React.useCallback(
     async (enforceEmailMatch: boolean) => {
-      setIntegrationsError(null);
-
-      try {
+      await runWithIntegrationError(async () => {
         const result = await updateSettings.mutateAsync({
           enforceEmailMatch,
         });
-
-        if (enforceEmailMatch && result.removedPersonalConnections > 0) {
-          toast.success(
-            `Google Calendar email matching enabled. Removed ${result.removedPersonalConnections} mismatched Google Calendar connection${result.removedPersonalConnections === 1 ? "" : "s"}.`,
-          );
-        } else {
-          toast.success(
-            enforceEmailMatch
-              ? "Google Calendar email matching enabled."
-              : "Google Calendar email matching disabled.",
-          );
-        }
-      } catch (error) {
-        setIntegrationsError(getApiErrorMessage(error));
-      }
+        toastEmailMatchToggle({
+          enabled: enforceEmailMatch,
+          integrationName: "Google Calendar",
+          removedPersonalConnections: result.removedPersonalConnections,
+        });
+      });
     },
-    [setIntegrationsError, updateSettings],
+    [runWithIntegrationError, updateSettings],
   );
 
   const summary: IntegrationSummary = {
@@ -191,8 +118,12 @@ export function useGoogleCalendarIntegrationController({
       isBusy={isBusy}
       onConnectPersonal={() => void connectPersonal()}
       onConnectWorkspace={(input) => void connectWorkspace(input)}
-      onDisconnectPersonal={() => void disconnectPersonal()}
-      onDisconnectWorkspace={() => void disconnectWorkspace()}
+      onDisconnectPersonal={() =>
+        void disconnectPersonal("Google Calendar account disconnected.")
+      }
+      onDisconnectWorkspace={() =>
+        void disconnectWorkspace("Google Calendar workspace disconnected.")
+      }
       onToggleCoworkerAccess={(enabled) => void toggleCoworkerAccess(enabled)}
       onToggleEmailMatch={(enabled) => void toggleEmailMatch(enabled)}
       status={status}

@@ -1,13 +1,18 @@
-import * as React from "react";
-
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import type { SlackIntegrationStatus } from "@notelab/features/integrations";
 import { integrationIcons } from "@/lib/integration-icons";
-import { Loader2Icon, PlugIcon, UnplugIcon } from "lucide-react";
 
-import { ConnectionBadge, IntegrationDetail } from "../components";
+import {
+  IntegrationDetail,
+  IntegrationEmailMatchSetting,
+  IntegrationOAuthNotConfiguredAlert,
+  IntegrationPersonalAccountCard,
+  IntegrationSectionCard,
+  IntegrationSectionHeader,
+  IntegrationSectionLayout,
+  IntegrationWorkspaceActions,
+  IntegrationWorkspacePendingAlert,
+  isIntegrationConnectBlocked,
+} from "../integration-card-sections";
 import { useIntegrationConnectionState } from "../use-integration-connection-state";
 
 export function SlackIntegrationCard({
@@ -33,35 +38,52 @@ export function SlackIntegrationCard({
     enforceEmailMatch,
     isPersonalConnected,
     isWorkspaceConnected,
-    pendingEmailMatch,
     setPendingEmailMatch,
   } = useIntegrationConnectionState(status);
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-xs">
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div className="flex min-w-0 gap-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-md border bg-background">
-              <img
-                alt=""
-                aria-hidden="true"
-                className="size-5"
-                src={integrationIcons.slack}
+      <IntegrationSectionCard>
+        <IntegrationSectionLayout
+          actions={
+            <IntegrationWorkspaceActions
+              canManageWorkspace={canManageWorkspace}
+              connectDisabled={isIntegrationConnectBlocked(status)}
+              connectLabel="Connect workspace"
+              isBusy={isBusy}
+              isWorkspaceConnected={isWorkspaceConnected}
+              onConnectWorkspace={() => onConnectWorkspace(enforceEmailMatch)}
+              onDisconnectWorkspace={onDisconnectWorkspace}
+            />
+          }
+          footer={
+            <>
+              <IntegrationEmailMatchSetting
+                canManageWorkspace={canManageWorkspace}
+                checked={enforceEmailMatch}
+                disabled={isBusy}
+                integrationName="Slack"
+                isWorkspaceConnected={isWorkspaceConnected}
+                onApply={onToggleEmailMatch}
+                onPendingChange={setPendingEmailMatch}
               />
-            </div>
-            <div className="min-w-0 space-y-2">
-              <div className="space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h4 className="font-medium">Slack workspace</h4>
-                  <ConnectionBadge connected={status?.workspace.connected} />
-                </div>
-                <p className="max-w-xl text-sm text-muted-foreground">
-                  Admin-managed Slack app installation for organization
-                  channels, files, canvases, and threads the app can access.
-                </p>
-              </div>
-              <div className="grid gap-2 text-sm md:grid-cols-2">
+              <IntegrationWorkspacePendingAlert
+                canManageWorkspace={canManageWorkspace}
+                isWorkspaceConnected={isWorkspaceConnected}
+                memberMessage="Slack workspace is not connected. Ask an admin to connect it before linking your Slack account."
+              />
+              <IntegrationOAuthNotConfiguredAlert
+                message="Slack OAuth is not configured on the backend."
+                status={status}
+              />
+            </>
+          }
+        >
+          <IntegrationSectionHeader
+            connected={status?.workspace.connected}
+            description="Admin-managed Slack app installation for organization channels, files, canvases, and threads the app can access."
+            details={
+              <>
                 <IntegrationDetail
                   label="Workspace"
                   value={
@@ -90,169 +112,56 @@ export function SlackIntegrationCard({
                       : "Workspace install"
                   }
                 />
-              </div>
-            </div>
-          </div>
-          {canManageWorkspace ? (
-            <div className="flex shrink-0 gap-2 md:justify-end">
-              {isWorkspaceConnected ? (
-                <Button
-                  disabled={isBusy}
-                  onClick={onDisconnectWorkspace}
-                  type="button"
-                  variant="destructive"
-                >
-                  {isBusy ? (
-                    <Loader2Icon className="animate-spin" />
-                  ) : (
-                    <UnplugIcon />
-                  )}
-                  Disconnect
-                </Button>
-              ) : (
-                <Button
-                  disabled={
-                    isBusy ||
-                    status?.configured === false ||
-                    status?.needsMigration === true
-                  }
-                  onClick={() => onConnectWorkspace(enforceEmailMatch)}
-                  type="button"
-                >
-                  {isBusy ? <Loader2Icon className="animate-spin" /> : <PlugIcon />}
-                  Connect workspace
-                </Button>
-              )}
-            </div>
-          ) : null}
-        </div>
-        <div className="mt-4 flex items-center justify-between gap-4 rounded-md border bg-background px-3 py-2">
-          <div className="space-y-0.5">
-            <div className="text-sm font-medium">Require matching email</div>
-            <div className="text-xs text-muted-foreground">
-              Members must connect a Slack account using their Notelab
-              organization email.
-            </div>
-          </div>
-          <Switch
-            checked={enforceEmailMatch}
-            disabled={isBusy || !canManageWorkspace}
-            onCheckedChange={(checked) => {
-              if (isWorkspaceConnected) {
-                onToggleEmailMatch(checked);
-              } else {
-                setPendingEmailMatch(checked);
-              }
-            }}
+              </>
+            }
+            iconSrc={integrationIcons.slack}
+            title="Slack workspace"
           />
-        </div>
-        {!isWorkspaceConnected && !canManageWorkspace ? (
-          <Alert className="mt-4">
-            <AlertDescription>
-              Slack workspace is not connected. Ask an admin to connect it
-              before linking your Slack account.
-            </AlertDescription>
-          </Alert>
-        ) : null}
-        {status?.configured === false ? (
-          <Alert className="mt-4" variant="destructive">
-            <AlertDescription>
-              Slack OAuth is not configured on the backend.
-            </AlertDescription>
-          </Alert>
-        ) : null}
-      </div>
+        </IntegrationSectionLayout>
+      </IntegrationSectionCard>
 
-      <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-xs">
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div className="flex min-w-0 gap-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-md border bg-background">
-              <img
-                alt=""
-                aria-hidden="true"
-                className="size-5"
-                src={integrationIcons.slack}
-              />
-            </div>
-            <div className="min-w-0 space-y-2">
-              <div className="space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h4 className="font-medium">My Slack account</h4>
-                  <ConnectionBadge connected={status?.personal.connected} />
-                </div>
-                <p className="max-w-xl text-sm text-muted-foreground">
-                  Connect your Slack identity so Notelab can verify you belong
-                  to the connected Slack workspace.
-                </p>
-              </div>
-              <div className="grid gap-2 text-sm md:grid-cols-2">
-                <IntegrationDetail
-                  label="Account"
-                  value={
-                    status?.personal.name ||
-                    status?.personal.email ||
-                    "Not connected"
-                  }
-                />
-                <IntegrationDetail
-                  label="Email"
-                  value={status?.personal.email || "Not connected"}
-                />
-                <IntegrationDetail
-                  label="Workspace"
-                  value={
-                    status?.workspace.teamName ||
-                    status?.workspace.organizationName ||
-                    "Workspace not connected"
-                  }
-                />
-                <IntegrationDetail
-                  label="Access"
-                  value={isPersonalConnected ? "Slack identity linked" : "Not connected"}
-                />
-              </div>
-            </div>
-          </div>
-          <div className="flex shrink-0 gap-2 md:justify-end">
-            {isPersonalConnected ? (
-              <Button
-                disabled={isBusy}
-                onClick={onDisconnectPersonal}
-                type="button"
-                variant="destructive"
-              >
-                {isBusy ? (
-                  <Loader2Icon className="animate-spin" />
-                ) : (
-                  <UnplugIcon />
-                )}
-                Disconnect
-              </Button>
-            ) : (
-              <Button
-                disabled={
-                  isBusy ||
-                  !isWorkspaceConnected ||
-                  status?.configured === false ||
-                  status?.needsMigration === true
-                }
-                onClick={onConnectPersonal}
-                type="button"
-              >
-                {isBusy ? <Loader2Icon className="animate-spin" /> : <PlugIcon />}
-                Connect account
-              </Button>
-            )}
-          </div>
-        </div>
-        {!isWorkspaceConnected ? (
-          <Alert className="mt-4">
-            <AlertDescription>
-              Slack workspace is not connected yet.
-            </AlertDescription>
-          </Alert>
-        ) : null}
-      </div>
+      <IntegrationPersonalAccountCard
+        description="Connect your Slack identity so Notelab can verify you belong to the connected Slack workspace."
+        details={
+          <>
+            <IntegrationDetail
+              label="Account"
+              value={
+                status?.personal.name ||
+                status?.personal.email ||
+                "Not connected"
+              }
+            />
+            <IntegrationDetail
+              label="Email"
+              value={status?.personal.email || "Not connected"}
+            />
+            <IntegrationDetail
+              label="Workspace"
+              value={
+                status?.workspace.teamName ||
+                status?.workspace.organizationName ||
+                "Workspace not connected"
+              }
+            />
+            <IntegrationDetail
+              label="Access"
+              value={
+                isPersonalConnected ? "Slack identity linked" : "Not connected"
+              }
+            />
+          </>
+        }
+        iconSrc={integrationIcons.slack}
+        integrationName="Slack workspace"
+        isBusy={isBusy}
+        isPersonalConnected={isPersonalConnected}
+        isWorkspaceConnected={isWorkspaceConnected}
+        onConnectPersonal={onConnectPersonal}
+        onDisconnectPersonal={onDisconnectPersonal}
+        status={status}
+        title="My Slack account"
+      />
     </div>
   );
 }

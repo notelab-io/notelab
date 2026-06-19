@@ -1,18 +1,16 @@
 import * as React from "react";
 
-import {
-  useDisconnectIntegration,
-  useStartIntegrationOAuth,
-  useUpdateLinearIntegrationSettings,
-} from "@notelab/features/integrations";
+import { useUpdateLinearIntegrationSettings } from "@notelab/features/integrations";
 import type { LinearIntegrationStatus } from "@notelab/features/integrations";
-import { getApiErrorMessage } from "@/lib/api";
 import { integrationIcons } from "@/lib/integration-icons";
-import { toast } from "sonner";
 
 import { LinearIntegrationCard } from "../cards/linear";
 import type { IntegrationSummary } from "../types";
-import { integrationEndpointById, readDisconnectIntegrationId } from "./shared";
+import {
+  toastEmailMatchToggle,
+  useIntegrationBusyState,
+  useIntegrationOAuthActions,
+} from "./use-integration-oauth-actions";
 import type { IntegrationControllerContext } from "./types";
 
 export function useLinearIntegrationController({
@@ -24,99 +22,48 @@ export function useLinearIntegrationController({
 }: IntegrationControllerContext & {
   status: LinearIntegrationStatus | null;
 }) {
-  const startOAuth = useStartIntegrationOAuth();
-  const disconnectIntegration = useDisconnectIntegration();
   const updateSettings = useUpdateLinearIntegrationSettings();
-  const isBusy =
-    isLoadingIntegrations ||
-    (startOAuth.isPending && startOAuth.variables?.id === "linear") ||
-    (disconnectIntegration.isPending &&
-      readDisconnectIntegrationId(disconnectIntegration.variables) ===
-        "linear") ||
-    updateSettings.isPending;
-
-  const connectWorkspace = React.useCallback(
-    async (enforceEmailMatch: boolean) => {
-      setIntegrationsError(null);
-
-      try {
-        const response = await startOAuth.mutateAsync({
-          id: integrationEndpointById.linear,
-          input: { enforceEmailMatch, mode: "workspace" },
-        });
-        window.location.assign(response.url);
-      } catch (error) {
-        setIntegrationsError(getApiErrorMessage(error));
-      }
-    },
-    [setIntegrationsError, startOAuth],
-  );
-
-  const connectPersonal = React.useCallback(async () => {
-    setIntegrationsError(null);
-
-    try {
-      const response = await startOAuth.mutateAsync({
-        id: integrationEndpointById.linear,
-        input: { mode: "personal" },
-      });
-      window.location.assign(response.url);
-    } catch (error) {
-      setIntegrationsError(getApiErrorMessage(error));
-    }
-  }, [setIntegrationsError, startOAuth]);
-
-  const disconnectWorkspace = React.useCallback(async () => {
-    setIntegrationsError(null);
-
-    try {
-      await disconnectIntegration.mutateAsync({
-        id: "linear",
-        mode: "workspace",
-      });
-      toast.success("Linear workspace disconnected.");
-    } catch (error) {
-      setIntegrationsError(getApiErrorMessage(error));
-    }
-  }, [disconnectIntegration, setIntegrationsError]);
-
-  const disconnectPersonal = React.useCallback(async () => {
-    setIntegrationsError(null);
-
-    try {
-      await disconnectIntegration.mutateAsync({
-        id: "linear",
-        mode: "personal",
-      });
-      toast.success("Linear account disconnected.");
-    } catch (error) {
-      setIntegrationsError(getApiErrorMessage(error));
-    }
-  }, [disconnectIntegration, setIntegrationsError]);
+  const {
+    connectPersonal,
+    connectWorkspace,
+    disconnectIntegration,
+    disconnectPersonal,
+    disconnectWorkspace,
+    endpointId,
+    runWithIntegrationError,
+    startOAuth,
+  } = useIntegrationOAuthActions({
+    integrationId: "linear",
+    setIntegrationsError,
+  });
+  const isBusy = useIntegrationBusyState({
+    disconnectIntegration,
+    endpointId,
+    isLoadingIntegrations,
+    settingsPending: updateSettings.isPending,
+    startOAuth,
+  });
 
   const toggleEmailMatch = React.useCallback(
     async (enforceEmailMatch: boolean) => {
-      setIntegrationsError(null);
-
-      try {
+      await runWithIntegrationError(async () => {
         const result = await updateSettings.mutateAsync({ enforceEmailMatch });
 
         if (enforceEmailMatch && result.removedPersonalConnections > 0) {
-          toast.success(
-            `Email matching enabled. Removed ${result.removedPersonalConnections} mismatched Linear connection${result.removedPersonalConnections === 1 ? "" : "s"}.`,
-          );
+          toastEmailMatchToggle({
+            enabled: enforceEmailMatch,
+            integrationName: "Linear",
+            removedPersonalConnections: result.removedPersonalConnections,
+          });
         } else {
-          toast.success(
-            enforceEmailMatch
-              ? "Linear email matching enabled."
-              : "Linear email matching disabled.",
-          );
+          toastEmailMatchToggle({
+            enabled: enforceEmailMatch,
+            integrationName: "Linear",
+          });
         }
-      } catch (error) {
-        setIntegrationsError(getApiErrorMessage(error));
-      }
+      });
     },
-    [setIntegrationsError, updateSettings],
+    [runWithIntegrationError, updateSettings],
   );
 
   const summary: IntegrationSummary = {
@@ -137,7 +84,9 @@ export function useLinearIntegrationController({
     name: "Linear",
     onConnect: () =>
       canManageWorkspace
-        ? void connectWorkspace(status?.workspace.enforceEmailMatch ?? true)
+        ? void connectWorkspace({
+            enforceEmailMatch: status?.workspace.enforceEmailMatch ?? true,
+          })
         : void connectPersonal(),
     onManage: () => setSelectedIntegrationId("linear"),
   };
@@ -147,9 +96,15 @@ export function useLinearIntegrationController({
       canManageWorkspace={canManageWorkspace}
       isBusy={isBusy}
       onConnectPersonal={() => void connectPersonal()}
-      onConnectWorkspace={(enabled) => void connectWorkspace(enabled)}
-      onDisconnectPersonal={() => void disconnectPersonal()}
-      onDisconnectWorkspace={() => void disconnectWorkspace()}
+      onConnectWorkspace={(enabled) =>
+        void connectWorkspace({ enforceEmailMatch: enabled })
+      }
+      onDisconnectPersonal={() =>
+        void disconnectPersonal("Linear account disconnected.")
+      }
+      onDisconnectWorkspace={() =>
+        void disconnectWorkspace("Linear workspace disconnected.")
+      }
       onToggleEmailMatch={(enabled) => void toggleEmailMatch(enabled)}
       status={status}
     />

@@ -1,18 +1,16 @@
 import * as React from "react";
 
-import {
-  useDisconnectIntegration,
-  useStartIntegrationOAuth,
-  useUpdateGithubIntegrationSettings,
-} from "@notelab/features/integrations";
+import { useUpdateGithubIntegrationSettings } from "@notelab/features/integrations";
 import type { GithubIntegrationStatus } from "@notelab/features/integrations";
-import { getApiErrorMessage } from "@/lib/api";
 import { integrationIcons } from "@/lib/integration-icons";
 import { toast } from "sonner";
 
 import { GithubIntegrationCard } from "../cards/github";
 import type { IntegrationSummary } from "../types";
-import { integrationEndpointById, readDisconnectIntegrationId } from "./shared";
+import {
+  useIntegrationBusyState,
+  useIntegrationOAuthActions,
+} from "./use-integration-oauth-actions";
 import type { IntegrationControllerContext } from "./types";
 
 export function useGithubIntegrationController({
@@ -24,10 +22,28 @@ export function useGithubIntegrationController({
 }: IntegrationControllerContext & {
   status: GithubIntegrationStatus | null;
 }) {
-  const startOAuth = useStartIntegrationOAuth();
-  const disconnectIntegration = useDisconnectIntegration();
   const updateSettings = useUpdateGithubIntegrationSettings();
   const [organizationLogin, setOrganizationLogin] = React.useState("");
+  const {
+    connectPersonal,
+    connectWorkspace,
+    disconnectIntegration,
+    disconnectPersonal,
+    disconnectWorkspace,
+    endpointId,
+    runWithIntegrationError,
+    startOAuth,
+  } = useIntegrationOAuthActions({
+    integrationId: "github",
+    setIntegrationsError,
+  });
+  const isBusy = useIntegrationBusyState({
+    disconnectIntegration,
+    endpointId,
+    isLoadingIntegrations,
+    settingsPending: updateSettings.isPending,
+    startOAuth,
+  });
 
   React.useEffect(() => {
     if (status?.workspace.organizationLogin) {
@@ -35,82 +51,9 @@ export function useGithubIntegrationController({
     }
   }, [status?.workspace.organizationLogin]);
 
-  const isBusy =
-    isLoadingIntegrations ||
-    (startOAuth.isPending && startOAuth.variables?.id === "github") ||
-    (disconnectIntegration.isPending &&
-      readDisconnectIntegrationId(disconnectIntegration.variables) ===
-        "github") ||
-    updateSettings.isPending;
-
-  const connectWorkspace = React.useCallback(
-    async (input: { enforceEmailMatch: boolean; organizationLogin: string }) => {
-      setIntegrationsError(null);
-
-      try {
-        const response = await startOAuth.mutateAsync({
-          id: integrationEndpointById.github,
-          input: {
-            enforceEmailMatch: input.enforceEmailMatch,
-            githubOrganizationLogin: input.organizationLogin,
-            mode: "workspace",
-          },
-        });
-        window.location.assign(response.url);
-      } catch (error) {
-        setIntegrationsError(getApiErrorMessage(error));
-      }
-    },
-    [setIntegrationsError, startOAuth],
-  );
-
-  const connectPersonal = React.useCallback(async () => {
-    setIntegrationsError(null);
-
-    try {
-      const response = await startOAuth.mutateAsync({
-        id: integrationEndpointById.github,
-        input: { mode: "personal" },
-      });
-      window.location.assign(response.url);
-    } catch (error) {
-      setIntegrationsError(getApiErrorMessage(error));
-    }
-  }, [setIntegrationsError, startOAuth]);
-
-  const disconnectWorkspace = React.useCallback(async () => {
-    setIntegrationsError(null);
-
-    try {
-      await disconnectIntegration.mutateAsync({
-        id: "github",
-        mode: "workspace",
-      });
-      toast.success("GitHub organization disconnected.");
-    } catch (error) {
-      setIntegrationsError(getApiErrorMessage(error));
-    }
-  }, [disconnectIntegration, setIntegrationsError]);
-
-  const disconnectPersonal = React.useCallback(async () => {
-    setIntegrationsError(null);
-
-    try {
-      await disconnectIntegration.mutateAsync({
-        id: "github",
-        mode: "personal",
-      });
-      toast.success("GitHub account disconnected.");
-    } catch (error) {
-      setIntegrationsError(getApiErrorMessage(error));
-    }
-  }, [disconnectIntegration, setIntegrationsError]);
-
   const toggleEmailMatch = React.useCallback(
     async (enforceEmailMatch: boolean) => {
-      setIntegrationsError(null);
-
-      try {
+      await runWithIntegrationError(async () => {
         const response = await updateSettings.mutateAsync({
           enforceEmailMatch,
         });
@@ -123,11 +66,9 @@ export function useGithubIntegrationController({
               : "GitHub email matching enabled."
             : "GitHub email matching disabled.",
         );
-      } catch (error) {
-        setIntegrationsError(getApiErrorMessage(error));
-      }
+      });
     },
-    [setIntegrationsError, updateSettings],
+    [runWithIntegrationError, updateSettings],
   );
 
   const summary: IntegrationSummary = {
@@ -157,9 +98,18 @@ export function useGithubIntegrationController({
       githubOrganizationLogin={organizationLogin}
       isBusy={isBusy}
       onConnectPersonal={() => void connectPersonal()}
-      onConnectWorkspace={(input) => void connectWorkspace(input)}
-      onDisconnectPersonal={() => void disconnectPersonal()}
-      onDisconnectWorkspace={() => void disconnectWorkspace()}
+      onConnectWorkspace={(input) =>
+        void connectWorkspace({
+          enforceEmailMatch: input.enforceEmailMatch,
+          githubOrganizationLogin: input.organizationLogin,
+        })
+      }
+      onDisconnectPersonal={() =>
+        void disconnectPersonal("GitHub account disconnected.")
+      }
+      onDisconnectWorkspace={() =>
+        void disconnectWorkspace("GitHub organization disconnected.")
+      }
       onOrganizationLoginChange={setOrganizationLogin}
       onToggleEmailMatch={(enabled) => void toggleEmailMatch(enabled)}
       status={status}
