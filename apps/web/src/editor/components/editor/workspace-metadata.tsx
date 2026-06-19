@@ -94,10 +94,7 @@ export function WorkspaceMetadata({
   const commentsEnabled = Boolean(
     enableComments && workspaceId && session?.user,
   )
-  const { data: threadsData } = useWorkspaceThreads(
-    workspaceId,
-    commentsEnabled && (commentsOpen || editorCommentsOpenRequest > 0),
-  )
+  const { data: threadsData } = useWorkspaceThreads(workspaceId, commentsEnabled)
   const updatePropertyValue = useUpdateWorkspacePropertyValue()
   const cover = coverProp ?? localCover
   const icon = iconProp ?? localIcon

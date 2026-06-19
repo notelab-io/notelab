@@ -232,9 +232,10 @@ function AppLayoutContent({ children }: { children?: ReactNode }) {
         discussionsEnabled={discussionsEnabled}
         discussionsOpen={discussionsSidebarOpen}
         discussionsPanel={
-          discussionsEnabled && discussionsSidebarOpen ? (
+          discussionsEnabled ? (
             <DiscussionsSidebarPanel
               onClose={() => setDiscussionsSidebarOpen(false)}
+              open={discussionsSidebarOpen}
               workspaceId={workspaceId}
             />
           ) : undefined
