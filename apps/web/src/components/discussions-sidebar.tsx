@@ -9,26 +9,17 @@ import {
 import { WorkspaceCommentThread } from "@/components/workspace-comments"
 import { useWorkspaceThreads } from "@notelab/features/workspaces"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
 import { useMemo } from "react"
 
-export function DiscussionsSidebar({
+export function DiscussionsSidebarPanel({
   workspaceId,
   onClose,
-  open,
 }: {
   workspaceId?: string | null
   onClose: () => void
-  open: boolean
 }) {
   return (
-      <aside
-        aria-label="Discussions sidebar"
-        className={cn(
-          "fixed inset-y-0 right-0 z-40 flex w-[min(100vw,26rem)] flex-col border-l border-sidebar-border bg-background text-foreground transition-transform duration-200 ease-linear md:relative md:inset-auto md:z-20 md:h-svh md:w-[24rem] md:shrink-0",
-          open ? "translate-x-0" : "translate-x-full md:hidden",
-        )}
-      >
+    <>
         <header className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
           <Button
             aria-label="Close discussions sidebar"
@@ -65,7 +56,7 @@ export function DiscussionsSidebar({
         <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 text-sm" data-discussions-scroll-shell>
           <DiscussionsThreads workspaceId={workspaceId} />
         </div>
-      </aside>
+    </>
   )
 }
 

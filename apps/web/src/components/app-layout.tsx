@@ -12,9 +12,13 @@ import { ArrowRight } from "lucide-react"
 
 import { AppSidebar } from "@/components/app-sidebar"
 import { AppSearchProvider } from "@/components/app-search"
-import { ChatSidebar } from "@/components/chat-sidebar"
+import {
+  ChatSidebarPanel,
+  ChatSidebarTrigger,
+} from "@/components/chat-sidebar"
 import { WorkspaceEditorRegistryProvider } from "@/contexts/workspace-editor-registry"
-import { DiscussionsSidebar } from "@/components/discussions-sidebar"
+import { DiscussionsSidebarPanel } from "@/components/discussions-sidebar"
+import { RightSidebars } from "@/components/right-sidebars"
 import { WorkspaceEditorCommentsProvider } from "@/components/workspace-editor-comments"
 import { NavActions } from "@/components/nav-actions"
 import { HistorySidebar } from "@/components/history-sidebar"
@@ -96,6 +100,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
       style={
         {
           "--app-sidebar-panel-width": "18rem",
+          "--right-sidebar-panel-width": "24rem",
           "--sidebar-width": "var(--app-sidebar-panel-width)",
         } as React.CSSProperties
       }
@@ -136,14 +141,12 @@ function AppLayoutContent({ children }: { children?: ReactNode }) {
     if (appSidebarOpen) {
       closeSidePane()
     }
-    setDiscussionsSidebarOpen(false)
     setChatSidebarOpen(true)
   }, [appSidebarOpen, closeSidePane])
   const openDiscussionsSidebar = useCallback(() => {
     if (appSidebarOpen) {
       closeSidePane()
     }
-    setChatSidebarOpen(false)
     setDiscussionsSidebarOpen(true)
   }, [appSidebarOpen, closeSidePane])
   const sidePaneContext = useMemo<WorkspaceSidePaneContextValue>(
@@ -164,13 +167,6 @@ function AppLayoutContent({ children }: { children?: ReactNode }) {
       setDiscussionsSidebarOpen(false)
     }
   }, [databaseId])
-
-  // Close other side panels when discussions or chat opens in some flows
-  useEffect(() => {
-    if (discussionsSidebarOpen && chatSidebarOpen) {
-      setChatSidebarOpen(false)
-    }
-  }, [discussionsSidebarOpen, chatSidebarOpen])
 
   useEffect(() => {
     if (appSidebarOpen && sidePaneWorkspaceId && chatSidebarOpen) {
@@ -212,20 +208,36 @@ function AppLayoutContent({ children }: { children?: ReactNode }) {
           {children ?? <Outlet />}
         </div>
       </SidebarInset>
-      <ChatSidebar
-        databaseId={databaseId}
-        onClose={() => setChatSidebarOpen(false)}
-        onOpen={openChatSidebar}
-        open={chatSidebarOpen}
-        workspaceId={workspaceId}
-      />
-        {discussionsEnabled ? (
-          <DiscussionsSidebar
+      <RightSidebars
+        chatOpen={chatSidebarOpen}
+        chatPanel={
+          <ChatSidebarPanel
+            databaseId={databaseId}
+            onClose={() => setChatSidebarOpen(false)}
             workspaceId={workspaceId}
-            onClose={() => setDiscussionsSidebarOpen(false)}
-            open={discussionsSidebarOpen}
           />
-        ) : null}
+        }
+        chatTrigger={
+          chatSidebarOpen ? null : (
+            <ChatSidebarTrigger
+              discussionsSidebarOpen={
+                discussionsEnabled && discussionsSidebarOpen
+              }
+              onOpen={openChatSidebar}
+            />
+          )
+        }
+        discussionsEnabled={discussionsEnabled}
+        discussionsOpen={discussionsSidebarOpen}
+        discussionsPanel={
+          discussionsEnabled ? (
+            <DiscussionsSidebarPanel
+              onClose={() => setDiscussionsSidebarOpen(false)}
+              workspaceId={workspaceId}
+            />
+          ) : undefined
+        }
+      />
       </WorkspaceSidePaneContext.Provider>
     </WorkspaceEditorCommentsProvider>
     </WorkspaceEditorRegistryProvider>
