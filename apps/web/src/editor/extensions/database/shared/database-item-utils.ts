@@ -1,8 +1,11 @@
 import {
+  firstScalarValue,
   serializePropertyValue,
   toStringArray,
+  toTrimmedStringArray,
   type DatabasePropertyValue,
 } from "../utils"
+import { getReadOnlyTimePropertyRawValue } from "./read-only-time-property"
 import type {
   DatabaseFilterItemConfig,
   DatabasePropertyFilterConfig,
@@ -44,22 +47,6 @@ export function hasViewHiddenPropertyIds(config: unknown) {
   )
 }
 
-function getReadOnlyTimePropertySortValue(
-  item: {
-    createdAt: string
-    page: {
-      createdAt?: string
-      updatedAt?: string
-    }
-    updatedAt: string
-  },
-  type: string
-) {
-  return type === "created_time"
-    ? item.page.createdAt ?? item.createdAt
-    : item.page.updatedAt ?? item.updatedAt
-}
-
 function isEmptySortValue(value: number | string | null) {
   return value === null || value === ""
 }
@@ -97,15 +84,15 @@ function compareSortValues(
 function getComparableDateValue(
   value: DatabasePropertyValue | string | null | undefined
 ) {
-  const rawValue = Array.isArray(value) ? value[0] ?? "" : value
+  const rawValue = firstScalarValue(value)
   const timestamp = rawValue ? new Date(rawValue).getTime() : Number.NaN
 
   return Number.isFinite(timestamp) ? timestamp : null
 }
 
 function getComparableNumberValue(value: DatabasePropertyValue) {
-  const rawValue = Array.isArray(value) ? value[0] ?? "" : value
-  const parsedValue = rawValue.trim() ? Number(rawValue) : Number.NaN
+  const rawValue = firstScalarValue(value).trim()
+  const parsedValue = rawValue ? Number(rawValue) : Number.NaN
 
   return Number.isFinite(parsedValue) ? parsedValue : null
 }
@@ -135,7 +122,7 @@ function getComparablePropertyValue(
     case "created_time":
     case "edited_time":
       return getComparableDateValue(
-        getReadOnlyTimePropertySortValue(item, property.property.type)
+        getReadOnlyTimePropertyRawValue(item, property.property.type)
       )
     case "date":
       return getComparableDateValue(propertyValue)
@@ -149,7 +136,7 @@ function getComparablePropertyValue(
 }
 
 function getDateValue(value: DatabasePropertyValue | string | null | undefined) {
-  const rawValue = Array.isArray(value) ? value[0] ?? "" : value
+  const rawValue = firstScalarValue(value)
   const timestamp = rawValue ? new Date(rawValue).getTime() : Number.NaN
 
   if (!Number.isFinite(timestamp)) {
@@ -162,22 +149,13 @@ function getDateValue(value: DatabasePropertyValue | string | null | undefined) 
   return date
 }
 
-function getReadOnlyTimePropertyFilterValue(
-  item: SortableDatabaseItem,
-  type: string
-) {
-  return type === "created_time"
-    ? item.page.createdAt ?? item.createdAt
-    : item.page.updatedAt ?? item.updatedAt
-}
-
 function getFilterPropertyValue(
   item: SortableDatabaseItem,
   property: SortableDatabaseProperty,
   propertyValuesByKey: Record<string, DatabasePropertyValue>
 ) {
   if (property.property.type === "created_time" || property.property.type === "edited_time") {
-    return getReadOnlyTimePropertyFilterValue(item, property.property.type)
+    return getReadOnlyTimePropertyRawValue(item, property.property.type)
   }
 
   return propertyValuesByKey[`${item.pageId}:${property.property.id}`] ?? ""
@@ -220,7 +198,7 @@ function getFilterRowValues({
     )
   }
 
-  return Array.isArray(value) ? value : value.trim() ? [value] : []
+  return toTrimmedStringArray(value)
 }
 
 function getFilterPropertyType(

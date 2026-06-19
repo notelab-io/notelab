@@ -167,7 +167,7 @@ class ColumnSelection extends Selection {
   }
 }
 
-export const Column = Node.create({
+const Column = Node.create({
   name: "column",
 
   group: "column",
@@ -192,7 +192,7 @@ export const Column = Node.create({
   },
 })
 
-export const ColumnBlock = Node.create({
+const ColumnBlock = Node.create({
   name: "columnBlock",
 
   group: "block",

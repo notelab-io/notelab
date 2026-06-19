@@ -36,6 +36,7 @@ import { syncExtensionOptions } from "./sync-extension-options"
 import type { BlockDropLine, EditorProps, PasteChoiceState } from "./types"
 import { useEditorDragHandle } from "./use-editor-drag-handle"
 import { useEditorRuntime } from "./use-editor-runtime"
+import { useLatestRef } from "./use-latest-ref"
 import { useMobileNodeActions } from "./use-mobile-node-actions"
 
 export function Editor({
@@ -92,25 +93,12 @@ export function Editor({
     [addDatabaseRow]
   )
 
-  const onContentChangeRef = useRef(onContentChange)
-  const dropPageOnDatabaseRef = useRef(handleDatabasePageDrop)
-  const handleProviderLinkPasteRef = useRef(
+  const onContentChangeRef = useLatestRef(onContentChange)
+  const dropPageOnDatabaseRef = useLatestRef(handleDatabasePageDrop)
+  const handleProviderLinkPasteRef = useLatestRef(
     (view: Parameters<typeof handleProviderLinkPaste>[0], event: ClipboardEvent) =>
       handleProviderLinkPaste(view, event, editable, setPasteChoice)
   )
-
-  useEffect(() => {
-    onContentChangeRef.current = onContentChange
-  }, [onContentChange])
-
-  useEffect(() => {
-    dropPageOnDatabaseRef.current = handleDatabasePageDrop
-  }, [handleDatabasePageDrop])
-
-  useEffect(() => {
-    handleProviderLinkPasteRef.current = (view, event) =>
-      handleProviderLinkPaste(view, event, editable, setPasteChoice)
-  }, [editable])
 
   const collaborationEnabled = editable && Boolean(workspaceId)
   const baseExtensions = useMemo(
@@ -227,7 +215,7 @@ export function Editor({
     if (!editor || editor.isDestroyed || !editor.extensionManager) return
     syncExtensionOptions(editor, {
       databaseEditorRuntime,
-      editorEditable: editable,
+      editable,
       editorRuntimeRef,
       onOpenPage,
       workspaceId,

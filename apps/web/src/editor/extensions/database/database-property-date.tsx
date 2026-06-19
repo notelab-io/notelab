@@ -23,6 +23,7 @@ import {
   type DateFormatValue,
   type TimeFormatValue,
 } from "./shared/database-date-config"
+import { firstScalarValue } from "./utils"
 
 type DatabasePropertyDateProps = {
   editable?: boolean
@@ -558,7 +559,7 @@ function parseDateRange(value: string | string[]) {
 }
 
 function getStartValue(value: string | string[]) {
-  return Array.isArray(value) ? value[0] ?? "" : value
+  return firstScalarValue(value)
 }
 
 function getEndValue(value: string | string[]) {

@@ -46,6 +46,7 @@ import { DatabasePropertyInput } from "../database-property-input"
 import { DatabasePageLink } from "../shared/database-page-link"
 import { DatabasePropertyValue } from "../shared/database-property-value"
 import {
+  firstScalarValue,
   serializePropertyValue,
   toStringArray,
   type DatabasePropertyValue as DatabaseCellValue,
@@ -554,7 +555,7 @@ export function DatabaseKanbanView() {
   }
 
   const createKanbanDateGroup = (value: DatabaseCellValue) => {
-    const nextValue = Array.isArray(value) ? value[0] ?? "" : value
+    const nextValue = firstScalarValue(value)
 
     setNewKanbanOptionName(nextValue)
 

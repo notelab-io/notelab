@@ -6,7 +6,7 @@ import {
 import { ExternalLink, FileText, X } from "lucide-react"
 import { toast } from "sonner"
 
-import { useOptionalWorkspaceSidePane } from "@/components/app-layout"
+import { useOptionalWorkspaceSidePane } from "@/contexts/workspace-side-pane"
 import {
   getWorkspaceEmoji,
   useUpdateWorkspace,

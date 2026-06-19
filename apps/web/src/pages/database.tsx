@@ -2,12 +2,12 @@ import { useCallback, useEffect, useState } from "react"
 import { Link, useParams } from "@tanstack/react-router"
 import { ArrowRight, Maximize2 } from "lucide-react"
 
+import { AppLayout } from "@/components/app-layout"
 import {
-  AppLayout,
   getWorkspaceSidePaneWidthClass,
   WorkspaceSidePaneProvider,
   useWorkspaceSidePane,
-} from "@/components/app-layout"
+} from "@/contexts/workspace-side-pane"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"

@@ -6,6 +6,18 @@ export function toStringArray(value: DatabasePropertyValue): string[] {
   return Array.isArray(value) ? value : value ? [value] : []
 }
 
+export function toTrimmedStringArray(value: DatabasePropertyValue): string[] {
+  return Array.isArray(value) ? value : value.trim() ? [value] : []
+}
+
+export function firstScalarValue(
+  value: DatabasePropertyValue | string | null | undefined,
+  fallback = ""
+): string {
+  if (Array.isArray(value)) return value[0] ?? fallback
+  return value ?? fallback
+}
+
 export function createDatabaseBlockContent(databaseId: string) {
   return [
     {
@@ -116,8 +128,7 @@ export function serializePropertyValue(
   }
 
   if (propertyType === "number") {
-    const nextValue = Array.isArray(value) ? value[0] : value
-    const trimmedValue = nextValue.trim()
+    const trimmedValue = firstScalarValue(value).trim()
 
     if (!trimmedValue) {
       return null
@@ -129,20 +140,17 @@ export function serializePropertyValue(
   }
 
   if (propertyType === "phone") {
-    const nextValue = Array.isArray(value) ? value[0] : value
-
-    return nextValue.trim()
+    return firstScalarValue(value).trim()
   }
 
   if (propertyType === "checkbox") {
-    const nextValue = Array.isArray(value) ? value[0] : value
-    const normalizedValue = nextValue.trim().toLowerCase()
+    const normalizedValue = firstScalarValue(value).trim().toLowerCase()
 
     return ["1", "checked", "true", "yes"].includes(normalizedValue)
   }
 
   if (propertyType === "select" || propertyType === "status") {
-    return Array.isArray(value) ? (value[0] ?? "") : value
+    return firstScalarValue(value)
   }
 
   if (propertyType === "date") {

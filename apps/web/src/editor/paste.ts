@@ -9,10 +9,10 @@ import type { EditorTableType, PasteChoiceState } from "./types"
 const getEmbedProvider = (embedAttrs: Record<string, unknown>): EmbedProvider | null =>
   "provider" in embedAttrs ? (embedAttrs.provider as EmbedProvider) : null
 
-export const looksLikeUrl = (value: string) =>
+const looksLikeUrl = (value: string) =>
   /^(https?:\/\/|www\.|[^\s]+\.[^\s]{2,})/i.test(value.trim())
 
-export const normalizePastedUrl = (value: string) => {
+const normalizePastedUrl = (value: string) => {
   const trimmed = value.trim()
   try {
     return new URL(
@@ -123,7 +123,7 @@ export const normalizePastedEditorHTML = (html: string) => {
   return changed ? document.body.innerHTML : html
 }
 
-export const createProviderLinkPasteChoice = (
+const createProviderLinkPasteChoice = (
   view: EditorView,
   pastedText: string,
   embedAttrs: Record<string, unknown>

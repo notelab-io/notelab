@@ -12,6 +12,10 @@ import { DatabasePropertySelect } from "../database-property-select"
 import { DatabaseFormulaValue } from "../formula"
 import { type DatabasePropertyValue } from "../utils"
 import { formatDatabaseDateValue } from "./database-date-config"
+import {
+  getReadOnlyTimePropertyRawValue,
+  isReadOnlyTimeProperty,
+} from "./read-only-time-property"
 import { useDatabaseViewContext } from "./database-view-context"
 import { getPersonLimit } from "./database-view-config"
 import { type DatabasePropertyListItem } from "../kanban/database-kanban-config"
@@ -64,21 +68,15 @@ type DatabasePropertyValueProps = {
   value: DatabasePropertyValue
 }
 
-function isReadOnlyTimeProperty(type: string) {
-  return type === "created_time" || type === "edited_time"
-}
-
-function getReadOnlyTimePropertyValue(
+function formatReadOnlyTimePropertyValue(
   row: DatabaseRow,
   config: unknown,
   type: string
 ) {
-  const value =
-    type === "created_time"
-      ? row.page.createdAt ?? row.createdAt
-      : row.page.updatedAt ?? row.updatedAt
-
-  return formatDatabaseDateValue(value, config)
+  return formatDatabaseDateValue(
+    getReadOnlyTimePropertyRawValue(row, type),
+    config
+  )
 }
 
 function resizeCellEditor(element: HTMLTextAreaElement) {
@@ -130,7 +128,7 @@ export function DatabasePropertyValue({
       : value
   const content = isReadOnlyTimeCell ? (
     <span className="database-input-cell-trigger">
-      {getReadOnlyTimePropertyValue(
+      {formatReadOnlyTimePropertyValue(
         row,
         workspaceProperty.config,
         workspaceProperty.type

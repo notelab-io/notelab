@@ -1,7 +1,5 @@
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useState,
@@ -17,6 +15,11 @@ import {
   ChatSidebarTrigger,
 } from "@/components/chat-sidebar"
 import { WorkspaceEditorRegistryProvider } from "@/contexts/workspace-editor-registry"
+import {
+  getWorkspaceSidePaneWidthClass,
+  WorkspaceSidePaneContext,
+  type WorkspaceSidePaneContextValue,
+} from "@/contexts/workspace-side-pane"
 import { DiscussionsSidebarPanel } from "@/components/discussions-sidebar"
 import { RightSidebars } from "@/components/right-sidebars"
 import { WorkspaceEditorCommentsProvider } from "@/components/workspace-editor-comments"
@@ -48,53 +51,6 @@ import {
 } from "@notelab/features/workspaces"
 import { useWorkspaces } from "@notelab/features/workspaces"
 import { useDatabase } from "@notelab/features/databases"
-
-type WorkspaceSidePaneContextValue = {
-  closeSidePane: () => void
-  openSidePane: (workspaceId: string) => void
-  sidePaneWorkspaceId: string | null
-}
-
-const WorkspaceSidePaneContext =
-  createContext<WorkspaceSidePaneContextValue | null>(null)
-
-const sidePaneWidthClass = "w-full min-w-0 md:basis-0 md:flex-1"
-
-export function WorkspaceSidePaneProvider({
-  children,
-  resetKey,
-}: {
-  children: ReactNode
-  resetKey?: string | null
-}) {
-  const [sidePaneWorkspaceId, setSidePaneWorkspaceId] = useState<string | null>(
-    null,
-  )
-  const closeSidePane = useCallback(() => {
-    setSidePaneWorkspaceId(null)
-  }, [])
-  const openSidePane = useCallback((nextWorkspaceId: string) => {
-    setSidePaneWorkspaceId(nextWorkspaceId)
-  }, [])
-  const sidePaneContext = useMemo<WorkspaceSidePaneContextValue>(
-    () => ({
-      closeSidePane,
-      openSidePane,
-      sidePaneWorkspaceId,
-    }),
-    [closeSidePane, openSidePane, sidePaneWorkspaceId],
-  )
-
-  useEffect(() => {
-    closeSidePane()
-  }, [closeSidePane, resetKey])
-
-  return (
-    <WorkspaceSidePaneContext.Provider value={sidePaneContext}>
-      {children}
-    </WorkspaceSidePaneContext.Provider>
-  )
-}
 
 export function AppLayout({ children }: { children?: ReactNode }) {
   return (
@@ -247,24 +203,6 @@ function AppLayoutContent({ children }: { children?: ReactNode }) {
   )
 }
 
-export function useWorkspaceSidePane() {
-  const context = useContext(WorkspaceSidePaneContext)
-
-  if (!context) {
-    throw new Error("useWorkspaceSidePane must be used inside AppLayout")
-  }
-
-  return context
-}
-
-export function useOptionalWorkspaceSidePane() {
-  return useContext(WorkspaceSidePaneContext)
-}
-
-export function getWorkspaceSidePaneWidthClass() {
-  return sidePaneWidthClass
-}
-
 function AppHeader({
   isSettingsPage,
   onCloseSidePane,
@@ -291,7 +229,7 @@ function AppHeader({
         <PaneHeaderContent
           className={cn(
             "animate-in slide-in-from-right-8 absolute inset-0 z-10 bg-background duration-200 md:static md:z-auto md:border-l",
-            sidePaneWidthClass,
+            getWorkspaceSidePaneWidthClass(),
           )}
           leadingControl={
             <Button
