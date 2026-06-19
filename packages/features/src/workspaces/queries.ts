@@ -1,21 +1,16 @@
-import { queryOptions } from "@tanstack/react-query"
+import { type QueryClient, queryOptions } from "@tanstack/react-query"
 
 import type { ApiFetcher } from "../context"
+import type { WorkspaceMetadata } from "./item-relationships"
+
+export type { ItemRef, NavItemKind, WorkspaceMetadata } from "./item-relationships"
+export { readLinkedItems, readParentItemId } from "./item-relationships"
 
 export type NotelabAiMode = "instruction" | "skill"
 
 export const notelabAiModeLabels: Record<NotelabAiMode, string> = {
   instruction: "Use as instruction",
   skill: "Use as skill",
-}
-
-export type WorkspaceMetadata = {
-  cover?: string | null
-  emoji?: string | null
-  fullWidth?: boolean | null
-  notelabai?: NotelabAiMode | null
-  parentWorkspaceId?: string | null
-  useUserFullWidthPreference?: boolean | null
 }
 
 export type WorkspaceDatabaseRow = {
@@ -210,7 +205,7 @@ export type WorkspacePersonAccessTargetsPayload = {
 }
 
 export const workspacesQueryKey = (organizationId: string | null | undefined) =>
-  ["workspaces", organizationId ?? "none"] as const
+  ["workspaces", organizationId ?? "none", "nav"] as const
 
 export const notelabAiWorkspacesQueryKey = (
   organizationId: string | null | undefined,
@@ -218,6 +213,25 @@ export const notelabAiWorkspacesQueryKey = (
 
 export const workspaceQueryKey = (workspaceId: string | null | undefined) =>
   ["workspace", workspaceId ?? "none"] as const
+
+export type WorkspaceDetail = {
+  accessLevel?: AccessLevel | null
+  workspace: Workspace
+}
+
+export function getWorkspaceFromDetail(
+  detail: WorkspaceDetail | Workspace | null | undefined,
+) {
+  if (!detail || typeof detail !== "object") {
+    return null
+  }
+
+  if ("workspace" in detail) {
+    return detail.workspace
+  }
+
+  return detail as Workspace
+}
 
 export const workspacePropertiesQueryKey = (
   workspaceId: string | null | undefined,
@@ -258,7 +272,7 @@ export const workspacesQueryOptions = (
 
       try {
         const result = await apiFetch<{ workspaces: Workspace[] }>(
-          `/workspaces?organizationId=${encodeURIComponent(organizationId)}`,
+          `/workspaces?organizationId=${encodeURIComponent(organizationId)}&fields=nav`,
           { method: "GET" },
         )
 
@@ -324,7 +338,7 @@ export const workspaceQueryOptions = (
   queryOptions({
     queryKey: workspaceQueryKey(workspaceId),
     enabled: Boolean(workspaceId),
-    queryFn: async () => {
+    queryFn: async (): Promise<WorkspaceDetail | null> => {
       if (!workspaceId) {
         throw new Error("workspaceId is required")
       }
@@ -338,7 +352,10 @@ export const workspaceQueryOptions = (
           { method: "GET" },
         )
 
-        return result.workspace
+        return {
+          accessLevel: result.accessLevel ?? null,
+          workspace: result.workspace,
+        }
       } catch (error) {
         if (
           typeof error === "object" &&
@@ -355,6 +372,16 @@ export const workspaceQueryOptions = (
       }
     },
   })
+
+export async function ensureWorkspaceDetail(
+  queryClient: QueryClient,
+  apiFetch: ApiFetcher,
+  workspaceId: string,
+) {
+  return queryClient.ensureQueryData(
+    workspaceQueryOptions(apiFetch, workspaceId),
+  )
+}
 
 export const workspaceAccessQueryOptions = (
   apiFetch: ApiFetcher,
@@ -426,44 +453,7 @@ export const workspacePersonAccessTargetsQueryOptions = (
     },
   })
 
-export const workspaceAccessLevelQueryOptions = (
-  apiFetch: ApiFetcher,
-  workspaceId: string | null | undefined,
-) =>
-  queryOptions({
-    queryKey: [...workspaceQueryKey(workspaceId), "access-level"] as const,
-    enabled: Boolean(workspaceId),
-    queryFn: async () => {
-      if (!workspaceId) {
-        return null
-      }
 
-      try {
-        const result = await apiFetch<{
-          accessLevel?: AccessLevel
-          workspace: Workspace
-        }>(
-        `/workspaces/${workspaceId}`,
-        { method: "GET" },
-      )
-
-        return result.accessLevel ?? null
-      } catch (error) {
-        if (
-          typeof error === "object" &&
-          error !== null &&
-          "status" in error &&
-          (error.status === 401 ||
-            error.status === 403 ||
-            error.status === 404)
-        ) {
-          return null
-        }
-
-        throw error
-      }
-    },
-  })
 
 export const workspacePropertiesQueryOptions = (
   apiFetch: ApiFetcher,

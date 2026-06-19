@@ -1,4 +1,5 @@
 export * from "./hooks"
+export * from "./item-relationships"
 export * from "./queries"
 export * from "./realtime"
 export * from "./realtime-utils"

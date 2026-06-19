@@ -6,12 +6,13 @@ import {
   userSettingsQueryKey,
   type UserSettings,
 } from "../user-settings/queries"
+import type { NavItemKind } from "./item-relationships"
 import {
   workspaceQueryKey,
   workspaceQueryOptions,
+  getWorkspaceFromDetail,
   workspaceAccessQueryKey,
   workspaceAccessQueryOptions,
-  workspaceAccessLevelQueryOptions,
   workspaceAccessTargetsQueryOptions,
   workspaceCommentsQueryOptions,
   workspacePersonAccessTargetsQueryOptions,
@@ -23,6 +24,7 @@ import {
   notelabAiWorkspacesQueryOptions,
   workspacesQueryKey,
   workspacesQueryOptions,
+  type WorkspaceDetail,
   type AccessLevel,
   type AccessTargetType,
   type Workspace,
@@ -37,7 +39,7 @@ type CreateWorkspaceInput = {
   organizationId: string
   name?: string
   emoji?: string
-  parentWorkspaceId?: string
+  parentItemId?: string
 }
 
 type UpdateWorkspaceInput = {
@@ -97,10 +99,17 @@ type SetWorkspaceFavoriteInput = {
   workspaceId: string
 }
 
-export function useWorkspaces(organizationId: string | null | undefined) {
+export function useWorkspaces(
+  organizationId: string | null | undefined,
+  options?: { enabled?: boolean },
+) {
   const { apiFetch } = useNotelabFeatures()
 
-  return useQuery(workspacesQueryOptions(apiFetch, organizationId))
+  return useQuery({
+    ...workspacesQueryOptions(apiFetch, organizationId),
+    enabled:
+      Boolean(organizationId) && (options?.enabled ?? true),
+  })
 }
 
 export function useNotelabAiWorkspaces(
@@ -111,18 +120,34 @@ export function useNotelabAiWorkspaces(
   return useQuery(notelabAiWorkspacesQueryOptions(apiFetch, organizationId))
 }
 
-export function useWorkspace(workspaceId: string | null | undefined) {
+type WorkspaceQueryHookOptions = {
+  refetchOnMount?: boolean
+}
+
+export function useWorkspace(
+  workspaceId: string | null | undefined,
+  options?: WorkspaceQueryHookOptions,
+) {
   const { apiFetch } = useNotelabFeatures()
 
-  return useQuery(workspaceQueryOptions(apiFetch, workspaceId))
+  return useQuery({
+    ...workspaceQueryOptions(apiFetch, workspaceId),
+    refetchOnMount: options?.refetchOnMount,
+    select: (detail) => getWorkspaceFromDetail(detail),
+  })
 }
 
 export function useWorkspaceAccessLevel(
   workspaceId: string | null | undefined,
+  options?: WorkspaceQueryHookOptions,
 ) {
   const { apiFetch } = useNotelabFeatures()
 
-  return useQuery(workspaceAccessLevelQueryOptions(apiFetch, workspaceId))
+  return useQuery({
+    ...workspaceQueryOptions(apiFetch, workspaceId),
+    refetchOnMount: options?.refetchOnMount,
+    select: (detail) => detail?.accessLevel ?? null,
+  })
 }
 
 export function useWorkspaceAccess(workspaceId: string | null | undefined) {
@@ -141,10 +166,15 @@ export function useWorkspaceAccessTargets(
 
 export function useWorkspacePersonAccessTargets(
   workspaceId: string | null | undefined,
+  options?: { enabled?: boolean },
 ) {
   const { apiFetch } = useNotelabFeatures()
 
-  return useQuery(workspacePersonAccessTargetsQueryOptions(apiFetch, workspaceId))
+  return useQuery({
+    ...workspacePersonAccessTargetsQueryOptions(apiFetch, workspaceId),
+    enabled:
+      Boolean(workspaceId) && (options?.enabled ?? true),
+  })
 }
 
 export function useWorkspaceProperties(workspaceId: string | null | undefined) {
@@ -192,7 +222,7 @@ export function useCreateWorkspace() {
       name = "",
       emoji,
       metadata: inputMetadata,
-      parentWorkspaceId,
+      parentItemId,
     }: CreateWorkspaceInput) => {
       const userSettings =
         queryClient.getQueryData<UserSettings>(userSettingsQueryKey) ??
@@ -207,8 +237,9 @@ export function useCreateWorkspace() {
         metadata.emoji = emoji
       }
 
-      if (parentWorkspaceId) {
-        metadata.parentWorkspaceId = parentWorkspaceId
+      if (parentItemId) {
+        metadata.parentItemId = parentItemId
+        metadata.parentItemKind = "workspace"
       }
 
       const result = await apiFetch<{ workspace: Workspace }>("/workspaces", {
@@ -226,13 +257,16 @@ export function useCreateWorkspace() {
       return result.workspace
     },
     onSuccess: async (workspace) => {
-      queryClient.setQueryData<Workspace | null>(
+      queryClient.setQueryData<WorkspaceDetail | null>(
         workspaceQueryKey(workspace.id),
         (current) => ({
-          ...(current ?? {}),
-          ...workspace,
-          isFavorite: workspace.isFavorite ?? current?.isFavorite,
-          isTeamspace: workspace.isTeamspace ?? current?.isTeamspace,
+          accessLevel: current?.accessLevel ?? null,
+          workspace: {
+            ...(current?.workspace ?? {}),
+            ...workspace,
+            isFavorite: workspace.isFavorite ?? current?.workspace.isFavorite,
+            isTeamspace: workspace.isTeamspace ?? current?.workspace.isTeamspace,
+          },
         }),
       )
       await Promise.all([
@@ -272,7 +306,9 @@ export function useUpsertWorkspaceAccess() {
         queryClient.invalidateQueries({
           queryKey: workspaceAccessQueryKey(variables.workspaceId),
         }),
-        queryClient.invalidateQueries({ queryKey: ["workspaces"] }),
+        queryClient.invalidateQueries({
+          queryKey: workspaceQueryKey(variables.workspaceId),
+        }),
       ])
     },
   })
@@ -298,7 +334,9 @@ export function useDeleteWorkspaceAccess() {
         queryClient.invalidateQueries({
           queryKey: workspaceAccessQueryKey(variables.workspaceId),
         }),
-        queryClient.invalidateQueries({ queryKey: ["workspaces"] }),
+        queryClient.invalidateQueries({
+          queryKey: workspaceQueryKey(variables.workspaceId),
+        }),
       ])
     },
   })
@@ -339,10 +377,66 @@ export function useSetWorkspacePublished() {
           queryKey: workspaceAccessQueryKey(variables.workspaceId),
         }),
         queryClient.invalidateQueries({
-          queryKey: [...workspaceQueryKey(variables.workspaceId), "access-level"],
+          queryKey: workspaceQueryKey(variables.workspaceId),
         }),
-        queryClient.invalidateQueries({ queryKey: ["workspaces"] }),
       ])
+    },
+  })
+}
+
+type EmbedWorkspaceItemInput = {
+  hostWorkspaceId: string
+  itemId: string
+  kind: NavItemKind
+}
+
+export function useEmbedWorkspaceItem() {
+  const { apiFetch, queryClient } = useNotelabFeatures()
+
+  return useMutation({
+    mutationFn: async ({
+      hostWorkspaceId,
+      itemId,
+      kind,
+    }: EmbedWorkspaceItemInput) =>
+      apiFetch<{ action: string; host: Workspace }>(
+        `/workspaces/${hostWorkspaceId}/embed-item`,
+        {
+          method: "POST",
+          body: JSON.stringify({ itemId, kind }),
+        },
+      ),
+    onSuccess: async (result) => {
+      await queryClient.invalidateQueries({
+        queryKey: workspacesQueryKey(result.host.organizationId),
+      })
+    },
+  })
+}
+
+export function useRemoveWorkspaceEmbed() {
+  const { apiFetch, queryClient } = useNotelabFeatures()
+
+  return useMutation({
+    mutationFn: async ({
+      hostWorkspaceId,
+      itemId,
+      kind,
+    }: EmbedWorkspaceItemInput) =>
+      apiFetch<{ action: string }>(`/workspaces/${hostWorkspaceId}/embed-item`, {
+        method: "DELETE",
+        body: JSON.stringify({ itemId, kind }),
+      }),
+    onSuccess: async (_result, variables) => {
+      const host = getWorkspaceFromDetail(
+        queryClient.getQueryData(workspaceQueryKey(variables.hostWorkspaceId)),
+      )
+
+      if (host) {
+        await queryClient.invalidateQueries({
+          queryKey: workspacesQueryKey(host.organizationId),
+        })
+      }
     },
   })
 }
@@ -362,9 +456,23 @@ export function useUpdateWorkspace() {
 
       return result.workspace
     },
-    onSuccess: async (workspace) => {
-      queryClient.setQueryData(workspaceQueryKey(workspace.id), workspace)
-      await Promise.all([
+    onSuccess: async (workspace, variables) => {
+      queryClient.setQueryData<WorkspaceDetail | null>(
+        workspaceQueryKey(workspace.id),
+        (current) => ({
+          accessLevel: current?.accessLevel ?? null,
+          workspace,
+        }),
+      )
+
+      const navFieldsChanged =
+        variables.name !== undefined || variables.metadata !== undefined
+
+      if (!navFieldsChanged) {
+        return
+      }
+
+      const invalidations = [
         queryClient.invalidateQueries({
           queryKey: workspacesQueryKey(workspace.organizationId),
         }),
@@ -372,7 +480,9 @@ export function useUpdateWorkspace() {
           queryKey: notelabAiWorkspacesQueryKey(workspace.organizationId),
         }),
         queryClient.invalidateQueries({ queryKey: ["database"] }),
-      ])
+      ]
+
+      await Promise.all(invalidations)
     },
   })
 }
@@ -393,11 +503,16 @@ export function useSetWorkspaceFavorite() {
       return result.workspace
     },
     onSuccess: async (workspace) => {
-      queryClient.setQueryData(workspaceQueryKey(workspace.id), workspace)
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["database"] }),
-        queryClient.invalidateQueries({ queryKey: ["workspaces"] }),
-      ])
+      queryClient.setQueryData<WorkspaceDetail | null>(
+        workspaceQueryKey(workspace.id),
+        (current) => ({
+          accessLevel: current?.accessLevel ?? null,
+          workspace,
+        }),
+      )
+      await queryClient.invalidateQueries({
+        queryKey: workspacesQueryKey(workspace.organizationId),
+      })
     },
   })
 }
