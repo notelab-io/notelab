@@ -1,6 +1,19 @@
 "use client";
 
-import { useState, type CSSProperties, type ReactNode } from "react";
+import { useState, type CSSProperties } from "react";
+
+import {
+  CollapsibleConnectorPanel,
+  ConnectorStat,
+  ConnectorTitle,
+  metadataItem,
+} from "../../../shared/connector-ui.js";
+import { connectorUiStyles } from "../../../shared/connector-ui-styles.js";
+import {
+  formatConnectorBytes,
+  formatConnectorDateTime,
+  formatConnectorNumber,
+} from "../../../shared/format.js";
 
 import type {
   GmailAttachmentSummary,
@@ -325,85 +338,12 @@ const styles: Record<string, CSSProperties> = {
     fontSize: 12,
     padding: "6px 9px",
   },
-  panel: {
-    display: "grid",
-    gap: 10,
-  },
-  searchHeader: {
-    alignItems: "center",
-    display: "flex",
-    gap: 12,
-    justifyContent: "space-between",
-    marginBottom: 2,
-  },
-  sourceTitle: {
-    alignItems: "center",
-    display: "flex",
-    gap: 8,
-    minWidth: 0,
-  },
-  sourceIcon: {
-    flex: "0 0 auto",
-    height: 16,
-    width: 16,
-  },
-  headerActions: {
-    alignItems: "center",
-    display: "flex",
-    flex: "0 0 auto",
-    gap: 6,
-  },
-  toggleButton: {
-    alignItems: "center",
-    background: "transparent",
-    border: "1px solid color-mix(in srgb, currentColor 16%, transparent)",
-    borderRadius: 999,
-    color: "color-mix(in srgb, currentColor 70%, transparent)",
-    cursor: "pointer",
-    display: "inline-flex",
-    font: "inherit",
-    fontSize: 12,
-    height: 24,
-    justifyContent: "center",
-    lineHeight: 1,
-    padding: 0,
-    width: 24,
-  },
-  collapseRegion: {
-    display: "grid",
-    overflow: "hidden",
-    transition:
-      "grid-template-rows 180ms ease, opacity 160ms ease, margin-top 180ms ease",
-  },
-  collapseInner: {
-    minHeight: 0,
-    overflow: "hidden",
-  },
-  searchSummary: {
-    color: "color-mix(in srgb, currentColor 60%, transparent)",
-    fontSize: 11,
-    lineHeight: 1.35,
-    marginTop: 2,
-  },
+  panel: connectorUiStyles.panel,
   header: {
     alignItems: "start",
     display: "flex",
     gap: 10,
     justifyContent: "space-between",
-  },
-  kicker: {
-    color: "color-mix(in srgb, currentColor 58%, transparent)",
-    fontSize: 11,
-    fontWeight: 700,
-    letterSpacing: 0,
-    lineHeight: 1.2,
-    textTransform: "uppercase",
-  },
-  title: {
-    fontSize: 14,
-    fontWeight: 600,
-    lineHeight: 1.3,
-    marginTop: 3,
   },
   meta: {
     color: "color-mix(in srgb, currentColor 66%, transparent)",
@@ -475,15 +415,7 @@ const styles: Record<string, CSSProperties> = {
     padding: 10,
     whiteSpace: "pre-wrap",
   },
-  pill: {
-    border: "1px solid color-mix(in srgb, currentColor 15%, transparent)",
-    borderRadius: 999,
-    color: "color-mix(in srgb, currentColor 68%, transparent)",
-    fontSize: 11,
-    lineHeight: 1,
-    padding: "4px 7px",
-    whiteSpace: "nowrap",
-  },
+  pill: connectorUiStyles.pill,
   labelPill: {
     background: "color-mix(in srgb, currentColor 5%, transparent)",
     border: "1px solid color-mix(in srgb, currentColor 13%, transparent)",
@@ -493,13 +425,6 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1,
     padding: "4px 7px",
     whiteSpace: "nowrap",
-  },
-  stat: {
-    background: "color-mix(in srgb, currentColor 6%, transparent)",
-    borderRadius: 6,
-    display: "grid",
-    gap: 3,
-    padding: "10px 12px",
   },
   statGrid: {
     display: "grid",
@@ -629,54 +554,34 @@ function GmailSearchResults({
   output: SearchGmailMessagesOutput;
 }) {
   const messages = output.messages ?? [];
-  const [isExpanded, setIsExpanded] = useState(true);
   const countLabel =
     typeof output.resultSizeEstimate === "number"
       ? `${output.resultSizeEstimate} estimated`
       : `${messages.length} shown`;
 
   return (
-    <section className={className} style={styles.panel}>
-      <div style={styles.searchHeader}>
-        <div>
-          <SourceTitle iconSrc={gmailIconSrc} title="Matching messages" />
-          <div style={styles.searchSummary}>
-            {messages.length
-              ? `${messages.length} messages shown from Gmail`
-              : "No messages returned from Gmail"}
-          </div>
+    <CollapsibleConnectorPanel
+      className={className}
+      countLabel={countLabel}
+      expandedLabels={{
+        hide: "Hide Gmail results",
+        show: "Show Gmail results",
+      }}
+      iconSrc={gmailIconSrc}
+      summary={
+        messages.length
+          ? `${messages.length} messages shown from Gmail`
+          : "No messages returned from Gmail"
+      }
+      title="Matching messages"
+    >
+      <EmailInboxWidget messages={messages} />
+      {output.nextPageToken ? (
+        <div style={{ ...styles.meta, paddingTop: 2 }}>
+          More results are available in Gmail.
         </div>
-        <div style={styles.headerActions}>
-          <span style={styles.pill}>{countLabel}</span>
-          <button
-            aria-expanded={isExpanded}
-            aria-label={isExpanded ? "Hide Gmail results" : "Show Gmail results"}
-            onClick={() => setIsExpanded((current) => !current)}
-            style={styles.toggleButton}
-            type="button"
-          >
-            <ChevronIcon expanded={isExpanded} />
-          </button>
-        </div>
-      </div>
-      <div
-        style={{
-          ...styles.collapseRegion,
-          gridTemplateRows: isExpanded ? "1fr" : "0fr",
-          marginTop: isExpanded ? 0 : -6,
-          opacity: isExpanded ? 1 : 0,
-        }}
-      >
-        <div style={styles.collapseInner}>
-          <EmailInboxWidget messages={messages} />
-          {output.nextPageToken ? (
-            <div style={{ ...styles.meta, paddingTop: 2 }}>
-              More results are available in Gmail.
-            </div>
-          ) : null}
-        </div>
-      </div>
-    </section>
+      ) : null}
+    </CollapsibleConnectorPanel>
   );
 }
 
@@ -692,7 +597,7 @@ function GmailLabels({
   return (
     <section className={className} style={styles.panel}>
       <div style={styles.header}>
-        <Title kicker="Gmail labels" title="Mailbox labels" />
+        <ConnectorTitle kicker="Gmail labels" title="Mailbox labels" />
         <span style={styles.pill}>{labels.length} labels</span>
       </div>
       <div style={styles.rowList}>
@@ -704,7 +609,7 @@ function GmailLabels({
             >
               <div style={styles.header}>
                 <div>
-                  <div style={styles.title}>{label.name}</div>
+                  <div style={connectorUiStyles.title}>{label.name}</div>
                   <div style={{ ...styles.meta, marginTop: 4 }}>
                     {metadataItem("ID", label.id)}
                     {metadataItem("Type", label.type)}
@@ -714,9 +619,9 @@ function GmailLabels({
                 <span style={styles.pill}>{label.type ?? "label"}</span>
               </div>
               <div style={styles.meta}>
-                <span>{formatNumber(label.messagesUnread)} unread messages</span>
-                <span>{formatNumber(label.messagesTotal)} total messages</span>
-                <span>{formatNumber(label.threadsUnread)} unread threads</span>
+                <span>{formatConnectorNumber(label.messagesUnread)} unread messages</span>
+                <span>{formatConnectorNumber(label.messagesTotal)} total messages</span>
+                <span>{formatConnectorNumber(label.threadsUnread)} unread threads</span>
               </div>
             </div>
           ))
@@ -744,7 +649,7 @@ function GmailDrafts({
   return (
     <section className={className} style={styles.panel}>
       <div style={styles.header}>
-        <Title kicker="Gmail drafts" title="Draft messages" />
+        <ConnectorTitle kicker="Gmail drafts" title="Draft messages" />
         <span style={styles.pill}>{countLabel}</span>
       </div>
       <div style={styles.list}>
@@ -783,7 +688,7 @@ function GmailDraft({
           ) : null}
         </>
       ) : (
-        <Title kicker="Gmail draft" title={draft.id} />
+        <ConnectorTitle kicker="Gmail draft" title={draft.id} />
       )}
       <div style={styles.meta}>{metadataItem("Draft", draft.id)}</div>
     </section>
@@ -800,14 +705,14 @@ function GmailLabelCard({
   return (
     <section className={className} style={styles.card}>
       <div style={styles.header}>
-        <Title kicker="Gmail label" title={label.name} />
+        <ConnectorTitle kicker="Gmail label" title={label.name} />
         <span style={styles.pill}>{label.type ?? "label"}</span>
       </div>
       <div style={styles.statGrid}>
-        <Stat label="Messages" value={formatNumber(label.messagesTotal)} />
-        <Stat label="Unread" value={formatNumber(label.messagesUnread)} />
-        <Stat label="Threads" value={formatNumber(label.threadsTotal)} />
-        <Stat label="Unread Threads" value={formatNumber(label.threadsUnread)} />
+        <ConnectorStat label="Messages" value={formatConnectorNumber(label.messagesTotal)} />
+        <ConnectorStat label="Unread" value={formatConnectorNumber(label.messagesUnread)} />
+        <ConnectorStat label="Threads" value={formatConnectorNumber(label.threadsTotal)} />
+        <ConnectorStat label="Unread Threads" value={formatConnectorNumber(label.threadsUnread)} />
       </div>
       <div style={styles.meta}>
         {metadataItem("ID", label.id)}
@@ -834,7 +739,7 @@ function GmailThreads({
   return (
     <section className={className} style={styles.panel}>
       <div style={styles.header}>
-        <Title kicker="Gmail threads" title="Matching conversations" />
+        <ConnectorTitle kicker="Gmail threads" title="Matching conversations" />
         <span style={styles.pill}>{countLabel}</span>
       </div>
       <div style={styles.threadList}>
@@ -866,13 +771,13 @@ function ThreadRow({
     <section style={styles.threadGroup}>
       <div style={styles.header}>
         <div>
-          <Title kicker="Gmail thread" title={threadTitle(messages, thread.id)} />
+          <ConnectorTitle kicker="Gmail thread" title={threadTitle(messages, thread.id)} />
           <div style={{ ...styles.meta, marginTop: 6 }}>
             {senderSummary ? <span>{senderSummary}</span> : null}
             {latestMessage
               ? metadataItem(
                   "Latest",
-                  formatDate(latestMessage.date ?? latestMessage.internalDate),
+                  formatConnectorDateTime(latestMessage.date ?? latestMessage.internalDate),
                 )
               : null}
           </div>
@@ -1043,7 +948,7 @@ function GmailThread({
     <section className={className} style={styles.panel}>
       <div style={styles.header}>
         <div>
-          <Title kicker="Gmail thread" title={threadTitle(messages, output.id)} />
+          <ConnectorTitle kicker="Gmail thread" title={threadTitle(messages, output.id)} />
           {senderSummary ? (
             <div style={{ ...styles.meta, marginTop: 6 }}>
               <span>{senderSummary}</span>
@@ -1090,11 +995,11 @@ function GmailProfileCard({
 }) {
   return (
     <section className={className} style={styles.card}>
-      <Title kicker="Gmail profile" title={profile.emailAddress} />
+      <ConnectorTitle kicker="Gmail profile" title={profile.emailAddress} />
       <div style={styles.statGrid}>
-        <Stat label="Messages" value={formatNumber(profile.messagesTotal)} />
-        <Stat label="Threads" value={formatNumber(profile.threadsTotal)} />
-        <Stat label="History ID" value={profile.historyId ?? "Unavailable"} />
+        <ConnectorStat label="Messages" value={formatConnectorNumber(profile.messagesTotal)} />
+        <ConnectorStat label="Threads" value={formatConnectorNumber(profile.threadsTotal)} />
+        <ConnectorStat label="History ID" value={profile.historyId ?? "Unavailable"} />
       </div>
     </section>
   );
@@ -1113,7 +1018,7 @@ function GmailAttachments({
     <section className={className} style={styles.panel}>
       <div style={styles.header}>
         <div>
-          <Title
+          <ConnectorTitle
             kicker="Gmail attachments"
             title={output.subject ?? "Message attachments"}
           />
@@ -1153,8 +1058,8 @@ function GmailAttachment({
   return (
     <section className={className} style={styles.card}>
       <div style={styles.header}>
-        <Title kicker="Gmail attachment" title={output.attachmentId} />
-        <span style={styles.pill}>{formatBytes(output.size)}</span>
+        <ConnectorTitle kicker="Gmail attachment" title={output.attachmentId} />
+        <span style={styles.pill}>{formatConnectorBytes(output.size)}</span>
       </div>
       <div style={styles.meta}>
         {metadataItem("Message", output.messageId)}
@@ -1184,7 +1089,7 @@ function GmailHistoryList({
   return (
     <section className={className} style={styles.panel}>
       <div style={styles.header}>
-        <Title kicker="Gmail history" title="Mailbox changes" />
+        <ConnectorTitle kicker="Gmail history" title="Mailbox changes" />
         <span style={styles.pill}>{history.length} events</span>
       </div>
       <div style={styles.rowList}>
@@ -1195,7 +1100,7 @@ function GmailHistoryList({
               style={{ ...styles.row, borderTop: index === 0 ? 0 : emailSeparatorBorder }}
             >
               <div style={styles.header}>
-                <div style={styles.title}>History {event.id ?? index + 1}</div>
+                <div style={connectorUiStyles.title}>History {event.id ?? index + 1}</div>
                 <span style={styles.pill}>
                   {historyEventCount(event)} changes
                 </span>
@@ -1236,8 +1141,8 @@ function GmailRawMessage({
   return (
     <section className={className} style={styles.card}>
       <div style={styles.header}>
-        <Title kicker="Gmail raw message" title={output.id} />
-        <span style={styles.pill}>{formatBytes(output.sizeEstimate)}</span>
+        <ConnectorTitle kicker="Gmail raw message" title={output.id} />
+        <span style={styles.pill}>{formatConnectorBytes(output.sizeEstimate)}</span>
       </div>
       <div style={styles.meta}>
         {metadataItem("Thread", output.threadId)}
@@ -1262,7 +1167,7 @@ function AttachmentRow({
     >
       <div style={styles.header}>
         <div>
-          <div style={styles.title}>
+          <div style={connectorUiStyles.title}>
             {attachment.filename || attachment.mimeType || "Attachment"}
           </div>
           <div style={{ ...styles.meta, marginTop: 4 }}>
@@ -1271,7 +1176,7 @@ function AttachmentRow({
             {metadataItem("MIME", attachment.mimeType)}
           </div>
         </div>
-        <span style={styles.pill}>{formatBytes(attachment.size)}</span>
+        <span style={styles.pill}>{formatConnectorBytes(attachment.size)}</span>
       </div>
     </div>
   );
@@ -1309,14 +1214,14 @@ function MessageHeading({ message }: { message: GmailMessageSummary }) {
   return (
     <div style={styles.header}>
       <div>
-        <Title
+        <ConnectorTitle
           kicker={getSenderName(message.from)}
           title={message.subject ?? "(No subject)"}
         />
         <div style={{ ...styles.meta, marginTop: 6 }}>
           {metadataItem("From", getSenderAddress(message.from))}
           {metadataItem("To", message.to)}
-          {metadataItem("Date", formatDate(message.date ?? message.internalDate))}
+          {metadataItem("Date", formatConnectorDateTime(message.date ?? message.internalDate))}
         </div>
       </div>
       <div style={styles.pillGroup}>
@@ -1436,63 +1341,6 @@ function EmailFrame({ message }: { message: GmailMessageSummary }) {
       title={message.subject ?? "Email message"}
     />
   );
-}
-
-function SourceTitle({ iconSrc, title }: { iconSrc: string; title: ReactNode }) {
-  return (
-    <div style={styles.sourceTitle}>
-      <img alt="" aria-hidden="true" src={iconSrc} style={styles.sourceIcon} />
-      <div style={{ ...styles.title, marginTop: 0 }}>{title}</div>
-    </div>
-  );
-}
-
-function ChevronIcon({ expanded }: { expanded: boolean }) {
-  return (
-    <svg
-      aria-hidden="true"
-      fill="none"
-      height="14"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-      style={{
-        transform: expanded ? "rotate(180deg)" : "rotate(0deg)",
-        transition: "transform 140ms ease",
-      }}
-      viewBox="0 0 24 24"
-      width="14"
-    >
-      <path d="m6 9 6 6 6-6" />
-    </svg>
-  );
-}
-
-function Title({ kicker, title }: { kicker: ReactNode; title: ReactNode }) {
-  return (
-    <div>
-      <div style={styles.kicker}>{kicker}</div>
-      <div style={styles.title}>{title}</div>
-    </div>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={styles.stat}>
-      <span style={styles.kicker}>{label}</span>
-      <span style={styles.title}>{value}</span>
-    </div>
-  );
-}
-
-function metadataItem(label: string, value?: string) {
-  return value ? (
-    <span>
-      {label}: {value}
-    </span>
-  ) : null;
 }
 
 function getSenderName(from?: string) {
@@ -1672,44 +1520,6 @@ function escapeHtml(value: string) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
-}
-
-function formatDate(value?: string) {
-  if (!value) {
-    return undefined;
-  }
-
-  const date =
-    /^\d+$/.test(value) ? new Date(Number.parseInt(value, 10)) : new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
-}
-
-function formatNumber(value?: number) {
-  return typeof value === "number" ? new Intl.NumberFormat().format(value) : "Unavailable";
-}
-
-function formatBytes(value?: number) {
-  if (typeof value !== "number") {
-    return "Unknown size";
-  }
-
-  if (value < 1024) {
-    return `${value} B`;
-  }
-
-  if (value < 1024 * 1024) {
-    return `${(value / 1024).toFixed(1)} KB`;
-  }
-
-  return `${(value / 1024 / 1024).toFixed(1)} MB`;
 }
 
 function historyEventCount(event: GmailHistory) {

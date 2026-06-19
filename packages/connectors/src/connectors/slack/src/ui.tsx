@@ -2,6 +2,12 @@
 
 import { useState, type CSSProperties } from "react";
 
+import { ChevronIcon, SourceTitle } from "../../../shared/connector-ui.js";
+import {
+  collapseRegionStyle,
+  connectorUiStyles,
+} from "../../../shared/connector-ui-styles.js";
+
 const slackIconSrc = "/icons/slack.svg";
 
 export type SlackToolName =
@@ -43,17 +49,6 @@ const styles: Record<string, CSSProperties> = {
     gap: 12,
     justifyContent: "space-between",
   },
-  sourceTitle: {
-    alignItems: "center",
-    display: "flex",
-    gap: 8,
-    minWidth: 0,
-  },
-  sourceIcon: {
-    flex: "0 0 auto",
-    height: 16,
-    width: 16,
-  },
   main: {
     display: "grid",
     flex: "1 1 auto",
@@ -68,55 +63,13 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1.2,
     textTransform: "uppercase",
   },
-  title: {
-    color: "color-mix(in srgb, currentColor 92%, transparent)",
-    fontSize: 14,
-    fontWeight: 600,
-    lineHeight: 1.3,
-  },
-  headerActions: {
-    alignItems: "center",
-    display: "flex",
-    flex: "0 0 auto",
-    gap: 6,
-  },
-  pill: {
-    border: "1px solid color-mix(in srgb, currentColor 16%, transparent)",
-    borderRadius: 999,
-    color: "color-mix(in srgb, currentColor 66%, transparent)",
-    fontSize: 12,
-    fontWeight: 600,
-    lineHeight: 1,
-    padding: "4px 7px",
-    whiteSpace: "nowrap",
-  },
-  toggleButton: {
-    alignItems: "center",
-    background: "transparent",
-    border: "1px solid color-mix(in srgb, currentColor 16%, transparent)",
-    borderRadius: 999,
-    color: "color-mix(in srgb, currentColor 70%, transparent)",
-    cursor: "pointer",
-    display: "inline-flex",
-    font: "inherit",
-    fontSize: 12,
-    height: 24,
-    justifyContent: "center",
-    lineHeight: 1,
-    padding: 0,
-    width: 24,
-  },
-  collapseRegion: {
-    display: "grid",
-    overflow: "hidden",
-    transition:
-      "grid-template-rows 180ms ease, opacity 160ms ease, margin-top 180ms ease",
-  },
+  headerActions: connectorUiStyles.headerActions,
+  pill: connectorUiStyles.pill,
+  toggleButton: connectorUiStyles.toggleButton,
   collapseInner: {
+    ...connectorUiStyles.collapseInner,
     display: "grid",
     gap: 12,
-    minHeight: 0,
-    overflow: "hidden",
   },
   guide: {
     alignItems: "center",
@@ -217,17 +170,7 @@ export function SlackToolOutput({
     <section className={className} style={styles.card}>
       <div style={styles.header}>
         <div>
-          <div style={styles.sourceTitle}>
-            <img
-              alt=""
-              aria-hidden="true"
-              src={slackIconSrc}
-              style={styles.sourceIcon}
-            />
-            <div style={styles.title}>
-              Slack access needed
-            </div>
-          </div>
+          <SourceTitle iconSrc={slackIconSrc} title="Slack access needed" />
           <div style={styles.collapsedMeta}>
             {channelCount > 1
               ? `Invite Notelab to ${channelCount} channels`
@@ -247,14 +190,7 @@ export function SlackToolOutput({
           </button>
         </div>
       </div>
-      <div
-        style={{
-          ...styles.collapseRegion,
-          gridTemplateRows: isExpanded ? "1fr" : "0fr",
-          marginTop: isExpanded ? 0 : -6,
-          opacity: isExpanded ? 1 : 0,
-        }}
-      >
+      <div style={collapseRegionStyle(isExpanded)}>
         <div style={styles.collapseInner}>
           <div style={styles.main}>
             <p style={styles.body}>
@@ -297,28 +233,6 @@ export function SlackToolOutput({
         </div>
       </div>
     </section>
-  );
-}
-
-function ChevronIcon({ expanded }: { expanded: boolean }) {
-  return (
-    <svg
-      aria-hidden="true"
-      fill="none"
-      height="14"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-      style={{
-        transform: expanded ? "rotate(180deg)" : "rotate(0deg)",
-        transition: "transform 140ms ease",
-      }}
-      viewBox="0 0 24 24"
-      width="14"
-    >
-      <path d="m6 9 6 6 6-6" />
-    </svg>
   );
 }
 

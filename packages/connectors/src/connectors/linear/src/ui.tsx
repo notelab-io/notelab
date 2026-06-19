@@ -2,6 +2,17 @@
 
 import { useState, type CSSProperties, type ReactNode } from "react";
 
+import {
+  ChevronIcon,
+  ConnectorStat,
+  SourceTitle,
+} from "../../../shared/connector-ui.js";
+import {
+  collapseRegionStyle,
+  connectorUiStyles,
+} from "../../../shared/connector-ui-styles.js";
+import { formatConnectorMediumDate } from "../../../shared/format.js";
+
 const linearIconSrc = "/icons/linear.svg";
 
 export type LinearToolName =
@@ -135,63 +146,9 @@ const styles: Record<string, CSSProperties> = {
     gap: 12,
     justifyContent: "space-between",
   },
-  sourceTitle: {
-    alignItems: "center",
-    display: "flex",
-    gap: 8,
-    minWidth: 0,
-  },
-  sourceIcon: {
-    flex: "0 0 auto",
-    height: 16,
-    width: 16,
-  },
-  headerActions: {
-    alignItems: "center",
-    display: "flex",
-    flex: "0 0 auto",
-    gap: 6,
-  },
-  toggleButton: {
-    alignItems: "center",
-    background: "transparent",
-    border: "1px solid color-mix(in srgb, currentColor 16%, transparent)",
-    borderRadius: 999,
-    color: "color-mix(in srgb, currentColor 70%, transparent)",
-    cursor: "pointer",
-    display: "inline-flex",
-    font: "inherit",
-    fontSize: 12,
-    height: 24,
-    justifyContent: "center",
-    lineHeight: 1,
-    padding: 0,
-    width: 24,
-  },
-  collapseRegion: {
-    display: "grid",
-    overflow: "hidden",
-    transition:
-      "grid-template-rows 180ms ease, opacity 160ms ease, margin-top 180ms ease",
-  },
-  collapseInner: {
-    minHeight: 0,
-    overflow: "hidden",
-  },
-  kicker: {
-    color: "color-mix(in srgb, currentColor 58%, transparent)",
-    fontSize: 11,
-    fontWeight: 700,
-    letterSpacing: 0,
-    lineHeight: 1.2,
-    textTransform: "uppercase",
-  },
-  title: {
-    fontSize: 14,
-    fontWeight: 600,
-    lineHeight: 1.3,
-    marginTop: 3,
-  },
+  headerActions: connectorUiStyles.headerActions,
+  toggleButton: connectorUiStyles.toggleButton,
+  collapseInner: connectorUiStyles.collapseInner,
   summary: {
     color: "color-mix(in srgb, currentColor 60%, transparent)",
     fontSize: 11,
@@ -287,15 +244,7 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1.35,
     marginTop: 7,
   },
-  pill: {
-    border: "1px solid color-mix(in srgb, currentColor 15%, transparent)",
-    borderRadius: 999,
-    color: "color-mix(in srgb, currentColor 68%, transparent)",
-    fontSize: 11,
-    lineHeight: 1,
-    padding: "4px 7px",
-    whiteSpace: "nowrap",
-  },
+  pill: connectorUiStyles.pill,
   card: {
     border: "1px solid color-mix(in srgb, currentColor 14%, transparent)",
     borderRadius: 8,
@@ -307,13 +256,6 @@ const styles: Record<string, CSSProperties> = {
     display: "grid",
     gap: 8,
     gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-  },
-  stat: {
-    background: "color-mix(in srgb, currentColor 6%, transparent)",
-    borderRadius: 6,
-    display: "grid",
-    gap: 3,
-    padding: "10px 12px",
   },
 };
 
@@ -401,14 +343,7 @@ function LinearIssues({
         }
         title={title}
       />
-      <div
-        style={{
-          ...styles.collapseRegion,
-          gridTemplateRows: isExpanded ? "1fr" : "0fr",
-          marginTop: isExpanded ? 0 : -6,
-          opacity: isExpanded ? 1 : 0,
-        }}
-      >
+      <div style={collapseRegionStyle(isExpanded)}>
         <div style={styles.collapseInner}>
           <div style={styles.list}>
             {issues.length ? (
@@ -440,7 +375,7 @@ function IssueRow({ index, issue }: { index: number; issue: LinearIssueSummary }
       <div style={styles.rowMain}>
         <div style={styles.rowTopline}>
           <span style={styles.id}>{issue.identifier}</span>
-          <span style={styles.rowMeta}>{formatDate(issue.updatedAt)}</span>
+          <span style={styles.rowMeta}>{formatConnectorMediumDate(issue.updatedAt)}</span>
         </div>
         <p style={styles.itemTitle}>{issue.title}</p>
         {issue.description ? (
@@ -469,7 +404,7 @@ function LinearIssueDetail({
       <ToolHeader
         countLabel={issue.state?.name ?? "Issue"}
         kicker={issue.identifier}
-        summary={issue.team ? `${issue.team.name} · Updated ${formatDate(issue.updatedAt)}` : `Updated ${formatDate(issue.updatedAt)}`}
+        summary={issue.team ? `${issue.team.name} · Updated ${formatConnectorMediumDate(issue.updatedAt)}` : `Updated ${formatConnectorMediumDate(issue.updatedAt)}`}
         title={issue.title}
       />
       {issue.description ? (
@@ -514,7 +449,7 @@ function LinearComments({
               <div style={styles.rowMain}>
                 <div style={styles.rowTopline}>
                   <span style={styles.id}>{userLabel(comment.user)}</span>
-                  <span style={styles.rowMeta}>{formatDate(comment.createdAt)}</span>
+                  <span style={styles.rowMeta}>{formatConnectorMediumDate(comment.createdAt)}</span>
                 </div>
                 <p style={{ ...styles.description, whiteSpace: "pre-wrap" }}>
                   {stripMarkdown(comment.body)}
@@ -652,9 +587,9 @@ function LinearProfile({
         title={output.organization?.name ?? "Linear workspace"}
       />
       <div style={styles.statGrid}>
-        <Stat label="Workspace" value={output.organization?.name ?? "Unavailable"} />
-        <Stat label="URL key" value={output.organization?.urlKey ?? "Unavailable"} />
-        <Stat label="Viewer" value={output.viewer ? userLabel(output.viewer) : "Unavailable"} />
+        <ConnectorStat label="Workspace" value={output.organization?.name ?? "Unavailable"} />
+        <ConnectorStat label="URL key" value={output.organization?.urlKey ?? "Unavailable"} />
+        <ConnectorStat label="Viewer" value={output.viewer ? userLabel(output.viewer) : "Unavailable"} />
       </div>
     </section>
   );
@@ -682,8 +617,8 @@ function ToolHeader({
           <SourceTitle iconSrc={linearIconSrc} title={title} />
         ) : (
           <>
-            <div style={styles.kicker}>{kicker}</div>
-            <div style={styles.title}>{title}</div>
+            <div style={connectorUiStyles.kicker}>{kicker}</div>
+            <div style={connectorUiStyles.title}>{title}</div>
           </>
         )}
         {summary ? <div style={styles.summary}>{summary}</div> : null}
@@ -708,46 +643,6 @@ function ToolHeader({
   );
 }
 
-function SourceTitle({ iconSrc, title }: { iconSrc: string; title: ReactNode }) {
-  return (
-    <div style={styles.sourceTitle}>
-      <img alt="" aria-hidden="true" src={iconSrc} style={styles.sourceIcon} />
-      <div style={{ ...styles.title, marginTop: 0 }}>{title}</div>
-    </div>
-  );
-}
-
-function ChevronIcon({ expanded }: { expanded: boolean }) {
-  return (
-    <svg
-      aria-hidden="true"
-      fill="none"
-      height="14"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-      style={{
-        transform: expanded ? "rotate(180deg)" : "rotate(0deg)",
-        transition: "transform 140ms ease",
-      }}
-      viewBox="0 0 24 24"
-      width="14"
-    >
-      <path d="m6 9 6 6 6-6" />
-    </svg>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={styles.stat}>
-      <span style={styles.kicker}>{label}</span>
-      <span style={styles.title}>{value}</span>
-    </div>
-  );
-}
-
 function Empty({ label }: { label: string }) {
   return <div style={{ ...styles.row, borderTop: 0 }}>{label}</div>;
 }
@@ -767,22 +662,6 @@ function initials(value?: string) {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase())
     .join("") || "?";
-}
-
-function formatDate(value?: string) {
-  if (!value) {
-    return "";
-  }
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-  }).format(date);
 }
 
 function formatShortDate(value: string) {
