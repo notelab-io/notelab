@@ -18,6 +18,7 @@ import {
   View,
 } from 'react-native';
 
+import { AuthField, AuthFieldLabel, AuthInput } from '@/components/auth-form';
 import { TopBar, TopBarInset } from '@/components/top-bar';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
@@ -177,9 +178,9 @@ export function WorkspaceAuthScreen({
               </View>
             ) : (
               <View style={styles.form}>
-                <Field>
-                  <FieldLabel label="Workspace name" />
-                  <Input
+                <AuthField>
+                  <AuthFieldLabel label="Workspace name" />
+                  <AuthInput
                     autoCapitalize="words"
                     autoComplete="organization"
                     editable={!isBusy}
@@ -187,7 +188,7 @@ export function WorkspaceAuthScreen({
                     placeholder="Acme Design"
                     value={workspaceName}
                   />
-                </Field>
+                </AuthField>
 
                 <PrimaryButton
                   disabled={isCreating}
@@ -255,40 +256,6 @@ function WorkspaceCard({
 
       <View style={[styles.selectionDot, isSelected && styles.selectionDotActive]} />
     </Pressable>
-  );
-}
-
-function FieldLabel({ label }: { label: string }) {
-  const { styles } = useThemedStyles(createStyles);
-
-  return <Text style={styles.fieldLabel}>{label}</Text>;
-}
-
-function Field({ children }: React.PropsWithChildren) {
-  const { styles } = useThemedStyles(createStyles);
-
-  return <View style={styles.field}>{children}</View>;
-}
-
-function Input({ style, ...props }: React.ComponentProps<typeof TextInput>) {
-  const { palette, styles } = useThemedStyles(createStyles);
-  const [isFocused, setIsFocused] = React.useState(false);
-
-  return (
-    <TextInput
-      placeholderTextColor={palette.mutedForeground}
-      selectionColor={palette.foreground}
-      style={[styles.input, isFocused && styles.inputFocused, style]}
-      onBlur={(event) => {
-        setIsFocused(false);
-        props.onBlur?.(event);
-      }}
-      onFocus={(event) => {
-        setIsFocused(true);
-        props.onFocus?.(event);
-      }}
-      {...props}
-    />
   );
 }
 
@@ -451,34 +418,6 @@ function createStyles(
     selectionDotActive: {
       borderColor: palette.foreground,
       backgroundColor: palette.foreground,
-    },
-    field: {
-      gap: 8,
-    },
-    fieldLabel: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: palette.foreground,
-    },
-    input: {
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: palette.border,
-      backgroundColor: palette.card,
-      paddingHorizontal: 16,
-      paddingVertical: 14,
-      fontSize: 16,
-      lineHeight: 20,
-      fontFamily: Fonts.sans,
-      fontWeight: '400',
-      color: palette.foreground,
-    },
-    inputFocused: {
-      borderColor: palette.foreground,
-      shadowColor: palette.foreground,
-      shadowOpacity: isDark ? 0.18 : 0.08,
-      shadowRadius: 8,
-      shadowOffset: { width: 0, height: 2 },
     },
     errorText: {
       color: palette.destructive,
