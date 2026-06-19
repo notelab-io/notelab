@@ -6,9 +6,34 @@ import {
   workspaceThreadsQueryKey,
   workspacesQueryKey,
 } from "./queries"
-import type { WorkspaceRealtimeEvent } from "./realtime-utils"
+import type {
+  WorkspaceChangedEvent,
+  WorkspaceRealtimeEvent,
+} from "./realtime-utils"
 
 const refetchDebounceMs = 120
+
+type WorkspaceChangedField = WorkspaceChangedEvent["changed"][number]
+
+export function shouldInvalidateWorkspaceDetail(
+  changed?: WorkspaceChangedField[],
+) {
+  if (!changed || changed.length === 0) {
+    return true
+  }
+
+  return changed.some((field) => field === "name" || field === "metadata")
+}
+
+export function shouldInvalidateWorkspacesNav(
+  changed?: WorkspaceChangedField[],
+) {
+  if (!changed || changed.length === 0) {
+    return true
+  }
+
+  return changed.some((field) => field === "name" || field === "metadata")
+}
 
 type WorkspaceRealtimeSubscriptionOptions = {
   organizationId?: string | null
@@ -24,22 +49,43 @@ export function createWorkspaceRealtimeSubscription({
   let workspaceRefetchTimeout: number | null = null
   let commentsRefetchTimeout: number | null = null
 
-  const scheduleWorkspaceRefetch = (eventOrganizationId?: string | null) => {
+  const scheduleWorkspaceRefetch = (
+    eventOrganizationId?: string | null,
+    changed?: WorkspaceChangedField[],
+  ) => {
+    const invalidateWorkspace = shouldInvalidateWorkspaceDetail(changed)
+    const invalidateNav = shouldInvalidateWorkspacesNav(changed)
+
+    if (!invalidateWorkspace && !invalidateNav) {
+      return
+    }
+
     if (workspaceRefetchTimeout !== null) {
       window.clearTimeout(workspaceRefetchTimeout)
     }
 
     workspaceRefetchTimeout = window.setTimeout(() => {
       workspaceRefetchTimeout = null
-      void Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: workspaceQueryKey(workspaceId),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: workspacesQueryKey(eventOrganizationId ?? organizationId),
-        }),
-        queryClient.invalidateQueries({ queryKey: ["database"] }),
-      ])
+
+      const invalidations = []
+
+      if (invalidateWorkspace) {
+        invalidations.push(
+          queryClient.invalidateQueries({
+            queryKey: workspaceQueryKey(workspaceId),
+          }),
+        )
+      }
+
+      if (invalidateNav) {
+        invalidations.push(
+          queryClient.invalidateQueries({
+            queryKey: workspacesQueryKey(eventOrganizationId ?? organizationId),
+          }),
+        )
+      }
+
+      void Promise.all(invalidations)
     }, refetchDebounceMs)
   }
 
@@ -78,7 +124,7 @@ export function createWorkspaceRealtimeSubscription({
     }
 
     if (message.type === "workspace.changed") {
-      scheduleWorkspaceRefetch(message.organizationId)
+      scheduleWorkspaceRefetch(message.organizationId, message.changed)
       return
     }
 
@@ -88,8 +134,8 @@ export function createWorkspaceRealtimeSubscription({
   }
 
   const scheduleReconnectRefetch = () => {
-    scheduleWorkspaceRefetch()
-    scheduleCommentsRefetch()
+    // Live edits arrive over the workspace realtime channel. Refetching the
+    // full workspace and nav list on every reconnect caused duplicate loads.
   }
 
   const dispose = () => {

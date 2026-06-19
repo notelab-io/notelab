@@ -6,6 +6,10 @@ const featuresRealtimeUtilsPath = join(
   testDir,
   "../../../packages/features/src/workspaces/realtime-utils.ts",
 )
+const featuresRealtimeSubscriptionPath = join(
+  testDir,
+  "../../../packages/features/src/workspaces/realtime-subscription.ts",
+)
 
 export function register({ assert, loadModule, test }) {
   test("workspace realtime URL uses the API origin and WebSocket protocol", async () => {
@@ -70,6 +74,20 @@ export function register({ assert, loadModule, test }) {
       parseWorkspaceRealtimeEvent(JSON.stringify(event)),
       event,
     )
+  })
+
+  test("workspace realtime skips nav/detail refetch for content-only changes", async () => {
+    const {
+      shouldInvalidateWorkspaceDetail,
+      shouldInvalidateWorkspacesNav,
+    } = await loadModule(featuresRealtimeSubscriptionPath)
+
+    assert.equal(shouldInvalidateWorkspaceDetail(["content"]), false)
+    assert.equal(shouldInvalidateWorkspacesNav(["content"]), false)
+    assert.equal(shouldInvalidateWorkspaceDetail(["name"]), true)
+    assert.equal(shouldInvalidateWorkspacesNav(["metadata"]), true)
+    assert.equal(shouldInvalidateWorkspaceDetail(["content", "name"]), true)
+    assert.equal(shouldInvalidateWorkspacesNav(undefined), true)
   })
 
   test("workspace realtime frame codec round-trips events", async () => {

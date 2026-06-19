@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 
 import { useNotelabFeatures } from "../context"
-import { workspaceQueryKey } from "../workspaces/queries"
+
 import {
   databaseQueryKey,
   type DatabasePayload,
@@ -77,22 +77,9 @@ export function useDatabaseRealtime(
       }
 
       refetchTimeoutRef.current = window.setTimeout(() => {
-        const currentPayload = queryClient.getQueryData<DatabasePayload | null>(
-          databaseQueryKey(databaseId),
-        )
-        const rowPageInvalidations = (currentPayload?.rows ?? []).map((row) =>
-          queryClient.invalidateQueries({
-            queryKey: workspaceQueryKey(row.pageId),
-          }),
-        )
-
-        void Promise.all([
-          queryClient.invalidateQueries({
-            queryKey: databaseQueryKey(databaseId),
-          }),
-          queryClient.invalidateQueries({ queryKey: ["workspace"] }),
-          ...rowPageInvalidations,
-        ])
+        void queryClient.invalidateQueries({
+          queryKey: databaseQueryKey(databaseId),
+        })
       }, refetchDebounceMs)
     }
 
@@ -129,7 +116,7 @@ export function useDatabaseRealtime(
           }),
         )
 
-        if (reconnectAttemptRef.current > 0 || lastSeenVersion === null) {
+        if (reconnectAttemptRef.current > 0) {
           scheduleRefetch()
         }
 
