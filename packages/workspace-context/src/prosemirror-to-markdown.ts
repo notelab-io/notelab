@@ -6,6 +6,8 @@ type ProseMirrorNode = {
   type?: string
 }
 
+type BlockSerializer = (node: ProseMirrorNode) => string
+
 export function prosemirrorToMarkdown(content: unknown): string {
   if (content === null || content === undefined) {
     return ""
@@ -50,124 +52,145 @@ function serializeBlocks(nodes: ProseMirrorNode[]) {
   return parts.join("\n\n").trim()
 }
 
-function serializeBlock(node: ProseMirrorNode): string {
-  switch (node.type) {
-    case "paragraph":
-      return serializeInline(node.content ?? [])
-    case "heading": {
-      const level =
-        typeof node.attrs?.level === "number"
-          ? Math.min(Math.max(node.attrs.level, 1), 6)
-          : 1
-      return `${"#".repeat(level)} ${serializeInline(node.content ?? [])}`.trim()
-    }
-    case "blockquote":
-      return (node.content ?? [])
-        .map((child) => `> ${serializeBlock(child)}`)
-        .join("\n")
-    case "bulletList":
-      return serializeList(node.content ?? [], "- ")
-    case "orderedList":
-      return serializeOrderedList(node.content ?? [])
-    case "taskList":
-      return serializeTaskList(node.content ?? [])
-    case "codeBlock": {
-      const language =
-        typeof node.attrs?.language === "string" ? node.attrs.language : ""
-      const code = serializeInline(node.content ?? [])
-      return `\`\`\`${language}\n${code}\n\`\`\``.trim()
-    }
-    case "horizontalRule":
-      return "---"
-    case "databaseBlock": {
-      const databaseId =
-        typeof node.attrs?.databaseId === "string" ? node.attrs.databaseId : ""
-      const label = databaseId ? `Database (${databaseId})` : "Database"
-      return `[${label}]`
-    }
-    case "pageBlock": {
-      const pageId =
-        typeof node.attrs?.pageId === "string" ? node.attrs.pageId : ""
-      const title =
-        typeof node.attrs?.title === "string" && node.attrs.title.trim()
-          ? node.attrs.title.trim()
-          : "Untitled page"
-      return pageId
-        ? `[Page: ${title} (${pageId})]`
-        : `[Page: ${title}]`
-    }
-    case "imageBlock": {
-      const src = typeof node.attrs?.src === "string" ? node.attrs.src : ""
-      const alt =
-        typeof node.attrs?.alt === "string" && node.attrs.alt.trim()
-          ? node.attrs.alt.trim()
-          : "image"
-      return src ? `![${alt}](${src})` : `![${alt}]`
-    }
-    case "videoBlock": {
-      const src = typeof node.attrs?.src === "string" ? node.attrs.src : ""
-      return src ? `[Video](${src})` : "[Video]"
-    }
-    case "embedBlock": {
-      const url = typeof node.attrs?.url === "string" ? node.attrs.url : ""
-      const title =
-        typeof node.attrs?.title === "string" && node.attrs.title.trim()
-          ? node.attrs.title.trim()
-          : "Embed"
-      return url ? `[${title}](${url})` : `[${title}]`
-    }
-    case "fileBlock": {
-      const name =
-        typeof node.attrs?.name === "string" && node.attrs.name.trim()
-          ? node.attrs.name.trim()
-          : "File"
-      const url = typeof node.attrs?.url === "string" ? node.attrs.url : ""
-      return url ? `[File: ${name}](${url})` : `[File: ${name}]`
-    }
-    case "bookmarkBlock": {
-      const url = typeof node.attrs?.url === "string" ? node.attrs.url : ""
-      const title =
-        typeof node.attrs?.title === "string" && node.attrs.title.trim()
-          ? node.attrs.title.trim()
-          : url || "Bookmark"
-      return url ? `[${title}](${url})` : `[${title}]`
-    }
-    case "linkMention": {
-      const href = typeof node.attrs?.href === "string" ? node.attrs.href : ""
-      const title =
-        typeof node.attrs?.title === "string" && node.attrs.title.trim()
-          ? node.attrs.title.trim()
-          : href || "Link"
-      return href ? `[${title}](${href})` : title
-    }
-    case "table":
-      return serializeTable(node.content ?? [])
-    case "columnBlock":
-    case "columnsExtension":
-      return serializeBlocks(node.content ?? [])
-    case "column":
-      return serializeBlocks(node.content ?? [])
-    case "details":
-      return serializeBlocks(node.content ?? [])
-    case "detailsSummary": {
-      const summary = serializeInline(node.content ?? [])
-      const body = serializeBlocks(
-        (node as ProseMirrorNode & { parentContent?: ProseMirrorNode[] })
-          .content ?? [],
-      )
-      return summary ? `**${summary}**\n${body}`.trim() : body
-    }
-    case "detailsContent":
-      return serializeBlocks(node.content ?? [])
-    case "text":
-      return applyMarks(node.text ?? "", node.marks ?? [])
-    default:
-      if (node.content?.length) {
-        return serializeBlocks(node.content)
-      }
+function stringAttr(
+  attrs: Record<string, unknown> | undefined,
+  key: string,
+): string {
+  return typeof attrs?.[key] === "string" ? attrs[key] : ""
+}
 
-      return serializeInline(node.content ?? [])
+function trimmedStringAttr(
+  attrs: Record<string, unknown> | undefined,
+  key: string,
+  fallback: string,
+): string {
+  const value = stringAttr(attrs, key).trim()
+  return value || fallback
+}
+
+function serializeParagraph(node: ProseMirrorNode) {
+  return serializeInline(node.content ?? [])
+}
+
+function serializeHeading(node: ProseMirrorNode) {
+  const level =
+    typeof node.attrs?.level === "number"
+      ? Math.min(Math.max(node.attrs.level, 1), 6)
+      : 1
+
+  return `${"#".repeat(level)} ${serializeInline(node.content ?? [])}`.trim()
+}
+
+function serializeBlockquote(node: ProseMirrorNode) {
+  return (node.content ?? [])
+    .map((child) => `> ${serializeBlock(child)}`)
+    .join("\n")
+}
+
+function serializeCodeBlock(node: ProseMirrorNode) {
+  const language = stringAttr(node.attrs, "language")
+  const code = serializeInline(node.content ?? [])
+  return `\`\`\`${language}\n${code}\n\`\`\``.trim()
+}
+
+function serializeDatabaseBlock(node: ProseMirrorNode) {
+  const databaseId = stringAttr(node.attrs, "databaseId")
+  const label = databaseId ? `Database (${databaseId})` : "Database"
+  return `[${label}]`
+}
+
+function serializePageBlock(node: ProseMirrorNode) {
+  const pageId = stringAttr(node.attrs, "pageId")
+  const title = trimmedStringAttr(node.attrs, "title", "Untitled page")
+  return pageId ? `[Page: ${title} (${pageId})]` : `[Page: ${title}]`
+}
+
+function serializeImageBlock(node: ProseMirrorNode) {
+  const src = stringAttr(node.attrs, "src")
+  const alt = trimmedStringAttr(node.attrs, "alt", "image")
+  return src ? `![${alt}](${src})` : `![${alt}]`
+}
+
+function serializeVideoBlock(node: ProseMirrorNode) {
+  const src = stringAttr(node.attrs, "src")
+  return src ? `[Video](${src})` : "[Video]"
+}
+
+function serializeEmbedBlock(node: ProseMirrorNode) {
+  const url = stringAttr(node.attrs, "url")
+  const title = trimmedStringAttr(node.attrs, "title", "Embed")
+  return url ? `[${title}](${url})` : `[${title}]`
+}
+
+function serializeFileBlock(node: ProseMirrorNode) {
+  const name = trimmedStringAttr(node.attrs, "name", "File")
+  const url = stringAttr(node.attrs, "url")
+  return url ? `[File: ${name}](${url})` : `[File: ${name}]`
+}
+
+function serializeBookmarkBlock(node: ProseMirrorNode) {
+  const url = stringAttr(node.attrs, "url")
+  const title = trimmedStringAttr(node.attrs, "title", url || "Bookmark")
+  return url ? `[${title}](${url})` : `[${title}]`
+}
+
+function serializeLinkMention(node: ProseMirrorNode) {
+  const href = stringAttr(node.attrs, "href")
+  const title = trimmedStringAttr(node.attrs, "title", href || "Link")
+  return href ? `[${title}](${href})` : title
+}
+
+function serializeDetailsSummary(node: ProseMirrorNode) {
+  const summary = serializeInline(node.content ?? [])
+  const body = serializeBlocks(
+    (node as ProseMirrorNode & { parentContent?: ProseMirrorNode[] })
+      .content ?? [],
+  )
+  return summary ? `**${summary}**\n${body}`.trim() : body
+}
+
+function serializeNestedBlocks(node: ProseMirrorNode) {
+  return serializeBlocks(node.content ?? [])
+}
+
+function serializeDefaultBlock(node: ProseMirrorNode) {
+  if (node.content?.length) {
+    return serializeBlocks(node.content)
   }
+
+  return serializeInline(node.content ?? [])
+}
+
+const BLOCK_SERIALIZERS: Record<string, BlockSerializer> = {
+  blockquote: serializeBlockquote,
+  bookmarkBlock: serializeBookmarkBlock,
+  bulletList: (node) => serializeList(node.content ?? [], "- "),
+  codeBlock: serializeCodeBlock,
+  column: serializeNestedBlocks,
+  columnBlock: serializeNestedBlocks,
+  columnsExtension: serializeNestedBlocks,
+  databaseBlock: serializeDatabaseBlock,
+  details: serializeNestedBlocks,
+  detailsContent: serializeNestedBlocks,
+  detailsSummary: serializeDetailsSummary,
+  embedBlock: serializeEmbedBlock,
+  fileBlock: serializeFileBlock,
+  heading: serializeHeading,
+  horizontalRule: () => "---",
+  imageBlock: serializeImageBlock,
+  linkMention: serializeLinkMention,
+  orderedList: (node) => serializeOrderedList(node.content ?? []),
+  pageBlock: serializePageBlock,
+  paragraph: serializeParagraph,
+  table: (node) => serializeTable(node.content ?? []),
+  taskList: (node) => serializeTaskList(node.content ?? []),
+  text: (node) => applyMarks(node.text ?? "", node.marks ?? []),
+  videoBlock: serializeVideoBlock,
+}
+
+function serializeBlock(node: ProseMirrorNode): string {
+  const serializer = node.type ? BLOCK_SERIALIZERS[node.type] : undefined
+  return serializer ? serializer(node) : serializeDefaultBlock(node)
 }
 
 function serializeList(nodes: ProseMirrorNode[], marker: string) {
