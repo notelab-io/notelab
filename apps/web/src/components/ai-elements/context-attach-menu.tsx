@@ -10,12 +10,34 @@ import {
   PromptInputCommandItem,
   PromptInputCommandList,
 } from "@/components/ai-elements/prompt-input"
+import { WorkspacePageIcon } from "@/lib/workspace-icon"
 import { useActiveOrganizationId } from "@notelab/features/integrations"
 import type { AppSearchResult } from "@notelab/features/search"
 import { useWorkspaces, type Workspace } from "@notelab/features/workspaces"
-import type { ContextAttachment } from "@notelab/workspace-context"
+import type {
+  ContextAttachment,
+  ContextSourceRef,
+} from "@notelab/workspace-context"
 
-function buildWorkspacePath(
+const MAX_VISIBLE_PER_GROUP = 3
+
+type AttachMenuCategory = "current-page" | "skills" | "link-to-page" | "databases"
+
+const categoryHeadings: Record<AttachMenuCategory, string> = {
+  "current-page": "Current page",
+  skills: "Skills",
+  "link-to-page": "Link to page",
+  databases: "Databases",
+}
+
+const categoryOrder: AttachMenuCategory[] = [
+  "current-page",
+  "skills",
+  "link-to-page",
+  "databases",
+]
+
+export function buildWorkspacePath(
   workspacesById: Map<string, Workspace>,
   workspaceId: string,
 ) {
@@ -53,47 +75,14 @@ function readDatabaseEmoji(config: unknown) {
   return typeof emoji === "string" && emoji.length > 0 ? emoji : null
 }
 
-function buildAttachResults(
-  workspaces: Workspace[],
-  query: string,
-): AppSearchResult[] {
-  const workspacesById = new Map(workspaces.map((workspace) => [workspace.id, workspace]))
+function matchesQuery(text: string, query: string) {
   const normalizedQuery = query.trim().toLowerCase()
-  const results: AppSearchResult[] = []
 
-  for (const workspace of workspaces) {
-    const title = workspace.name.trim() || "Untitled"
-    const path = buildWorkspacePath(workspacesById, workspace.id)
-    const pageSearchText = `${title} ${path}`.toLowerCase()
-
-    if (!normalizedQuery || pageSearchText.includes(normalizedQuery)) {
-      results.push({
-        emoji: workspace.metadata?.emoji ?? null,
-        id: workspace.id,
-        path,
-        title,
-        type: "page",
-      })
-    }
-
-    for (const database of workspace.databases ?? []) {
-      const databaseTitle = database.name.trim() || "Database"
-      const databasePath = `${path} / ${databaseTitle}`
-      const databaseSearchText = `${databaseTitle} ${databasePath}`.toLowerCase()
-
-      if (!normalizedQuery || databaseSearchText.includes(normalizedQuery)) {
-        results.push({
-          emoji: readDatabaseEmoji(database.config),
-          id: database.id,
-          path: databasePath,
-          title: databaseTitle,
-          type: "database",
-        })
-      }
-    }
+  if (!normalizedQuery) {
+    return true
   }
 
-  return results.sort((left, right) => left.title.localeCompare(right.title))
+  return text.toLowerCase().includes(normalizedQuery)
 }
 
 function toAttachment(result: AppSearchResult): ContextAttachment {
@@ -108,11 +97,322 @@ function toAttachment(result: AppSearchResult): ContextAttachment {
 
 type AttachMenuItem = {
   attachment: ContextAttachment
+  category: AttachMenuCategory
   key: string
   result: AppSearchResult
 }
 
+function buildAttachMenuItems({
+  currentDatabaseId,
+  currentPageId,
+  existingAttachmentKeys,
+  query,
+  workspaces,
+}: {
+  currentDatabaseId?: string | null
+  currentPageId?: string | null
+  existingAttachmentKeys: Set<string>
+  query: string
+  workspaces: Workspace[]
+}): AttachMenuItem[] {
+  const workspacesById = new Map(
+    workspaces.map((workspace) => [workspace.id, workspace]),
+  )
+  const items: AttachMenuItem[] = []
+
+  const pushItem = (
+    result: AppSearchResult,
+    category: AttachMenuCategory,
+  ) => {
+    const key = `${result.type === "database" ? "database" : "page"}:${result.id}`
+
+    if (existingAttachmentKeys.has(key)) {
+      return
+    }
+
+    items.push({
+      attachment: toAttachment(result),
+      category,
+      key,
+      result,
+    })
+  }
+
+  if (currentPageId) {
+    const workspace = workspacesById.get(currentPageId)
+
+    if (workspace) {
+      const title = workspace.name.trim() || "Untitled"
+      const path = buildWorkspacePath(workspacesById, workspace.id)
+      const searchText = `${title} ${path}`
+
+      if (matchesQuery(searchText, query)) {
+        pushItem(
+          {
+            emoji: workspace.metadata?.emoji ?? null,
+            id: workspace.id,
+            path,
+            title,
+            type: "page",
+          },
+          "current-page",
+        )
+      }
+    }
+  } else if (currentDatabaseId) {
+    for (const workspace of workspaces) {
+      const database = workspace.databases?.find(
+        (item) => item.id === currentDatabaseId,
+      )
+
+      if (!database) {
+        continue
+      }
+
+      const path = `${buildWorkspacePath(workspacesById, workspace.id)} / ${database.name.trim() || "Database"}`
+      const title = database.name.trim() || "Database"
+      const searchText = `${title} ${path}`
+
+      if (matchesQuery(searchText, query)) {
+        pushItem(
+          {
+            emoji: readDatabaseEmoji(database.config),
+            id: database.id,
+            path,
+            title,
+            type: "database",
+          },
+          "current-page",
+        )
+      }
+
+      break
+    }
+  }
+
+  const skillPages: AppSearchResult[] = []
+  const linkPages: AppSearchResult[] = []
+  const databases: AppSearchResult[] = []
+
+  for (const workspace of workspaces) {
+    const title = workspace.name.trim() || "Untitled"
+    const path = buildWorkspacePath(workspacesById, workspace.id)
+    const pageSearchText = `${title} ${path}`
+    const isCurrentPage = workspace.id === currentPageId
+    const isSkill = workspace.metadata?.notelabai === "skill"
+
+    if (!isCurrentPage && matchesQuery(pageSearchText, query)) {
+      const result: AppSearchResult = {
+        emoji: workspace.metadata?.emoji ?? null,
+        id: workspace.id,
+        path,
+        title,
+        type: "page",
+      }
+
+      if (isSkill) {
+        skillPages.push(result)
+      } else {
+        linkPages.push(result)
+      }
+    }
+
+    for (const database of workspace.databases ?? []) {
+      if (database.id === currentDatabaseId) {
+        continue
+      }
+
+      const databaseTitle = database.name.trim() || "Database"
+      const databasePath = `${path} / ${databaseTitle}`
+      const databaseSearchText = `${databaseTitle} ${databasePath}`
+
+      if (matchesQuery(databaseSearchText, query)) {
+        databases.push({
+          emoji: readDatabaseEmoji(database.config),
+          id: database.id,
+          path: databasePath,
+          title: databaseTitle,
+          type: "database",
+        })
+      }
+    }
+  }
+
+  skillPages
+    .sort((left, right) => left.title.localeCompare(right.title))
+    .forEach((result) => pushItem(result, "skills"))
+
+  linkPages
+    .sort((left, right) => left.title.localeCompare(right.title))
+    .forEach((result) => pushItem(result, "link-to-page"))
+
+  databases
+    .sort((left, right) => left.title.localeCompare(right.title))
+    .forEach((result) => pushItem(result, "databases"))
+
+  return items
+}
+
+export function buildPrimaryAttachment({
+  databaseEmoji,
+  databaseName,
+  primarySource,
+  workspaces,
+}: {
+  databaseEmoji?: string | null
+  databaseName?: string | null
+  primarySource: ContextSourceRef
+  workspaces: Workspace[]
+}): ContextAttachment | null {
+  if (primarySource.type === "database") {
+    if (!databaseName) {
+      return null
+    }
+
+    for (const workspace of workspaces) {
+      const database = workspace.databases?.find(
+        (item) => item.id === primarySource.id,
+      )
+
+      if (!database) {
+        continue
+      }
+
+      const workspacesById = new Map(
+        workspaces.map((item) => [item.id, item]),
+      )
+
+      return {
+        emoji: databaseEmoji ?? readDatabaseEmoji(database.config),
+        id: primarySource.id,
+        path: `${buildWorkspacePath(workspacesById, workspace.id)} / ${databaseName}`,
+        title: databaseName,
+        type: "database",
+      }
+    }
+
+    return {
+      emoji: databaseEmoji,
+      id: primarySource.id,
+      path: "",
+      title: databaseName,
+      type: "database",
+    }
+  }
+
+  const workspacesById = new Map(workspaces.map((item) => [item.id, item]))
+  const workspace = workspacesById.get(primarySource.id)
+
+  if (!workspace) {
+    return null
+  }
+
+  return {
+    emoji: workspace.metadata?.emoji ?? null,
+    id: primarySource.id,
+    path: buildWorkspacePath(workspacesById, primarySource.id),
+    title: workspace.name.trim() || "Untitled",
+    type: "page",
+  }
+}
+
+function AttachMenuItemIcon({
+  item,
+}: {
+  item: AttachMenuItem
+}) {
+  if (item.result.type === "database") {
+    if (item.result.emoji) {
+      return <span className="text-base leading-none">{item.result.emoji}</span>
+    }
+
+    return <DatabaseIcon className="size-4 shrink-0 text-muted-foreground" />
+  }
+
+  if (item.category === "skills") {
+    return <FileTextIcon className="size-4 shrink-0 text-muted-foreground" />
+  }
+
+  const workspace = {
+    content: null,
+    metadata: {
+      emoji: item.result.emoji,
+    },
+  }
+
+  return (
+    <span className="flex size-4 shrink-0 items-center justify-center">
+      <WorkspacePageIcon workspace={workspace} />
+    </span>
+  )
+}
+
+function AttachMenuGroup({
+  allItems,
+  category,
+  items,
+  onSelect,
+  selectedIndex,
+  selectedItemRef,
+}: {
+  allItems: AttachMenuItem[]
+  category: AttachMenuCategory
+  items: AttachMenuItem[]
+  onSelect: (attachment: ContextAttachment) => void
+  selectedIndex: number
+  selectedItemRef: React.RefObject<HTMLDivElement | null>
+}) {
+  if (items.length === 0) {
+    return null
+  }
+
+  const visibleItems = items.slice(0, MAX_VISIBLE_PER_GROUP)
+  const hiddenCount = items.length - visibleItems.length
+
+  return (
+    <PromptInputCommandGroup heading={categoryHeadings[category]}>
+      {visibleItems.map((item) => {
+        const itemIndex = allItems.findIndex((candidate) => candidate.key === item.key)
+
+        return (
+          <PromptInputCommandItem
+            aria-selected={itemIndex === selectedIndex}
+            className={
+              itemIndex === selectedIndex ? "bg-muted text-foreground" : ""
+            }
+            key={item.key}
+            onMouseDown={(event) => {
+              event.preventDefault()
+              onSelect(item.attachment)
+            }}
+            onSelect={() => onSelect(item.attachment)}
+            ref={itemIndex === selectedIndex ? selectedItemRef : undefined}
+            value={item.key}
+          >
+            <AttachMenuItemIcon item={item} />
+            <div className="min-w-0">
+              <div className="truncate">{item.result.title}</div>
+              {item.result.path ? (
+                <div className="truncate text-xs text-muted-foreground">
+                  {item.result.path}
+                </div>
+              ) : null}
+            </div>
+          </PromptInputCommandItem>
+        )
+      })}
+      {hiddenCount > 0 ? (
+        <div className="px-2 py-1.5 text-xs text-muted-foreground">
+          ... {hiddenCount} more result{hiddenCount === 1 ? "" : "s"}
+        </div>
+      ) : null}
+    </PromptInputCommandGroup>
+  )
+}
+
 export function ContextAttachMenu({
+  currentDatabaseId = null,
+  currentPageId = null,
   existingAttachmentKeys,
   onItemsChange,
   onSelect,
@@ -121,6 +421,8 @@ export function ContextAttachMenu({
   selectedIndex,
   setSelectedIndex,
 }: {
+  currentDatabaseId?: string | null
+  currentPageId?: string | null
   existingAttachmentKeys: Set<string>
   onItemsChange?: (items: ContextAttachment[]) => void
   onSelect: (attachment: ContextAttachment) => void
@@ -137,44 +439,40 @@ export function ContextAttachMenu({
   } = useWorkspaces(organizationId)
   const selectedItemRef = useRef<HTMLDivElement | null>(null)
 
-  const results = useMemo(
-    () => (open ? buildAttachResults(workspaces, query) : []),
-    [open, query, workspaces],
+  const items = useMemo(
+    () =>
+      open
+        ? buildAttachMenuItems({
+            currentDatabaseId,
+            currentPageId,
+            existingAttachmentKeys,
+            query,
+            workspaces,
+          })
+        : [],
+    [
+      currentDatabaseId,
+      currentPageId,
+      existingAttachmentKeys,
+      open,
+      query,
+      workspaces,
+    ],
   )
 
-  const items = useMemo(() => {
-    const nextItems: AttachMenuItem[] = []
-
-    for (const result of results) {
-      const key = `${result.type === "database" ? "database" : "page"}:${result.id}`
-
-      if (existingAttachmentKeys.has(key)) {
-        continue
-      }
-
-      nextItems.push({
-        attachment: toAttachment(result),
-        key,
-        result,
-      })
-    }
-
-    return nextItems
-  }, [existingAttachmentKeys, results])
-
   const groupedResults = useMemo(() => {
-    const pages: AttachMenuItem[] = []
-    const databases: AttachMenuItem[] = []
+    const groups: Record<AttachMenuCategory, AttachMenuItem[]> = {
+      "current-page": [],
+      databases: [],
+      "link-to-page": [],
+      skills: [],
+    }
 
     for (const item of items) {
-      if (item.result.type === "database") {
-        databases.push(item)
-      } else {
-        pages.push(item)
-      }
+      groups[item.category].push(item)
     }
 
-    return { databases, pages }
+    return groups
   }, [items])
 
   const selectedItem = items[selectedIndex]
@@ -213,80 +511,17 @@ export function ContextAttachMenu({
           ) : items.length === 0 ? (
             <PromptInputCommandEmpty>No pages or databases found.</PromptInputCommandEmpty>
           ) : (
-            <>
-              {groupedResults.pages.length > 0 ? (
-                <PromptInputCommandGroup heading="Pages">
-                  {groupedResults.pages.map((item) => {
-                    const itemIndex = items.findIndex(
-                      (candidate) => candidate.key === item.key,
-                    )
-
-                    return (
-                      <PromptInputCommandItem
-                        aria-selected={itemIndex === selectedIndex}
-                        className={
-                          itemIndex === selectedIndex
-                            ? "bg-muted text-foreground"
-                            : ""
-                        }
-                        key={item.key}
-                        onMouseDown={(event) => {
-                          event.preventDefault()
-                          onSelect(item.attachment)
-                        }}
-                        onSelect={() => onSelect(item.attachment)}
-                        ref={itemIndex === selectedIndex ? selectedItemRef : undefined}
-                        value={item.key}
-                      >
-                        <FileTextIcon className="size-4 shrink-0 text-muted-foreground" />
-                        <div className="min-w-0">
-                          <div className="truncate">{item.result.title}</div>
-                          <div className="truncate text-xs text-muted-foreground">
-                            {item.result.path}
-                          </div>
-                        </div>
-                      </PromptInputCommandItem>
-                    )
-                  })}
-                </PromptInputCommandGroup>
-              ) : null}
-              {groupedResults.databases.length > 0 ? (
-                <PromptInputCommandGroup heading="Databases">
-                  {groupedResults.databases.map((item) => {
-                    const itemIndex = items.findIndex(
-                      (candidate) => candidate.key === item.key,
-                    )
-
-                    return (
-                      <PromptInputCommandItem
-                        aria-selected={itemIndex === selectedIndex}
-                        className={
-                          itemIndex === selectedIndex
-                            ? "bg-muted text-foreground"
-                            : ""
-                        }
-                        key={item.key}
-                        onMouseDown={(event) => {
-                          event.preventDefault()
-                          onSelect(item.attachment)
-                        }}
-                        onSelect={() => onSelect(item.attachment)}
-                        ref={itemIndex === selectedIndex ? selectedItemRef : undefined}
-                        value={item.key}
-                      >
-                        <DatabaseIcon className="size-4 shrink-0 text-muted-foreground" />
-                        <div className="min-w-0">
-                          <div className="truncate">{item.result.title}</div>
-                          <div className="truncate text-xs text-muted-foreground">
-                            {item.result.path}
-                          </div>
-                        </div>
-                      </PromptInputCommandItem>
-                    )
-                  })}
-                </PromptInputCommandGroup>
-              ) : null}
-            </>
+            categoryOrder.map((category) => (
+              <AttachMenuGroup
+                allItems={items}
+                category={category}
+                items={groupedResults[category]}
+                key={category}
+                onSelect={onSelect}
+                selectedIndex={selectedIndex}
+                selectedItemRef={selectedItemRef}
+              />
+            ))
           )}
         </PromptInputCommandList>
       </PromptInputCommand>

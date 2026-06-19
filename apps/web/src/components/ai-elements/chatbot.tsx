@@ -20,6 +20,7 @@ import {
 } from "@/components/ai-elements/model-selector";
 import { ContextAttachChips } from "@/components/ai-elements/context-attach-chips";
 import {
+  buildPrimaryAttachment,
   ContextAttachMenu,
   getAttachmentKey,
   parseMentionState,
@@ -58,11 +59,13 @@ import {
 } from "@notelab/features/ai-chat";
 import { useSession } from "@notelab/features/auth";
 import { useNotelabFeatures } from "@notelab/features";
+import { useDatabase } from "@notelab/features/databases";
 import {
   useActiveOrganizationId,
   useIntegrations,
   useOrganizationAiModels,
 } from "@notelab/features/integrations";
+import { useWorkspaces } from "@notelab/features/workspaces";
 import type { OrganizationAiChatModel } from "@notelab/features/integrations";
 import { integrationIcons } from "@/lib/integration-icons";
 import { useAgent } from "agents/react";
@@ -1153,6 +1156,7 @@ const Chatbot = ({
   const [text, setText] = useState<string>("");
   const [textCursor, setTextCursor] = useState(0);
   const [attachments, setAttachments] = useState<ContextAttachment[]>([]);
+  const [primaryDismissed, setPrimaryDismissed] = useState(false);
   const [dismissedMentionKey, setDismissedMentionKey] = useState<string | null>(
     null,
   );
@@ -1173,12 +1177,47 @@ const Chatbot = ({
 
     return null;
   }, [databaseId, workspaceId]);
+  const effectivePrimarySource = primaryDismissed ? null : primarySource;
+  const { data: workspaces = [] } = useWorkspaces(organizationId);
+  const { data: databasePayload } = useDatabase(databaseId);
+  const primaryAttachment = useMemo(() => {
+    if (!effectivePrimarySource) {
+      return null;
+    }
+
+    const databaseConfig = databasePayload?.database.config;
+    const databaseEmoji =
+      databaseConfig &&
+      typeof databaseConfig === "object" &&
+      !Array.isArray(databaseConfig) &&
+      typeof (databaseConfig as { emoji?: unknown }).emoji === "string"
+        ? ((databaseConfig as { emoji: string }).emoji)
+        : null;
+
+    return (
+      buildPrimaryAttachment({
+        databaseEmoji,
+        databaseName: databasePayload?.database.name,
+        primarySource: effectivePrimarySource,
+        workspaces,
+      }) ?? {
+        emoji: databaseEmoji,
+        id: effectivePrimarySource.id,
+        path: "",
+        title:
+          effectivePrimarySource.type === "database"
+            ? databasePayload?.database.name?.trim() || "Database"
+            : "Current page",
+        type: effectivePrimarySource.type,
+      }
+    );
+  }, [databasePayload, effectivePrimarySource, workspaces]);
   const { error: contextError, isLoading: isContextLoading, markdown: workspaceContext } =
     useWorkspaceAiContext({
       attachments,
       enabled: isSidebar && Boolean(organizationId),
       organizationId,
-      primarySource,
+      primarySource: effectivePrimarySource,
     });
   const integrationsQuery = useIntegrations();
   const aiModelsQuery = useOrganizationAiModels();
@@ -1224,6 +1263,7 @@ const Chatbot = ({
   useEffect(() => {
     setAttachments([]);
     setDismissedMentionKey(null);
+    setPrimaryDismissed(false);
     setSelectedMentionIndex(0);
     setTextCursor(0);
   }, [databaseId, workspaceId]);
@@ -1298,7 +1338,7 @@ const Chatbot = ({
         ? {
             attachmentIds: attachments.map((item) => item.id),
             charCount: workspaceContext.length,
-            primaryId: primarySource?.id ?? null,
+            primaryId: effectivePrimarySource?.id ?? null,
           }
         : undefined,
     }),
@@ -1384,12 +1424,12 @@ const Chatbot = ({
   const existingAttachmentKeys = useMemo(() => {
     const keys = new Set(attachments.map((item) => getAttachmentKey(item)));
 
-    if (primarySource) {
-      keys.add(getAttachmentKey(primarySource));
+    if (effectivePrimarySource) {
+      keys.add(getAttachmentKey(effectivePrimarySource));
     }
 
     return keys;
-  }, [attachments, primarySource]);
+  }, [attachments, effectivePrimarySource]);
 
   const syncTextCursor = useCallback(() => {
     const cursor = textareaRef.current?.selectionStart ?? text.length;
@@ -1435,12 +1475,26 @@ const Chatbot = ({
         return;
       }
 
+      if (
+        primarySource &&
+        getAttachmentKey(primarySource) === key
+      ) {
+        setPrimaryDismissed(false);
+        clearMentionTrigger();
+        textareaRef.current?.focus();
+        return;
+      }
+
       setAttachments((current) => [...current, attachment]);
       clearMentionTrigger();
       textareaRef.current?.focus();
     },
-    [clearMentionTrigger, existingAttachmentKeys]
+    [clearMentionTrigger, existingAttachmentKeys, primarySource]
   );
+
+  const handleRemovePrimary = useCallback(() => {
+    setPrimaryDismissed(true);
+  }, []);
 
   const handleTextareaKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -1610,10 +1664,14 @@ const Chatbot = ({
             <ContextAttachChips
               attachments={attachments}
               onRemove={handleRemoveAttachment}
+              onRemovePrimary={handleRemovePrimary}
+              primaryAttachment={primaryAttachment}
             />
             <div className="relative w-full min-w-0 flex-1 self-stretch">
               {mentionMenuOpen ? (
                 <ContextAttachMenu
+                  currentDatabaseId={databaseId}
+                  currentPageId={workspaceId}
                   existingAttachmentKeys={existingAttachmentKeys}
                   onItemsChange={setMentionCandidates}
                   onSelect={handleAttachContext}
