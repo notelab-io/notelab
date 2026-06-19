@@ -10,43 +10,51 @@ import { useOptionalWorkspaceSidePane } from "@/components/app-layout"
 import {
   getWorkspaceEmoji,
   useUpdateWorkspace,
-  useWorkspace,
+  type WorkspaceMetadata,
 } from "@notelab/features/workspaces"
+
+type DatabasePageSummary = {
+  id?: string
+  name?: string
+  metadata?: WorkspaceMetadata | null | unknown
+}
 
 export function DatabasePageLink({
   editable = false,
-  fallbackTitle,
   onActiveChange,
   onOpen,
   pageId,
+  pageSummary,
   showPageIcon = true,
 }: {
   editable?: boolean
-  fallbackTitle?: string
   onActiveChange?: (active: boolean) => void
   onOpen?: (pageId: string) => void
   pageId: string
+  pageSummary?: DatabasePageSummary | null
   showPageIcon?: boolean
 }) {
   const sidePane = useOptionalWorkspaceSidePane()
-  const { data: page, isLoading } = useWorkspace(pageId)
   const updateWorkspace = useUpdateWorkspace()
   const inputRef = useRef<HTMLInputElement | null>(null)
   const titleEditFinishedRef = useRef(false)
   const [draftTitle, setDraftTitle] = useState("")
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const isOpen = sidePane?.sidePaneWorkspaceId === pageId
-  const title =
-    page?.name.trim() || fallbackTitle?.trim() || "Untitled"
-  const emoji = page ? getWorkspaceEmoji(page) : null
+  const title = pageSummary?.name.trim() || "Untitled"
+  const emoji = pageSummary
+    ? getWorkspaceEmoji({
+        metadata: pageSummary.metadata as WorkspaceMetadata | null | undefined,
+      })
+    : null
   const actionLabel = isOpen ? "Close" : "Open"
-  const canEditTitle = editable && Boolean(page)
+  const canEditTitle = editable && Boolean(pageSummary)
 
   useEffect(() => {
     if (!isEditingTitle) {
-      setDraftTitle(page?.name ?? fallbackTitle ?? "")
+      setDraftTitle(pageSummary?.name ?? "")
     }
-  }, [fallbackTitle, isEditingTitle, page?.name])
+  }, [isEditingTitle, pageSummary?.name])
 
   useEffect(() => {
     if (!isEditingTitle) {
@@ -72,18 +80,18 @@ export function DatabasePageLink({
     onOpen?.(pageId)
   }
   const startTitleEdit = () => {
-    if (!page || !canEditTitle) {
+    if (!pageSummary || !canEditTitle) {
       return
     }
 
-    setDraftTitle(page.name)
+    setDraftTitle(pageSummary.name)
     titleEditFinishedRef.current = false
     onActiveChange?.(true)
     setIsEditingTitle(true)
   }
   const cancelTitleEdit = () => {
     titleEditFinishedRef.current = true
-    setDraftTitle(page?.name ?? "")
+    setDraftTitle(pageSummary?.name ?? "")
     onActiveChange?.(false)
     setIsEditingTitle(false)
   }
@@ -94,7 +102,7 @@ export function DatabasePageLink({
 
     titleEditFinishedRef.current = true
 
-    if (!page) {
+    if (!pageSummary) {
       onActiveChange?.(false)
       setIsEditingTitle(false)
       return
@@ -105,16 +113,16 @@ export function DatabasePageLink({
     onActiveChange?.(false)
     setIsEditingTitle(false)
 
-    if (nextTitle === page.name) {
-      setDraftTitle(page.name)
+    if (nextTitle === pageSummary.name) {
+      setDraftTitle(pageSummary.name)
       return
     }
 
     updateWorkspace.mutate(
-      { id: page.id, name: nextTitle },
+      { id: pageId, name: nextTitle },
       {
         onError: () => {
-          setDraftTitle(page.name)
+          setDraftTitle(pageSummary.name)
           toast.error("Couldn't rename page")
         },
       }
@@ -165,14 +173,10 @@ export function DatabasePageLink({
             {title}
           </button>
         ) : (
-          <span className="database-page-title">
-            {!isLoading && !page
-              ? "You don't have access to this block"
-              : title}
-          </span>
+          <span className="database-page-title">{title}</span>
         )}
       </span>
-      {page && !isEditingTitle ? (
+      {pageSummary && !isEditingTitle ? (
         <button
           aria-label={`${actionLabel} ${title}`}
           className="database-page-open"

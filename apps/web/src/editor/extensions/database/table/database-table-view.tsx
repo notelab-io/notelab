@@ -1234,12 +1234,12 @@ export function DatabaseTableView() {
               <DatabaseTableCellContent wrapContent={nameColumnWrapContent}>
                 <DatabasePageLink
                   editable={editable}
-                  fallbackTitle={row.page.name}
                   onActiveChange={(active) =>
                     setActivePropertyValueKey(active ? nameCellKey : null)
                   }
                   onOpen={onOpenPage}
                   pageId={row.pageId}
+                  pageSummary={row.page}
                   showPageIcon={nameColumnShowPageIcon}
                 />
               </DatabaseTableCellContent>

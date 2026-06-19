@@ -991,9 +991,12 @@ export function DatabaseKanbanView() {
                             ) : null}
                             <DatabasePageLink
                               editable={editable}
-                              fallbackTitle={item.page.name}
                               onOpen={onOpenPage}
                               pageId={item.pageId}
+                              pageSummary={{
+                                id: item.pageId,
+                                name: item.page.name ?? "",
+                              }}
                               showPageIcon={showPageIconInTitle}
                             />
                           </div>
