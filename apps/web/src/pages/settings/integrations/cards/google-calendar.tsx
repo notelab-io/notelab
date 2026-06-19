@@ -8,6 +8,7 @@ import { integrationIcons } from "@/lib/integration-icons";
 import { Loader2Icon, PlugIcon, UnplugIcon } from "lucide-react";
 
 import { ConnectionBadge, IntegrationDetail } from "../components";
+import { useIntegrationConnectionState } from "../use-integration-connection-state";
 
 export function GoogleCalendarIntegrationCard({
   canManageWorkspace,
@@ -33,14 +34,15 @@ export function GoogleCalendarIntegrationCard({
   onToggleEmailMatch: (enabled: boolean) => void;
   status: GoogleCalendarIntegrationStatus | null;
 }) {
-  const isWorkspaceConnected = status?.workspace.connected === true;
-  const isPersonalConnected = status?.personal.connected === true;
-  const [pendingEmailMatch, setPendingEmailMatch] = React.useState(true);
+  const {
+    enforceEmailMatch,
+    isPersonalConnected,
+    isWorkspaceConnected,
+    pendingEmailMatch,
+    setPendingEmailMatch,
+  } = useIntegrationConnectionState(status);
   const [pendingCoworkerAccess, setPendingCoworkerAccess] =
     React.useState(false);
-  const enforceEmailMatch = isWorkspaceConnected
-    ? status?.workspace.enforceEmailMatch === true
-    : pendingEmailMatch;
   const coworkerAccessEnabled = isWorkspaceConnected
     ? status?.workspace.coworkerCalendarAccessEnabled === true
     : pendingCoworkerAccess;

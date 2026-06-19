@@ -9,6 +9,7 @@ import { integrationIcons } from "@/lib/integration-icons";
 import { Loader2Icon, PlugIcon, UnplugIcon } from "lucide-react";
 
 import { ConnectionBadge, IntegrationDetail } from "../components";
+import { useIntegrationConnectionState } from "../use-integration-connection-state";
 
 export function GithubIntegrationCard({
   canManageWorkspace,
@@ -36,12 +37,13 @@ export function GithubIntegrationCard({
   onToggleEmailMatch: (enabled: boolean) => void;
   status: GithubIntegrationStatus | null;
 }) {
-  const isWorkspaceConnected = status?.workspace.connected === true;
-  const isPersonalConnected = status?.personal.connected === true;
-  const [pendingEmailMatch, setPendingEmailMatch] = React.useState(true);
-  const enforceEmailMatch = isWorkspaceConnected
-    ? status?.workspace.enforceEmailMatch === true
-    : pendingEmailMatch;
+  const {
+    enforceEmailMatch,
+    isPersonalConnected,
+    isWorkspaceConnected,
+    pendingEmailMatch,
+    setPendingEmailMatch,
+  } = useIntegrationConnectionState(status);
   const organizationLogin =
     status?.workspace.organizationLogin || githubOrganizationLogin;
   const canConnectWorkspace = organizationLogin.trim().length > 0;
