@@ -80,6 +80,11 @@ function aliasPlugin() {
   return {
     name: "notelab-test-alias",
     setup(build) {
+      build.onResolve({ filter: /^@\/packages\/editor\/?/ }, async (args) => ({
+        path: await resolveAliasPath(
+          join(srcDir, "editor", args.path.replace(/^@\/packages\/editor\/?/, ""))
+        ),
+      }))
       build.onResolve({ filter: /^@\// }, async (args) => ({
         path: await resolveAliasPath(join(srcDir, args.path.slice(2))),
       }))

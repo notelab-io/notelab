@@ -11,9 +11,8 @@
     "deploy": "wrangler deploy"
   },
   "dependencies": {
-    "@cloudflare/ai-chat": "^0.6.0",
-    "agents": "^0.12.1",
     "@base-ui/react": "^1.5.0",
+    "@cloudflare/ai-chat": "^0.6.0",
     "@faker-js/faker": "^10.4.0",
     "@fontsource-variable/geist": "^5.2.9",
     "@linear/sdk": "^86.0.0",
@@ -52,6 +51,7 @@
     "@tiptap/suggestion": "^3.23.6",
     "@tiptap/y-tiptap": "^3.0.5",
     "@xyflow/react": "^12.11.0",
+    "agents": "^0.12.1",
     "ai": "^6.0.193",
     "better-auth": "^1.6.11",
     "class-variance-authority": "^0.7.1",
@@ -92,6 +92,7 @@
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",
     "esbuild": "^0.27.7",
+    "linkedom": "^0.18.12",
     "typescript": "~5.8.3",
     "vite": "^7.0.4"
   }
