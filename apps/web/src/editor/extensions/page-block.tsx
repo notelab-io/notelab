@@ -19,7 +19,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { useWorkspace, useWorkspaces } from "@notelab/features/workspaces"
+import { useWorkspaces } from "@notelab/features/workspaces"
 import { getWorkspaceEmoji } from "@notelab/features/workspaces"
 import { colorWithAlpha } from "@/packages/editor/components/editor/toolbar-data"
 import { DATABASE_PAGE_DRAG_MIME } from "@/packages/editor/extensions/database/constants"
@@ -31,6 +31,7 @@ export type CreatedPage = {
 export type PageBlockOptions = {
   currentPageId?: string | null
   onCreatePage?: () => Promise<CreatedPage>
+  onEmbedPage?: (pageId: string) => void | Promise<void>
   onOpenPage?: (pageId: string) => void
   organizationId?: string | null
 }
@@ -48,11 +49,17 @@ function PageBlockView({
   const [isOpen, setIsOpen] = useState(shouldOpenPicker)
   const [selectedIndex, setSelectedIndex] = useState(0)
   const optionRefs = useRef<Array<HTMLButtonElement | null>>([])
-  const { data: page, isLoading: isPageLoading } = useWorkspace(pageId)
+  const options = extension.options as PageBlockOptions
+  const { data: pages = [], isLoading: isLoadingPages } = useWorkspaces(
+    options.organizationId,
+    {
+      enabled: Boolean(pageId) || isOpen,
+    },
+  )
+  const page = pageId ? pages.find((workspace) => workspace.id === pageId) : undefined
   const title = page?.name.trim() || "Untitled"
   const emoji = page ? getWorkspaceEmoji(page) : null
-  const options = extension.options as PageBlockOptions
-  const { data: pages = [] } = useWorkspaces(options.organizationId)
+  const isPageLoading = Boolean(pageId) && isLoadingPages && !page
   const linkablePages = pages.filter(
     (workspace) => workspace.id !== options.currentPageId
   )
@@ -112,10 +119,12 @@ function PageBlockView({
   }
 
   const linkPage = (nextPageId: string) => {
-    updateAttributes({
-      pageId: nextPageId,
+    void Promise.resolve(options.onEmbedPage?.(nextPageId)).finally(() => {
+      updateAttributes({
+        pageId: nextPageId,
+      })
+      setIsOpen(false)
     })
-    setIsOpen(false)
   }
 
   const openPage = () => {
@@ -324,6 +333,7 @@ export const PageBlock = Node.create<PageBlockOptions>({
     return {
       currentPageId: null,
       onCreatePage: undefined,
+      onEmbedPage: undefined,
       onOpenPage: undefined,
       organizationId: null,
     }

@@ -15,12 +15,14 @@ import { cn } from "@/lib/utils"
 import {
   getWorkspaceCover,
   getWorkspaceEmoji,
+  readParentItemId,
   resolveWorkspaceFullWidth,
   type WorkspaceMetadata,
 } from "@notelab/features/workspaces"
 import {
   useUpdateWorkspace,
   useCreateWorkspace,
+  useEmbedWorkspaceItem,
   useWorkspaceRealtime,
   useWorkspace,
   useWorkspaceAccessLevel,
@@ -217,14 +219,14 @@ function PublicWorkspaceBreadcrumbAncestors({
   workspaceId: string
 }) {
   const { data: workspace } = useWorkspace(workspaceId)
-  const parentWorkspaceId = workspace?.metadata?.parentWorkspaceId ?? null
+  const parentItemId = readParentItemId(workspace?.metadata) ?? null
 
   return (
     <>
-      {parentWorkspaceId ? (
+      {parentItemId ? (
         <>
           <PublicWorkspaceBreadcrumbAncestors
-            workspaceId={parentWorkspaceId}
+            workspaceId={parentItemId}
           />
           <li className="shrink-0">/</li>
         </>
@@ -267,9 +269,12 @@ export function WorkspaceEditorPane({
 }: WorkspaceEditorPaneProps) {
   const { data: session } = useSession()
   const { data: workspace, isLoading } = useWorkspace(workspaceId)
-  const { data: accessLevel } = useWorkspaceAccessLevel(workspaceId)
+  const { data: accessLevel } = useWorkspaceAccessLevel(workspaceId, {
+    refetchOnMount: false,
+  })
   const { data: userSettings } = useUserSettings()
   const createWorkspace = useCreateWorkspace()
+  const embedWorkspaceItem = useEmbedWorkspaceItem()
   const updateWorkspace = useUpdateWorkspace()
   const contentSaveTimeoutRef = useRef<number | null>(null)
   const pendingContentRef = useRef<unknown>(null)
@@ -441,6 +446,21 @@ export function WorkspaceEditorPane({
     ],
   )
 
+  const embedLinkedPage = useCallback(
+    async (pageId: string) => {
+      if (!workspace) {
+        return
+      }
+
+      await embedWorkspaceItem.mutateAsync({
+        hostWorkspaceId: workspace.id,
+        itemId: pageId,
+        kind: "workspace",
+      })
+    },
+    [embedWorkspaceItem, workspace],
+  )
+
   const createNestedPage = useCallback(async () => {
     if (
       readOnly ||
@@ -455,7 +475,7 @@ export function WorkspaceEditorPane({
       emoji: "",
       name: "",
       organizationId: workspace.organizationId,
-      parentWorkspaceId: workspace.id,
+      parentItemId: workspace.id,
     })
   }, [accessLevel, createWorkspace, readOnly, workspace])
 
@@ -493,6 +513,7 @@ export function WorkspaceEditorPane({
         onContentChange={updateContent}
         onCoverChange={updateCover}
         onCreatePage={createNestedPage}
+        onEmbedPage={embedLinkedPage}
         onEmojiChange={updateEmoji}
         onOpenPage={onOpenPage}
         onTitleChange={setName}

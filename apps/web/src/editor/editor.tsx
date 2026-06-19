@@ -153,6 +153,7 @@ type EditorProps = {
   onContentChange?: (content: unknown) => void
   onCoverChange?: (cover: string) => void
   onCreatePage?: () => Promise<CreatedPage>
+  onEmbedPage?: (pageId: string) => void | Promise<void>
   onEmojiChange?: (emoji: string) => void
   onOpenPage?: (pageId: string) => void
   onTitleChange?: (title: string) => void
@@ -370,6 +371,7 @@ export function Editor({
   onContentChange,
   onCoverChange,
   onCreatePage,
+  onEmbedPage,
   onEmojiChange,
   onOpenPage,
   onTitleChange,
@@ -613,6 +615,7 @@ export function Editor({
       PageBlock.configure({
         currentPageId: workspaceId,
         onCreatePage,
+        onEmbedPage,
         onOpenPage,
         organizationId,
       }),
@@ -650,6 +653,7 @@ export function Editor({
       databaseEditorRuntime,
       editable,
       onCreatePage,
+      onEmbedPage,
       onOpenPage,
       organizationId,
       workspaceId,

@@ -41,7 +41,7 @@ export function DatabasePageLink({
   const [draftTitle, setDraftTitle] = useState("")
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const isOpen = sidePane?.sidePaneWorkspaceId === pageId
-  const title = pageSummary?.name.trim() || "Untitled"
+  const title = pageSummary?.name?.trim() || "Untitled"
   const emoji = pageSummary
     ? getWorkspaceEmoji({
         metadata: pageSummary.metadata as WorkspaceMetadata | null | undefined,
@@ -84,7 +84,7 @@ export function DatabasePageLink({
       return
     }
 
-    setDraftTitle(pageSummary.name)
+    setDraftTitle(pageSummary.name ?? "")
     titleEditFinishedRef.current = false
     onActiveChange?.(true)
     setIsEditingTitle(true)
@@ -113,8 +113,10 @@ export function DatabasePageLink({
     onActiveChange?.(false)
     setIsEditingTitle(false)
 
-    if (nextTitle === pageSummary.name) {
-      setDraftTitle(pageSummary.name)
+    const currentTitle = pageSummary.name ?? ""
+
+    if (nextTitle === currentTitle) {
+      setDraftTitle(currentTitle)
       return
     }
 
@@ -122,7 +124,7 @@ export function DatabasePageLink({
       { id: pageId, name: nextTitle },
       {
         onError: () => {
-          setDraftTitle(pageSummary.name)
+          setDraftTitle(currentTitle)
           toast.error("Couldn't rename page")
         },
       }
