@@ -24,6 +24,8 @@ import {
   ContextAttachMenu,
   getAttachmentKey,
   parseMentionState,
+  type ContextAttachMenuEntry,
+  type ContextAttachMenuHandle,
 } from "@/components/ai-elements/context-attach-menu";
 import type { PromptInputMessage } from "@/components/ai-elements/prompt-input";
 import { useWorkspaceAiContext } from "@/hooks/use-workspace-ai-context";
@@ -1161,9 +1163,10 @@ const Chatbot = ({
     null,
   );
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
-  const [mentionCandidates, setMentionCandidates] = useState<ContextAttachment[]>(
-    [],
-  );
+  const [mentionMenuEntries, setMentionMenuEntries] = useState<
+    ContextAttachMenuEntry[]
+  >([]);
+  const mentionMenuRef = useRef<ContextAttachMenuHandle | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const organizationId = useActiveOrganizationId();
   const primarySource = useMemo<ContextSourceRef | null>(() => {
@@ -1505,8 +1508,8 @@ const Chatbot = ({
       if (event.key === "ArrowDown") {
         event.preventDefault();
         setSelectedMentionIndex((index) =>
-          mentionCandidates.length
-            ? (index + 1) % mentionCandidates.length
+          mentionMenuEntries.length
+            ? (index + 1) % mentionMenuEntries.length
             : 0,
         );
         return;
@@ -1515,8 +1518,8 @@ const Chatbot = ({
       if (event.key === "ArrowUp") {
         event.preventDefault();
         setSelectedMentionIndex((index) =>
-          mentionCandidates.length
-            ? (index - 1 + mentionCandidates.length) % mentionCandidates.length
+          mentionMenuEntries.length
+            ? (index - 1 + mentionMenuEntries.length) % mentionMenuEntries.length
             : 0,
         );
         return;
@@ -1534,19 +1537,18 @@ const Chatbot = ({
       ) {
         event.preventDefault();
 
-        const selectedAttachment = mentionCandidates[selectedMentionIndex];
+        const selectedEntry = mentionMenuEntries[selectedMentionIndex];
 
-        if (selectedAttachment) {
-          handleAttachContext(selectedAttachment);
+        if (selectedEntry) {
+          mentionMenuRef.current?.activateEntry(selectedEntry);
         } else {
           setDismissedMentionKey(mentionKey);
         }
       }
     },
     [
-      handleAttachContext,
-      mentionCandidates,
       mentionKey,
+      mentionMenuEntries,
       mentionMenuOpen,
       selectedMentionIndex,
     ]
@@ -1577,7 +1579,6 @@ const Chatbot = ({
     );
   }, []);
 
-  const isBusy = status === "submitted" || status === "streaming";
   const hasMessages = messages.length > 0;
   const showPendingAssistant = shouldShowPendingAssistant(messages, status);
 
@@ -1673,10 +1674,11 @@ const Chatbot = ({
                   currentDatabaseId={databaseId}
                   currentPageId={workspaceId}
                   existingAttachmentKeys={existingAttachmentKeys}
-                  onItemsChange={setMentionCandidates}
+                  onEntriesChange={setMentionMenuEntries}
                   onSelect={handleAttachContext}
                   open={mentionMenuOpen}
                   query={activeMentionTrigger?.mentionQuery ?? ""}
+                  ref={mentionMenuRef}
                   selectedIndex={selectedMentionIndex}
                   setSelectedIndex={setSelectedMentionIndex}
                 />

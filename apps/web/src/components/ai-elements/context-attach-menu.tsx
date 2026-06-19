@@ -1,6 +1,14 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 import { DatabaseIcon, FileTextIcon } from "lucide-react"
 
 import {
@@ -100,6 +108,66 @@ type AttachMenuItem = {
   category: AttachMenuCategory
   key: string
   result: AppSearchResult
+}
+
+export type ContextAttachMenuEntry =
+  | {
+      attachment: ContextAttachment
+      key: string
+      menuItem: AttachMenuItem
+      type: "attachment"
+    }
+  | {
+      category: AttachMenuCategory
+      hiddenCount: number
+      key: string
+      type: "expand"
+    }
+
+export type ContextAttachMenuHandle = {
+  activateEntry: (entry: ContextAttachMenuEntry) => void
+}
+
+function getExpandKey(category: AttachMenuCategory) {
+  return `expand:${category}`
+}
+
+function buildMenuEntries({
+  expandedCategories,
+  groupedResults,
+}: {
+  expandedCategories: Set<AttachMenuCategory>
+  groupedResults: Record<AttachMenuCategory, AttachMenuItem[]>
+}): ContextAttachMenuEntry[] {
+  const entries: ContextAttachMenuEntry[] = []
+
+  for (const category of categoryOrder) {
+    const groupItems = groupedResults[category]
+    const isExpanded = expandedCategories.has(category)
+    const visibleItems = isExpanded
+      ? groupItems
+      : groupItems.slice(0, MAX_VISIBLE_PER_GROUP)
+
+    for (const item of visibleItems) {
+      entries.push({
+        attachment: item.attachment,
+        key: item.key,
+        menuItem: item,
+        type: "attachment",
+      })
+    }
+
+    if (!isExpanded && groupItems.length > visibleItems.length) {
+      entries.push({
+        category,
+        hiddenCount: groupItems.length - visibleItems.length,
+        key: getExpandKey(category),
+        type: "expand",
+      })
+    }
+  }
+
+  return entries
 }
 
 function buildAttachMenuItems({
@@ -347,45 +415,20 @@ function AttachMenuItemIcon({
   )
 }
 
-function AttachMenuExpandItem({
-  hiddenCount,
-  onExpand,
-}: {
-  hiddenCount: number
-  onExpand: () => void
-}) {
-  return (
-    <button
-      className="relative flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm text-muted-foreground outline-hidden transition-colors select-none hover:bg-muted hover:text-foreground"
-      onMouseDown={(event) => {
-        event.preventDefault()
-        onExpand()
-      }}
-      type="button"
-    >
-      <span className="truncate">
-        ... {hiddenCount} more result{hiddenCount === 1 ? "" : "s"}
-      </span>
-    </button>
-  )
-}
-
 function AttachMenuGroup({
-  allItems,
+  allEntries,
   category,
   isExpanded,
   items,
-  onExpand,
-  onSelect,
+  onActivateEntry,
   selectedIndex,
   selectedItemRef,
 }: {
-  allItems: AttachMenuItem[]
+  allEntries: ContextAttachMenuEntry[]
   category: AttachMenuCategory
   isExpanded: boolean
   items: AttachMenuItem[]
-  onExpand: () => void
-  onSelect: (attachment: ContextAttachment) => void
+  onActivateEntry: (entry: ContextAttachMenuEntry) => void
   selectedIndex: number
   selectedItemRef: React.RefObject<HTMLDivElement | null>
 }) {
@@ -397,25 +440,47 @@ function AttachMenuGroup({
     ? items
     : items.slice(0, MAX_VISIBLE_PER_GROUP)
   const hiddenCount = isExpanded ? 0 : items.length - visibleItems.length
+  const expandKey = getExpandKey(category)
+  const expandEntry: ContextAttachMenuEntry | null =
+    hiddenCount > 0
+      ? {
+          category,
+          hiddenCount,
+          key: expandKey,
+          type: "expand",
+        }
+      : null
 
   return (
     <PromptInputCommandGroup heading={categoryHeadings[category]}>
       {visibleItems.map((item) => {
-        const itemIndex = allItems.findIndex((candidate) => candidate.key === item.key)
+        const entryIndex = allEntries.findIndex((candidate) => candidate.key === item.key)
 
         return (
           <PromptInputCommandItem
-            aria-selected={itemIndex === selectedIndex}
+            aria-selected={entryIndex === selectedIndex}
             className={
-              itemIndex === selectedIndex ? "bg-muted text-foreground" : ""
+              entryIndex === selectedIndex ? "bg-muted text-foreground" : ""
             }
             key={item.key}
             onMouseDown={(event) => {
               event.preventDefault()
-              onSelect(item.attachment)
+              onActivateEntry({
+                attachment: item.attachment,
+                key: item.key,
+                menuItem: item,
+                type: "attachment",
+              })
             }}
-            onSelect={() => onSelect(item.attachment)}
-            ref={itemIndex === selectedIndex ? selectedItemRef : undefined}
+            onSelect={() =>
+              onActivateEntry({
+                attachment: item.attachment,
+                key: item.key,
+                menuItem: item,
+                type: "attachment",
+              })
+            }
+            ref={entryIndex === selectedIndex ? selectedItemRef : undefined}
             value={item.key}
           >
             <AttachMenuItemIcon item={item} />
@@ -430,34 +495,68 @@ function AttachMenuGroup({
           </PromptInputCommandItem>
         )
       })}
-      {hiddenCount > 0 ? (
-        <AttachMenuExpandItem hiddenCount={hiddenCount} onExpand={onExpand} />
+      {expandEntry ? (
+        (() => {
+          const entryIndex = allEntries.findIndex(
+            (candidate) => candidate.key === expandKey,
+          )
+
+          return (
+            <PromptInputCommandItem
+              aria-selected={entryIndex === selectedIndex}
+              className={
+                entryIndex === selectedIndex
+                  ? "bg-muted text-foreground"
+                  : "text-muted-foreground"
+              }
+              key={expandKey}
+              onMouseDown={(event) => {
+                event.preventDefault()
+                onActivateEntry(expandEntry)
+              }}
+              onSelect={() => onActivateEntry(expandEntry)}
+              ref={entryIndex === selectedIndex ? selectedItemRef : undefined}
+              value={expandKey}
+            >
+              <span className="truncate">
+                ... {expandEntry.hiddenCount} more result
+                {expandEntry.hiddenCount === 1 ? "" : "s"}
+              </span>
+            </PromptInputCommandItem>
+          )
+        })()
       ) : null}
     </PromptInputCommandGroup>
   )
 }
 
-export function ContextAttachMenu({
-  currentDatabaseId = null,
-  currentPageId = null,
-  existingAttachmentKeys,
-  onItemsChange,
-  onSelect,
-  open,
-  query,
-  selectedIndex,
-  setSelectedIndex,
-}: {
-  currentDatabaseId?: string | null
-  currentPageId?: string | null
-  existingAttachmentKeys: Set<string>
-  onItemsChange?: (items: ContextAttachment[]) => void
-  onSelect: (attachment: ContextAttachment) => void
-  open: boolean
-  query: string
-  selectedIndex: number
-  setSelectedIndex: (index: number) => void
-}) {
+export const ContextAttachMenu = forwardRef<
+  ContextAttachMenuHandle,
+  {
+    currentDatabaseId?: string | null
+    currentPageId?: string | null
+    existingAttachmentKeys: Set<string>
+    onEntriesChange?: (entries: ContextAttachMenuEntry[]) => void
+    onSelect: (attachment: ContextAttachment) => void
+    open: boolean
+    query: string
+    selectedIndex: number
+    setSelectedIndex: (index: number) => void
+  }
+>(function ContextAttachMenu(
+  {
+    currentDatabaseId = null,
+    currentPageId = null,
+    existingAttachmentKeys,
+    onEntriesChange,
+    onSelect,
+    open,
+    query,
+    selectedIndex,
+    setSelectedIndex,
+  },
+  ref,
+) {
   const organizationId = useActiveOrganizationId()
   const {
     data: workspaces = [],
@@ -505,25 +604,45 @@ export function ContextAttachMenu({
     return groups
   }, [items])
 
-  const navigableItems = useMemo(() => {
-    const nextItems: AttachMenuItem[] = []
+  const menuEntries = useMemo(
+    () =>
+      buildMenuEntries({
+        expandedCategories,
+        groupedResults,
+      }),
+    [expandedCategories, groupedResults],
+  )
 
-    for (const category of categoryOrder) {
-      const groupItems = groupedResults[category]
-      const isExpanded = expandedCategories.has(category)
-
-      nextItems.push(
-        ...(isExpanded
-          ? groupItems
-          : groupItems.slice(0, MAX_VISIBLE_PER_GROUP)),
-      )
-    }
-
-    return nextItems
-  }, [expandedCategories, groupedResults])
-
-  const selectedItem = navigableItems[selectedIndex]
+  const selectedEntry = menuEntries[selectedIndex]
   const isLoadingResults = (isLoading || isFetching) && workspaces.length === 0
+
+  const handleExpandCategory = useCallback((category: AttachMenuCategory) => {
+    setExpandedCategories((current) => {
+      const next = new Set(current)
+      next.add(category)
+      return next
+    })
+  }, [])
+
+  const handleActivateEntry = useCallback(
+    (entry: ContextAttachMenuEntry) => {
+      if (entry.type === "expand") {
+        handleExpandCategory(entry.category)
+        return
+      }
+
+      onSelect(entry.attachment)
+    },
+    [handleExpandCategory, onSelect],
+  )
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      activateEntry: handleActivateEntry,
+    }),
+    [handleActivateEntry],
+  )
 
   useEffect(() => {
     setExpandedCategories(new Set())
@@ -534,16 +653,14 @@ export function ContextAttachMenu({
   }, [selectedIndex])
 
   useEffect(() => {
-    onItemsChange?.(navigableItems.map((item) => item.attachment))
-  }, [navigableItems, onItemsChange])
+    onEntriesChange?.(menuEntries)
+  }, [menuEntries, onEntriesChange])
 
-  const handleExpandCategory = (category: AttachMenuCategory) => {
-    setExpandedCategories((current) => {
-      const next = new Set(current)
-      next.add(category)
-      return next
-    })
-  }
+  useEffect(() => {
+    if (selectedIndex >= menuEntries.length && menuEntries.length > 0) {
+      setSelectedIndex(menuEntries.length - 1)
+    }
+  }, [menuEntries.length, selectedIndex, setSelectedIndex])
 
   if (!open) {
     return null
@@ -553,14 +670,14 @@ export function ContextAttachMenu({
     <div className="absolute bottom-full left-0 z-50 mb-2 w-full max-w-md overflow-hidden rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10">
       <PromptInputCommand
         onValueChange={(value) => {
-          const nextIndex = navigableItems.findIndex((item) => item.key === value)
+          const nextIndex = menuEntries.findIndex((entry) => entry.key === value)
 
           if (nextIndex >= 0) {
             setSelectedIndex(nextIndex)
           }
         }}
         shouldFilter={false}
-        value={selectedItem?.key ?? ""}
+        value={selectedEntry?.key ?? ""}
       >
         <PromptInputCommandList className="max-h-60">
           {isLoadingResults ? (
@@ -572,13 +689,12 @@ export function ContextAttachMenu({
           ) : (
             categoryOrder.map((category) => (
               <AttachMenuGroup
-                allItems={navigableItems}
+                allEntries={menuEntries}
                 category={category}
                 isExpanded={expandedCategories.has(category)}
                 items={groupedResults[category]}
                 key={category}
-                onExpand={() => handleExpandCategory(category)}
-                onSelect={onSelect}
+                onActivateEntry={handleActivateEntry}
                 selectedIndex={selectedIndex}
                 selectedItemRef={selectedItemRef}
               />
@@ -588,7 +704,7 @@ export function ContextAttachMenu({
       </PromptInputCommand>
     </div>
   )
-}
+})
 
 export function getAttachmentKey(attachment: Pick<ContextAttachment, "type" | "id">) {
   return `${attachment.type}:${attachment.id}`
