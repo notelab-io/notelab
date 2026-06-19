@@ -30,8 +30,16 @@ import {
 } from "@/components/ui/alert-dialog"
 
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   DATABASE_PAGE_DRAG_MIME,
   defaultStatusOptions,
+  getDatabasePropertyType,
 } from "../constants"
 import { DatabasePropertyDate } from "../database-property-date"
 import { DatabasePropertyInput } from "../database-property-input"
@@ -57,6 +65,7 @@ import {
   isOptionBackedKanbanGroupProperty,
 } from "./database-kanban-config"
 import { useDatabaseViewContext } from "../shared/database-view-context"
+import { NameColumnGlyph } from "../shared/name-column-glyph"
 import { getDatabaseGroupMoveValue } from "../shared/database-group-values"
 import {
   getAnchoredReorderedRowIds,
@@ -297,6 +306,7 @@ export function DatabaseKanbanView() {
     draftPropertyValues,
     editable,
     groupProperty,
+    groupableProperties,
     isAddingDatabaseRow,
     showPageIconInTitle,
     addDatabaseRow,
@@ -307,6 +317,7 @@ export function DatabaseKanbanView() {
     savePropertyValue,
     setActivePropertyValueKey,
     setDraftPropertyValues,
+    setViewGroupProperty,
     saveDatabaseSorts,
     sortedItems: items,
     titlePropertyLabel,
@@ -1084,8 +1095,35 @@ export function DatabaseKanbanView() {
           </div>
         </div>
       ) : (
-        <div className="database-empty-state">
-          <span>Choose a property to group this Kanban view.</span>
+        <div className="database-empty-state flex flex-col items-center gap-3 px-6 py-10 text-sm text-muted-foreground">
+          <span>Group this Kanban view by</span>
+          <Select onValueChange={setViewGroupProperty}>
+            <SelectTrigger className="min-w-56">
+              <SelectValue placeholder="Choose a property" />
+            </SelectTrigger>
+            <SelectContent align="center">
+              {groupableProperties.map((property) => {
+                const PropertyIcon =
+                  property.id === "name"
+                    ? null
+                    : getDatabasePropertyType(property.property.type).icon
+
+                return (
+                  <SelectItem
+                    key={property.id}
+                    value={property.property.id}
+                  >
+                    {PropertyIcon ? (
+                      <PropertyIcon className="size-4 shrink-0 text-muted-foreground" />
+                    ) : (
+                      <NameColumnGlyph />
+                    )}
+                    <span>{property.property.name}</span>
+                  </SelectItem>
+                )
+              })}
+            </SelectContent>
+          </Select>
         </div>
       )}
       </div>
