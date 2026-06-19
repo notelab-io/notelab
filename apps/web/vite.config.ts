@@ -12,6 +12,9 @@ const connectorsDir = fileURLToPath(
 const featuresDir = fileURLToPath(
   new URL("../../packages/features/src", import.meta.url),
 );
+const workspaceContextDir = fileURLToPath(
+  new URL("../../packages/workspace-context/src", import.meta.url),
+);
 const backendTarget = process.env.VITE_API_URL?.replace(/\/$/, "") ?? "http://127.0.0.1:3000";
 
 // https://vite.dev/config/
@@ -26,6 +29,10 @@ export default defineConfig(async () => ({
         replacement: `${featuresDir}/$1/index.ts`,
       },
       { find: /^@notelab\/features$/, replacement: `${featuresDir}/index.ts` },
+      {
+        find: "@notelab/workspace-context",
+        replacement: `${workspaceContextDir}/index.ts`,
+      },
       {
         find: "@notelab/gmail-connector/ui",
         replacement: `${connectorsDir}/gmail/src/ui.tsx`,
@@ -93,6 +100,10 @@ export default defineConfig(async () => ({
         changeOrigin: true,
       },
       "/organization": {
+        target: backendTarget,
+        changeOrigin: true,
+      },
+      "/search": {
         target: backendTarget,
         changeOrigin: true,
       },
