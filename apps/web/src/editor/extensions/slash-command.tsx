@@ -24,6 +24,7 @@ import {
   Pilcrow,
   Quote,
   SmilePlus,
+  Sparkles,
   Table2,
   Video,
 } from "lucide-react"
@@ -43,6 +44,7 @@ import {
   MiroIcon,
   YouTubeIcon,
 } from "@/packages/editor/extensions/embed-block"
+import { openAskAiPopover } from "@/packages/editor/extensions/ask-ai-block"
 import type { CreatedPage } from "@/packages/editor/extensions/page-block"
 
 import { SlashCommandMenu } from "./slash-command-menu"
@@ -51,6 +53,7 @@ export type SlashCommandOptions = {
   onCreateDatabase?: () => Promise<string | null>
   onCreatePage?: () => Promise<CreatedPage>
   onOpenPage?: (pageId: string) => void
+  organizationId?: string | null
 }
 
 export type SlashCommandItem = {
@@ -129,6 +132,18 @@ export function createSlashCommandItems(
   options: SlashCommandOptions = {}
 ): SlashCommandItem[] {
   return [
+  {
+    title: "Ask AI",
+    description: "Generate content with AI",
+    icon: Sparkles,
+    command: ({ editor, range }) => {
+      openAskAiPopover({
+        editor,
+        organizationId: options.organizationId,
+        range,
+      })
+    },
+  },
   {
     title: "Text",
     description: "Plain paragraph",
@@ -569,6 +584,7 @@ export const SlashCommand = Extension.create<SlashCommandOptions>({
       onCreateDatabase: undefined,
       onCreatePage: undefined,
       onOpenPage: undefined,
+      organizationId: undefined,
     }
   },
 

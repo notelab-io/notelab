@@ -14,12 +14,14 @@ import { Table } from "@tiptap/extension-table"
 import { TableCell } from "@tiptap/extension-table-cell"
 import { TableHeader } from "@tiptap/extension-table-header"
 import { TableRow } from "@tiptap/extension-table-row"
+import { Markdown } from "@tiptap/markdown"
 import TaskList from "@tiptap/extension-task-list"
 import TextAlign from "@tiptap/extension-text-align"
 import { BackgroundColor, Color, TextStyle } from "@tiptap/extension-text-style"
 import Typography from "@tiptap/extension-typography"
 import type { Extensions } from "@tiptap/core"
 import StarterKit from "@tiptap/starter-kit"
+import { AskAiBlock } from "@/packages/editor/extensions/ask-ai-block"
 import { BookmarkBlock } from "@/packages/editor/extensions/bookmark-block"
 import { CodeBlockShiki } from "@/packages/editor/extensions/code-block-shiki"
 import { ColumnsExtension } from "@/packages/editor/extensions/columns"
@@ -129,10 +131,15 @@ export const createBaseExtensions = ({
   TableHeader,
   TableCell,
   Typography,
+  Markdown.configure({
+    markedOptions: { gfm: true },
+  }),
   CharacterCount,
+  AskAiBlock.configure({ organizationId }),
   SlashCommand.configure({
     onCreateDatabase: createEditorDatabase,
     onCreatePage,
     onOpenPage,
+    organizationId,
   }),
 ]

@@ -252,9 +252,60 @@
   .tiptap-editor .embed-block,
   .tiptap-editor .file-block,
   .tiptap-editor .bookmark-block,
+  .tiptap-editor .ask-ai-block,
   .tiptap-editor .database-block,
   .tiptap-editor .page-block {
     @apply my-4;
+  }
+
+  .ask-ai-block {
+    @apply w-full;
+  }
+
+  .ask-ai-input-shell {
+    @apply flex min-h-12 w-full items-end gap-2 rounded-md border bg-background px-3 py-2 shadow-sm transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/20;
+  }
+
+  .ask-ai-input-icon {
+    @apply mt-2 size-4 shrink-0 text-muted-foreground;
+  }
+
+  .ask-ai-textarea {
+    @apply max-h-48 min-h-8 flex-1 resize-none border-0 bg-transparent px-0 py-1 text-base leading-6 shadow-none focus-visible:ring-0;
+  }
+
+  .ask-ai-send-button {
+    @apply size-8 shrink-0 rounded-sm;
+  }
+
+  .ask-ai-send-button svg {
+    @apply size-4;
+  }
+
+  .ask-ai-status,
+  .ask-ai-error {
+    @apply mt-2 flex items-center gap-2 px-1 text-xs text-muted-foreground;
+  }
+
+  .ask-ai-status svg {
+    @apply size-3.5;
+  }
+
+  .ask-ai-error {
+    @apply text-destructive;
+  }
+
+  .ask-ai-popover-form {
+    @apply w-full;
+  }
+
+  .ask-ai-popover-status,
+  .ask-ai-popover-error {
+    @apply px-1 text-xs text-muted-foreground;
+  }
+
+  .ask-ai-popover-error {
+    @apply text-destructive;
   }
 
   .image-block-placeholder {
