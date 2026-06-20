@@ -265,9 +265,7 @@ export function useCreateWorkspace() {
           )
         : null
       const inheritedAccessLevel =
-        parentDetail?.accessLevel && parentDetail.accessLevel !== "none"
-          ? parentDetail.accessLevel
-          : ("full" as AccessLevel)
+        parentDetail?.accessLevel ?? ("full" as AccessLevel)
 
       queryClient.setQueryData<WorkspaceDetail | null>(
         workspaceQueryKey(workspace.id),

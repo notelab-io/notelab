@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/button-group"
 
 import { ColorMenu } from "./color-menu"
+import { SelectionAiMenu } from "./selection-ai-menu"
 import { toolbarGroups } from "./toolbar-data"
 import { ToolbarButton } from "./toolbar-button"
 import type { EditorControlProps, RunToolbarCommand } from "./types"
@@ -15,8 +16,10 @@ const SELECTION_BUBBLE_MENU_PLUGIN_KEY = "selectionBubbleMenu"
 
 export function SelectionBubbleMenu({
   editor,
+  organizationId,
   runCommand,
 }: EditorControlProps & {
+  organizationId?: string | null
   runCommand: RunToolbarCommand
 }) {
   useEffect(() => {
@@ -98,6 +101,8 @@ export function SelectionBubbleMenu({
             useMouseDown
           />
         ))}
+        <ButtonGroupSeparator />
+        <SelectionAiMenu editor={editor} organizationId={organizationId} />
         <ButtonGroupSeparator />
         <ColorMenu editor={editor} />
         <ButtonGroupSeparator />

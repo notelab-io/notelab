@@ -17,6 +17,7 @@ type EditorChromeProps = {
   editor: TiptapEditor | null
   editorId: string
   onClosePasteChoice: () => void
+  organizationId?: string | null
   pasteChoice: PasteChoiceState | null
   plusMenuOpen: boolean
   setDragHandleMenuOpen: (open: boolean) => void
@@ -32,6 +33,7 @@ export function EditorChrome({
   editor,
   editorId,
   onClosePasteChoice,
+  organizationId,
   pasteChoice,
   plusMenuOpen,
   setDragHandleMenuOpen,
@@ -73,6 +75,7 @@ export function EditorChrome({
         <>
           <SelectionBubbleMenu
             editor={editor}
+            organizationId={organizationId}
             runCommand={(action, attrs) =>
               runToolbarCommand(editor, action, attrs)
             }

@@ -1412,6 +1412,34 @@
     @apply flex items-center gap-1 rounded-md border bg-popover p-1 text-popover-foreground shadow-lg;
   }
 
+  .selection-ai-menu {
+    @apply w-80 gap-2 p-2;
+  }
+
+  .selection-ai-skills {
+    @apply flex max-h-44 flex-col gap-1 overflow-y-auto;
+  }
+
+  .selection-ai-skill {
+    @apply flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm text-muted-foreground outline-none hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground;
+  }
+
+  .selection-ai-skill-active {
+    @apply bg-accent text-accent-foreground;
+  }
+
+  .selection-ai-skill-emoji {
+    @apply shrink-0 text-base leading-none;
+  }
+
+  .selection-ai-empty {
+    @apply px-2 py-1 text-xs text-muted-foreground;
+  }
+
+  .selection-ai-form {
+    @apply border-t pt-2;
+  }
+
   .suggestion {
     @apply rounded bg-muted px-1;
   }

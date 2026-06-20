@@ -118,6 +118,7 @@ export function Editor({
           editor={editor}
           editorId={editorId}
           onClosePasteChoice={handleClosePasteChoice}
+          organizationId={organizationId}
           pasteChoice={pasteChoice}
           plusMenuOpen={plusMenuOpen}
           setDragHandleMenuOpen={setDragHandleMenuOpen}
