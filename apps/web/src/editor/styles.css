@@ -20,7 +20,7 @@
   }
 
   .tiptap-editor h2 {
-    @apply scroll-m-20 border-b pb-2 text-3xl font-semibold leading-tight tracking-normal first:mt-0;
+    @apply scroll-m-20 text-3xl font-semibold leading-tight tracking-normal first:mt-0;
   }
 
   .tiptap-editor h3 {
