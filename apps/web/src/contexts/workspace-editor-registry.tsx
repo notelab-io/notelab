@@ -7,11 +7,28 @@ import {
   type ReactNode,
 } from "react"
 
-type EditorContentGetter = () => unknown
+import type {
+  WorkspaceEditPreviewClearOptions,
+  WorkspaceEditPreviewRequest,
+} from "@/editor/types"
+
+export type WorkspaceEditorHandle = {
+  acceptEditDiffPreview: () => boolean
+  clearEditDiffPreview: (options?: WorkspaceEditPreviewClearOptions) => void
+  getActiveEditDiffToolCallId: () => string | null
+  getContentJson: () => unknown | null
+  isEditDiffPreviewActive: () => boolean
+  isEditable: () => boolean
+  setContentFromMarkdown: (markdown: string) => boolean
+  setContentJson: (content: unknown) => boolean
+  showEditDiffPreview: (request: WorkspaceEditPreviewRequest) => boolean
+}
+
+export type { WorkspaceEditPreviewClearOptions, WorkspaceEditPreviewRequest }
 
 type WorkspaceEditorRegistryValue = {
-  getEditorContent: (workspaceId: string) => unknown | null
-  registerEditor: (workspaceId: string, getter: EditorContentGetter) => void
+  getEditorHandle: (workspaceId: string) => WorkspaceEditorHandle | null
+  registerEditor: (workspaceId: string, handle: WorkspaceEditorHandle) => void
   unregisterEditor: (workspaceId: string) => void
 }
 
@@ -23,11 +40,11 @@ export function WorkspaceEditorRegistryProvider({
 }: {
   children: ReactNode
 }) {
-  const editorsRef = useRef(new Map<string, EditorContentGetter>())
+  const editorsRef = useRef(new Map<string, WorkspaceEditorHandle>())
 
   const registerEditor = useCallback(
-    (workspaceId: string, getter: EditorContentGetter) => {
-      editorsRef.current.set(workspaceId, getter)
+    (workspaceId: string, handle: WorkspaceEditorHandle) => {
+      editorsRef.current.set(workspaceId, handle)
     },
     [],
   )
@@ -36,23 +53,17 @@ export function WorkspaceEditorRegistryProvider({
     editorsRef.current.delete(workspaceId)
   }, [])
 
-  const getEditorContent = useCallback((workspaceId: string) => {
-    const getter = editorsRef.current.get(workspaceId)
-
-    if (!getter) {
-      return null
-    }
-
-    return getter()
+  const getEditorHandle = useCallback((workspaceId: string) => {
+    return editorsRef.current.get(workspaceId) ?? null
   }, [])
 
   const value = useMemo(
     () => ({
-      getEditorContent,
+      getEditorHandle,
       registerEditor,
       unregisterEditor,
     }),
-    [getEditorContent, registerEditor, unregisterEditor],
+    [getEditorHandle, registerEditor, unregisterEditor],
   )
 
   return (
