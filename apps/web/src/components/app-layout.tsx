@@ -91,6 +91,9 @@ function AppLayoutContent({ children }: { children?: ReactNode }) {
   const [sidePaneWorkspaceId, setSidePaneWorkspaceId] = useState<string | null>(
     null,
   )
+  const [sidePaneDatabaseId, setSidePaneDatabaseId] = useState<string | null>(
+    null,
+  )
   const [chatSidebarOpen, setChatSidebarOpen] = useState(false)
   const [discussionsSidebarOpen, setDiscussionsSidebarOpen] = useState(false)
   const openRightPanelCount =
@@ -99,15 +102,23 @@ function AppLayoutContent({ children }: { children?: ReactNode }) {
   const desktopRightPanelCount = isMobile ? 0 : openRightPanelCount
   const closeSidePane = useCallback(() => {
     setSidePaneWorkspaceId(null)
+    setSidePaneDatabaseId(null)
   }, [])
-  const openSidePane = useCallback((nextWorkspaceId: string) => {
-    if (appSidebarOpen) {
-      setChatSidebarOpen(false)
-      setDiscussionsSidebarOpen(false)
-    }
+  const openSidePane = useCallback(
+    (
+      nextWorkspaceId: string,
+      options?: { databaseId?: string | null },
+    ) => {
+      if (appSidebarOpen) {
+        setChatSidebarOpen(false)
+        setDiscussionsSidebarOpen(false)
+      }
 
-    setSidePaneWorkspaceId(nextWorkspaceId)
-  }, [appSidebarOpen])
+      setSidePaneWorkspaceId(nextWorkspaceId)
+      setSidePaneDatabaseId(options?.databaseId ?? null)
+    },
+    [appSidebarOpen],
+  )
   const openChatSidebar = useCallback(() => {
     if (appSidebarOpen) {
       closeSidePane()
@@ -124,9 +135,10 @@ function AppLayoutContent({ children }: { children?: ReactNode }) {
     () => ({
       closeSidePane,
       openSidePane,
+      sidePaneDatabaseId,
       sidePaneWorkspaceId,
     }),
-    [closeSidePane, openSidePane, sidePaneWorkspaceId],
+    [closeSidePane, openSidePane, sidePaneDatabaseId, sidePaneWorkspaceId],
   )
 
   useEffect(() => {

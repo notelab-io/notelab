@@ -65,7 +65,7 @@ export function WorkspaceEditCard({
       : null
   const isStaleResolveFailure =
     snapshot?.status === "failed" &&
-    Boolean(snapshot.errorMessage) &&
+    snapshot.errorMessage != null &&
     isStalePageEditResolveError(snapshot.errorMessage)
   const title = toolError
     ? "Page update failed"

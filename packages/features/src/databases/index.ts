@@ -1,3 +1,5 @@
 export * from "./hooks"
 export * from "./queries"
 export * from "./realtime"
+export * from "./row-page-properties"
+export * from "./use-database-id-for-row-page"

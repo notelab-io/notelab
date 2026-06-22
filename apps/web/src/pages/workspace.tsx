@@ -36,6 +36,7 @@ import { useWorkspaceContentSnapshot } from "@/packages/editor/use-workspace-con
 
 type WorkspaceEditorPaneProps = {
   className?: string
+  databaseId?: string | null
   onOpenPage: (pageId: string) => void
   readOnly?: boolean
   workspaceId: string
@@ -57,8 +58,12 @@ export default function WorkspacePage() {
 
 function AuthenticatedWorkspacePage() {
   const { workspaceId } = useParams({ from: "/workspace/$workspaceId" })
-  const { closeSidePane, openSidePane, sidePaneWorkspaceId } =
-    useWorkspaceSidePane()
+  const {
+    closeSidePane,
+    openSidePane,
+    sidePaneDatabaseId,
+    sidePaneWorkspaceId,
+  } = useWorkspaceSidePane()
   const sidePaneWidthClass = getWorkspaceSidePaneWidthClass()
 
   const openPageInSidePane = useCallback((pageId: string) => {
@@ -88,6 +93,7 @@ function AuthenticatedWorkspacePage() {
         >
           <WorkspaceEditorPane
             className="min-h-0 flex-1 overflow-y-auto"
+            databaseId={sidePaneDatabaseId}
             onOpenPage={openPageInSidePane}
             workspaceId={sidePaneWorkspaceId}
           />
@@ -108,8 +114,12 @@ function PublicWorkspacePage() {
 }
 
 function PublicWorkspaceContent({ workspaceId }: { workspaceId: string }) {
-  const { closeSidePane, openSidePane, sidePaneWorkspaceId } =
-    useWorkspaceSidePane()
+  const {
+    closeSidePane,
+    openSidePane,
+    sidePaneDatabaseId,
+    sidePaneWorkspaceId,
+  } = useWorkspaceSidePane()
   const sidePaneWidthClass = getWorkspaceSidePaneWidthClass()
   const openPageInSidePane = useCallback((pageId: string) => {
     if (pageId === workspaceId || pageId === sidePaneWorkspaceId) {
@@ -169,6 +179,7 @@ function PublicWorkspaceContent({ workspaceId }: { workspaceId: string }) {
           </div>
           <WorkspaceEditorPane
             className="min-h-0 flex-1 overflow-y-auto"
+            databaseId={sidePaneDatabaseId}
             onOpenPage={openPageInSidePane}
             readOnly
             workspaceId={sidePaneWorkspaceId}
@@ -264,6 +275,7 @@ function getWorkspaceBreadcrumbLabel(
 
 export function WorkspaceEditorPane({
   className,
+  databaseId,
   onOpenPage,
   readOnly = false,
   workspaceId,
@@ -526,6 +538,7 @@ export function WorkspaceEditorPane({
         key={workspace.id}
         content={workspace.content ?? ""}
         cover={cover}
+        databaseId={databaseId}
         editorContentRef={editorContentRef}
         editable={pageEditable}
         onEditorReady={(editor) => {

@@ -1,6 +1,14 @@
+import { useMemo } from "react"
 import { useMutation, useQuery } from "@tanstack/react-query"
 
 import { useNotelabFeatures } from "../context"
+import { useDatabase } from "../databases/hooks"
+import {
+  buildWorkspacePropertiesPayloadFromDatabase,
+  findDatabaseIdForRowPage,
+  syncDatabaseCacheWorkspacePropertyValues,
+} from "../databases/row-page-properties"
+import { useDatabaseIdForRowPage } from "../databases/use-database-id-for-row-page"
 import {
   defaultUserSettings,
   userSettingsQueryKey,
@@ -178,10 +186,48 @@ export function useWorkspacePersonAccessTargets(
   })
 }
 
-export function useWorkspaceProperties(workspaceId: string | null | undefined) {
-  const { apiFetch } = useNotelabFeatures()
+type WorkspacePropertiesOptions = {
+  databaseId?: string | null
+}
 
-  return useQuery(workspacePropertiesQueryOptions(apiFetch, workspaceId))
+export function useWorkspaceProperties(
+  workspaceId: string | null | undefined,
+  options?: WorkspacePropertiesOptions,
+) {
+  const { apiFetch } = useNotelabFeatures()
+  const resolvedDatabaseId = useDatabaseIdForRowPage(
+    workspaceId,
+    options?.databaseId,
+  )
+  const databaseQuery = useDatabase(resolvedDatabaseId)
+  const apiQuery = useQuery({
+    ...workspacePropertiesQueryOptions(apiFetch, workspaceId),
+    enabled: Boolean(workspaceId) && !resolvedDatabaseId,
+  })
+  const derivedPayload = useMemo(() => {
+    if (!resolvedDatabaseId || !databaseQuery.data || !workspaceId) {
+      return undefined
+    }
+
+    return buildWorkspacePropertiesPayloadFromDatabase(
+      databaseQuery.data,
+      workspaceId,
+    )
+  }, [databaseQuery.data, resolvedDatabaseId, workspaceId])
+
+  if (!resolvedDatabaseId) {
+    return apiQuery
+  }
+
+  return {
+    ...databaseQuery,
+    data: derivedPayload ?? undefined,
+    isLoading: databaseQuery.isLoading,
+    isFetching: databaseQuery.isFetching,
+    isError: databaseQuery.isError,
+    error: databaseQuery.error,
+    refetch: databaseQuery.refetch,
+  }
 }
 
 export function useWorkspaceComments(
@@ -548,6 +594,19 @@ export function useUpdateWorkspacePropertyValue() {
         workspacePropertiesQueryKey(variables.workspaceId),
         payload,
       )
+
+      const databaseId =
+        findDatabaseIdForRowPage(queryClient, variables.workspaceId) ??
+        null
+
+      if (databaseId) {
+        syncDatabaseCacheWorkspacePropertyValues(
+          queryClient,
+          databaseId,
+          variables.workspaceId,
+          payload,
+        )
+      }
     },
   })
 }

@@ -51,6 +51,7 @@ export type WorkspaceEditPreviewControls = {
 export type EditorProps = {
   content?: unknown
   cover?: string
+  databaseId?: string | null
   editorContentRef?: MutableRefObject<(() => unknown) | null>
   onEditorReady?: (editor: Editor | null) => void
   emoji?: string

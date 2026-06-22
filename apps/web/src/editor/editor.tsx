@@ -28,6 +28,7 @@ import { useMobileNodeActions } from "./use-mobile-node-actions"
 export function Editor({
   content = starterContent,
   cover,
+  databaseId,
   editorContentRef,
   editable = true,
   emoji,
@@ -338,6 +339,7 @@ export function Editor({
         <WorkspaceMetadata
           contentClassName={pageContentLayout.className}
           cover={cover}
+          databaseId={databaseId}
           editable={editable}
           icon={emoji}
           onCoverChange={onCoverChange}

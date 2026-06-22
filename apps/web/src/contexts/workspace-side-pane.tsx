@@ -8,9 +8,17 @@ import {
   type ReactNode,
 } from "react"
 
+export type OpenWorkspaceSidePaneOptions = {
+  databaseId?: string | null
+}
+
 export type WorkspaceSidePaneContextValue = {
   closeSidePane: () => void
-  openSidePane: (workspaceId: string) => void
+  openSidePane: (
+    workspaceId: string,
+    options?: OpenWorkspaceSidePaneOptions,
+  ) => void
+  sidePaneDatabaseId: string | null
   sidePaneWorkspaceId: string | null
 }
 
@@ -29,19 +37,28 @@ export function WorkspaceSidePaneProvider({
   const [sidePaneWorkspaceId, setSidePaneWorkspaceId] = useState<string | null>(
     null,
   )
+  const [sidePaneDatabaseId, setSidePaneDatabaseId] = useState<string | null>(
+    null,
+  )
   const closeSidePane = useCallback(() => {
     setSidePaneWorkspaceId(null)
+    setSidePaneDatabaseId(null)
   }, [])
-  const openSidePane = useCallback((nextWorkspaceId: string) => {
-    setSidePaneWorkspaceId(nextWorkspaceId)
-  }, [])
+  const openSidePane = useCallback(
+    (nextWorkspaceId: string, options?: OpenWorkspaceSidePaneOptions) => {
+      setSidePaneWorkspaceId(nextWorkspaceId)
+      setSidePaneDatabaseId(options?.databaseId ?? null)
+    },
+    [],
+  )
   const sidePaneContext = useMemo<WorkspaceSidePaneContextValue>(
     () => ({
       closeSidePane,
       openSidePane,
+      sidePaneDatabaseId,
       sidePaneWorkspaceId,
     }),
-    [closeSidePane, openSidePane, sidePaneWorkspaceId],
+    [closeSidePane, openSidePane, sidePaneDatabaseId, sidePaneWorkspaceId],
   )
 
   useEffect(() => {

@@ -47,8 +47,12 @@ export default function DatabasePage() {
 function AuthenticatedDatabasePage() {
   const { databaseId } = useParams({ from: "/database/$databaseId" })
   const { data: payload, isLoading } = useDatabase(databaseId)
-  const { closeSidePane, openSidePane, sidePaneWorkspaceId } =
-    useWorkspaceSidePane()
+  const {
+    closeSidePane,
+    openSidePane,
+    sidePaneDatabaseId,
+    sidePaneWorkspaceId,
+  } = useWorkspaceSidePane()
   const sidePaneWidthClass = getWorkspaceSidePaneWidthClass()
   const databasePageId = payload?.database.pageId ?? null
 
@@ -58,8 +62,8 @@ function AuthenticatedDatabasePage() {
       return
     }
 
-    openSidePane(pageId)
-  }, [closeSidePane, databasePageId, openSidePane, sidePaneWorkspaceId])
+    openSidePane(pageId, { databaseId })
+  }, [closeSidePane, databaseId, databasePageId, openSidePane, sidePaneWorkspaceId])
 
   if (isLoading) {
     return (
@@ -94,6 +98,7 @@ function AuthenticatedDatabasePage() {
         >
           <WorkspaceEditorPane
             className="min-h-0 flex-1 overflow-y-auto"
+            databaseId={sidePaneDatabaseId ?? databaseId}
             onOpenPage={openPageInSidePane}
             workspaceId={sidePaneWorkspaceId}
           />
@@ -115,8 +120,12 @@ function PublicDatabasePage() {
 
 function PublicDatabaseContent({ databaseId }: { databaseId: string }) {
   const { data: payload, isLoading } = useDatabase(databaseId)
-  const { closeSidePane, openSidePane, sidePaneWorkspaceId } =
-    useWorkspaceSidePane()
+  const {
+    closeSidePane,
+    openSidePane,
+    sidePaneDatabaseId,
+    sidePaneWorkspaceId,
+  } = useWorkspaceSidePane()
   const sidePaneWidthClass = getWorkspaceSidePaneWidthClass()
   const databasePageId = payload?.database.pageId ?? null
   const openPageInSidePane = useCallback((pageId: string) => {
@@ -125,8 +134,8 @@ function PublicDatabaseContent({ databaseId }: { databaseId: string }) {
       return
     }
 
-    openSidePane(pageId)
-  }, [closeSidePane, databasePageId, openSidePane, sidePaneWorkspaceId])
+    openSidePane(pageId, { databaseId })
+  }, [closeSidePane, databaseId, databasePageId, openSidePane, sidePaneWorkspaceId])
 
   if (isLoading) {
     return (
@@ -192,6 +201,7 @@ function PublicDatabaseContent({ databaseId }: { databaseId: string }) {
           </div>
           <WorkspaceEditorPane
             className="min-h-0 flex-1 overflow-y-auto"
+            databaseId={sidePaneDatabaseId ?? databaseId}
             onOpenPage={openPageInSidePane}
             readOnly
             workspaceId={sidePaneWorkspaceId}

@@ -79,7 +79,9 @@ export function WorkspaceMetadata({
   const [draftValues, setDraftValues] = useState<Record<string, DatabasePropertyValue>>({})
   const titleRef = useRef<HTMLTextAreaElement | null>(null)
   const { editorCommentsOpenRequest } = useWorkspaceEditorComments()
-  const { data: propertyPayload } = useWorkspaceProperties(workspaceId)
+  const { data: propertyPayload } = useWorkspaceProperties(workspaceId, {
+    databaseId,
+  })
   const needsPersonAccessTargets = useMemo(
     () =>
       (propertyPayload?.properties ?? []).some(
