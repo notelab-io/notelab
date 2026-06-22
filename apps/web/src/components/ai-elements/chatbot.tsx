@@ -28,7 +28,14 @@ import {
   type ContextAttachMenuHandle,
 } from "@/components/ai-elements/context-attach-menu";
 import type { PromptInputMessage } from "@/components/ai-elements/prompt-input";
+import { useWorkspaceEditorRegistry } from "@/contexts/workspace-editor-registry";
 import { useWorkspaceAiContext } from "@/hooks/use-workspace-ai-context";
+import {
+  updateWorkspaceEditSnapshotStatus,
+  useWorkspaceEditAutoApply,
+} from "@/hooks/use-workspace-edit-auto-apply";
+import { useWorkspaceEditApplier } from "@/hooks/use-workspace-edit-applier";
+import { WorkspaceEditCard } from "@/components/ai-elements/workspace-edit-card";
 import {
   PromptInput,
   PromptInputButton,
@@ -57,7 +64,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   aiChatThreadMessagesQueryKey,
+  buildWorkspaceEditSnapshotMap,
+  dedupeChatMessagesById,
+  isProposePageContentUpdateToolName,
+  isWorkspaceEditBaselineCurrent,
+  isWorkspaceEditReviewAvailable,
+  logWorkspaceEdit,
   type AiChatThreadMessagesResponse,
+  type ProposePageContentUpdateOutput,
+  type WorkspaceEditSnapshotPart,
 } from "@notelab/features/ai-chat";
 import { useSession } from "@notelab/features/auth";
 import { useNotelabFeatures } from "@notelab/features";
@@ -67,7 +82,10 @@ import {
   useIntegrations,
   useOrganizationAiModels,
 } from "@notelab/features/integrations";
-import { useWorkspaces } from "@notelab/features/workspaces";
+import {
+  useWorkspaceAccessLevel,
+  useWorkspaces,
+} from "@notelab/features/workspaces";
 import type { OrganizationAiChatModel } from "@notelab/features/integrations";
 import { integrationIcons } from "@/lib/integration-icons";
 import { useAgent } from "agents/react";
@@ -99,11 +117,14 @@ import {
 import {
   type ChatStatus,
   type UIMessage,
+  getToolName,
   isToolUIPart,
 } from "ai";
 import {
+  extractPageMarkdownFromContext,
   logWorkspaceContextSent,
   logWorkspaceContextRebuild,
+  prosemirrorToMarkdown,
   type ContextAttachment,
   type ContextSourceRef,
 } from "@notelab/workspace-context";
@@ -227,6 +248,7 @@ const toolTitles: Record<string, string> = {
   searchGmailMessages: "Search Gmail",
   searchLinearIssues: "Search Linear issues",
   searchSlackMessages: "Search Slack",
+  proposePageContentUpdate: "Update page content",
 };
 
 const toolSources: Record<string, keyof typeof integrationIcons> = {
@@ -1015,16 +1037,101 @@ function shouldShowPendingAssistant(
   );
 }
 
+const WorkspaceEditToolPart = ({
+  isApplying,
+  isBaselineCurrent,
+  isDiffVisible,
+  isReviewAvailable,
+  onApply,
+  onDiscard,
+  onToggleChanges,
+  onUndo,
+  part,
+  snapshot,
+}: {
+  isApplying: boolean;
+  isBaselineCurrent: boolean;
+  isDiffVisible: boolean;
+  isReviewAvailable: boolean;
+  onApply: (toolCallId: string) => void | Promise<void>;
+  onDiscard: (toolCallId: string) => void | Promise<void>;
+  onToggleChanges: (toolCallId: string) => void;
+  onUndo: (toolCallId: string) => void | Promise<void>;
+  part: ToolPart;
+  snapshot: WorkspaceEditSnapshotPart | null;
+}) => {
+  const output = part.output as ProposePageContentUpdateOutput | undefined;
+  const summary =
+    output?.summary ??
+    (typeof part.input === "object" &&
+    part.input &&
+    "summary" in part.input &&
+    typeof part.input.summary === "string"
+      ? part.input.summary
+      : "Updated the page in workspace context.");
+  const toolError =
+    part.state === "output-error" || part.errorText
+      ? part.errorText ?? "The page update tool failed."
+      : null;
+
+  if (
+    part.state !== "output-available" &&
+    part.state !== "output-error" &&
+    !snapshot &&
+    !isApplying
+  ) {
+    return null;
+  }
+
+  return (
+    <WorkspaceEditCard
+      isApplying={isApplying}
+      isBaselineCurrent={isBaselineCurrent}
+      isDiffVisible={isDiffVisible}
+      isReviewAvailable={isReviewAvailable}
+      onApply={() => onApply(part.toolCallId)}
+      onDiscard={() => onDiscard(part.toolCallId)}
+      onToggleChanges={() => onToggleChanges(part.toolCallId)}
+      onUndo={() => onUndo(part.toolCallId)}
+      snapshot={snapshot}
+      summary={summary}
+      toolError={toolError}
+    />
+  );
+};
+
 const ChatMessage = ({
+  applyingToolCallIds,
+  getWorkspaceEditBaselineCurrent,
+  getWorkspaceEditReviewAvailable,
   message,
+  onApplyWorkspaceEdit,
+  onDiscardWorkspaceEdit,
+  onToggleWorkspaceEditChanges,
+  onUndoWorkspaceEdit,
   showGenerativeToolUi,
   showToolOutputUi,
+  snapshotByToolCallId,
+  visibleDiffToolCallId,
 }: {
+  applyingToolCallIds: readonly string[];
+  getWorkspaceEditBaselineCurrent: (
+    snapshot: WorkspaceEditSnapshotPart,
+  ) => boolean;
+  getWorkspaceEditReviewAvailable: (
+    snapshot: WorkspaceEditSnapshotPart,
+  ) => boolean;
   message: UIMessage;
+  onApplyWorkspaceEdit: (toolCallId: string) => void | Promise<void>;
+  onDiscardWorkspaceEdit: (toolCallId: string) => void | Promise<void>;
+  onToggleWorkspaceEditChanges: (toolCallId: string) => void;
+  onUndoWorkspaceEdit: (toolCallId: string) => void | Promise<void>;
   showGenerativeToolUi: boolean;
   showToolOutputUi: boolean;
+  snapshotByToolCallId: Map<string, WorkspaceEditSnapshotPart>;
+  visibleDiffToolCallId: string | null;
 }) => {
-  if (message.role === "system") {
+  if (message.role === "system" || (message.role as string) === "data") {
     return null;
   }
 
@@ -1052,6 +1159,36 @@ const ChatMessage = ({
           }
 
           if (isToolUIPart(part)) {
+            const toolName = getToolName(part);
+
+            if (isProposePageContentUpdateToolName(toolName)) {
+              const snapshot =
+                snapshotByToolCallId.get(part.toolCallId) ?? null;
+
+              return (
+                <WorkspaceEditToolPart
+                  isApplying={
+                    applyingToolCallIds.includes(part.toolCallId) &&
+                    !snapshotByToolCallId.has(part.toolCallId)
+                  }
+                  isBaselineCurrent={
+                    snapshot ? getWorkspaceEditBaselineCurrent(snapshot) : false
+                  }
+                  isDiffVisible={visibleDiffToolCallId === part.toolCallId}
+                  isReviewAvailable={
+                    snapshot ? getWorkspaceEditReviewAvailable(snapshot) : false
+                  }
+                  key={`${message.id}-${index}`}
+                  onApply={onApplyWorkspaceEdit}
+                  onDiscard={onDiscardWorkspaceEdit}
+                  onToggleChanges={onToggleWorkspaceEditChanges}
+                  onUndo={onUndoWorkspaceEdit}
+                  part={part}
+                  snapshot={snapshot}
+                />
+              );
+            }
+
             if (
               showGenerativeToolUi &&
               !showToolOutputUi &&
@@ -1184,6 +1321,12 @@ const Chatbot = ({
   const { data: workspaces = [] } = useWorkspaces(organizationId, {
     enabled: isSidebar && Boolean(organizationId),
   });
+  const { data: workspaceAccessLevel } = useWorkspaceAccessLevel(
+    isSidebar ? workspaceId : null,
+    {
+      refetchOnMount: false,
+    },
+  );
   const { data: databasePayload } = useDatabase(databaseId);
   const primaryAttachment = useMemo(() => {
     if (!effectivePrimarySource) {
@@ -1323,11 +1466,40 @@ const Chatbot = ({
     query,
   });
 
+  const { getEditorHandle } = useWorkspaceEditorRegistry();
+  const { commitPageEdit, undoPageEdit } = useWorkspaceEditApplier();
+  const [visibleDiffToolCallId, setVisibleDiffToolCallId] = useState<string | null>(
+    null,
+  );
+
+  const allowedWorkspaceIds = useMemo(() => {
+    const ids = new Set<string>();
+
+    if (effectivePrimarySource?.type === "page") {
+      ids.add(effectivePrimarySource.id);
+    }
+
+    for (const attachment of attachments) {
+      if (attachment.type === "page") {
+        ids.add(attachment.id);
+      }
+    }
+
+    return [...ids];
+  }, [attachments, effectivePrimarySource]);
+
+  const canEditWorkspacePages = Boolean(
+    isSidebar &&
+      workspaceId &&
+      (workspaceAccessLevel === "edit" || workspaceAccessLevel === "full"),
+  );
+
   const {
     clearError,
     error,
     messages,
     sendMessage,
+    setMessages,
     status,
     stop,
   } = useAgentChat({
@@ -1339,6 +1511,8 @@ const Chatbot = ({
       ...(organizationId ? { organizationId } : {}),
       ...(userId ? { userId } : {}),
       ...(workspaceContext ? { workspaceContext } : {}),
+      allowedWorkspaceIds,
+      canEditWorkspacePages,
       workspaceContextMeta: workspaceContext
         ? {
             attachmentIds: attachments.map((item) => item.id),
@@ -1376,6 +1550,280 @@ const Chatbot = ({
     },
     resume: true,
   });
+
+  useEffect(() => {
+    if (!isSidebar) {
+      return;
+    }
+
+    logWorkspaceEdit("chat:workspace-edit-config", {
+      allowedWorkspaceIds,
+      canEditWorkspacePages,
+      primaryWorkspaceId: effectivePrimarySource?.type === "page"
+        ? effectivePrimarySource.id
+        : null,
+      workspaceAccessLevel: workspaceAccessLevel ?? null,
+      workspaceContextChars: workspaceContext.length,
+      workspaceId,
+    });
+  }, [
+    allowedWorkspaceIds,
+    canEditWorkspacePages,
+    effectivePrimarySource,
+    isSidebar,
+    workspaceAccessLevel,
+    workspaceContext.length,
+    workspaceId,
+  ]);
+
+  const getContextPageMarkdown = useCallback(
+    (targetWorkspaceId: string) =>
+      workspaceContext
+        ? extractPageMarkdownFromContext(workspaceContext, targetWorkspaceId)
+        : null,
+    [workspaceContext],
+  );
+
+  const { applyingToolCallIds } = useWorkspaceEditAutoApply({
+    enabled: isSidebar && canEditWorkspacePages,
+    getContextPageMarkdown,
+    messages,
+    setMessages,
+  });
+
+  const snapshotByToolCallId = useMemo(
+    () => buildWorkspaceEditSnapshotMap(messages),
+    [messages],
+  );
+
+  const visibleMessages = useMemo(
+    () =>
+      dedupeChatMessagesById(
+        messages.filter(
+          (message) => message.role === "user" || message.role === "assistant",
+        ),
+      ),
+    [messages],
+  );
+
+  const getWorkspaceEditBaselineCurrent = useCallback(
+    (snapshot: WorkspaceEditSnapshotPart) => {
+      const handle = getEditorHandle(snapshot.workspaceId);
+      const currentContentJson = handle?.getContentJson() ?? null;
+
+      return isWorkspaceEditBaselineCurrent(
+        snapshot.beforeContentJson,
+        currentContentJson,
+        {
+          baselineMarkdown: snapshot.beforeMarkdown,
+          currentMarkdown: currentContentJson
+            ? prosemirrorToMarkdown(currentContentJson)
+            : undefined,
+        },
+      );
+    },
+    [getEditorHandle],
+  );
+
+  const getWorkspaceEditReviewAvailable = useCallback(
+    (snapshot: WorkspaceEditSnapshotPart) => {
+      const handle = getEditorHandle(snapshot.workspaceId);
+      const currentContentJson = handle?.getContentJson() ?? null;
+
+      return isWorkspaceEditReviewAvailable(
+        snapshot,
+        currentContentJson,
+        currentContentJson
+          ? prosemirrorToMarkdown(currentContentJson)
+          : undefined,
+      );
+    },
+    [getEditorHandle],
+  );
+
+  const handleDiscardWorkspaceEdit = useCallback(
+    (toolCallId: string) => {
+      const snapshot = snapshotByToolCallId.get(toolCallId);
+
+      if (!snapshot || snapshot.status !== "preview") {
+        return;
+      }
+
+      getEditorHandle(snapshot.workspaceId)?.clearEditDiffPreview({
+        silent: true,
+      });
+
+      if (visibleDiffToolCallId === toolCallId) {
+        setVisibleDiffToolCallId(null);
+      }
+
+      setMessages((currentMessages) =>
+        updateWorkspaceEditSnapshotStatus(currentMessages, toolCallId, "declined"),
+      );
+    },
+    [
+      getEditorHandle,
+      setMessages,
+      snapshotByToolCallId,
+      visibleDiffToolCallId,
+    ],
+  );
+
+  const handleApplyWorkspaceEdit = useCallback(
+    async (toolCallId: string) => {
+      const snapshot = snapshotByToolCallId.get(toolCallId);
+
+      if (
+        !snapshot ||
+        (snapshot.status !== "preview" && snapshot.status !== "undone")
+      ) {
+        return;
+      }
+
+      if (!getWorkspaceEditReviewAvailable(snapshot)) {
+        toast.error("This update is no longer available", {
+          description: "The page has changed since this suggestion was created.",
+        });
+        return;
+      }
+
+      const result = commitPageEdit({
+        afterMarkdown: snapshot.afterMarkdown,
+        workspaceId: snapshot.workspaceId,
+      });
+
+      if (!result.success) {
+        toast.error("Apply failed", {
+          description: result.errorMessage,
+        });
+        return;
+      }
+
+      getEditorHandle(snapshot.workspaceId)?.clearEditDiffPreview({
+        silent: true,
+      });
+
+      if (visibleDiffToolCallId === toolCallId) {
+        setVisibleDiffToolCallId(null);
+      }
+
+      const afterContentJson =
+        getEditorHandle(snapshot.workspaceId)?.getContentJson() ?? null;
+
+      setMessages((currentMessages) =>
+        updateWorkspaceEditSnapshotStatus(currentMessages, toolCallId, "applied", {
+          afterContentJson,
+        }),
+      );
+    },
+    [
+      commitPageEdit,
+      getEditorHandle,
+      getWorkspaceEditReviewAvailable,
+      setMessages,
+      snapshotByToolCallId,
+      visibleDiffToolCallId,
+    ],
+  );
+
+  const handleToggleWorkspaceEditChanges = useCallback(
+    (toolCallId: string) => {
+      const snapshot = snapshotByToolCallId.get(toolCallId);
+
+      if (!snapshot?.afterMarkdown) {
+        return;
+      }
+
+      const handle = getEditorHandle(snapshot.workspaceId);
+
+      if (!handle) {
+        toast.error("Open the page in the editor to review this change.");
+        return;
+      }
+
+      if (!getWorkspaceEditReviewAvailable(snapshot)) {
+        toast.error("This update is no longer available", {
+          description: "The page has changed since this suggestion was created.",
+        });
+        return;
+      }
+
+      if (
+        visibleDiffToolCallId === toolCallId ||
+        (handle.isEditDiffPreviewActive() &&
+          handle.getActiveEditDiffToolCallId() === toolCallId)
+      ) {
+        handle.clearEditDiffPreview({ silent: true });
+        setVisibleDiffToolCallId(null);
+        return;
+      }
+
+      handle.clearEditDiffPreview({ silent: true });
+      const shown = handle.showEditDiffPreview({
+        afterMarkdown: snapshot.afterMarkdown,
+        beforeMarkdown: snapshot.beforeMarkdown,
+        toolCallId,
+        useBeforeBaseline: snapshot.status === "applied",
+      });
+
+      if (!shown) {
+        toast.error("Could not show changes in the editor.");
+        return;
+      }
+
+      setVisibleDiffToolCallId(toolCallId);
+      document
+        .querySelector("[data-editor-surface]")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    },
+    [
+      getEditorHandle,
+      getWorkspaceEditReviewAvailable,
+      snapshotByToolCallId,
+      visibleDiffToolCallId,
+    ],
+  );
+
+  const handleUndoWorkspaceEdit = useCallback(
+    async (toolCallId: string) => {
+      const snapshot = snapshotByToolCallId.get(toolCallId);
+
+      if (!snapshot || snapshot.status !== "applied") {
+        return;
+      }
+
+      const result = await undoPageEdit({
+        beforeContentJson: snapshot.beforeContentJson,
+        workspaceId: snapshot.workspaceId,
+      });
+
+      if (!result.success) {
+        toast.error("Undo failed", {
+          description: result.errorMessage,
+        });
+        return;
+      }
+
+      getEditorHandle(snapshot.workspaceId)?.clearEditDiffPreview({
+        silent: true,
+      });
+
+      if (visibleDiffToolCallId === toolCallId) {
+        setVisibleDiffToolCallId(null);
+      }
+
+      setMessages((currentMessages) =>
+        updateWorkspaceEditSnapshotStatus(currentMessages, toolCallId, "undone"),
+      );
+    },
+    [
+      getEditorHandle,
+      setMessages,
+      snapshotByToolCallId,
+      undoPageEdit,
+      visibleDiffToolCallId,
+    ],
+  );
 
   useEffect(() => {
     if (!error) {
@@ -1581,14 +2029,14 @@ const Chatbot = ({
     );
   }, []);
 
-  const hasMessages = messages.length > 0;
+  const hasMessages = visibleMessages.length > 0;
   const showPendingAssistant = shouldShowPendingAssistant(messages, status);
 
   useEffect(() => {
     const previousMessageCount = previousMessageCountRef.current;
-    previousMessageCountRef.current = messages.length;
+    previousMessageCountRef.current = visibleMessages.length;
 
-    if (!(previousMessageCount === 0 && messages.length > 0)) {
+    if (!(previousMessageCount === 0 && visibleMessages.length > 0)) {
       return;
     }
 
@@ -1602,7 +2050,7 @@ const Chatbot = ({
         top: scrollShell.scrollHeight,
       });
     });
-  }, [messages.length]);
+  }, [visibleMessages.length]);
 
   return (
     <div
@@ -1628,12 +2076,21 @@ const Chatbot = ({
           {!hasMessages ? (
             <EmptyState />
           ) : (
-            messages.map((message) => (
+            visibleMessages.map((message) => (
               <ChatMessage
+                applyingToolCallIds={applyingToolCallIds}
+                getWorkspaceEditBaselineCurrent={getWorkspaceEditBaselineCurrent}
+                getWorkspaceEditReviewAvailable={getWorkspaceEditReviewAvailable}
                 key={message.id}
                 message={message}
+                onApplyWorkspaceEdit={handleApplyWorkspaceEdit}
+                onDiscardWorkspaceEdit={handleDiscardWorkspaceEdit}
+                onToggleWorkspaceEditChanges={handleToggleWorkspaceEditChanges}
+                onUndoWorkspaceEdit={handleUndoWorkspaceEdit}
                 showGenerativeToolUi={showGenerativeToolUi}
                 showToolOutputUi={showToolOutputUi}
+                snapshotByToolCallId={snapshotByToolCallId}
+                visibleDiffToolCallId={visibleDiffToolCallId}
               />
             ))
           )}
