@@ -87,16 +87,22 @@ function RightSidebarDesktopPanel({
     <>
       <ResizableHandle withHandle />
       <ResizablePanel
-        className="min-w-0"
+        className="min-h-0 min-w-0"
         defaultSize={panelPercentage(defaultSize)}
         elementRef={panelRef}
         id={panelId}
         maxSize={panelPercentage(maxSize)}
         minSize={panelPercentage(RIGHT_SIDEBAR_MIN_SIZE)}
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          minHeight: 0,
+          overflow: "hidden",
+        }}
       >
         <aside
           aria-label={ariaLabel}
-          className="flex h-full min-w-0 flex-col bg-background text-foreground"
+          className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-background text-foreground"
         >
           {children}
         </aside>

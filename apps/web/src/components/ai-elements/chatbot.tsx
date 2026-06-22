@@ -30,6 +30,8 @@ import {
 import type { PromptInputMessage } from "@/components/ai-elements/prompt-input";
 import { useWorkspaceEditorRegistry } from "@/contexts/workspace-editor-registry";
 import { useWorkspaceAiContext } from "@/hooks/use-workspace-ai-context";
+import { useDatabaseEmbedAutoApply } from "@/hooks/use-database-embed-auto-apply";
+import { useDatabaseToolCacheSync } from "@/hooks/use-database-tool-cache-sync";
 import {
   updateWorkspaceEditSnapshotStatus,
   useWorkspaceEditAutoApply,
@@ -249,6 +251,17 @@ const toolTitles: Record<string, string> = {
   searchLinearIssues: "Search Linear issues",
   searchSlackMessages: "Search Slack",
   proposePageContentUpdate: "Update page content",
+  createWorkspace: "Create workspace",
+  createDatabase: "Create database",
+  embedDatabaseInPage: "Embed database in page",
+  linkDatabaseInWorkspace: "Link database in sidebar",
+  createDatabaseProperty: "Add database property",
+  updateDatabaseProperty: "Update database property",
+  createDatabaseView: "Create database view",
+  updateDatabaseView: "Update database view",
+  updateDatabase: "Update database",
+  createDatabaseRow: "Add database row",
+  setDatabaseCellValue: "Set cell value",
 };
 
 const toolSources: Record<string, keyof typeof integrationIcons> = {
@@ -1589,6 +1602,16 @@ const Chatbot = ({
     getContextPageMarkdown,
     messages,
     setMessages,
+  });
+
+  useDatabaseToolCacheSync({
+    enabled: isSidebar && canEditWorkspacePages,
+    messages,
+  });
+
+  useDatabaseEmbedAutoApply({
+    enabled: isSidebar && canEditWorkspacePages,
+    messages,
   });
 
   const snapshotByToolCallId = useMemo(

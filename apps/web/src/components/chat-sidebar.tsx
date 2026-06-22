@@ -77,7 +77,7 @@ export function ChatSidebarPanel({
   }, [])
 
   return (
-    <>
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <header className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
         <Button
           aria-label="Close chat sidebar"
@@ -141,6 +141,6 @@ export function ChatSidebarPanel({
           )}
         </div>
       )}
-    </>
+    </div>
   )
 }

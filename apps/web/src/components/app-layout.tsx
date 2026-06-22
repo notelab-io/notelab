@@ -64,6 +64,7 @@ import { useDatabase } from "@notelab/features/databases"
 export function AppLayout({ children }: { children?: ReactNode }) {
   return (
     <SidebarProvider
+      className="h-svh overflow-hidden"
       style={
         {
           "--app-sidebar-panel-width": "18rem",
@@ -175,18 +176,25 @@ function AppLayoutContent({ children }: { children?: ReactNode }) {
             <AppSidebar />
           )}
           <ResizablePanelGroup
-            className="min-w-0 flex-1"
+            className="min-h-0 min-w-0 flex-1 overflow-hidden"
             orientation="horizontal"
+            style={{ height: "100svh" }}
           >
             <ResizablePanel
-              className="min-w-0"
+              className="min-h-0 min-w-0"
               defaultSize={getRightSidebarEditorDefaultSize(
                 desktopRightPanelCount,
               )}
               id="app-editor-pane"
               minSize={getRightSidebarEditorMinSize(desktopRightPanelCount)}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                minHeight: 0,
+                overflow: "hidden",
+              }}
             >
-              <SidebarInset className="h-svh overflow-hidden">
+              <SidebarInset className="flex h-full min-h-0 flex-col overflow-hidden">
                 {embeddedMobileViewer ? null : (
                   <AppHeader
                     isSettingsPage={isSettingsPage || isAiPage}

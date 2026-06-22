@@ -1,5 +1,6 @@
 export * from "./hooks"
 export * from "./queries"
 export * from "./apply-page-content-patch"
+export * from "./database-tools"
 export * from "./workspace-edit"
 export * from "./workspace-edit-debug"
