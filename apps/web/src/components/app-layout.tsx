@@ -30,7 +30,6 @@ import {
 import { WorkspaceEditorCommentsProvider } from "@/components/workspace-editor-comments"
 import { useActiveOrganizationId } from "@notelab/features/integrations"
 import { NavActions } from "@/components/nav-actions"
-import { HistorySidebar } from "@/components/history-sidebar"
 import { SettingsSidebar } from "@/components/settings-sidebar"
 import { Button } from "@/components/ui/button"
 import {
@@ -170,8 +169,6 @@ function AppLayoutContent({ children }: { children?: ReactNode }) {
         <WorkspaceSidePaneContext.Provider value={sidePaneContext}>
           {isSettingsPage ? (
             <SettingsSidebar />
-          ) : isAiPage ? (
-            <HistorySidebar />
           ) : (
             <AppSidebar />
           )}

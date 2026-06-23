@@ -4,6 +4,7 @@ import * as React from "react"
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router"
 import { toast } from "sonner"
 
+import { AiChatHistoryList } from "@/components/ai-elements/ai-chat-history-list"
 import { AppSidebarShell } from "@/components/app-sidebar-shell"
 import { useAppSearch } from "@/components/app-search"
 import { NavFavorites } from "@/components/nav-favorites"
@@ -20,6 +21,7 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -45,6 +47,8 @@ import {
   useWorkspaces,
 } from "@notelab/features/workspaces"
 import { useAppStore } from "@/stores/app-store"
+import { useAiChatThreadActions } from "@/hooks/use-ai-chat-thread-actions"
+import { useAiChatThreadState } from "@/hooks/use-ai-chat-thread-state"
 import {
   BlocksIcon,
   CalendarIcon,
@@ -52,6 +56,7 @@ import {
   FileIcon,
   HomeIcon,
   MessageCircleQuestionIcon,
+  PlusIcon,
   SearchIcon,
   Settings2Icon,
   SparklesIcon,
@@ -138,6 +143,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     ...workspaceSections.privateWorkspaces,
     ...workspaceSections.teamspaceWorkspaces,
   ])
+  const isAiPage = pathname === "/ai"
 
   const handleCreateWorkspace = async () => {
     if (!organizationId || createWorkspace.isPending) {
@@ -242,18 +248,24 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           onOpenSearch={openSearch}
           pathname={pathname}
         />
-        <NavFavorites
-          favorites={favorites}
-          onRemoveDatabaseFavorite={handleRemoveDatabaseFavorite}
-          onRemoveFavorite={handleRemoveFavorite}
-        />
-        <NavWorkspaces
-          onCreateWorkspace={handleCreateWorkspace}
-          onDropPageOnDatabase={handleDropPageOnDatabase}
-          privateWorkspaces={workspaceSections.privateWorkspaces}
-          teamspaceWorkspaces={workspaceSections.teamspaceWorkspaces}
-        />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
+        {isAiPage ? (
+          <AiSidebarHistory />
+        ) : (
+          <>
+            <NavFavorites
+              favorites={favorites}
+              onRemoveDatabaseFavorite={handleRemoveDatabaseFavorite}
+              onRemoveFavorite={handleRemoveFavorite}
+            />
+            <NavWorkspaces
+              onCreateWorkspace={handleCreateWorkspace}
+              onDropPageOnDatabase={handleDropPageOnDatabase}
+              privateWorkspaces={workspaceSections.privateWorkspaces}
+              teamspaceWorkspaces={workspaceSections.teamspaceWorkspaces}
+            />
+            <NavSecondary items={data.navSecondary} className="mt-auto" />
+          </>
+        )}
       </SidebarContent>
       <SidebarFooter>
         <SidebarMenu>
@@ -291,13 +303,7 @@ function NavMain({
   return (
     <SidebarGroup>
       <SidebarGroupContent>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton onClick={onOpenSearch} type="button">
-              <SearchIcon />
-              <span>Search</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+        <SidebarMenu className="gap-1">
           {items.map((item) => (
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton
@@ -311,9 +317,53 @@ function NavMain({
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
+          <SidebarMenuItem>
+            <SidebarMenuButton onClick={onOpenSearch} type="button">
+              <SearchIcon />
+              <span>Search</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
         </SidebarMenu>
       </SidebarGroupContent>
     </SidebarGroup>
+  )
+}
+
+function AiSidebarHistory() {
+  const { activeThreadId, setActiveThreadId } = useAiChatThreadState()
+  const { createThread, handleCreateThread } = useAiChatThreadActions({
+    activeThreadId,
+    onSelectThread: setActiveThreadId,
+  })
+
+  return (
+    <>
+      <SidebarGroup>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                disabled={createThread.isPending}
+                onClick={() => void handleCreateThread()}
+              >
+                <PlusIcon />
+                <span>New chat</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+      <SidebarGroup className="min-h-0 flex-1 overflow-hidden pt-0 group-data-[collapsible=icon]:hidden">
+        <SidebarGroupLabel>History</SidebarGroupLabel>
+        <SidebarGroupContent className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <AiChatHistoryList
+            activeThreadId={activeThreadId}
+            className="px-0 py-0"
+            onSelectThread={setActiveThreadId}
+          />
+        </SidebarGroupContent>
+      </SidebarGroup>
+    </>
   )
 }
 
@@ -540,5 +590,3 @@ function cloneLinkedTreeNode(
     pages: node.pages.map((page) => cloneLinkedTreeNode(page, nextVisitedIds)),
   }
 }
-
-

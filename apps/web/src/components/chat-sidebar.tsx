@@ -134,7 +134,6 @@ export function ChatSidebarPanel({
             <Chatbot
               databaseId={databaseId}
               isSidebar
-              key={activeThreadId}
               threadId={activeThreadId}
               workspaceId={workspaceId}
             />
