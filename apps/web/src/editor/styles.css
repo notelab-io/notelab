@@ -11,8 +11,9 @@
     content: attr(data-placeholder);
   }
 
+  /* Uniform gap between blocks — hierarchy lives in padding, not margin. */
   .tiptap-editor > * + * {
-    @apply mt-6;
+    @apply mt-1;
   }
 
   .tiptap-editor h1 {
@@ -20,7 +21,7 @@
   }
 
   .tiptap-editor h2 {
-    @apply scroll-m-20 text-3xl font-semibold leading-tight tracking-normal first:mt-0;
+    @apply scroll-m-20 text-3xl font-semibold leading-tight tracking-normal;
   }
 
   .tiptap-editor h3 {
@@ -43,6 +44,85 @@
     @apply leading-7 text-foreground;
   }
 
+
+
+  /* Spacing hierarchy via padding inside each block (included in selection). */
+  .tiptap-editor > :is(
+      p,
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6,
+      ul,
+      ol,
+      blockquote,
+      pre,
+      .code-block-shiki,
+      .editor-details,
+      .tableWrapper,
+      .column-block
+    ) {
+    @apply pb-0.5;
+  }
+
+  .tiptap-editor > * + p {
+    @apply pt-2;
+  }
+
+  .tiptap-editor > * + h1 {
+    @apply pt-8;
+  }
+
+  .tiptap-editor > * + h2 {
+    @apply pt-6;
+  }
+
+  .tiptap-editor > * + h3 {
+    @apply pt-4;
+  }
+
+  .tiptap-editor > * + h4 {
+    @apply pt-3;
+  }
+
+  .tiptap-editor > * + :is(h5, h6) {
+    @apply pt-2;
+  }
+
+  .tiptap-editor > * + :is(
+      ul,
+      ol,
+      pre,
+      .code-block-shiki,
+      .editor-details,
+      .tableWrapper
+    ) {
+    @apply pt-2;
+  }
+
+  .tiptap-editor > * + :is(.column-block, blockquote, hr) {
+    @apply pt-4;
+  }
+
+  .tiptap-editor > * + :is(
+      .image-block,
+      .video-block,
+      .embed-block,
+      .file-block,
+      .bookmark-block,
+      .ask-ai-block,
+      .database-block,
+      .page-block
+    ) {
+    @apply pt-4;
+  }
+
+  /* Tighter spacing for stacked link-only paragraphs. */
+  .tiptap-editor > * + p:has(> .link-mention:only-child) {
+    @apply pt-1;
+  }
 
   /* Hide native text selection during Ctrl/Cmd+A block selection. */
   .tiptap-editor.ProseMirror-hideselection ::selection,
@@ -173,7 +253,7 @@
   }
 
   .tiptap-editor ul {
-    @apply my-6 ml-6 list-disc;
+    @apply ml-6 list-disc;
   }
 
   .tiptap-editor ul[data-type="taskList"] {
@@ -181,7 +261,11 @@
   }
 
   .tiptap-editor li {
-    @apply mt-2;
+    @apply pb-0.5;
+  }
+
+  .tiptap-editor li + li {
+    @apply mt-1 pt-1;
   }
 
   .tiptap-editor ul[data-type="taskList"] li,
@@ -204,15 +288,15 @@
   }
 
   .tiptap-editor ol {
-    @apply my-6 ml-6 list-decimal;
+    @apply ml-6 list-decimal;
   }
 
   .tiptap-editor blockquote {
-    @apply mt-6 border-l-2 pl-6 italic;
+    @apply border-l-2 pl-6 italic;
   }
 
   .tiptap-editor .column-block {
-    @apply mt-6 grid w-full gap-4 py-2;
+    @apply grid w-full gap-4 py-2;
   }
 
   .tiptap-editor .column {
@@ -300,21 +384,25 @@
   }
 
   .tiptap-editor hr {
-    @apply my-8 border-border;
+    @apply border-border;
   }
 
-  .tiptap-editor .image-block {
-    @apply my-4;
+  .tiptap-editor > hr {
+    @apply pb-4;
   }
 
-  .tiptap-editor .video-block,
-  .tiptap-editor .embed-block,
-  .tiptap-editor .file-block,
-  .tiptap-editor .bookmark-block,
-  .tiptap-editor .ask-ai-block,
-  .tiptap-editor .database-block,
-  .tiptap-editor .page-block {
-    @apply my-4;
+  .tiptap-editor > :is(
+      .image-block,
+      .video-block,
+      .embed-block,
+      .file-block,
+      .bookmark-block,
+      .ask-ai-block,
+      .database-block,
+      .page-block,
+      hr
+    ) {
+    @apply pb-4;
   }
 
   .ask-ai-block {
@@ -1268,7 +1356,7 @@
   }
 
   .tiptap-editor .tableWrapper {
-    @apply my-6 w-full max-w-full overflow-x-auto;
+    @apply w-full max-w-full overflow-x-auto;
   }
 
   .tiptap-editor table {
