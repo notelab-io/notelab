@@ -205,7 +205,11 @@
   }
 
   .tiptap-editor .node-databaseBlock .database-scroll-section {
-    @apply relative mt-1 min-w-0 overflow-visible pb-0.5 pt-1;
+    @apply relative mt-1 min-w-0 overflow-visible pb-0.5;
+  }
+
+  .tiptap-editor .node-databaseBlock :is(.database-table-wrap, .database-kanban-wrap) {
+    @apply mt-0;
   }
 
   .tiptap-editor
@@ -295,6 +299,49 @@
     :is(.database-table, .database-page-create-row, .database-kanban-board)::before {
     background-color: color-mix(in srgb, #4b9fff 42%, transparent);
     background-color: Highlight;
+  }
+
+  /* Toolbar controls stay transparent so the section highlight reads as one overlay. */
+  .tiptap-editor
+    .node-databaseBlock.editor-block-selection
+    .database-toolbar-section
+    :is(button, a, input) {
+    background-color: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+    color: inherit !important;
+  }
+
+  /* Opaque kanban surfaces sit above the board ::before layer. */
+  .tiptap-editor
+    .node-databaseBlock.editor-block-selection
+    :is(
+      .database-kanban-column:not(.database-kanban-new-column),
+      .database-kanban-card,
+      .database-kanban-count,
+      .database-kanban-new-card,
+      .database-select-badge,
+      .database-table-group-count
+    ) {
+    background-color: color-mix(in srgb, #0078d7 35%, transparent) !important;
+    background-color: Highlight !important;
+    border-color: color-mix(in srgb, HighlightText 18%, transparent) !important;
+    color: HighlightText !important;
+  }
+
+  .dark
+    .tiptap-editor
+    .node-databaseBlock.editor-block-selection
+    :is(
+      .database-kanban-column:not(.database-kanban-new-column),
+      .database-kanban-card,
+      .database-kanban-count,
+      .database-kanban-new-card,
+      .database-select-badge,
+      .database-table-group-count
+    ) {
+    background-color: color-mix(in srgb, #4b9fff 42%, transparent) !important;
+    background-color: Highlight !important;
   }
 
   .tiptap-editor .node-databaseBlock.editor-block-selection .database-block-shell {
