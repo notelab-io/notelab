@@ -43,6 +43,65 @@
     @apply leading-7 text-foreground;
   }
 
+
+  /* Hide native text selection during Ctrl/Cmd+A block selection. */
+  .tiptap-editor.ProseMirror-hideselection ::selection,
+  .tiptap-editor.ProseMirror-hideselection *::selection {
+    background: transparent !important;
+    color: inherit !important;
+  }
+
+  .tiptap-editor.ProseMirror-hideselection ::-moz-selection,
+  .tiptap-editor.ProseMirror-hideselection *::-moz-selection {
+    background: transparent !important;
+    color: inherit !important;
+  }
+
+  /* Block selection: full-width highlights with system selection colors. */
+  .tiptap-editor :is(
+      p,
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6,
+      li,
+      blockquote,
+      pre,
+      .code-block-shiki,
+      .image-block,
+      .video-block,
+      .embed-block,
+      .file-block,
+      .bookmark-block,
+      .database-block,
+      .page-block,
+      .ask-ai-block,
+      .editor-details,
+      .column-block,
+      table
+    ).editor-block-selection {
+    background-color: color-mix(in srgb, #0078d7 35%, transparent);
+    background-color: Highlight;
+    border-radius: 2px;
+    color: inherit;
+    display: block;
+    width: 100%;
+  }
+
+  .dark .tiptap-editor .editor-block-selection {
+    background-color: color-mix(in srgb, #4b9fff 42%, transparent);
+    background-color: Highlight;
+  }
+
+  @supports (background-color: Highlight) {
+    .tiptap-editor .editor-block-selection {
+      color: HighlightText;
+    }
+  }
+
+
   .tiptap-editor :is(p, li, blockquote, td, th) strong {
     @apply font-semibold;
   }
