@@ -74,23 +74,24 @@
     @apply pt-2;
   }
 
-  .tiptap-editor > * + h1 {
+  /* Heading padding applies to every heading, including the first block. */
+  .tiptap-editor > h1 {
     @apply pt-8;
   }
 
-  .tiptap-editor > * + h2 {
+  .tiptap-editor > h2 {
     @apply pt-6;
   }
 
-  .tiptap-editor > * + h3 {
+  .tiptap-editor > h3 {
     @apply pt-4;
   }
 
-  .tiptap-editor > * + h4 {
+  .tiptap-editor > h4 {
     @apply pt-3;
   }
 
-  .tiptap-editor > * + :is(h5, h6) {
+  .tiptap-editor > :is(h5, h6) {
     @apply pt-2;
   }
 
