@@ -3,6 +3,25 @@
 @layer components {
   .tiptap-editor {
     @apply min-h-[520px] px-5 py-5 text-base leading-7 text-foreground outline-none sm:px-8 md:px-20 md:py-6 lg:px-24;
+    --editor-selection-background: color-mix(in srgb, #0078d7 35%, transparent);
+    --editor-selection-foreground: inherit;
+  }
+
+  .dark .tiptap-editor {
+    --editor-selection-background: color-mix(in srgb, #4b9fff 42%, transparent);
+    --editor-selection-foreground: #ffffff;
+  }
+
+  .tiptap-editor ::selection,
+  .tiptap-editor *::selection {
+    background-color: var(--editor-selection-background);
+    color: var(--editor-selection-foreground);
+  }
+
+  .tiptap-editor ::-moz-selection,
+  .tiptap-editor *::-moz-selection {
+    background-color: var(--editor-selection-background);
+    color: var(--editor-selection-foreground);
   }
 
   .tiptap-editor .is-editor-empty:first-child::before,
@@ -168,12 +187,11 @@
       .column-block,
       table
     ).editor-block-selection {
-    background-color: color-mix(in srgb, #0078d7 35%, transparent);
-    background-color: Highlight;
     background-clip: border-box;
+    background-color: var(--editor-selection-background);
     border-radius: 4px;
     box-sizing: border-box;
-    color: inherit;
+    color: var(--editor-selection-foreground);
     display: block;
     width: 100%;
   }
@@ -215,12 +233,11 @@
   .tiptap-editor
     .node-databaseBlock.editor-block-selection
     .database-toolbar-section {
-    background-color: color-mix(in srgb, #0078d7 35%, transparent);
-    background-color: Highlight;
     background-clip: border-box;
+    background-color: var(--editor-selection-background);
     border-radius: 4px;
     box-sizing: border-box;
-    color: inherit;
+    color: var(--editor-selection-foreground);
     display: block;
     width: 100%;
   }
@@ -230,9 +247,9 @@
     .database-scroll-section:has(
       .database-inline-scroll-wrap:not([data-inline-scroll="true"])
     ) {
-    background-color: color-mix(in srgb, #0078d7 35%, transparent);
-    background-color: Highlight;
+    background-color: var(--editor-selection-background);
     border-radius: 4px;
+    color: var(--editor-selection-foreground);
   }
 
   .tiptap-editor
@@ -247,8 +264,7 @@
     .node-databaseBlock.editor-block-selection
     .database-inline-scroll-wrap[data-inline-scroll="true"]
     :is(.database-table, .database-page-create-row, .database-kanban-board)::before {
-    background-color: color-mix(in srgb, #0078d7 35%, transparent);
-    background-color: Highlight;
+    background-color: var(--editor-selection-background);
     border-radius: 4px;
     content: "";
     inset: 0;
@@ -257,48 +273,11 @@
     z-index: -1;
   }
 
-  @supports (background-color: Highlight) {
-    .tiptap-editor
-      .node-databaseBlock.editor-block-selection
-      .database-toolbar-section,
-    .tiptap-editor
-      .node-databaseBlock.editor-block-selection
-      .database-scroll-section:has(
-        .database-inline-scroll-wrap:not([data-inline-scroll="true"])
-      ),
-    .tiptap-editor
-      .node-databaseBlock.editor-block-selection
-      .database-inline-scroll-wrap[data-inline-scroll="true"]
-      :is(.database-table, .database-page-create-row, .database-kanban-board) {
-      color: HighlightText;
-    }
-  }
-
-  .dark
-    .tiptap-editor
-    .node-databaseBlock.editor-block-selection
-    .database-toolbar-section {
-    background-color: color-mix(in srgb, #4b9fff 42%, transparent);
-    background-color: Highlight;
-  }
-
-  .dark
-    .tiptap-editor
-    .node-databaseBlock.editor-block-selection
-    .database-scroll-section:has(
-      .database-inline-scroll-wrap:not([data-inline-scroll="true"])
-    ) {
-    background-color: color-mix(in srgb, #4b9fff 42%, transparent);
-    background-color: Highlight;
-  }
-
-  .dark
-    .tiptap-editor
+  .tiptap-editor
     .node-databaseBlock.editor-block-selection
     .database-inline-scroll-wrap[data-inline-scroll="true"]
-    :is(.database-table, .database-page-create-row, .database-kanban-board)::before {
-    background-color: color-mix(in srgb, #4b9fff 42%, transparent);
-    background-color: Highlight;
+    :is(.database-table, .database-page-create-row, .database-kanban-board) {
+    color: var(--editor-selection-foreground);
   }
 
   /* Toolbar controls stay transparent so the section highlight reads as one overlay. */
@@ -323,40 +302,17 @@
       .database-select-badge,
       .database-table-group-count
     ) {
-    background-color: color-mix(in srgb, #0078d7 35%, transparent) !important;
-    background-color: Highlight !important;
-    border-color: color-mix(in srgb, HighlightText 18%, transparent) !important;
-    color: HighlightText !important;
-  }
-
-  .dark
-    .tiptap-editor
-    .node-databaseBlock.editor-block-selection
-    :is(
-      .database-kanban-column:not(.database-kanban-new-column),
-      .database-kanban-card,
-      .database-kanban-count,
-      .database-kanban-new-card,
-      .database-select-badge,
-      .database-table-group-count
-    ) {
-    background-color: color-mix(in srgb, #4b9fff 42%, transparent) !important;
-    background-color: Highlight !important;
+    background-color: var(--editor-selection-background) !important;
+    border-color: color-mix(
+      in srgb,
+      var(--editor-selection-foreground) 18%,
+      transparent
+    ) !important;
+    color: var(--editor-selection-foreground) !important;
   }
 
   .tiptap-editor .node-databaseBlock.editor-block-selection .database-block-shell {
     background-color: transparent;
-  }
-
-  .dark .tiptap-editor .editor-block-selection {
-    background-color: color-mix(in srgb, #4b9fff 42%, transparent);
-    background-color: Highlight;
-  }
-
-  @supports (background-color: Highlight) {
-    .tiptap-editor .editor-block-selection {
-      color: HighlightText;
-    }
   }
 
 
