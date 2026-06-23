@@ -117,10 +117,13 @@
       .file-block,
       .bookmark-block,
       .ask-ai-block,
-      .node-databaseBlock,
       .page-block
     ) {
     @apply pt-4;
+  }
+
+  .tiptap-editor > * + .node-databaseBlock .database-toolbar-section {
+    @apply pt-2;
   }
 
   /* Tighter spacing for stacked link-only paragraphs. */
@@ -528,11 +531,14 @@
       .file-block,
       .bookmark-block,
       .ask-ai-block,
-      .node-databaseBlock,
       .page-block,
       hr
     ) {
     @apply pb-4;
+  }
+
+  .tiptap-editor > .node-databaseBlock {
+    @apply pb-0.5;
   }
 
   .ask-ai-block {
