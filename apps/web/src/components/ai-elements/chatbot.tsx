@@ -182,22 +182,7 @@ function areMessagesEquivalent(
   });
 }
 
-type AiChatDebugEvent = {
-  at: string;
-  context: Record<string, unknown>;
-  source: string;
-};
-
-type AiChatDebugGlobal = typeof globalThis & {
-  __notelabAiChatDebugEvents?: AiChatDebugEvent[];
-};
-
-const AI_CHAT_DEBUG_EVENT_LIMIT = 80;
 const emptyAgentChatMessages: UIMessage[] = [];
-
-function getAiChatDebugGlobal() {
-  return globalThis as AiChatDebugGlobal;
-}
 
 function getErrorDetails(error: unknown) {
   if (error instanceof Error) {
@@ -231,42 +216,19 @@ function summarizeMessagesForDebug(messages: UIMessage[]) {
   };
 }
 
-function recordAiChatDebugEvent(
-  source: string,
-  context: Record<string, unknown>,
-) {
-  const event: AiChatDebugEvent = {
-    at: new Date().toISOString(),
-    context,
-    source,
-  };
-  const debugGlobal = getAiChatDebugGlobal();
-  const events = debugGlobal.__notelabAiChatDebugEvents ?? [];
-
-  events.push(event);
-
-  if (events.length > AI_CHAT_DEBUG_EVENT_LIMIT) {
-    events.splice(0, events.length - AI_CHAT_DEBUG_EVENT_LIMIT);
-  }
-
-  debugGlobal.__notelabAiChatDebugEvents = events;
-  console.debug("[notelab ai chat]", source, context);
-}
-
 function logAiChatError(
   source: string,
   error: unknown,
   context: Record<string, unknown>,
 ) {
-  const recentEvents = getAiChatDebugGlobal().__notelabAiChatDebugEvents ?? [];
+  const errorDetails = getErrorDetails(error);
 
   console.groupCollapsed(
-    `[notelab ai chat] ${source}: ${getErrorDetails(error).message}`,
+    `[notelab ai chat] ${source}: ${errorDetails.message}`,
   );
   console.error(error);
-  console.info("error details", getErrorDetails(error));
+  console.info("error details", errorDetails);
   console.info("context", context);
-  console.info("recent debug events", recentEvents.slice(-20));
   console.groupEnd();
 }
 
@@ -1671,16 +1633,6 @@ const ChatbotInner = ({
     workspaceId,
   ]);
 
-  const recordChatDebug = useCallback(
-    (source: string, context: Record<string, unknown> = {}) => {
-      recordAiChatDebugEvent(source, {
-        ...debugContextRef.current,
-        ...context,
-      });
-    },
-    [],
-  );
-
   useEffect(() => {
     const handleWindowError = (event: ErrorEvent) => {
       logAiChatError("window error", event.error ?? event.message, {
@@ -1795,21 +1747,12 @@ const ChatbotInner = ({
       threadMessagesQueryKey,
       (current) => {
         if (!current) {
-          recordChatDebug("threadMessages:skip-cache-sync:no-current");
           return current;
         }
 
         if (areMessagesEquivalent(current.messages, messages)) {
-          recordChatDebug("threadMessages:skip-cache-sync:equivalent", {
-            cachedMessages: summarizeMessagesForDebug(current.messages),
-          });
           return current;
         }
-
-        recordChatDebug("threadMessages:cache-sync", {
-          cachedMessages: summarizeMessagesForDebug(current.messages),
-          nextMessages: summarizeMessagesForDebug(messages),
-        });
 
         return { ...current, messages };
       },
@@ -1817,7 +1760,6 @@ const ChatbotInner = ({
   }, [
     messages,
     queryClient,
-    recordChatDebug,
     status,
     threadMessagesQueryKey,
   ]);
@@ -2074,11 +2016,6 @@ const ChatbotInner = ({
         attachmentCount: attachments.length,
         charCount: workspaceContext.length,
       });
-      recordChatDebug("submit", {
-        attachmentCount: attachments.length,
-        contentLength: content.trim().length,
-        selectedSources,
-      });
 
       void sendMessage({
         text: content.trim(),
@@ -2090,8 +2027,6 @@ const ChatbotInner = ({
     [
       attachments.length,
       isAgentReady,
-      recordChatDebug,
-      selectedSources,
       sendMessage,
       workspaceContext,
     ]
