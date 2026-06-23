@@ -29,6 +29,8 @@ import { ApiError, apiFetch } from "@/lib/api"
 import { queryClient } from "@/lib/query-client"
 import { webAuthClient } from "@/providers/features-provider"
 
+const NAVIGATION_AUTH_STALE_TIME = 30_000
+
 const rootRoute = createRootRoute({
   component: () => <Outlet />,
 })
@@ -271,14 +273,14 @@ export const router = createRouter({ routeTree })
 function getFreshSession() {
   return queryClient.fetchQuery({
     ...sessionQueryOptions(webAuthClient),
-    staleTime: 0,
+    staleTime: NAVIGATION_AUTH_STALE_TIME,
   })
 }
 
 function getOrganizations() {
   return queryClient.fetchQuery({
     ...organizationsQueryOptions(webAuthClient),
-    staleTime: 0,
+    staleTime: NAVIGATION_AUTH_STALE_TIME,
   })
 }
 

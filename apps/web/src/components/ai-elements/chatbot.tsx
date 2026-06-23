@@ -1359,17 +1359,21 @@ const Chatbot = ({
   const userId = session?.user?.id ?? null;
   const isAgentReady = Boolean(organizationId && userId && threadId);
   const query = organizationId ? { organizationId } : undefined;
+  const agentName = isAgentReady
+    ? `org-${organizationId}-user-${userId}-thread-${threadId}`
+    : "chat-not-ready";
   const agent = useAgent({
     agent: "ChatAgent",
-    name: isAgentReady
-      ? `org-${organizationId}-user-${userId}-thread-${threadId}`
-      : "chat-not-ready",
+    name: agentName,
     query,
   });
 
   const { getEditorHandle } = useWorkspaceEditorRegistry();
   const { commitPageEdit, undoPageEdit } = useWorkspaceEditApplier();
   const [visibleDiffToolCallId, setVisibleDiffToolCallId] = useState<string | null>(
+    null,
+  );
+  const [hydratingMessagesKey, setHydratingMessagesKey] = useState<string | null>(
     null,
   );
 
@@ -1394,6 +1398,41 @@ const Chatbot = ({
       workspaceId &&
       (workspaceAccessLevel === "edit" || workspaceAccessLevel === "full"),
   );
+
+  const threadMessagesKey = organizationId && threadId
+    ? `${organizationId}:${threadId}`
+    : null;
+  const threadMessagesQueryKey = useMemo(
+    () =>
+      organizationId && threadId
+        ? aiChatThreadMessagesQueryKey(organizationId, threadId)
+        : null,
+    [organizationId, threadId],
+  );
+
+  const loadThreadMessages = useCallback(async () => {
+    if (!organizationId || !threadId || !threadMessagesQueryKey) {
+      return [];
+    }
+
+    const cached =
+      queryClient.getQueryData<AiChatThreadMessagesResponse>(
+        threadMessagesQueryKey,
+      );
+
+    if (cached?.messages) {
+      return cached.messages;
+    }
+
+    const response = await apiFetch<AiChatThreadMessagesResponse>(
+      `/api/ai/threads/${encodeURIComponent(threadId)}/messages`,
+      { headers: { "x-notelab-organization-id": organizationId } },
+    );
+
+    queryClient.setQueryData(threadMessagesQueryKey, response);
+
+    return response.messages;
+  }, [apiFetch, organizationId, queryClient, threadId, threadMessagesQueryKey]);
 
   const {
     clearError,
@@ -1422,28 +1461,7 @@ const Chatbot = ({
           }
         : undefined,
     }),
-    getInitialMessages: async () => {
-      if (!organizationId || !threadId) {
-        return [];
-      }
-
-      const cached = queryClient.getQueryData<AiChatThreadMessagesResponse>(
-        aiChatThreadMessagesQueryKey(organizationId, threadId),
-      );
-
-      if (cached?.messages) {
-        return cached.messages;
-      }
-
-      const response = await apiFetch<AiChatThreadMessagesResponse>(
-        `/api/ai/threads/${encodeURIComponent(threadId)}/messages`,
-        organizationId
-          ? { headers: { "x-notelab-organization-id": organizationId } }
-          : undefined,
-      );
-
-      return response.messages;
-    },
+    getInitialMessages: null,
     onError: (chatError) => {
       toast.error("Ask AI failed", {
         description: chatError.message,
@@ -1451,6 +1469,83 @@ const Chatbot = ({
     },
     resume: true,
   });
+
+  const setMessagesRef = useRef(setMessages);
+
+  useEffect(() => {
+    setMessagesRef.current = setMessages;
+  }, [setMessages]);
+
+  useEffect(() => {
+    setText("");
+    setTextCursor(0);
+    setAttachments([]);
+    setPrimaryDismissed(false);
+    setDismissedMentionKey(null);
+    setSelectedMentionIndex(0);
+    setMentionMenuEntries([]);
+    setVisibleDiffToolCallId(null);
+    previousMessageCountRef.current = 0;
+  }, [threadId]);
+
+  useEffect(() => {
+    if (!threadMessagesKey) {
+      setMessagesRef.current([]);
+      setHydratingMessagesKey(null);
+      return;
+    }
+
+    const cached =
+      threadMessagesQueryKey
+        ? queryClient.getQueryData<AiChatThreadMessagesResponse>(
+            threadMessagesQueryKey,
+          )
+        : null;
+
+    if (cached?.messages) {
+      setMessagesRef.current(cached.messages);
+      setHydratingMessagesKey(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    setMessagesRef.current([]);
+    setHydratingMessagesKey(threadMessagesKey);
+
+    void loadThreadMessages()
+      .then((nextMessages) => {
+        if (cancelled) {
+          return;
+        }
+
+        setMessagesRef.current(nextMessages);
+      })
+      .catch((hydrationError) => {
+        if (cancelled) {
+          return;
+        }
+
+        toast.error("Failed to load chat", {
+          description:
+            hydrationError instanceof Error ? hydrationError.message : "Try again.",
+        });
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setHydratingMessagesKey(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    loadThreadMessages,
+    queryClient,
+    threadMessagesKey,
+    threadMessagesQueryKey,
+  ]);
 
   useEffect(() => {
     if (!isSidebar) {
@@ -1516,6 +1611,27 @@ const Chatbot = ({
       ),
     [messages],
   );
+  const isThreadMessagesHydrating = hydratingMessagesKey === threadMessagesKey;
+
+  useEffect(() => {
+    if (
+      !threadMessagesQueryKey ||
+      isThreadMessagesHydrating ||
+      messages.length === 0
+    ) {
+      return;
+    }
+
+    queryClient.setQueryData<AiChatThreadMessagesResponse>(
+      threadMessagesQueryKey,
+      (current) => (current ? { ...current, messages } : current),
+    );
+  }, [
+    isThreadMessagesHydrating,
+    messages,
+    queryClient,
+    threadMessagesQueryKey,
+  ]);
 
   const getWorkspaceEditBaselineCurrent = useCallback(
     (snapshot: WorkspaceEditSnapshotPart) => {
@@ -1941,7 +2057,8 @@ const Chatbot = ({
   }, []);
 
   const hasMessages = visibleMessages.length > 0;
-  const showPendingAssistant = shouldShowPendingAssistant(messages, status);
+  const showPendingAssistant =
+    !isThreadMessagesHydrating && shouldShowPendingAssistant(messages, status);
 
   useEffect(() => {
     const previousMessageCount = previousMessageCountRef.current;
@@ -1984,7 +2101,11 @@ const Chatbot = ({
               : "px-0 pb-0 md:px-4"
           }
         >
-          {!hasMessages ? (
+          {isThreadMessagesHydrating ? (
+            <div className="flex min-h-40 items-center justify-center text-muted-foreground text-sm">
+              Loading chat...
+            </div>
+          ) : !hasMessages ? (
             <EmptyState />
           ) : (
             visibleMessages.map((message) => (

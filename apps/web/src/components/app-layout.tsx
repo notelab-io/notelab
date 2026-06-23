@@ -5,7 +5,7 @@ import {
   useState,
 } from "react"
 import type { ReactNode } from "react"
-import { Link, Outlet, useLocation } from "@tanstack/react-router"
+import { Link, Outlet, useRouterState } from "@tanstack/react-router"
 import { ArrowRight } from "lucide-react"
 
 import { AppSidebar } from "@/components/app-sidebar"
@@ -80,13 +80,15 @@ export function AppLayout({ children }: { children?: ReactNode }) {
 }
 
 function AppLayoutContent({ children }: { children?: ReactNode }) {
-  const location = useLocation()
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  })
   const embeddedMobileViewer = isEmbeddedMobileViewer()
   const { isMobile, open: appSidebarOpen } = useSidebar()
-  const isSettingsPage = location.pathname.startsWith("/settings")
-  const isAiPage = location.pathname === "/ai"
-  const workspaceId = getWorkspaceId(location.pathname)
-  const databaseId = getDatabaseId(location.pathname)
+  const isSettingsPage = pathname.startsWith("/settings")
+  const isAiPage = pathname === "/ai"
+  const workspaceId = getWorkspaceId(pathname)
+  const databaseId = getDatabaseId(pathname)
   const discussionsEnabled = Boolean(workspaceId && !databaseId)
   const [sidePaneWorkspaceId, setSidePaneWorkspaceId] = useState<string | null>(
     null,
@@ -199,7 +201,7 @@ function AppLayoutContent({ children }: { children?: ReactNode }) {
                     onOpenDiscussions={
                       discussionsEnabled ? openDiscussionsSidebar : undefined
                     }
-                    pathname={location.pathname}
+                    pathname={pathname}
                     sidePaneWorkspaceId={sidePaneWorkspaceId}
                   />
                 )}
