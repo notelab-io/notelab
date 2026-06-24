@@ -1,7 +1,6 @@
 import type {
   DatabasePayload,
   DatabaseRow,
-  DatabaseRowsPagination,
   WorkspacePropertyValue,
 } from "./queries"
 
