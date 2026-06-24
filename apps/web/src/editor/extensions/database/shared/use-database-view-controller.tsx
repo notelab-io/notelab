@@ -67,7 +67,13 @@ export function useDatabaseViewController({
   const updateProperty = useUpdateDatabaseProperty()
   const addRow = useAddDatabaseRow(organizationId)
   const updateValue = useUpdateDatabasePropertyValue()
-  const { data: payload, isLoading } = useDatabase(databaseId)
+  const {
+    data: payload,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+  } = useDatabase(databaseId)
   const [draftDatabaseTitle, setDraftDatabaseTitle] = useState("New database")
   const [draftViewTitle, setDraftViewTitle] = useState("Table")
   const [activeViewId, setActiveViewId] = useState<string | null>(null)
@@ -89,10 +95,22 @@ export function useDatabaseViewController({
   )
   const {
     data: linkedPayload,
+    fetchNextPage: fetchNextLinkedPage,
+    hasNextPage: hasNextLinkedPage,
+    isFetchingNextPage: isFetchingNextLinkedPage,
     isLoading: isLoadingLinkedPayload,
   } = useDatabase(activeLinkedDatabaseView?.databaseId)
   const activePayload = activeLinkedDatabaseView ? linkedPayload : payload
   const activeDatabaseId = activeLinkedDatabaseView?.databaseId ?? databaseId
+  const activeFetchNextPage = activeLinkedDatabaseView
+    ? fetchNextLinkedPage
+    : fetchNextPage
+  const activeHasNextPage = activeLinkedDatabaseView
+    ? hasNextLinkedPage
+    : hasNextPage
+  const activeIsFetchingNextPage = activeLinkedDatabaseView
+    ? isFetchingNextLinkedPage
+    : isFetchingNextPage
   const activeViewLookupId = activeLinkedDatabaseView?.viewId ?? activeViewId
   const { data: session } = useSession()
   const needsPersonAccessTargets = useMemo(
@@ -472,6 +490,7 @@ export function useDatabaseViewController({
     draftDatabaseTitle,
     draftViewTitle,
     editable,
+    fetchNextPage: activeFetchNextPage,
     filterFieldOptions,
     filterPickerOpen,
     filterValueOptionsByField,
@@ -481,6 +500,7 @@ export function useDatabaseViewController({
     groupProperty,
     groupableProperties,
     hasDatabasePageDragPayload,
+    hasNextPage: activeHasNextPage,
     hostDatabaseId: databaseId,
     hostDatabaseName: payload?.database.name,
     hostDatabaseOrganizationId: payload?.database.organizationId,
@@ -488,6 +508,7 @@ export function useDatabaseViewController({
     isAddingDatabaseProperty: addProperty.isPending,
     isAddingDatabaseRow: addRow.isPending,
     isAddingDatabaseView: addDatabaseView.isPending,
+    isFetchingNextPage: activeIsFetchingNextPage,
     linkedDatabaseViews,
     titlePropertyLabel,
     showPageIconInTitle,

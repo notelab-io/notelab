@@ -67,6 +67,7 @@ import {
   isOptionBackedKanbanGroupProperty,
 } from "./database-kanban-config"
 import { useDatabaseViewContext } from "../shared/database-view-context"
+import { useDatabaseRowsScroll } from "../shared/use-database-rows-scroll"
 import { NameColumnGlyph } from "../shared/name-column-glyph"
 import { getDatabaseGroupMoveValue } from "../shared/database-group-values"
 import {
@@ -307,9 +308,12 @@ export function DatabaseKanbanView() {
     databaseId,
     draftPropertyValues,
     editable,
+    fetchNextPage,
     groupProperty,
     groupableProperties,
+    hasNextPage,
     isAddingDatabaseRow,
+    isFetchingNextPage,
     showPageIconInTitle,
     addDatabaseRow,
     onOpenPage,
@@ -478,6 +482,12 @@ export function DatabaseKanbanView() {
     measureKey: `${kanbanOptions.length}:${editable}`,
     scrollRef,
     wrapperRef: wrapRef,
+  })
+  const { sentinelRef: rowsScrollSentinelRef } = useDatabaseRowsScroll({
+    enabled: Boolean(groupProperty),
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
   })
 
   const createKanbanOption = async (nextOptionName = newKanbanOptionName) => {
@@ -1097,6 +1107,20 @@ export function DatabaseKanbanView() {
                 </section>
               ) : null}
             </div>
+            {hasNextPage || isFetchingNextPage ? (
+              <div
+                aria-hidden={!isFetchingNextPage}
+                className="database-rows-pagination-status flex items-center justify-center gap-2 px-4 py-3 text-sm text-muted-foreground"
+                ref={rowsScrollSentinelRef}
+              >
+                {isFetchingNextPage ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    <span>Loading more rows...</span>
+                  </>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </div>
       ) : (

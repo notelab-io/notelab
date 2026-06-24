@@ -64,6 +64,7 @@ import {
   getPropertyWrapContent,
 } from "../shared/database-view-config"
 import { useDatabaseViewContext } from "../shared/database-view-context"
+import { useDatabaseRowsScroll } from "../shared/use-database-rows-scroll"
 import { useInlineDatabaseScroll } from "../shared/use-inline-database-scroll"
 import { databaseItemMatchesFilter } from "../shared/database-item-utils"
 import {
@@ -237,11 +238,14 @@ export function DatabaseTableView() {
     databaseId,
     draftPropertyValues,
     editable,
+    fetchNextPage,
     getDatabasePageDragPayload,
     groupProperty,
     hasDatabasePageDragPayload,
+    hasNextPage,
     isAddingDatabaseProperty,
     isAddingDatabaseRow,
+    isFetchingNextPage,
     titlePropertyLabel: nameColumnLabel,
     showPageIconInTitle: nameColumnShowPageIcon,
     addDatabaseRow,
@@ -376,6 +380,11 @@ export function DatabaseTableView() {
     getContentWidth: getInlineTableContentWidth,
     scrollRef: tableScrollRef,
     wrapperRef: tableWrapRef,
+  })
+  const { sentinelRef: rowsScrollSentinelRef } = useDatabaseRowsScroll({
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
   })
   const groupedSections = useMemo<GroupSection[]>(() => {
     if (!isTableGrouped || !groupProperty) {
@@ -1580,6 +1589,25 @@ export function DatabaseTableView() {
               </table>
             </>
           )}
+          {hasNextPage || isFetchingNextPage ? (
+            <div
+              aria-hidden={!isFetchingNextPage}
+              className="database-rows-pagination-status flex items-center justify-center gap-2 px-4 py-3 text-sm text-muted-foreground"
+              ref={rowsScrollSentinelRef}
+              style={
+                {
+                  "--database-table-min-width": `${tableMinWidth}px`,
+                } as CSSProperties
+              }
+            >
+              {isFetchingNextPage ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  <span>Loading more rows...</span>
+                </>
+              ) : null}
+            </div>
+          ) : null}
           {editable && !isTableGrouped ? (
             <div
               className="database-page-create-row"

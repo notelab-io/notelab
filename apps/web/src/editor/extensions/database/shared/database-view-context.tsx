@@ -101,6 +101,7 @@ export type DatabaseViewContextValue = {
   draftPropertyValues: Record<string, DatabasePropertyValue>
   draftViewTitle: string
   editable: boolean
+  fetchNextPage: () => Promise<void>
   filteredItems: SortableDatabaseItem[]
   filterFieldOptions: DatabaseSearchableMenuOption[]
   filterPickerOpen: boolean
@@ -112,6 +113,7 @@ export type DatabaseViewContextValue = {
   groupProperty: DatabasePropertyListItem | null
   groupableProperties: DatabasePropertyListItem[]
   hasDatabasePageDragPayload: (dataTransfer: DataTransfer | null) => boolean
+  hasNextPage: boolean
   hostDatabaseId: string | null | undefined
   hostDatabaseName?: string
   hostDatabaseOrganizationId?: string
@@ -119,6 +121,7 @@ export type DatabaseViewContextValue = {
   isAddingDatabaseProperty: boolean
   isAddingDatabaseRow: boolean
   isAddingDatabaseView: boolean
+  isFetchingNextPage: boolean
   items: DatabaseRow[]
   linkedDatabaseViews: DatabaseLinkedViewConfig[]
   onOpenPage?: (pageId: string) => void
