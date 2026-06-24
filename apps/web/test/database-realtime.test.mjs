@@ -29,7 +29,7 @@ export function register({ assert, loadModule, test }) {
     )
   })
 
-  test("database realtime changed events refetch only for newer remote mutations", async () => {
+  test("database realtime changed events sync only for newer remote mutations", async () => {
     const { getDatabaseChangedRefetchDecision } = await loadModule(
       featuresRealtimeUtilsPath,
     )
@@ -42,7 +42,7 @@ export function register({ assert, loadModule, test }) {
           Boolean(clientMutationId && ownMutationIds.has(clientMutationId)),
         version: 8,
       }),
-      { latestVersion: 8, shouldRefetch: false },
+      { latestVersion: 8, shouldRefetch: false, shouldSync: false },
     )
     assert.deepEqual(
       getDatabaseChangedRefetchDecision({
@@ -52,7 +52,7 @@ export function register({ assert, loadModule, test }) {
           Boolean(clientMutationId && ownMutationIds.has(clientMutationId)),
         version: 9,
       }),
-      { latestVersion: 9, shouldRefetch: false },
+      { latestVersion: 9, shouldRefetch: false, shouldSync: false },
     )
     assert.deepEqual(
       getDatabaseChangedRefetchDecision({
@@ -62,7 +62,7 @@ export function register({ assert, loadModule, test }) {
           Boolean(clientMutationId && ownMutationIds.has(clientMutationId)),
         version: 10,
       }),
-      { latestVersion: 10, shouldRefetch: true },
+      { latestVersion: 10, shouldRefetch: false, shouldSync: true },
     )
   })
 

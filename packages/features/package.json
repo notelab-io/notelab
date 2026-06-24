@@ -3,9 +3,18 @@
   "private": true,
   "type": "module",
   "version": "0.0.0",
+  "scripts": {
+    "test": "tsx --test src/databases/*.test.ts",
+    "test:databases": "tsx --test src/databases/*.test.ts"
+  },
   "dependencies": {
     "dexie": "^4.0.11",
     "lib0": "^0.2.117"
+  },
+  "devDependencies": {
+    "@tanstack/react-query": "^5.100.14",
+    "fake-indexeddb": "^6.2.5",
+    "tsx": "^4.22.3"
   },
   "peerDependencies": {
     "@tanstack/react-query": "^5.100.14",

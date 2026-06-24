@@ -45,3 +45,12 @@ export function getLocalDatabaseDb() {
 
   return localDb
 }
+
+export async function resetLocalDatabaseDbForTests() {
+  if (!localDb) {
+    return
+  }
+
+  await localDb.delete()
+  localDb = null
+}
