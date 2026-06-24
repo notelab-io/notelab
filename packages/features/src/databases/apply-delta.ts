@@ -1,0 +1,208 @@
+import type { DatabasePayload, DatabaseProperty, DatabaseRow } from "./queries"
+import type { DatabaseDelta } from "./sync-types"
+
+function mergeRecord<T extends Record<string, unknown>>(
+  current: T | undefined,
+  patch: Record<string, unknown>,
+) {
+  return {
+    ...(current ?? {}),
+    ...patch,
+  } as T
+}
+
+function mergeProperty(
+  current: DatabaseProperty | undefined,
+  patch: Record<string, unknown>,
+): DatabaseProperty | null {
+  if (!current && !patch.property && !patch.id) {
+    return null
+  }
+
+  const nestedProperty =
+    patch.property && typeof patch.property === "object"
+      ? (patch.property as DatabaseProperty["property"])
+      : undefined;
+
+  return mergeRecord(current ?? ({} as DatabaseProperty), {
+    ...patch,
+    property: nestedProperty
+      ? mergeRecord(current?.property, nestedProperty as Record<string, unknown>)
+      : current?.property,
+  })
+}
+
+function mergeRow(
+  current: DatabaseRow | undefined,
+  patch: Record<string, unknown>,
+): DatabaseRow | null {
+  if (!current && !patch.id) {
+    return null
+  }
+
+  const nestedPage =
+    patch.page && typeof patch.page === "object"
+      ? (patch.page as DatabaseRow["page"])
+      : undefined
+
+  return mergeRecord(current ?? ({} as DatabaseRow), {
+    ...patch,
+    page: nestedPage
+      ? mergeRecord(current?.page, nestedPage as Record<string, unknown>)
+      : current?.page,
+  })
+}
+
+export function applyDatabaseDelta(
+  payload: DatabasePayload,
+  delta: DatabaseDelta,
+): DatabasePayload {
+  let next = payload
+
+  if (delta.database) {
+    next = {
+      ...next,
+      database: mergeRecord(next.database, {
+        ...delta.database,
+        version:
+          typeof delta.database.version === "number"
+            ? delta.database.version
+            : next.database.version,
+      }),
+    }
+  }
+
+  if (delta.properties?.length) {
+    const properties = [...next.properties]
+
+    for (const patch of delta.properties) {
+      const id = typeof patch.id === "string" ? patch.id : null
+
+      if (!id) {
+        continue
+      }
+
+      const index = properties.findIndex((property) => property.id === id)
+      const merged = mergeProperty(
+        index >= 0 ? properties[index] : undefined,
+        patch,
+      )
+
+      if (!merged) {
+        continue
+      }
+
+      if (index >= 0) {
+        properties[index] = merged
+      } else {
+        properties.push(merged)
+      }
+    }
+
+    next = {
+      ...next,
+      properties: properties.sort((left, right) => left.position - right.position),
+    }
+  }
+
+  if (delta.removedPropertyIds?.length) {
+    const removed = new Set(delta.removedPropertyIds)
+
+    next = {
+      ...next,
+      properties: next.properties.filter((property) => !removed.has(property.id)),
+    }
+  }
+
+  if (delta.views?.length) {
+    const views = [...next.views]
+
+    for (const patch of delta.views) {
+      const id = typeof patch.id === "string" ? patch.id : null
+
+      if (!id) {
+        continue
+      }
+
+      const index = views.findIndex((view) => view.id === id)
+
+      if (index >= 0) {
+        views[index] = mergeRecord(views[index], patch)
+      } else {
+        views.push(mergeRecord({} as (typeof views)[number], patch))
+      }
+    }
+
+    next = {
+      ...next,
+      views: views.sort((left, right) => left.position - right.position),
+    }
+  }
+
+  if (delta.rows?.length) {
+    const rows = [...next.rows]
+
+    for (const patch of delta.rows) {
+      const id = typeof patch.id === "string" ? patch.id : null
+
+      if (!id) {
+        continue
+      }
+
+      const index = rows.findIndex((row) => row.id === id)
+      const merged = mergeRow(index >= 0 ? rows[index] : undefined, patch)
+
+      if (!merged) {
+        continue
+      }
+
+      if (index >= 0) {
+        rows[index] = merged
+      } else {
+        rows.push(merged)
+      }
+    }
+
+    next = {
+      ...next,
+      rows: rows.sort((left, right) => left.position - right.position),
+    }
+  }
+
+  if (delta.values?.length) {
+    const values = [...next.values]
+
+    for (const patch of delta.values) {
+      const index = values.findIndex(
+        (value) =>
+          value.workspaceId === patch.workspaceId &&
+          value.propertyId === patch.propertyId,
+      )
+      const merged = {
+        ...(index >= 0 ? values[index] : {}),
+        ...patch,
+        createdAt:
+          patch.createdAt ??
+          (index >= 0 ? values[index]?.createdAt : undefined) ??
+          new Date().toISOString(),
+        id:
+          patch.id ??
+          (index >= 0 ? values[index]?.id : undefined) ??
+          crypto.randomUUID(),
+      }
+
+      if (index >= 0) {
+        values[index] = merged
+      } else {
+        values.push(merged)
+      }
+    }
+
+    next = {
+      ...next,
+      values,
+    }
+  }
+
+  return next
+}
