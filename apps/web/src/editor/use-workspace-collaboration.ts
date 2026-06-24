@@ -5,6 +5,8 @@ import * as Y from "yjs"
 
 import { API_BASE_URL, apiFetch } from "@/lib/api"
 
+import { installOutboundMessageThrottling } from "./throttled-websocket-provider"
+
 export type WorkspaceCollaborationUser = {
   color: string
   email?: string
@@ -117,6 +119,7 @@ export function useWorkspaceCollaboration({
     )
 
     provider.awareness.setLocalStateField("user", user)
+    const disposeOutboundThrottling = installOutboundMessageThrottling(provider)
     setState({
       provider: null,
       status: "connecting",
@@ -196,10 +199,28 @@ export function useWorkspaceCollaboration({
       }
     }
 
+    const handleVisibilityChange = () => {
+      if (disposed) {
+        return
+      }
+
+      if (document.visibilityState === "hidden") {
+        provider.disconnect()
+        return
+      }
+
+      if (!provider.wsconnected) {
+        provider.connect()
+      }
+    }
+
     void connect()
+    document.addEventListener("visibilitychange", handleVisibilityChange)
 
     return () => {
       disposed = true
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
+      disposeOutboundThrottling()
       provider.off("status", handleStatus)
       provider.off("sync", handleSync)
       provider.destroy()
