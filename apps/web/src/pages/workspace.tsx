@@ -3,6 +3,7 @@ import { Link, useParams } from "@tanstack/react-router"
 import { ArrowRight, Maximize2 } from "lucide-react"
 
 import { AppLayout } from "@/components/app-layout"
+import { WorkspaceOrganizationGate } from "@/components/workspace-organization-gate"
 import {
   getWorkspaceSidePaneWidthClass,
   WorkspaceSidePaneProvider,
@@ -77,12 +78,14 @@ function AuthenticatedWorkspacePage() {
 
   return (
     <main className="relative flex h-full min-h-[calc(100svh-3rem)] flex-1 overflow-hidden">
-      <WorkspaceEditorPane
-        className="min-w-0 flex-1 overflow-y-auto"
-        key={workspaceId}
-        onOpenPage={openPageInSidePane}
-        workspaceId={workspaceId}
-      />
+      <WorkspaceOrganizationGate workspaceId={workspaceId}>
+        <WorkspaceEditorPane
+          className="min-w-0 flex-1 overflow-y-auto"
+          key={workspaceId}
+          onOpenPage={openPageInSidePane}
+          workspaceId={workspaceId}
+        />
+      </WorkspaceOrganizationGate>
       {sidePaneWorkspaceId ? (
         <aside
           className={cn(
@@ -91,12 +94,14 @@ function AuthenticatedWorkspacePage() {
           )}
           key={sidePaneWorkspaceId}
         >
-          <WorkspaceEditorPane
-            className="min-h-0 flex-1 overflow-y-auto"
-            databaseId={sidePaneDatabaseId}
-            onOpenPage={openPageInSidePane}
-            workspaceId={sidePaneWorkspaceId}
-          />
+          <WorkspaceOrganizationGate workspaceId={sidePaneWorkspaceId}>
+            <WorkspaceEditorPane
+              className="min-h-0 flex-1 overflow-y-auto"
+              databaseId={sidePaneDatabaseId}
+              onOpenPage={openPageInSidePane}
+              workspaceId={sidePaneWorkspaceId}
+            />
+          </WorkspaceOrganizationGate>
         </aside>
       ) : null}
     </main>
