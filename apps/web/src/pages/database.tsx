@@ -4,7 +4,7 @@ import { ArrowRight, Maximize2 } from "lucide-react"
 
 import { AppLayout } from "@/components/app-layout"
 import {
-  getWorkspaceSidePaneWidthClass,
+  WorkspaceSidePaneLayout,
   WorkspaceSidePaneProvider,
   useWorkspaceSidePane,
 } from "@/contexts/workspace-side-pane"
@@ -50,10 +50,12 @@ function AuthenticatedDatabasePage() {
   const {
     closeSidePane,
     openSidePane,
+    renderedSidePaneWorkspaceId,
+    sidePaneAnimatedOpen,
+    sidePaneContentReady,
     sidePaneDatabaseId,
     sidePaneWorkspaceId,
   } = useWorkspaceSidePane()
-  const sidePaneWidthClass = getWorkspaceSidePaneWidthClass()
   const databasePageId = payload?.database.pageId ?? null
 
   const openPageInSidePane = useCallback((pageId: string) => {
@@ -82,29 +84,27 @@ function AuthenticatedDatabasePage() {
   }
 
   return (
-    <main className="relative flex h-full min-h-[calc(100svh-3rem)] flex-1 overflow-hidden animate-in fade-in-0 duration-300">
-      <DatabaseMainPane
-        className="min-w-0 flex-1 overflow-y-auto"
-        databaseId={databaseId}
-        onOpenPage={openPageInSidePane}
-      />
-      {sidePaneWorkspaceId ? (
-        <aside
-          className={cn(
-            "animate-in slide-in-from-right-8 absolute inset-0 z-10 flex flex-col bg-background duration-200 md:static md:z-auto md:border-l",
-            sidePaneWidthClass,
-          )}
-          key={sidePaneWorkspaceId}
-        >
+    <WorkspaceSidePaneLayout
+      className="animate-in fade-in-0 duration-300"
+      main={
+        <DatabaseMainPane
+          databaseId={databaseId}
+          onOpenPage={openPageInSidePane}
+        />
+      }
+      sidePane={
+        sidePaneContentReady && renderedSidePaneWorkspaceId ? (
           <WorkspaceEditorPane
-            className="min-h-0 flex-1 overflow-y-auto"
             databaseId={sidePaneDatabaseId ?? databaseId}
+            key={renderedSidePaneWorkspaceId}
             onOpenPage={openPageInSidePane}
-            workspaceId={sidePaneWorkspaceId}
+            workspaceId={renderedSidePaneWorkspaceId}
           />
-        </aside>
-      ) : null}
-    </main>
+        ) : null
+      }
+      sidePaneOpen={sidePaneAnimatedOpen}
+      sidePaneVisible={renderedSidePaneWorkspaceId !== null}
+    />
   )
 }
 
@@ -123,10 +123,12 @@ function PublicDatabaseContent({ databaseId }: { databaseId: string }) {
   const {
     closeSidePane,
     openSidePane,
+    renderedSidePaneWorkspaceId,
+    sidePaneAnimatedOpen,
+    sidePaneContentReady,
     sidePaneDatabaseId,
     sidePaneWorkspaceId,
   } = useWorkspaceSidePane()
-  const sidePaneWidthClass = getWorkspaceSidePaneWidthClass()
   const databasePageId = payload?.database.pageId ?? null
   const openPageInSidePane = useCallback((pageId: string) => {
     if (pageId === databasePageId || pageId === sidePaneWorkspaceId) {
@@ -154,61 +156,69 @@ function PublicDatabaseContent({ databaseId }: { databaseId: string }) {
   }
 
   return (
-    <main className="relative flex min-h-svh flex-1 overflow-hidden bg-background animate-in fade-in-0 duration-300">
-      <div className="flex min-w-0 flex-1 flex-col">
-        <PublicPaneTopbar workspaceId={databasePageId} />
-        <DatabaseMainPane
-          className="min-h-0 min-w-0 flex-1 overflow-y-auto"
-          databaseId={databaseId}
-          onOpenPage={openPageInSidePane}
-          readOnly
-        />
-      </div>
-      {sidePaneWorkspaceId ? (
-        <aside
-          className={cn(
-            "animate-in slide-in-from-right-8 absolute inset-0 z-10 flex flex-col bg-background duration-200 md:static md:z-auto md:border-l",
-            sidePaneWidthClass,
-          )}
-          key={sidePaneWorkspaceId}
-        >
-          <div className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
-            <div className="flex shrink-0 items-center gap-1">
-              <Button
-                aria-label="Close side pane"
-                onClick={closeSidePane}
-                size="icon-sm"
-                type="button"
-                variant="ghost"
-              >
-                <ArrowRight />
-              </Button>
-              <Button
-                aria-label="Open as main page"
-                asChild
-                size="icon-sm"
-                variant="ghost"
-              >
-                <Link
-                  params={{ workspaceId: sidePaneWorkspaceId }}
-                  to="/workspace/$workspaceId"
-                >
-                  <Maximize2 />
-                </Link>
-              </Button>
-            </div>
-            <PublicWorkspaceBreadcrumb workspaceId={sidePaneWorkspaceId} />
-          </div>
-          <WorkspaceEditorPane
-            className="min-h-0 flex-1 overflow-y-auto"
-            databaseId={sidePaneDatabaseId ?? databaseId}
+    <WorkspaceSidePaneLayout
+      className="bg-background animate-in fade-in-0 duration-300"
+      standalone
+      viewportHeightClass="h-svh"
+      main={
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <PublicPaneTopbar workspaceId={databasePageId} />
+          <DatabaseMainPane
+            className="min-h-0 min-w-0 flex-1 overflow-y-auto"
+            databaseId={databaseId}
             onOpenPage={openPageInSidePane}
             readOnly
-            workspaceId={sidePaneWorkspaceId}
           />
-        </aside>
-      ) : null}
-    </main>
+        </div>
+      }
+      sidePane={
+        renderedSidePaneWorkspaceId ? (
+          <div className="flex h-full min-h-0 flex-col">
+            <div className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
+              <div className="flex shrink-0 items-center gap-1">
+                <Button
+                  aria-label="Close side pane"
+                  onClick={closeSidePane}
+                  size="icon-sm"
+                  type="button"
+                  variant="ghost"
+                >
+                  <ArrowRight />
+                </Button>
+                <Button
+                  aria-label="Open as main page"
+                  asChild
+                  size="icon-sm"
+                  variant="ghost"
+                >
+                  <Link
+                    params={{ workspaceId: renderedSidePaneWorkspaceId }}
+                    to="/workspace/$workspaceId"
+                  >
+                    <Maximize2 />
+                  </Link>
+                </Button>
+              </div>
+              <PublicWorkspaceBreadcrumb
+                workspaceId={renderedSidePaneWorkspaceId}
+              />
+            </div>
+            {sidePaneContentReady ? (
+              <WorkspaceEditorPane
+                className="min-h-0 flex-1"
+                databaseId={sidePaneDatabaseId ?? databaseId}
+                key={renderedSidePaneWorkspaceId}
+                onOpenPage={openPageInSidePane}
+                readOnly
+                workspaceId={renderedSidePaneWorkspaceId}
+              />
+            ) : null}
+          </div>
+        ) : null
+      }
+      sidePaneOpen={sidePaneAnimatedOpen}
+      sidePaneVisible={renderedSidePaneWorkspaceId !== null}
+    />
   )
 }
 

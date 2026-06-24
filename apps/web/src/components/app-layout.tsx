@@ -16,9 +16,10 @@ import {
 } from "@/components/chat-sidebar"
 import { WorkspaceEditorRegistryProvider } from "@/contexts/workspace-editor-registry"
 import {
-  getWorkspaceSidePaneWidthClass,
+  useWorkspaceSidePaneState,
   WorkspaceSidePaneContext,
-  type WorkspaceSidePaneContextValue,
+  WorkspaceSidePaneHeaderCell,
+  WorkspaceSidePaneShell,
 } from "@/contexts/workspace-side-pane"
 import { DiscussionsSidebarPanel } from "@/components/discussions-sidebar"
 import {
@@ -51,7 +52,6 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { cn } from "@/lib/utils"
 import { isEmbeddedMobileViewer } from "@/lib/embedded-view"
 import {
   getWorkspaceEmoji,
@@ -91,22 +91,20 @@ function AppLayoutContent({ children }: { children?: ReactNode }) {
   const workspaceId = getWorkspaceId(pathname)
   const databaseId = getDatabaseId(pathname)
   const discussionsEnabled = Boolean(workspaceId && !databaseId)
-  const [sidePaneWorkspaceId, setSidePaneWorkspaceId] = useState<string | null>(
-    null,
-  )
-  const [sidePaneDatabaseId, setSidePaneDatabaseId] = useState<string | null>(
-    null,
-  )
+  const sidePaneState = useWorkspaceSidePaneState(workspaceId)
+  const {
+    closeSidePane,
+    openSidePane: openSidePaneBase,
+    renderedSidePaneWorkspaceId,
+    sidePaneAnimatedOpen,
+    sidePaneWorkspaceId,
+  } = sidePaneState
   const [chatSidebarOpen, setChatSidebarOpen] = useState(false)
   const [discussionsSidebarOpen, setDiscussionsSidebarOpen] = useState(false)
   const openRightPanelCount =
     (chatSidebarOpen ? 1 : 0) +
     (discussionsEnabled && discussionsSidebarOpen ? 1 : 0)
   const desktopRightPanelCount = isMobile ? 0 : openRightPanelCount
-  const closeSidePane = useCallback(() => {
-    setSidePaneWorkspaceId(null)
-    setSidePaneDatabaseId(null)
-  }, [])
   const openSidePane = useCallback(
     (
       nextWorkspaceId: string,
@@ -117,10 +115,9 @@ function AppLayoutContent({ children }: { children?: ReactNode }) {
         setDiscussionsSidebarOpen(false)
       }
 
-      setSidePaneWorkspaceId(nextWorkspaceId)
-      setSidePaneDatabaseId(options?.databaseId ?? null)
+      openSidePaneBase(nextWorkspaceId, options)
     },
-    [appSidebarOpen],
+    [appSidebarOpen, openSidePaneBase],
   )
   const openChatSidebar = useCallback(() => {
     if (appSidebarOpen) {
@@ -134,19 +131,13 @@ function AppLayoutContent({ children }: { children?: ReactNode }) {
     }
     setDiscussionsSidebarOpen(true)
   }, [appSidebarOpen, closeSidePane])
-  const sidePaneContext = useMemo<WorkspaceSidePaneContextValue>(
+  const sidePaneContext = useMemo(
     () => ({
-      closeSidePane,
+      ...sidePaneState,
       openSidePane,
-      sidePaneDatabaseId,
-      sidePaneWorkspaceId,
     }),
-    [closeSidePane, openSidePane, sidePaneDatabaseId, sidePaneWorkspaceId],
+    [openSidePane, sidePaneState],
   )
-
-  useEffect(() => {
-    closeSidePane()
-  }, [closeSidePane, workspaceId])
 
   useEffect(() => {
     if (databaseId) {
@@ -195,20 +186,25 @@ function AppLayoutContent({ children }: { children?: ReactNode }) {
               }}
             >
               <SidebarInset className="flex h-full min-h-0 flex-col overflow-hidden">
-                {embeddedMobileViewer ? null : (
-                  <AppHeader
-                    isSettingsPage={isSettingsPage || isAiPage}
-                    onCloseSidePane={closeSidePane}
-                    onOpenDiscussions={
-                      discussionsEnabled ? openDiscussionsSidebar : undefined
-                    }
-                    pathname={pathname}
-                    sidePaneWorkspaceId={sidePaneWorkspaceId}
-                  />
-                )}
-                <div className="min-h-0 flex-1 overflow-y-auto">
-                  {children ?? <Outlet />}
-                </div>
+                <WorkspaceSidePaneShell
+                  body={children ?? <Outlet />}
+                  header={
+                    embeddedMobileViewer ? undefined : (
+                      <AppHeader
+                        isSettingsPage={isSettingsPage || isAiPage}
+                        onCloseSidePane={closeSidePane}
+                        onOpenDiscussions={
+                          discussionsEnabled ? openDiscussionsSidebar : undefined
+                        }
+                        pathname={pathname}
+                        renderedSidePaneWorkspaceId={renderedSidePaneWorkspaceId}
+                        sidePaneAnimatedOpen={sidePaneAnimatedOpen}
+                      />
+                    )
+                  }
+                  open={sidePaneAnimatedOpen}
+                  visible={renderedSidePaneWorkspaceId !== null}
+                />
               </SidebarInset>
             </ResizablePanel>
             <RightSidebars
@@ -273,47 +269,82 @@ function AppHeader({
   onCloseSidePane,
   onOpenDiscussions,
   pathname,
-  sidePaneWorkspaceId,
+  renderedSidePaneWorkspaceId,
+  sidePaneAnimatedOpen,
 }: {
   isSettingsPage: boolean
   onCloseSidePane: () => void
   onOpenDiscussions?: () => void
   pathname: string
-  sidePaneWorkspaceId: string | null
+  renderedSidePaneWorkspaceId: string | null
+  sidePaneAnimatedOpen: boolean
 }) {
+  const showSidePaneHeader = renderedSidePaneWorkspaceId !== null
+  const splitActive = showSidePaneHeader && sidePaneAnimatedOpen
+
   return (
-    <header className="relative z-20 flex h-12 shrink-0 bg-background">
-      <PaneHeaderContent
-        className="min-w-0 flex-1"
-        leadingControl={null}
-        onOpenDiscussions={onOpenDiscussions}
-        pathname={pathname}
-        showActions={!isSettingsPage}
-      />
-      {sidePaneWorkspaceId ? (
+    <>
+      <WorkspaceSidePaneHeaderCell
+        className="z-20"
+        side="main"
+        splitActive={splitActive}
+      >
         <PaneHeaderContent
-          className={cn(
-            "animate-in slide-in-from-right-8 absolute inset-0 z-10 bg-background duration-200 md:static md:z-auto md:border-l",
-            getWorkspaceSidePaneWidthClass(),
-          )}
+          className="min-w-0 flex-1"
           leadingControl={
-            <Button
-              aria-label="Close side pane"
-              onClick={onCloseSidePane}
-              size="icon-sm"
-              type="button"
-              variant="ghost"
-            >
-              <ArrowRight />
-            </Button>
+            <MainPaneHeaderLeadingControl splitActive={splitActive} />
           }
           onOpenDiscussions={onOpenDiscussions}
-          pathname={`/workspace/${encodeURIComponent(sidePaneWorkspaceId)}`}
-          showActions
+          pathname={pathname}
+          showActions={!isSettingsPage}
         />
+      </WorkspaceSidePaneHeaderCell>
+      {showSidePaneHeader ? (
+        <WorkspaceSidePaneHeaderCell
+          className="z-20"
+          side="side"
+          splitActive={splitActive}
+        >
+          <PaneHeaderContent
+            className="min-w-0 flex-1"
+            leadingControl={
+              <Button
+                aria-label="Close side pane"
+                onClick={onCloseSidePane}
+                size="icon-sm"
+                type="button"
+                variant="ghost"
+              >
+                <ArrowRight />
+              </Button>
+            }
+            onOpenDiscussions={onOpenDiscussions}
+            pathname={`/workspace/${encodeURIComponent(renderedSidePaneWorkspaceId ?? "")}`}
+            showActions
+          />
+        </WorkspaceSidePaneHeaderCell>
       ) : null}
-    </header>
+    </>
   )
+}
+
+function MainPaneHeaderLeadingControl({
+  splitActive,
+}: {
+  splitActive: boolean
+}) {
+  const { isMobile, open, openMobile } = useSidebar()
+  const isCollapsed = isMobile ? !openMobile : !open
+
+  if (isCollapsed) {
+    return <CollapsedSidebarTrigger />
+  }
+
+  if (splitActive) {
+    return <div aria-hidden className="size-8 shrink-0" />
+  }
+
+  return null
 }
 
 function CollapsedSidebarTrigger() {

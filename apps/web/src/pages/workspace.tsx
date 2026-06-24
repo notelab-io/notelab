@@ -5,7 +5,7 @@ import { ArrowRight, Maximize2 } from "lucide-react"
 import { AppLayout } from "@/components/app-layout"
 import { WorkspaceOrganizationGate } from "@/components/workspace-organization-gate"
 import {
-  getWorkspaceSidePaneWidthClass,
+  WorkspaceSidePaneLayout,
   WorkspaceSidePaneProvider,
   useWorkspaceSidePane,
 } from "@/contexts/workspace-side-pane"
@@ -62,10 +62,12 @@ function AuthenticatedWorkspacePage() {
   const {
     closeSidePane,
     openSidePane,
+    renderedSidePaneWorkspaceId,
+    sidePaneAnimatedOpen,
+    sidePaneContentReady,
     sidePaneDatabaseId,
     sidePaneWorkspaceId,
   } = useWorkspaceSidePane()
-  const sidePaneWidthClass = getWorkspaceSidePaneWidthClass()
 
   const openPageInSidePane = useCallback((pageId: string) => {
     if (pageId === workspaceId || pageId === sidePaneWorkspaceId) {
@@ -77,34 +79,31 @@ function AuthenticatedWorkspacePage() {
   }, [closeSidePane, openSidePane, sidePaneWorkspaceId, workspaceId])
 
   return (
-    <main className="relative flex h-full min-h-[calc(100svh-3rem)] flex-1 overflow-hidden">
-      <WorkspaceOrganizationGate workspaceId={workspaceId}>
-        <WorkspaceEditorPane
-          className="min-w-0 flex-1 overflow-y-auto"
-          key={workspaceId}
-          onOpenPage={openPageInSidePane}
-          workspaceId={workspaceId}
-        />
-      </WorkspaceOrganizationGate>
-      {sidePaneWorkspaceId ? (
-        <aside
-          className={cn(
-            "animate-in slide-in-from-right-8 absolute inset-0 z-10 flex flex-col bg-background duration-200 md:static md:z-auto md:border-l",
-            sidePaneWidthClass,
-          )}
-          key={sidePaneWorkspaceId}
-        >
-          <WorkspaceOrganizationGate workspaceId={sidePaneWorkspaceId}>
+    <WorkspaceSidePaneLayout
+      main={
+        <WorkspaceOrganizationGate workspaceId={workspaceId}>
+          <WorkspaceEditorPane
+            key={workspaceId}
+            onOpenPage={openPageInSidePane}
+            workspaceId={workspaceId}
+          />
+        </WorkspaceOrganizationGate>
+      }
+      sidePane={
+        sidePaneContentReady && renderedSidePaneWorkspaceId ? (
+          <WorkspaceOrganizationGate workspaceId={renderedSidePaneWorkspaceId}>
             <WorkspaceEditorPane
-              className="min-h-0 flex-1 overflow-y-auto"
               databaseId={sidePaneDatabaseId}
+              key={renderedSidePaneWorkspaceId}
               onOpenPage={openPageInSidePane}
-              workspaceId={sidePaneWorkspaceId}
+              workspaceId={renderedSidePaneWorkspaceId}
             />
           </WorkspaceOrganizationGate>
-        </aside>
-      ) : null}
-    </main>
+        ) : null
+      }
+      sidePaneOpen={sidePaneAnimatedOpen}
+      sidePaneVisible={renderedSidePaneWorkspaceId !== null}
+    />
   )
 }
 
@@ -122,10 +121,12 @@ function PublicWorkspaceContent({ workspaceId }: { workspaceId: string }) {
   const {
     closeSidePane,
     openSidePane,
+    renderedSidePaneWorkspaceId,
+    sidePaneAnimatedOpen,
+    sidePaneContentReady,
     sidePaneDatabaseId,
     sidePaneWorkspaceId,
   } = useWorkspaceSidePane()
-  const sidePaneWidthClass = getWorkspaceSidePaneWidthClass()
   const openPageInSidePane = useCallback((pageId: string) => {
     if (pageId === workspaceId || pageId === sidePaneWorkspaceId) {
       closeSidePane()
@@ -136,62 +137,70 @@ function PublicWorkspaceContent({ workspaceId }: { workspaceId: string }) {
   }, [closeSidePane, openSidePane, sidePaneWorkspaceId, workspaceId])
 
   return (
-    <main className="relative flex h-svh flex-1 overflow-hidden bg-background">
-      <div className="flex min-w-0 flex-1 flex-col">
-        <PublicPaneTopbar workspaceId={workspaceId} />
-        <WorkspaceEditorPane
-          className="min-h-0 min-w-0 flex-1 overflow-y-auto"
-          key={workspaceId}
-          onOpenPage={openPageInSidePane}
-          readOnly
-          workspaceId={workspaceId}
-        />
-      </div>
-      {sidePaneWorkspaceId ? (
-        <aside
-          className={cn(
-            "animate-in slide-in-from-right-8 absolute inset-0 z-10 flex flex-col bg-background duration-200 md:static md:z-auto md:border-l",
-            sidePaneWidthClass,
-          )}
-          key={sidePaneWorkspaceId}
-        >
-          <div className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
-            <div className="flex shrink-0 items-center gap-1">
-              <Button
-                aria-label="Close side pane"
-                onClick={closeSidePane}
-                size="icon-sm"
-                type="button"
-                variant="ghost"
-              >
-                <ArrowRight />
-              </Button>
-              <Button
-                aria-label="Open as main page"
-                asChild
-                size="icon-sm"
-                variant="ghost"
-              >
-                <Link
-                  params={{ workspaceId: sidePaneWorkspaceId }}
-                  to="/workspace/$workspaceId"
-                >
-                  <Maximize2 />
-                </Link>
-              </Button>
-            </div>
-            <PublicWorkspaceBreadcrumb workspaceId={sidePaneWorkspaceId} />
-          </div>
+    <WorkspaceSidePaneLayout
+      className="bg-background"
+      standalone
+      viewportHeightClass="h-svh"
+      main={
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <PublicPaneTopbar workspaceId={workspaceId} />
           <WorkspaceEditorPane
-            className="min-h-0 flex-1 overflow-y-auto"
-            databaseId={sidePaneDatabaseId}
+            className="min-h-0 min-w-0 flex-1 overflow-y-auto"
+            key={workspaceId}
             onOpenPage={openPageInSidePane}
             readOnly
-            workspaceId={sidePaneWorkspaceId}
+            workspaceId={workspaceId}
           />
-        </aside>
-      ) : null}
-    </main>
+        </div>
+      }
+      sidePane={
+        renderedSidePaneWorkspaceId ? (
+          <div className="flex h-full min-h-0 flex-col">
+            <div className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
+              <div className="flex shrink-0 items-center gap-1">
+                <Button
+                  aria-label="Close side pane"
+                  onClick={closeSidePane}
+                  size="icon-sm"
+                  type="button"
+                  variant="ghost"
+                >
+                  <ArrowRight />
+                </Button>
+                <Button
+                  aria-label="Open as main page"
+                  asChild
+                  size="icon-sm"
+                  variant="ghost"
+                >
+                  <Link
+                    params={{ workspaceId: renderedSidePaneWorkspaceId }}
+                    to="/workspace/$workspaceId"
+                  >
+                    <Maximize2 />
+                  </Link>
+                </Button>
+              </div>
+              <PublicWorkspaceBreadcrumb
+                workspaceId={renderedSidePaneWorkspaceId}
+              />
+            </div>
+            {sidePaneContentReady ? (
+              <WorkspaceEditorPane
+                className="min-h-0 flex-1"
+                databaseId={sidePaneDatabaseId}
+                key={renderedSidePaneWorkspaceId}
+                onOpenPage={openPageInSidePane}
+                readOnly
+                workspaceId={renderedSidePaneWorkspaceId}
+              />
+            ) : null}
+          </div>
+        ) : null
+      }
+      sidePaneOpen={sidePaneAnimatedOpen}
+      sidePaneVisible={renderedSidePaneWorkspaceId !== null}
+    />
   )
 }
 
