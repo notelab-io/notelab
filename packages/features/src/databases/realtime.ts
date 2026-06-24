@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 
 import { useNotelabFeatures } from "../context"
+import {
+  bindVisibilityOnHidden,
+  getReconnectDelayMs,
+  shouldReconnectRealtimeSocket,
+  type RealtimeSocketStatus,
+} from "../realtime/socket-lifecycle"
 
 import { databaseQueryKey, type DatabasePayload } from "./queries"
 import { pullDatabaseSync } from "./sync-worker"
@@ -25,8 +31,7 @@ type DatabaseRealtimeOptions = {
 }
 
 const refetchDebounceMs = 120
-const stalePresenceMs = 45_000
-const presenceHeartbeatMs = 20_000
+const stalePresenceMs = 90_000
 
 export function useDatabaseRealtime(
   databaseId: string | null | undefined,
@@ -39,9 +44,7 @@ export function useDatabaseRealtime(
   }: DatabaseRealtimeOptions = {},
 ) {
   const { apiFetch, queryClient, realtimeBaseUrl } = useNotelabFeatures()
-  const [status, setStatus] = useState<
-    "connected" | "connecting" | "disconnected" | "offline"
-  >("offline")
+  const [status, setStatus] = useState<RealtimeSocketStatus>("offline")
   const [collaboratorsBySession, setCollaboratorsBySession] = useState<
     Record<string, DatabasePresenceCollaborator>
   >({})
@@ -90,6 +93,13 @@ export function useDatabaseRealtime(
           latestVersionRef.current = version
         })
       }, refetchDebounceMs)
+    }
+
+    const clearReconnectTimeout = () => {
+      if (reconnectTimeoutRef.current !== null) {
+        window.clearTimeout(reconnectTimeoutRef.current)
+        reconnectTimeoutRef.current = null
+      }
     }
 
     const connect = () => {
@@ -178,10 +188,15 @@ export function useDatabaseRealtime(
 
         setStatus("disconnected")
         socketRef.current = null
+
+        if (!shouldReconnectRealtimeSocket()) {
+          return
+        }
+
         reconnectAttemptRef.current += 1
         reconnectTimeoutRef.current = window.setTimeout(
           connect,
-          Math.min(10_000, 500 * 2 ** reconnectAttemptRef.current),
+          getReconnectDelayMs(reconnectAttemptRef.current),
         )
       })
 
@@ -192,52 +207,58 @@ export function useDatabaseRealtime(
       })
     }
 
+    const unbindVisibility = bindVisibilityOnHidden({
+      isDisposed: () => disposed,
+      onHidden: () => {
+        clearReconnectTimeout()
+        socketRef.current?.close()
+        socketRef.current = null
+        setStatus("offline")
+      },
+      onVisible: () => {
+        if (!socketRef.current) {
+          connect()
+        }
+      },
+    })
+
     connect()
 
     return () => {
       disposed = true
       setStatus("offline")
       setCollaboratorsBySession({})
+      unbindVisibility()
 
       if (refetchTimeoutRef.current !== null) {
         window.clearTimeout(refetchTimeoutRef.current)
       }
 
-      if (reconnectTimeoutRef.current !== null) {
-        window.clearTimeout(reconnectTimeoutRef.current)
-      }
-
+      clearReconnectTimeout()
       socketRef.current?.close()
       socketRef.current = null
     }
   }, [apiFetch, databaseId, enabled, queryClient, realtimeBaseUrl])
 
   useEffect(() => {
-    if (!databaseId) {
+    if (
+      !databaseId ||
+      document.visibilityState === "hidden" ||
+      socketRef.current?.readyState !== WebSocket.OPEN
+    ) {
       return
     }
 
-    const sendPresence = () => {
-      if (socketRef.current?.readyState !== WebSocket.OPEN) {
-        return
-      }
-
-      socketRef.current.send(
-        JSON.stringify({
-          type: "presence.update",
-          activePropertyId,
-          activeRowId,
-          activeViewId,
-          databaseId,
-        }),
-      )
-    }
-    const interval = window.setInterval(sendPresence, presenceHeartbeatMs)
-
-    sendPresence()
-
-    return () => window.clearInterval(interval)
-  }, [activePropertyId, activeRowId, activeViewId, databaseId])
+    socketRef.current.send(
+      JSON.stringify({
+        type: "presence.update",
+        activePropertyId,
+        activeRowId,
+        activeViewId,
+        databaseId,
+      }),
+    )
+  }, [activePropertyId, activeRowId, activeViewId, databaseId, status])
 
   useEffect(() => {
     const interval = window.setInterval(() => {
