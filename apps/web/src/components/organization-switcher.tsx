@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/sidebar"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { useNavigate } from "@tanstack/react-router"
 import { useSession } from "@notelab/features/auth"
 import {
   useCreateOrganization,
@@ -38,6 +39,7 @@ import { useAppStore } from "@/stores/app-store"
 import { Building2Icon, ChevronDownIcon, PlusIcon } from "lucide-react"
 
 export function OrganizationSwitcher() {
+  const navigate = useNavigate()
   const [isCreateDialogOpen, setIsCreateDialogOpen] = React.useState(false)
   const { data: sessionData } = useSession()
   const { data: organizations = [], isError, isLoading } = useOrganizations()
@@ -72,6 +74,7 @@ export function OrganizationSwitcher() {
       await createOrganization.mutateAsync(organizationName)
       form.reset()
       setIsCreateDialogOpen(false)
+      void navigate({ to: "/dashboard" })
     } catch {
       // React Query owns the visible error state.
     }
@@ -118,7 +121,10 @@ export function OrganizationSwitcher() {
               {organizations.map((organization, index) => (
                 <DropDrawerItem
                   key={organization.id}
-                  onClick={() => setActiveOrganization.mutate(organization.id)}
+                  onClick={() => {
+                    void navigate({ to: "/dashboard" })
+                    setActiveOrganization.mutate(organization.id)
+                  }}
                   disabled={
                     organization.id === activeOrganization?.id ||
                     setActiveOrganization.isPending
