@@ -2,10 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react"
 
 import { useNotelabFeatures } from "../context"
 
-import {
-  databaseQueryKey,
-  type DatabasePayload,
-} from "./queries"
+import { databaseQueryKey, type DatabasePayload } from "./queries"
+import { pullDatabaseSync } from "./sync-worker"
 import { isRecentDatabaseClientMutationId } from "./mutation-tracker"
 import {
   addCollaboratorColor,
@@ -40,7 +38,7 @@ export function useDatabaseRealtime(
     localVersion = null,
   }: DatabaseRealtimeOptions = {},
 ) {
-  const { queryClient, realtimeBaseUrl } = useNotelabFeatures()
+  const { apiFetch, queryClient, realtimeBaseUrl } = useNotelabFeatures()
   const [status, setStatus] = useState<
     "connected" | "connecting" | "disconnected" | "offline"
   >("offline")
@@ -71,14 +69,25 @@ export function useDatabaseRealtime(
 
     let disposed = false
 
-    const scheduleRefetch = () => {
+    const scheduleSync = () => {
       if (refetchTimeoutRef.current !== null) {
         window.clearTimeout(refetchTimeoutRef.current)
       }
 
       refetchTimeoutRef.current = window.setTimeout(() => {
-        void queryClient.invalidateQueries({
-          queryKey: databaseQueryKey(databaseId),
+        const currentPayload = queryClient.getQueryData<DatabasePayload | null>(
+          databaseQueryKey(databaseId),
+        )
+        const sinceVersion =
+          latestVersionRef.current ?? currentPayload?.database.version ?? 0
+
+        void pullDatabaseSync(
+          databaseId,
+          sinceVersion,
+          apiFetch,
+          queryClient,
+        ).then((version) => {
+          latestVersionRef.current = version
         })
       }, refetchDebounceMs)
     }
@@ -117,7 +126,7 @@ export function useDatabaseRealtime(
         )
 
         if (reconnectAttemptRef.current > 0) {
-          scheduleRefetch()
+          scheduleSync()
         }
 
         reconnectAttemptRef.current = 0
@@ -155,7 +164,7 @@ export function useDatabaseRealtime(
               ),
             )
           },
-          scheduleRefetch,
+          scheduleSync,
           setLatestVersion: (version) => {
             latestVersionRef.current = version
           },
@@ -201,7 +210,7 @@ export function useDatabaseRealtime(
       socketRef.current?.close()
       socketRef.current = null
     }
-  }, [databaseId, enabled, queryClient, realtimeBaseUrl])
+  }, [apiFetch, databaseId, enabled, queryClient, realtimeBaseUrl])
 
   useEffect(() => {
     if (!databaseId) {
@@ -279,7 +288,7 @@ async function handleDatabaseRealtimeSocketMessage(
     onReady: (
       peers: Array<Omit<DatabasePresenceCollaborator, "color">>,
     ) => void
-    scheduleRefetch: () => void
+    scheduleSync: () => void
     setLatestVersion: (version: number | null) => void
   },
 ) {
@@ -299,8 +308,8 @@ async function handleDatabaseRealtimeSocketMessage(
 
     handlers.setLatestVersion(decision.latestVersion)
 
-    if (decision.shouldRefetch) {
-      handlers.scheduleRefetch()
+    if (decision.shouldSync) {
+      handlers.scheduleSync()
     }
 
     return

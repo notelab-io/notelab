@@ -37,6 +37,8 @@ export type DatabaseChangedEvent = {
 export type DatabaseReadyEvent = {
   type: "realtime.ready"
   databaseId: string
+  lastSeenVersion?: number | null
+  needsSync?: boolean
   peers: Array<Omit<DatabasePresenceCollaborator, "color">>
   sessionId: string
 }
@@ -141,12 +143,14 @@ export function getDatabaseChangedRefetchDecision({
     return {
       latestVersion: currentVersion,
       shouldRefetch: false,
+      shouldSync: false,
     }
   }
 
   return {
     latestVersion: version,
-    shouldRefetch: !isOwnMutation(clientMutationId),
+    shouldRefetch: false,
+    shouldSync: !isOwnMutation(clientMutationId),
   }
 }
 
