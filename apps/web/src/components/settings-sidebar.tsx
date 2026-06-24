@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router"
 import { useRouterState } from "@tanstack/react-router"
 import {
+  ArrowLeftIcon,
   Building2Icon,
   KeyRoundIcon,
   PlugIcon,
@@ -68,7 +69,19 @@ export function SettingsSidebar({
   return (
     <AppSidebarShell {...props}>
       <SidebarHeader>
-        <div className="flex justify-end">
+        <div className="flex items-center gap-1">
+          <div className="min-w-0 flex-1">
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Home">
+                  <Link to="/dashboard">
+                    <ArrowLeftIcon />
+                    <span>Home</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </div>
           <SidebarTrigger className="shrink-0 group-data-[collapsible=icon]:hidden" />
         </div>
       </SidebarHeader>
