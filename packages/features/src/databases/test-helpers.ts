@@ -98,5 +98,9 @@ export function createTestDatabasePayload(
         updatedAt: "2026-06-01T00:00:00.000Z",
       },
     ],
+    rowCount: overrides.rowCount,
+    rowsPagination: overrides.rowsPagination,
+    clientMutationId: overrides.clientMutationId,
+    mutationId: overrides.mutationId,
   }
 }

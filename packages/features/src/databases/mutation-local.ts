@@ -1,9 +1,14 @@
 import type { QueryClient } from "@tanstack/react-query"
 
 import type { ApiFetcher } from "../context"
-import { applyLocalDatabaseDelta, writeLocalDatabasePayload } from "./local-store"
+import {
+  applyLocalDatabaseDelta,
+  readLocalDatabasePayload,
+  writeLocalDatabasePayload,
+} from "./local-store"
 import { enqueueDatabaseMutation } from "./outbox"
 import { databaseQueryKey, type DatabasePayload } from "./queries"
+import { fetchPaginatedDatabasePayload } from "./fetch-database-payload"
 import { scheduleDatabaseSync } from "./sync-worker"
 import type { DatabaseDelta, OutboxMutationType } from "./sync-types"
 import {
@@ -94,7 +99,19 @@ export async function hydrateDatabasePayload(
   apiFetch: ApiFetcher,
   queryClient: QueryClient,
 ) {
-  const payload = await apiFetch<DatabasePayload>(`/databases/${databaseId}`)
+  const local = await readLocalDatabasePayload(databaseId)
+
+  if (local) {
+    queryClient.setQueryData(databaseQueryKey(databaseId), local)
+
+    return local
+  }
+
+  const payload = await fetchPaginatedDatabasePayload(apiFetch, databaseId)
+
+  if (!payload) {
+    throw new Error("Database payload is not available")
+  }
 
   await writeLocalDatabasePayload(databaseId, payload)
   queryClient.setQueryData(databaseQueryKey(databaseId), payload)

@@ -109,6 +109,11 @@ export type WorkspacePropertyValue = {
   updatedAt: string
 }
 
+export type DatabaseRowsPagination = {
+  hasMore: boolean
+  nextCursor: number | null
+}
+
 export type DatabasePayload = {
   clientMutationId?: string
   database: DatabaseRecord
@@ -117,6 +122,7 @@ export type DatabasePayload = {
   views: DatabaseView[]
   rows: DatabaseRow[]
   rowCount?: number
+  rowsPagination?: DatabaseRowsPagination
   values: WorkspacePropertyValue[]
 }
 

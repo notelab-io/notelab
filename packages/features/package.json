@@ -45,6 +45,7 @@
       "types": "./src/organizations/index.ts",
       "default": "./src/organizations/index.ts"
     },
+
     "./search": {
       "types": "./src/search/index.ts",
       "default": "./src/search/index.ts"

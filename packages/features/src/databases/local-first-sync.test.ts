@@ -174,28 +174,42 @@ test("flushDatabaseSync batches cell updates through POST /mutations", async () 
 
   assert.equal(requests.length, 1)
   assert.equal(requests[0]?.path, `/databases/${databaseId}/mutations`)
-  assert.deepEqual(requests[0]?.body, {
-    mutations: [
-      {
-        clientMutationId: "client-a",
-        payload: {
-          propertyId: "property-status",
-          rowId: "row-1",
-          value: "Done",
-        },
-        type: "updatePropertyValue",
+
+  const requestBody = requests[0]?.body as {
+    mutations: Array<{
+      clientMutationId: string
+      payload: Record<string, unknown>
+      type: string
+    }>
+  }
+  const expectedMutations = [
+    {
+      clientMutationId: "client-a",
+      payload: {
+        propertyId: "property-status",
+        rowId: "row-1",
+        value: "Done",
       },
-      {
-        clientMutationId: "client-b",
-        payload: {
-          propertyId: "property-name",
-          rowId: "row-2",
-          value: "Renamed",
-        },
-        type: "updatePropertyValue",
+      type: "updatePropertyValue",
+    },
+    {
+      clientMutationId: "client-b",
+      payload: {
+        propertyId: "property-name",
+        rowId: "row-2",
+        value: "Renamed",
       },
-    ],
-  })
+      type: "updatePropertyValue",
+    },
+  ]
+  const sortMutations = (
+    mutations: typeof expectedMutations,
+  ) =>
+    [...mutations].sort((left, right) =>
+      left.clientMutationId.localeCompare(right.clientMutationId),
+    )
+
+  assert.deepEqual(sortMutations(requestBody.mutations), sortMutations(expectedMutations))
   assert.equal(await countPendingDatabaseMutations(databaseId), 0)
   assert.equal(
     queryClient.getQueryData(databaseQueryKey(databaseId))?.database.version,

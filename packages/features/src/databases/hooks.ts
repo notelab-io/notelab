@@ -1,6 +1,8 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
+import { useCallback, useState } from "react"
 
 import { useNotelabFeatures } from "../context"
+
 import {
   applyDatabaseMutationResult,
   createMutationBody,
@@ -17,6 +19,12 @@ import {
   databaseQueryOptions,
   type DatabasePayload,
 } from "./queries"
+import { fetchPaginatedDatabasePayload } from "./fetch-database-payload"
+import {
+  appendDatabaseRowPage,
+  DEFAULT_DATABASE_ROWS_PAGE_SIZE,
+  type DatabaseRowsPage,
+} from "./row-pagination"
 import { workspacesQueryKey } from "../workspaces/queries"
 
 type DatabaseMutationInput = {
@@ -137,13 +145,36 @@ function createDatabaseQueryOptions(
         return local
       }
 
-      const params = options?.schemaOnly ? "?schemaOnly=1" : ""
+      if (options?.schemaOnly) {
+        try {
+          const remote = await apiFetch<DatabasePayload>(
+            `/databases/${databaseId}?schemaOnly=1`,
+            { method: "GET" },
+          )
+
+          if (!remote) {
+            return null
+          }
+
+          await writeLocalDatabasePayload(databaseId, remote)
+
+          return remote
+        } catch (error) {
+          if (
+            typeof error === "object" &&
+            error !== null &&
+            "status" in error &&
+            error.status === 401
+          ) {
+            return null
+          }
+
+          throw error
+        }
+      }
 
       try {
-        const remote = await apiFetch<DatabasePayload>(
-          `/databases/${databaseId}${params}`,
-          { method: "GET" },
-        )
+        const remote = await fetchPaginatedDatabasePayload(apiFetch, databaseId)
 
         if (!remote) {
           return null
@@ -169,9 +200,54 @@ function createDatabaseQueryOptions(
 }
 
 export function useDatabase(databaseId: string | null | undefined) {
-  const { apiFetch } = useNotelabFeatures()
+  const { apiFetch, queryClient } = useNotelabFeatures()
+  const [isFetchingNextPage, setIsFetchingNextPage] = useState(false)
+  const query = useQuery(createDatabaseQueryOptions(apiFetch, databaseId))
+  const hasNextPage = query.data?.rowsPagination?.hasMore === true
 
-  return useQuery(createDatabaseQueryOptions(apiFetch, databaseId))
+  const fetchNextPage = useCallback(async () => {
+    if (!databaseId || isFetchingNextPage || !hasNextPage) {
+      return
+    }
+
+    const current = queryClient.getQueryData<DatabasePayload | null>(
+      databaseQueryKey(databaseId),
+    )
+
+    const nextCursor = current?.rowsPagination?.nextCursor
+
+    if (!current || nextCursor === null || nextCursor === undefined) {
+      return
+    }
+
+    setIsFetchingNextPage(true)
+
+    try {
+      const page = await apiFetch<DatabaseRowsPage>(
+        `/databases/${databaseId}/rows?cursor=${nextCursor}&limit=${DEFAULT_DATABASE_ROWS_PAGE_SIZE}`,
+        { method: "GET" },
+      )
+      const next = appendDatabaseRowPage(current, page)
+
+      await writeLocalDatabasePayload(databaseId, next)
+      queryClient.setQueryData(databaseQueryKey(databaseId), next)
+    } finally {
+      setIsFetchingNextPage(false)
+    }
+  }, [
+    apiFetch,
+    databaseId,
+    hasNextPage,
+    isFetchingNextPage,
+    queryClient,
+  ])
+
+  return {
+    ...query,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  }
 }
 
 export function useCreateDatabase() {
