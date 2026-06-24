@@ -1,9 +1,7 @@
 import { Loader2 } from "lucide-react"
 
-import { cn } from "@/lib/utils"
-
 import { DatabaseViewContent } from "./database-view-content"
-import { DatabaseViewProvider, useDatabaseViewContext } from "./database-view-context"
+import { DatabaseViewProvider } from "./database-view-context"
 import { DatabaseViewToolbar } from "./database-view-toolbar"
 import {
   useDatabaseViewController,
@@ -34,7 +32,6 @@ export function DatabaseView(props: DatabaseViewProps) {
       >
         <div className="database-toolbar-section">
           <DatabaseViewToolbar />
-          <DatabaseRealtimeStatusBanner />
         </div>
         <div className="database-scroll-section">
           {!databaseId ? (
@@ -52,35 +49,5 @@ export function DatabaseView(props: DatabaseViewProps) {
         </div>
       </div>
     </DatabaseViewProvider>
-  )
-}
-
-function DatabaseRealtimeStatusBanner() {
-  const { editable, realtimeStatus } = useDatabaseViewContext()
-
-  if (
-    !editable ||
-    realtimeStatus === "connected" ||
-    realtimeStatus === "offline"
-  ) {
-    return null
-  }
-
-  const message =
-    realtimeStatus === "connecting"
-      ? "Connecting to database updates…"
-      : "Reconnecting — database changes sync when the connection restores"
-
-  return (
-    <p
-      className={cn(
-        "mx-3 mb-2 rounded-md border px-3 py-2 text-xs",
-        realtimeStatus === "connecting"
-          ? "border-border text-muted-foreground"
-          : "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200",
-      )}
-    >
-      {message}
-    </p>
   )
 }
