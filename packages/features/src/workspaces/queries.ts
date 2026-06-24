@@ -1,5 +1,9 @@
 import { type QueryClient, queryOptions } from "@tanstack/react-query"
 
+import {
+  ACTIVE_ORGANIZATION_MISMATCH_CODE,
+  ActiveOrganizationMismatchError,
+} from "../api-errors"
 import type { ApiFetcher } from "../context"
 import type { WorkspaceMetadata } from "./item-relationships"
 
@@ -357,6 +361,34 @@ export const workspaceQueryOptions = (
           workspace: result.workspace,
         }
       } catch (error) {
+        if (
+          typeof error === "object" &&
+          error !== null &&
+          "status" in error &&
+          error.status === 409 &&
+          "body" in error &&
+          error.body &&
+          typeof error.body === "object" &&
+          "code" in error.body &&
+          error.body.code === ACTIVE_ORGANIZATION_MISMATCH_CODE &&
+          "organizationId" in error.body &&
+          typeof error.body.organizationId === "string"
+        ) {
+          const mismatchBody = error.body as {
+            error?: unknown
+            organizationId: string
+          }
+          const message =
+            typeof mismatchBody.error === "string"
+              ? mismatchBody.error
+              : undefined
+
+          throw new ActiveOrganizationMismatchError(
+            mismatchBody.organizationId,
+            message,
+          )
+        }
+
         if (
           typeof error === "object" &&
           error !== null &&
