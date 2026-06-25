@@ -4,17 +4,15 @@ import test from "node:test"
 import { applyDatabaseDelta } from "./apply-delta"
 import { createTestDatabasePayload } from "./test-helpers"
 
-test("applyDatabaseDelta updates database metadata and version", () => {
+test("applyDatabaseDelta updates database metadata", () => {
   const payload = createTestDatabasePayload()
   const next = applyDatabaseDelta(payload, {
     database: {
       name: "Roadmap",
-      version: 9,
     },
   })
 
   assert.equal(next.database.name, "Roadmap")
-  assert.equal(next.database.version, 9)
 })
 
 test("applyDatabaseDelta patches an existing cell value", () => {
@@ -137,12 +135,44 @@ test("applyDatabaseDelta upserts views and sorts by position", () => {
   assert.equal(next.views[1]?.id, "view-kanban")
 })
 
+test("applyDatabaseDelta removes views by id", () => {
+  const payload = createTestDatabasePayload({
+    views: [
+      {
+        config: {},
+        createdAt: "2026-06-01T00:00:00.000Z",
+        databaseId: "database-1",
+        id: "view-table",
+        name: "Table",
+        position: 0,
+        type: "table",
+        updatedAt: "2026-06-01T00:00:00.000Z",
+      },
+      {
+        config: {},
+        createdAt: "2026-06-01T00:00:00.000Z",
+        databaseId: "database-1",
+        id: "view-kanban",
+        name: "Kanban",
+        position: 1,
+        type: "kanban",
+        updatedAt: "2026-06-01T00:00:00.000Z",
+      },
+    ],
+  })
+  const next = applyDatabaseDelta(payload, {
+    removedViewIds: ["view-table"],
+  })
+
+  assert.deepEqual(
+    next.views.map((view) => view.id),
+    ["view-kanban"],
+  )
+})
+
 test("applyDatabaseDelta applies combined patches in one pass", () => {
   const payload = createTestDatabasePayload()
   const next = applyDatabaseDelta(payload, {
-    database: {
-      version: 10,
-    },
     properties: [
       {
         id: "column-status",
@@ -170,7 +200,6 @@ test("applyDatabaseDelta applies combined patches in one pass", () => {
     ],
   })
 
-  assert.equal(next.database.version, 10)
   assert.deepEqual(
     next.properties.map((property) => property.id),
     ["column-name", "column-status"],

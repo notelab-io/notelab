@@ -1,5 +1,5 @@
 import type { DatabasePayload, DatabaseProperty, DatabaseRow } from "./queries"
-import type { DatabaseDelta } from "./sync-types"
+import type { DatabaseDelta } from "./mutation-types"
 
 function mergeRecord<T extends Record<string, unknown>>(
   current: T | undefined,
@@ -62,13 +62,7 @@ export function applyDatabaseDelta(
   if (delta.database) {
     next = {
       ...next,
-      database: mergeRecord(next.database, {
-        ...delta.database,
-        version:
-          typeof delta.database.version === "number"
-            ? delta.database.version
-            : next.database.version,
-      }),
+      database: mergeRecord(next.database, delta.database),
     }
   }
 
@@ -136,6 +130,15 @@ export function applyDatabaseDelta(
     next = {
       ...next,
       views: views.sort((left, right) => left.position - right.position),
+    }
+  }
+
+  if (delta.removedViewIds?.length) {
+    const removed = new Set(delta.removedViewIds)
+
+    next = {
+      ...next,
+      views: next.views.filter((view) => !removed.has(view.id)),
     }
   }
 
