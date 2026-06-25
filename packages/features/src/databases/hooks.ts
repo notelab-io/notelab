@@ -1,49 +1,32 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { useCallback, useState } from "react"
+import { useCallback } from "react"
 
 import { useNotelabFeatures } from "../context"
 
-import {
-  applyDatabaseMutationResult,
-  createMutationBody,
-  hydrateDatabasePayload,
-  runLocalDatabaseMutation,
-} from "./mutation-local"
-import type { DatabaseMutationResponse } from "./sync-types"
-import {
-  readLocalDatabasePayload,
-  writeLocalDatabasePayload,
-} from "./local-store"
+import { applyMutationToCache } from "./mutation-cache"
+import { setDatabasePayloadQueryData } from "./query-cache"
 import {
   databaseQueryKey,
   databaseQueryOptions,
   type DatabasePayload,
 } from "./queries"
-import { fetchPaginatedDatabasePayload } from "./fetch-database-payload"
-import {
-  appendDatabaseRowPage,
-  DEFAULT_DATABASE_ROWS_PAGE_SIZE,
-  type DatabaseRowsPage,
-} from "./row-pagination"
+import type { DatabaseMutationResponse } from "./mutation-types"
 import { workspacesQueryKey } from "../workspaces/queries"
 
-type DatabaseMutationInput = {
-  clientMutationId?: string
-}
-
-type CreateDatabaseInput = DatabaseMutationInput & {
+type CreateDatabaseInput = {
   name?: string
   organizationId: string
   pageId: string
+  standalone?: boolean
 }
 
-type UpdateDatabaseInput = DatabaseMutationInput & {
+type UpdateDatabaseInput = {
   databaseId: string
   name?: string
   config?: unknown
 }
 
-type UpdateDatabaseViewInput = DatabaseMutationInput & {
+type UpdateDatabaseViewInput = {
   config?: unknown
   databaseId: string
   databaseViewId: string
@@ -51,19 +34,19 @@ type UpdateDatabaseViewInput = DatabaseMutationInput & {
   type?: string
 }
 
-type AddDatabaseViewInput = DatabaseMutationInput & {
+type AddDatabaseViewInput = {
   config?: unknown
   databaseId: string
   name?: string
   type?: string
 }
 
-type DeleteDatabaseViewInput = DatabaseMutationInput & {
+type DeleteDatabaseViewInput = {
   databaseId: string
   databaseViewId: string
 }
 
-type AddPropertyInput = DatabaseMutationInput & {
+type AddPropertyInput = {
   config?: unknown
   databaseId: string
   name?: string
@@ -71,7 +54,7 @@ type AddPropertyInput = DatabaseMutationInput & {
   type?: string
 }
 
-type UpdatePropertyInput = DatabaseMutationInput & {
+type UpdatePropertyInput = {
   databaseId: string
   databasePropertyId: string
   config?: unknown
@@ -81,7 +64,7 @@ type UpdatePropertyInput = DatabaseMutationInput & {
   width?: number | null
 }
 
-type AddRowInput = DatabaseMutationInput & {
+type AddRowInput = {
   databaseId: string
   pageId?: string
   parentRowId?: string | null
@@ -89,12 +72,12 @@ type AddRowInput = DatabaseMutationInput & {
   title?: string
 }
 
-type ReorderRowsInput = DatabaseMutationInput & {
+type ReorderRowsInput = {
   databaseId: string
   rowIds: string[]
 }
 
-type MoveRowInput = DatabaseMutationInput & {
+type MoveRowInput = {
   databaseId: string
   groupPropertyId?: string
   groupValue?: unknown
@@ -102,19 +85,19 @@ type MoveRowInput = DatabaseMutationInput & {
   rowIds: string[]
 }
 
-type UpdatePropertyValueInput = DatabaseMutationInput & {
+type UpdatePropertyValueInput = {
   databaseId: string
   propertyId: string
   rowId: string
   value: unknown
 }
 
-type DeletePropertyInput = DatabaseMutationInput & {
+type DeletePropertyInput = {
   databaseId: string
   databasePropertyId: string
 }
 
-type DuplicatePropertyInput = DatabaseMutationInput & {
+type DuplicatePropertyInput = {
   databaseId: string
   databasePropertyId: string
   includeValues?: boolean
@@ -125,128 +108,37 @@ type SetDatabaseFavoriteInput = {
   isFavorite: boolean
 }
 
-function createDatabaseQueryOptions(
-  apiFetch: ReturnType<typeof useNotelabFeatures>["apiFetch"],
+async function commitDatabaseMutation(
+  queryClient: ReturnType<typeof useNotelabFeatures>["queryClient"],
+  databaseId: string,
+  response: unknown,
+) {
+  const payload = applyMutationToCache(queryClient, databaseId, response)
+
+  if (!payload) {
+    throw new Error("Failed to apply database mutation")
+  }
+
+  return payload
+}
+
+export function useDatabase(
   databaseId: string | null | undefined,
   options?: { schemaOnly?: boolean },
 ) {
-  const base = databaseQueryOptions(apiFetch, databaseId, options)
-
-  return {
-    ...base,
-    queryFn: async () => {
-      if (!databaseId) {
-        throw new Error("databaseId is required")
-      }
-
-      const local = await readLocalDatabasePayload(databaseId)
-
-      if (local) {
-        return local
-      }
-
-      if (options?.schemaOnly) {
-        try {
-          const remote = await apiFetch<DatabasePayload>(
-            `/databases/${databaseId}?schemaOnly=1`,
-            { method: "GET" },
-          )
-
-          if (!remote) {
-            return null
-          }
-
-          await writeLocalDatabasePayload(databaseId, remote)
-
-          return remote
-        } catch (error) {
-          if (
-            typeof error === "object" &&
-            error !== null &&
-            "status" in error &&
-            error.status === 401
-          ) {
-            return null
-          }
-
-          throw error
-        }
-      }
-
-      try {
-        const remote = await fetchPaginatedDatabasePayload(apiFetch, databaseId)
-
-        if (!remote) {
-          return null
-        }
-
-        await writeLocalDatabasePayload(databaseId, remote)
-
-        return remote
-      } catch (error) {
-        if (
-          typeof error === "object" &&
-          error !== null &&
-          "status" in error &&
-          error.status === 401
-        ) {
-          return null
-        }
-
-        throw error
-      }
-    },
-  }
-}
-
-export function useDatabase(databaseId: string | null | undefined) {
-  const { apiFetch, queryClient } = useNotelabFeatures()
-  const [isFetchingNextPage, setIsFetchingNextPage] = useState(false)
-  const query = useQuery(createDatabaseQueryOptions(apiFetch, databaseId))
-  const hasNextPage = query.data?.rowsPagination?.hasMore === true
+  const { apiFetch } = useNotelabFeatures()
+  const query = useQuery(databaseQueryOptions(apiFetch, databaseId, options))
+  const hasNextPage = false
 
   const fetchNextPage = useCallback(async () => {
-    if (!databaseId || isFetchingNextPage || !hasNextPage) {
-      return
-    }
-
-    const current = queryClient.getQueryData<DatabasePayload | null>(
-      databaseQueryKey(databaseId),
-    )
-
-    const nextCursor = current?.rowsPagination?.nextCursor
-
-    if (!current || nextCursor === null || nextCursor === undefined) {
-      return
-    }
-
-    setIsFetchingNextPage(true)
-
-    try {
-      const page = await apiFetch<DatabaseRowsPage>(
-        `/databases/${databaseId}/rows?cursor=${nextCursor}&limit=${DEFAULT_DATABASE_ROWS_PAGE_SIZE}`,
-        { method: "GET" },
-      )
-      const next = appendDatabaseRowPage(current, page)
-
-      await writeLocalDatabasePayload(databaseId, next)
-      queryClient.setQueryData(databaseQueryKey(databaseId), next)
-    } finally {
-      setIsFetchingNextPage(false)
-    }
-  }, [
-    apiFetch,
-    databaseId,
-    hasNextPage,
-    isFetchingNextPage,
-    queryClient,
-  ])
+    return
+  }, [])
 
   return {
     ...query,
     fetchNextPage,
     hasNextPage,
-    isFetchingNextPage,
+    isFetchingNextPage: false,
   }
 }
 
@@ -260,8 +152,7 @@ export function useCreateDatabase() {
         body: JSON.stringify(input),
       }),
     onSuccess: async (payload) => {
-      await writeLocalDatabasePayload(payload.database.id, payload)
-      queryClient.setQueryData(databaseQueryKey(payload.database.id), payload)
+      setDatabasePayloadQueryData(queryClient, payload.database.id, payload)
       await queryClient.invalidateQueries({
         queryKey: workspacesQueryKey(payload.database.organizationId),
       })
@@ -273,22 +164,17 @@ export function useUpdateDatabase() {
   const { apiFetch, queryClient } = useNotelabFeatures()
 
   return useMutation({
-    mutationFn: async ({ databaseId, clientMutationId, ...patch }: UpdateDatabaseInput) =>
-      runLocalDatabaseMutation({
-        apiFetch,
-        buildDelta: () => ({
-          database: {
-            id: databaseId,
-            ...patch,
-            updatedAt: new Date().toISOString(),
-          },
-        }),
-        clientMutationId,
-        databaseId,
-        payload: patch,
-        queryClient,
-        type: "updateDatabase",
-      }),
+    mutationFn: async ({ databaseId, ...patch }: UpdateDatabaseInput) => {
+      const response = await apiFetch<DatabaseMutationResponse>(
+        `/databases/${databaseId}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify(patch),
+        },
+      )
+
+      return commitDatabaseMutation(queryClient, databaseId, response)
+    },
     onSuccess: async (_result, variables) => {
       const payload = queryClient.getQueryData<DatabasePayload | null>(
         databaseQueryKey(variables.databaseId),
@@ -310,29 +196,18 @@ export function useUpdateDatabaseView() {
     mutationFn: async ({
       databaseId,
       databaseViewId,
-      clientMutationId,
       ...patch
-    }: UpdateDatabaseViewInput) =>
-      runLocalDatabaseMutation({
-        apiFetch,
-        buildDelta: () => ({
-          views: [
-            {
-              id: databaseViewId,
-              ...patch,
-              updatedAt: new Date().toISOString(),
-            },
-          ],
-        }),
-        clientMutationId,
-        databaseId,
-        payload: {
-          databaseViewId,
-          ...patch,
+    }: UpdateDatabaseViewInput) => {
+      const response = await apiFetch<DatabaseMutationResponse>(
+        `/databases/${databaseId}/views/${databaseViewId}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify(patch),
         },
-        queryClient,
-        type: "updateView",
-      }),
+      )
+
+      return commitDatabaseMutation(queryClient, databaseId, response)
+    },
   })
 }
 
@@ -345,20 +220,11 @@ export function useAddDatabaseView() {
         `/databases/${databaseId}/views`,
         {
           method: "POST",
-          body: createMutationBody(input),
+          body: JSON.stringify(input),
         },
       )
-      const payload = await applyDatabaseMutationResult(
-        databaseId,
-        response,
-        queryClient,
-      )
 
-      if (!payload) {
-        throw new Error("Failed to apply database view mutation")
-      }
-
-      return payload
+      return commitDatabaseMutation(queryClient, databaseId, response)
     },
   })
 }
@@ -370,17 +236,13 @@ export function useDeleteDatabaseView() {
     mutationFn: async ({
       databaseId,
       databaseViewId,
-    }: DeleteDatabaseViewInput) =>
-      apiFetch<DatabasePayload>(
+    }: DeleteDatabaseViewInput) => {
+      const response = await apiFetch<DatabasePayload>(
         `/databases/${databaseId}/views/${databaseViewId}`,
         { method: "DELETE" },
-      ),
-    onSuccess: async (payload, variables) => {
-      await applyDatabaseMutationResult(
-        variables.databaseId,
-        payload,
-        queryClient,
       )
+
+      return commitDatabaseMutation(queryClient, databaseId, response)
     },
   })
 }
@@ -394,20 +256,11 @@ export function useAddDatabaseProperty() {
         `/databases/${databaseId}/properties`,
         {
           method: "POST",
-          body: createMutationBody(input),
+          body: JSON.stringify(input),
         },
       )
-      const payload = await applyDatabaseMutationResult(
-        databaseId,
-        response,
-        queryClient,
-      )
 
-      if (!payload) {
-        throw new Error("Failed to apply database property mutation")
-      }
-
-      return payload
+      return commitDatabaseMutation(queryClient, databaseId, response)
     },
   })
 }
@@ -419,46 +272,18 @@ export function useUpdateDatabaseProperty() {
     mutationFn: async ({
       databaseId,
       databasePropertyId,
-      clientMutationId,
       ...patch
-    }: UpdatePropertyInput) =>
-      runLocalDatabaseMutation({
-        apiFetch,
-        buildDelta: (payload) => {
-          const property = payload.properties.find(
-            (entry) => entry.id === databasePropertyId,
-          )
-
-          if (!property) {
-            return { properties: [] }
-          }
-
-          return {
-            properties: [
-              {
-                ...property,
-                ...patch,
-                property: {
-                  ...property.property,
-                  ...(patch.name !== undefined ? { name: patch.name } : {}),
-                  ...(patch.type !== undefined ? { type: patch.type } : {}),
-                  ...(patch.config !== undefined ? { config: patch.config } : {}),
-                  updatedAt: new Date().toISOString(),
-                },
-                updatedAt: new Date().toISOString(),
-              },
-            ],
-          }
+    }: UpdatePropertyInput) => {
+      const response = await apiFetch<DatabaseMutationResponse>(
+        `/databases/${databaseId}/properties/${databasePropertyId}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify(patch),
         },
-        clientMutationId,
-        databaseId,
-        payload: {
-          databasePropertyId,
-          ...patch,
-        },
-        queryClient,
-        type: "updateProperty",
-      }),
+      )
+
+      return commitDatabaseMutation(queryClient, databaseId, response)
+    },
   })
 }
 
@@ -466,22 +291,14 @@ export function useDeleteDatabaseProperty() {
   const { apiFetch, queryClient } = useNotelabFeatures()
 
   return useMutation({
-    mutationFn: async ({
-      clientMutationId,
-      databaseId,
-      databasePropertyId,
-    }: DeletePropertyInput) =>
-      runLocalDatabaseMutation({
-        apiFetch,
-        buildDelta: () => ({
-          removedPropertyIds: [databasePropertyId],
-        }),
-        clientMutationId,
-        databaseId,
-        payload: { databasePropertyId },
-        queryClient,
-        type: "deleteProperty",
-      }),
+    mutationFn: async ({ databaseId, databasePropertyId }: DeletePropertyInput) => {
+      const response = await apiFetch<DatabaseMutationResponse>(
+        `/databases/${databaseId}/properties/${databasePropertyId}`,
+        { method: "DELETE" },
+      )
+
+      return commitDatabaseMutation(queryClient, databaseId, response)
+    },
   })
 }
 
@@ -498,25 +315,16 @@ export function useDuplicateDatabaseProperty() {
         `/databases/${databaseId}/properties/${databasePropertyId}/duplicate`,
         {
           method: "POST",
-          body: createMutationBody({ includeValues }),
+          body: JSON.stringify({ includeValues }),
         },
       )
-      const payload = await applyDatabaseMutationResult(
-        databaseId,
-        response,
-        queryClient,
-      )
 
-      if (!payload) {
-        throw new Error("Failed to apply duplicate property mutation")
-      }
-
-      return payload
+      return commitDatabaseMutation(queryClient, databaseId, response)
     },
   })
 }
 
-export function useAddDatabaseRow(organizationId: string | null | undefined) {
+export function useAddDatabaseRow() {
   const { apiFetch, queryClient } = useNotelabFeatures()
 
   return useMutation({
@@ -525,27 +333,11 @@ export function useAddDatabaseRow(organizationId: string | null | undefined) {
         `/databases/${databaseId}/rows`,
         {
           method: "POST",
-          body: createMutationBody(input),
+          body: JSON.stringify(input),
         },
       )
-      const payload = await applyDatabaseMutationResult(
-        databaseId,
-        response,
-        queryClient,
-      )
 
-      if (!payload) {
-        throw new Error("Failed to apply database row mutation")
-      }
-
-      return payload
-    },
-    onSuccess: async () => {
-      if (organizationId) {
-        await queryClient.invalidateQueries({
-          queryKey: workspacesQueryKey(organizationId),
-        })
-      }
+      return commitDatabaseMutation(queryClient, databaseId, response)
     },
   })
 }
@@ -554,21 +346,17 @@ export function useReorderDatabaseRows() {
   const { apiFetch, queryClient } = useNotelabFeatures()
 
   return useMutation({
-    mutationFn: async ({ databaseId, rowIds, clientMutationId }: ReorderRowsInput) =>
-      runLocalDatabaseMutation({
-        apiFetch,
-        buildDelta: () => ({
-          rows: rowIds.map((id, position) => ({
-            id,
-            position,
-          })),
-        }),
-        clientMutationId,
-        databaseId,
-        payload: { rowIds },
-        queryClient,
-        type: "reorderRows",
-      }),
+    mutationFn: async ({ databaseId, rowIds }: ReorderRowsInput) => {
+      const response = await apiFetch<DatabaseMutationResponse>(
+        `/databases/${databaseId}/rows/reorder`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({ rowIds }),
+        },
+      )
+
+      return commitDatabaseMutation(queryClient, databaseId, response)
+    },
   })
 }
 
@@ -582,50 +370,21 @@ export function useMoveDatabaseRow() {
       rowIds,
       groupPropertyId,
       groupValue,
-      clientMutationId,
-    }: MoveRowInput) =>
-      runLocalDatabaseMutation({
-        apiFetch,
-        buildDelta: (payload) => {
-          const row = payload.rows.find((entry) => entry.id === rowId)
-          const now = new Date().toISOString()
+    }: MoveRowInput) => {
+      const response = await apiFetch<DatabaseMutationResponse>(
+        `/databases/${databaseId}/rows/${rowId}/move`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({
+            groupPropertyId,
+            groupValue,
+            rowIds,
+          }),
+        },
+      )
 
-          return {
-            rows: rowIds.map((id, position) => ({
-              id,
-              position,
-              ...(id === rowId
-                ? {
-                    lastEditedById: undefined,
-                    updatedAt: now,
-                  }
-                : {}),
-            })),
-            ...(row && groupPropertyId
-              ? {
-                  values: [
-                    {
-                      propertyId: groupPropertyId,
-                      updatedAt: now,
-                      value: groupValue,
-                      workspaceId: row.pageId,
-                    },
-                  ],
-                }
-              : {}),
-          }
-        },
-        clientMutationId,
-        databaseId,
-        payload: {
-          groupPropertyId,
-          groupValue,
-          rowId,
-          rowIds,
-        },
-        queryClient,
-        type: "moveRow",
-      }),
+      return commitDatabaseMutation(queryClient, databaseId, response)
+    },
   })
 }
 
@@ -638,41 +397,17 @@ export function useUpdateDatabasePropertyValue() {
       propertyId,
       rowId,
       value,
-      clientMutationId,
-    }: UpdatePropertyValueInput) =>
-      runLocalDatabaseMutation({
-        apiFetch,
-        buildDelta: (payload) => {
-          const row = payload.rows.find((entry) => entry.id === rowId)
-          const now = new Date().toISOString()
+    }: UpdatePropertyValueInput) => {
+      const response = await apiFetch<DatabaseMutationResponse>(
+        `/databases/${databaseId}/rows/${rowId}/properties/${propertyId}`,
+        {
+          method: "PUT",
+          body: JSON.stringify({ value }),
+        },
+      )
 
-          return {
-            rows: [
-              {
-                id: rowId,
-                updatedAt: now,
-              },
-            ],
-            values: [
-              {
-                propertyId,
-                updatedAt: now,
-                value,
-                workspaceId: row?.pageId ?? "",
-              },
-            ],
-          }
-        },
-        clientMutationId,
-        databaseId,
-        payload: {
-          propertyId,
-          rowId,
-          value,
-        },
-        queryClient,
-        type: "updatePropertyValue",
-      }),
+      return commitDatabaseMutation(queryClient, databaseId, response)
+    },
   })
 }
 
@@ -688,13 +423,10 @@ export function useSetDatabaseFavorite() {
         method: isFavorite ? "PUT" : "DELETE",
       }),
     onSuccess: async (payload) => {
-      await writeLocalDatabasePayload(payload.database.id, payload)
-      queryClient.setQueryData(databaseQueryKey(payload.database.id), payload)
+      setDatabasePayloadQueryData(queryClient, payload.database.id, payload)
       await queryClient.invalidateQueries({
         queryKey: workspacesQueryKey(payload.database.organizationId),
       })
     },
   })
 }
-
-export { hydrateDatabasePayload }

@@ -1,17 +1,28 @@
 import type { QueryClient } from "@tanstack/react-query"
 
-import type { WorkspacePropertiesPayload } from "../workspaces/queries"
+import type {
+  Workspace,
+  WorkspacePropertiesPayload,
+} from "../workspaces/queries"
 
 import {
   databaseQueryKey,
   type DatabasePayload,
   type DatabaseProperty,
 } from "./queries"
-
 export function findDatabaseIdForRowPage(
   queryClient: QueryClient,
   workspaceId: string,
 ) {
+  return findDatabaseIdsForRowPage(queryClient, workspaceId)[0] ?? null
+}
+
+export function findDatabaseIdsForRowPage(
+  queryClient: QueryClient,
+  workspaceId: string,
+) {
+  const databaseIds: string[] = []
+
   for (const [queryKey, data] of queryClient.getQueriesData<DatabasePayload>({
     queryKey: ["database"],
   })) {
@@ -22,11 +33,11 @@ export function findDatabaseIdForRowPage(
     }
 
     if (data.rows.some((row) => row.pageId === workspaceId)) {
-      return databaseId
+      databaseIds.push(databaseId)
     }
   }
 
-  return null
+  return databaseIds
 }
 
 export function isDatabaseRowPage(
@@ -58,7 +69,7 @@ export function buildWorkspacePropertiesPayloadFromDatabase(
   return { properties, values }
 }
 
-export function syncDatabaseCacheWorkspacePropertyValues(
+export function patchDatabaseCacheWorkspacePropertyValues(
   queryClient: QueryClient,
   databaseId: string,
   workspaceId: string,
@@ -84,4 +95,48 @@ export function syncDatabaseCacheWorkspacePropertyValues(
       }
     },
   )
+}
+
+export function patchDatabaseCacheWorkspacePage(
+  queryClient: QueryClient,
+  workspace: Workspace,
+) {
+  const databaseIds = findDatabaseIdsForRowPage(queryClient, workspace.id)
+
+  for (const databaseId of databaseIds) {
+    queryClient.setQueriesData<DatabasePayload>(
+      { queryKey: ["database", databaseId] },
+      (current) => patchDatabasePayloadWorkspacePage(current, workspace),
+    )
+  }
+
+  return databaseIds
+}
+
+function patchDatabasePayloadWorkspacePage(
+  current: DatabasePayload | undefined,
+  workspace: Workspace,
+) {
+  if (!current || !isDatabaseRowPage(current, workspace.id)) {
+    return current
+  }
+
+  const rows = current.rows.map((row) => {
+    if (row.pageId !== workspace.id) {
+      return row
+    }
+
+    return {
+      ...row,
+      page: {
+        ...row.page,
+        id: workspace.id,
+        metadata: workspace.metadata,
+        name: workspace.name,
+        updatedAt: workspace.updatedAt,
+      },
+    }
+  })
+
+  return { ...current, rows }
 }
