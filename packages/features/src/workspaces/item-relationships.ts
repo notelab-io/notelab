@@ -5,11 +5,15 @@ export type ItemRef = {
   kind: NavItemKind
 }
 
+export type EmbeddedItemsOpenAs = "dialog" | "sidepanel"
+
 export type WorkspaceMetadata = {
   cover?: string | null
   emoji?: string | null
+  embeddedItemsOpenAs?: EmbeddedItemsOpenAs | null
   fullWidth?: boolean | null
   notelabai?: "instruction" | "skill" | null
+  useUserEmbeddedItemsPreference?: boolean | null
   useUserFullWidthPreference?: boolean | null
   parentItemId?: string | null
   parentItemKind?: NavItemKind | null
@@ -26,6 +30,18 @@ export function readMetadataRecord(metadata: unknown): WorkspaceMetadata {
 
 export function readParentItemId(metadata: unknown) {
   const parentItemId = readMetadataRecord(metadata).parentItemId
+
+  return typeof parentItemId === "string" && parentItemId.length > 0
+    ? parentItemId
+    : null
+}
+
+export function readDatabaseParentItemId(config: unknown) {
+  if (!config || typeof config !== "object" || Array.isArray(config)) {
+    return null
+  }
+
+  const parentItemId = (config as { parentItemId?: unknown }).parentItemId
 
   return typeof parentItemId === "string" && parentItemId.length > 0
     ? parentItemId

@@ -46,7 +46,6 @@ export type NotelabFeaturesConfig = {
   auth: NotelabAuthClient
   preferredActiveOrganizationId?: string | null
   queryClient: QueryClient
-  realtimeBaseUrl?: string
   setPreferredActiveOrganizationId?: (organizationId: string | null) => void
 }
 

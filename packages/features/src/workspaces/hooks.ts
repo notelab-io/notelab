@@ -6,7 +6,8 @@ import { useDatabase } from "../databases/hooks"
 import {
   buildWorkspacePropertiesPayloadFromDatabase,
   findDatabaseIdForRowPage,
-  syncDatabaseCacheWorkspacePropertyValues,
+  patchDatabaseCacheWorkspacePage,
+  patchDatabaseCacheWorkspacePropertyValues,
 } from "../databases/row-page-properties"
 import { useDatabaseIdForRowPage } from "../databases/use-database-id-for-row-page"
 import {
@@ -23,6 +24,7 @@ import {
   workspaceAccessQueryKey,
   workspaceAccessQueryOptions,
   workspaceAccessTargetsQueryOptions,
+  workspaceCommentsQueryKey,
   workspaceCommentsQueryOptions,
   workspacePersonAccessTargetsQueryOptions,
   workspacePropertiesQueryKey,
@@ -38,6 +40,7 @@ import {
   type AccessTargetType,
   type Workspace,
   type WorkspaceCommentsPayload,
+  type WorkspaceCommentMessage,
   type WorkspaceMetadata,
   type WorkspacePropertiesPayload,
 } from "./queries"
@@ -259,6 +262,50 @@ export function useWorkspaceThreads(
   return useQuery(workspaceThreadsQueryOptions(apiFetch, workspaceId, enabled))
 }
 
+function updateCommentReaction(
+  payload: WorkspaceCommentsPayload | undefined,
+  messageId: string,
+  emoji: string,
+  delta: 1 | -1,
+) {
+  if (!payload) {
+    return payload
+  }
+
+  return {
+    ...payload,
+    comments: payload.comments.map((comment) => {
+      if (comment.id !== messageId) {
+        return comment
+      }
+
+      const reactions = [...(comment.reactions ?? [])]
+      const index = reactions.findIndex((reaction) => reaction.emoji === emoji)
+      const current = index >= 0
+        ? reactions[index]
+        : { count: 0, emoji, reactedByMe: false }
+      const nextCount = Math.max(0, current.count + delta)
+      const nextReaction = {
+        ...current,
+        count: nextCount,
+        reactedByMe: delta > 0,
+      }
+
+      if (nextCount === 0) {
+        if (index >= 0) {
+          reactions.splice(index, 1)
+        }
+      } else if (index >= 0) {
+        reactions[index] = nextReaction
+      } else {
+        reactions.push(nextReaction)
+      }
+
+      return { ...comment, reactions }
+    }),
+  }
+}
+
 export function useCreateWorkspace() {
   const { apiFetch, queryClient } = useNotelabFeatures()
 
@@ -275,7 +322,9 @@ export function useCreateWorkspace() {
         queryClient.getQueryData<UserSettings>(userSettingsQueryKey) ??
         defaultUserSettings
       const metadata: WorkspaceMetadata = {
+        embeddedItemsOpenAs: userSettings.embeddedItemsOpenAs,
         fullWidth: Boolean(userSettings.workspaceFullWidth),
+        useUserEmbeddedItemsPreference: true,
         useUserFullWidthPreference: true,
         ...(inputMetadata ?? {}),
       }
@@ -512,6 +561,50 @@ export function useUpdateWorkspace() {
 
       return result.workspace
     },
+    onMutate: async (variables) => {
+      const previous = queryClient.getQueryData<WorkspaceDetail | null>(
+        workspaceQueryKey(variables.id),
+      )
+      const currentWorkspace = previous?.workspace
+
+      if (!currentWorkspace) {
+        return { previous }
+      }
+
+      const optimisticWorkspace: Workspace = {
+        ...currentWorkspace,
+        ...(variables.content !== undefined
+          ? { content: variables.content }
+          : {}),
+        ...(variables.metadata !== undefined
+          ? { metadata: variables.metadata }
+          : {}),
+        ...(variables.name !== undefined ? { name: variables.name } : {}),
+        updatedAt: new Date().toISOString(),
+      }
+
+      queryClient.setQueryData<WorkspaceDetail | null>(
+        workspaceQueryKey(variables.id),
+        (): WorkspaceDetail => ({
+          accessLevel: previous.accessLevel ?? null,
+          workspace: optimisticWorkspace,
+        }),
+      )
+      patchDatabaseCacheWorkspacePage(queryClient, optimisticWorkspace)
+
+      return { previous }
+    },
+    onError: (_error, variables, context) => {
+      if (!context?.previous) {
+        return
+      }
+
+      queryClient.setQueryData(
+        workspaceQueryKey(variables.id),
+        context.previous,
+      )
+      patchDatabaseCacheWorkspacePage(queryClient, context.previous.workspace)
+    },
     onSuccess: async (workspace, variables) => {
       queryClient.setQueryData<WorkspaceDetail | null>(
         workspaceQueryKey(workspace.id),
@@ -520,11 +613,19 @@ export function useUpdateWorkspace() {
           workspace,
         }),
       )
+      const rowPageDatabaseIds = patchDatabaseCacheWorkspacePage(
+        queryClient,
+        workspace,
+      )
 
       const navFieldsChanged =
         variables.name !== undefined || variables.metadata !== undefined
 
       if (!navFieldsChanged) {
+        return
+      }
+
+      if (rowPageDatabaseIds.length > 0) {
         return
       }
 
@@ -535,7 +636,6 @@ export function useUpdateWorkspace() {
         queryClient.invalidateQueries({
           queryKey: notelabAiWorkspacesQueryKey(workspace.organizationId),
         }),
-        queryClient.invalidateQueries({ queryKey: ["database"] }),
       ]
 
       await Promise.all(invalidations)
@@ -600,7 +700,7 @@ export function useUpdateWorkspacePropertyValue() {
         null
 
       if (databaseId) {
-        syncDatabaseCacheWorkspacePropertyValues(
+        patchDatabaseCacheWorkspacePropertyValues(
           queryClient,
           databaseId,
           variables.workspaceId,
@@ -626,10 +726,54 @@ export function useCreateWorkspaceComment() {
           body: JSON.stringify({ body }),
         },
       ),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: ["workspace-comments", variables.workspaceId],
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({
+        queryKey: workspaceCommentsQueryKey(variables.workspaceId),
       })
+      const previous = queryClient.getQueryData<WorkspaceCommentsPayload>(
+        workspaceCommentsQueryKey(variables.workspaceId),
+      )
+      const now = new Date().toISOString()
+      const thread = previous?.thread ?? {
+        createdAt: now,
+        id: `optimistic-thread:${crypto.randomUUID()}`,
+        lastActivityAt: now,
+        organizationId: "",
+        updatedAt: now,
+        workspaceId: variables.workspaceId,
+      }
+      const optimisticComment: WorkspaceCommentMessage = {
+        author: null,
+        authorId: null,
+        body: variables.body,
+        createdAt: now,
+        id: `optimistic-comment:${crypto.randomUUID()}`,
+        reactions: [],
+        threadId: thread.id,
+        updatedAt: now,
+      }
+
+      queryClient.setQueryData<WorkspaceCommentsPayload>(
+        workspaceCommentsQueryKey(variables.workspaceId),
+        {
+          comments: [...(previous?.comments ?? []), optimisticComment],
+          thread,
+        },
+      )
+
+      return { previous }
+    },
+    onError: (_error, variables, context) => {
+      queryClient.setQueryData(
+        workspaceCommentsQueryKey(variables.workspaceId),
+        context?.previous,
+      )
+    },
+    onSuccess: (payload, variables) => {
+      queryClient.setQueryData(
+        workspaceCommentsQueryKey(variables.workspaceId),
+        payload,
+      )
       queryClient.invalidateQueries({
         queryKey: workspaceThreadsQueryKey(variables.workspaceId),
       })
@@ -653,10 +797,46 @@ export function useUpdateWorkspaceComment() {
           body: JSON.stringify({ body }),
         },
       ),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: ["workspace-comments", variables.workspaceId],
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({
+        queryKey: workspaceCommentsQueryKey(variables.workspaceId),
       })
+      const previous = queryClient.getQueryData<WorkspaceCommentsPayload>(
+        workspaceCommentsQueryKey(variables.workspaceId),
+      )
+
+      queryClient.setQueryData<WorkspaceCommentsPayload>(
+        workspaceCommentsQueryKey(variables.workspaceId),
+        previous
+          ? {
+              ...previous,
+              comments: previous.comments.map((comment) =>
+                comment.id === variables.messageId
+                  ? {
+                      ...comment,
+                      body: variables.body,
+                      editedAt: new Date().toISOString(),
+                      updatedAt: new Date().toISOString(),
+                    }
+                  : comment,
+              ),
+            }
+          : previous,
+      )
+
+      return { previous }
+    },
+    onError: (_error, variables, context) => {
+      queryClient.setQueryData(
+        workspaceCommentsQueryKey(variables.workspaceId),
+        context?.previous,
+      )
+    },
+    onSuccess: (payload, variables) => {
+      queryClient.setQueryData(
+        workspaceCommentsQueryKey(variables.workspaceId),
+        payload,
+      )
       queryClient.invalidateQueries({
         queryKey: workspaceThreadsQueryKey(variables.workspaceId),
       })
@@ -675,10 +855,39 @@ export function useDeleteWorkspaceComment() {
           method: "DELETE",
         },
       ),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: ["workspace-comments", variables.workspaceId],
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({
+        queryKey: workspaceCommentsQueryKey(variables.workspaceId),
       })
+      const previous = queryClient.getQueryData<WorkspaceCommentsPayload>(
+        workspaceCommentsQueryKey(variables.workspaceId),
+      )
+
+      queryClient.setQueryData<WorkspaceCommentsPayload>(
+        workspaceCommentsQueryKey(variables.workspaceId),
+        previous
+          ? {
+              ...previous,
+              comments: previous.comments.filter(
+                (comment) => comment.id !== variables.messageId,
+              ),
+            }
+          : previous,
+      )
+
+      return { previous }
+    },
+    onError: (_error, variables, context) => {
+      queryClient.setQueryData(
+        workspaceCommentsQueryKey(variables.workspaceId),
+        context?.previous,
+      )
+    },
+    onSuccess: (payload, variables) => {
+      queryClient.setQueryData(
+        workspaceCommentsQueryKey(variables.workspaceId),
+        payload,
+      )
       queryClient.invalidateQueries({
         queryKey: workspaceThreadsQueryKey(variables.workspaceId),
       })
@@ -702,10 +911,32 @@ export function useAddWorkspaceCommentReaction() {
           body: JSON.stringify({ emoji }),
         },
       ),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: ["workspace-comments", variables.workspaceId],
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({
+        queryKey: workspaceCommentsQueryKey(variables.workspaceId),
       })
+      const previous = queryClient.getQueryData<WorkspaceCommentsPayload>(
+        workspaceCommentsQueryKey(variables.workspaceId),
+      )
+
+      queryClient.setQueryData<WorkspaceCommentsPayload>(
+        workspaceCommentsQueryKey(variables.workspaceId),
+        updateCommentReaction(previous, variables.messageId, variables.emoji, 1),
+      )
+
+      return { previous }
+    },
+    onError: (_error, variables, context) => {
+      queryClient.setQueryData(
+        workspaceCommentsQueryKey(variables.workspaceId),
+        context?.previous,
+      )
+    },
+    onSuccess: (payload, variables) => {
+      queryClient.setQueryData(
+        workspaceCommentsQueryKey(variables.workspaceId),
+        payload,
+      )
       queryClient.invalidateQueries({
         queryKey: workspaceThreadsQueryKey(variables.workspaceId),
       })
@@ -729,10 +960,32 @@ export function useRemoveWorkspaceCommentReaction() {
           body: JSON.stringify({ emoji }),
         },
       ),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: ["workspace-comments", variables.workspaceId],
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({
+        queryKey: workspaceCommentsQueryKey(variables.workspaceId),
       })
+      const previous = queryClient.getQueryData<WorkspaceCommentsPayload>(
+        workspaceCommentsQueryKey(variables.workspaceId),
+      )
+
+      queryClient.setQueryData<WorkspaceCommentsPayload>(
+        workspaceCommentsQueryKey(variables.workspaceId),
+        updateCommentReaction(previous, variables.messageId, variables.emoji, -1),
+      )
+
+      return { previous }
+    },
+    onError: (_error, variables, context) => {
+      queryClient.setQueryData(
+        workspaceCommentsQueryKey(variables.workspaceId),
+        context?.previous,
+      )
+    },
+    onSuccess: (payload, variables) => {
+      queryClient.setQueryData(
+        workspaceCommentsQueryKey(variables.workspaceId),
+        payload,
+      )
       queryClient.invalidateQueries({
         queryKey: workspaceThreadsQueryKey(variables.workspaceId),
       })
@@ -754,7 +1007,7 @@ export function useResolveWorkspaceCommentThread() {
       ),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: ["workspace-comments", variables.workspaceId],
+        queryKey: workspaceCommentsQueryKey(variables.workspaceId),
       })
       queryClient.invalidateQueries({
         queryKey: workspaceThreadsQueryKey(variables.workspaceId),
@@ -777,7 +1030,7 @@ export function useUnresolveWorkspaceCommentThread() {
       ),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: ["workspace-comments", variables.workspaceId],
+        queryKey: workspaceCommentsQueryKey(variables.workspaceId),
       })
       queryClient.invalidateQueries({
         queryKey: workspaceThreadsQueryKey(variables.workspaceId),

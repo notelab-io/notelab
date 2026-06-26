@@ -5,9 +5,14 @@ import {
   ActiveOrganizationMismatchError,
 } from "../api-errors"
 import type { ApiFetcher } from "../context"
-import type { WorkspaceMetadata } from "./item-relationships"
+import type { EmbeddedItemsOpenAs, WorkspaceMetadata } from "./item-relationships"
 
-export type { ItemRef, NavItemKind, WorkspaceMetadata } from "./item-relationships"
+export type {
+  EmbeddedItemsOpenAs,
+  ItemRef,
+  NavItemKind,
+  WorkspaceMetadata,
+} from "./item-relationships"
 export { readLinkedItems, readParentItemId } from "./item-relationships"
 
 export type NotelabAiMode = "instruction" | "skill"
@@ -17,16 +22,23 @@ export const notelabAiModeLabels: Record<NotelabAiMode, string> = {
   skill: "Use as skill",
 }
 
-export type WorkspaceDatabaseRow = {
+export const embeddedItemsOpenAsLabels: Record<EmbeddedItemsOpenAs, string> = {
+  dialog: "Dialog",
+  sidepanel: "Side panel",
+}
+
+export const embeddedItemsOpenAsModes: EmbeddedItemsOpenAs[] = [
+  "sidepanel",
+  "dialog",
+]
+
+export type WorkspaceDatabaseView = {
   id: string
   databaseId: string
-  pageId: string
-  parentRowId?: string | null
   position: number
-  createdById?: string | null
-  lastEditedById?: string | null
-  deletedById?: string | null
-  deletedAt?: string | null
+  name: string
+  type: string
+  config?: unknown
   createdAt: string
   updatedAt: string
 }
@@ -38,7 +50,7 @@ export type WorkspaceDatabase = {
   name: string
   config?: unknown
   isFavorite?: boolean
-  rows: WorkspaceDatabaseRow[]
+  views: WorkspaceDatabaseView[]
   deletedById?: string | null
   deletedAt?: string | null
   createdAt: string
@@ -92,6 +104,25 @@ export function resolveWorkspaceFullWidth(
   }
 
   return Boolean(metadata?.fullWidth)
+}
+
+export function usesUserEmbeddedItemsPreference(
+  metadata: WorkspaceMetadata | null | undefined,
+) {
+  return metadata?.useUserEmbeddedItemsPreference !== false
+}
+
+export function resolveEmbeddedItemsOpenAs(
+  workspace: { metadata?: WorkspaceMetadata | null } | null | undefined,
+  userEmbeddedItemsPreference: EmbeddedItemsOpenAs | null | undefined,
+) {
+  const metadata = workspace?.metadata ?? null
+
+  if (usesUserEmbeddedItemsPreference(metadata)) {
+    return userEmbeddedItemsPreference ?? "sidepanel"
+  }
+
+  return metadata?.embeddedItemsOpenAs ?? "sidepanel"
 }
 
 export type WorkspaceProperty = {
@@ -342,6 +373,7 @@ export const workspaceQueryOptions = (
   queryOptions({
     queryKey: workspaceQueryKey(workspaceId),
     enabled: Boolean(workspaceId),
+    staleTime: 30_000,
     queryFn: async (): Promise<WorkspaceDetail | null> => {
       if (!workspaceId) {
         throw new Error("workspaceId is required")

@@ -40,7 +40,7 @@ export function useUpdateUserSettings() {
       queryClient.setQueryData<UserSettings>(
         userSettingsQueryKey,
         (current) => ({
-          workspaceFullWidth: false,
+          ...defaultUserSettings,
           ...(current ?? {}),
           ...patch,
         }),
