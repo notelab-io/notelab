@@ -182,6 +182,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     await navigate({
       to: "/database/$databaseId",
       params: { databaseId: payload.database.id },
+      search: { view: undefined },
     })
   }
 

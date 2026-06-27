@@ -1,6 +1,6 @@
 "use client"
 
-import { type ComponentProps, type ReactNode } from "react"
+import { useMemo, type ComponentProps, type ReactNode } from "react"
 import { Link } from "@tanstack/react-router"
 import { ArrowUpRightIcon, ChevronRightIcon } from "lucide-react"
 
@@ -58,25 +58,34 @@ const disclosureActionClassName =
 const leadingIconClassName =
   "flex size-5 shrink-0 items-center justify-center"
 const treeSubClassName =
-  "ml-6 mr-0 translate-x-0 gap-1 py-0.5 pl-0 pr-0"
+  "ml-6 mr-0 translate-x-0 gap-1 py-1 pl-0 pr-0"
 
 export function NavTree({
   activeDatabaseId,
+  activeDatabaseViewId,
   activeWorkspaceId,
   getLinkProps,
   items,
   renderItemMenu,
 }: {
   activeDatabaseId: string | null
+  activeDatabaseViewId?: string | null
   activeWorkspaceId: string | null
   getLinkProps?: NavTreeLinkPropsGetter
   items: WorkspaceNavItem[]
   renderItemMenu: NavTreeItemMenuRender
 }) {
+  const defaultDatabaseViewIds = useMemo(
+    () => getDefaultDatabaseViewIds(items),
+    [items],
+  )
+
   return items.map((item) => (
     <NavTreeItem
       activeDatabaseId={activeDatabaseId}
+      activeDatabaseViewId={activeDatabaseViewId ?? null}
       activeWorkspaceId={activeWorkspaceId}
+      defaultDatabaseViewIds={defaultDatabaseViewIds}
       getLinkProps={getLinkProps}
       isRoot
       item={item}
@@ -88,14 +97,18 @@ export function NavTree({
 
 function NavTreeItem({
   activeDatabaseId,
+  activeDatabaseViewId,
   activeWorkspaceId,
+  defaultDatabaseViewIds,
   getLinkProps,
   isRoot = false,
   item,
   renderItemMenu,
 }: {
   activeDatabaseId: string | null
+  activeDatabaseViewId: string | null
   activeWorkspaceId: string | null
+  defaultDatabaseViewIds: Map<string, string>
   getLinkProps?: NavTreeLinkPropsGetter
   isRoot?: boolean
   item: WorkspaceNavItem
@@ -104,12 +117,23 @@ function NavTreeItem({
   const isDatabaseRouteItem = Boolean(
     (item.isDatabase || item.isDatabaseView) && item.databaseId,
   )
-  const isActive = isDatabaseRouteItem
-    ? activeDatabaseId === item.databaseId
-    : activeWorkspaceId === item.id
+  const isActive = getIsActiveNavItem({
+    activeDatabaseId,
+    activeDatabaseViewId,
+    activeWorkspaceId,
+    defaultDatabaseViewIds,
+    item,
+  })
   const hasPages = item.pages.length > 0
   const isOpen =
-    isActive || hasActiveDescendant(item, activeDatabaseId, activeWorkspaceId)
+    isActive ||
+    hasActiveDescendant(
+      item,
+      activeDatabaseId,
+      activeDatabaseViewId,
+      activeWorkspaceId,
+      defaultDatabaseViewIds,
+    )
   const displayName = item.name.trim() || "Untitled"
   const nested = !isRoot
   const linkProps = getLinkProps?.({ displayName, item })
@@ -127,6 +151,14 @@ function NavTreeItem({
             {isDatabaseRouteItem && item.databaseId ? (
               <Link
                 params={{ databaseId: item.databaseId } as never}
+                search={
+                  {
+                    view:
+                      item.isDatabaseView && item.databaseViewId
+                        ? item.databaseViewId
+                        : undefined,
+                  } as never
+                }
                 title={displayName}
                 to="/database/$databaseId"
                 {...linkProps}
@@ -159,7 +191,7 @@ function NavTreeItem({
           {hasPages ? (
             <CollapsibleTrigger asChild>
               <SidebarMenuAction
-                className={`${nested ? "top-1" : ""} ${disclosureActionClassName} peer-data-active/menu-button:text-sidebar-accent-foreground`}
+                className={`${disclosureActionClassName} peer-data-active/menu-button:text-sidebar-accent-foreground`}
                 data-nav-menu-action="disclosure"
               >
                 <ChevronRightIcon />
@@ -168,20 +200,24 @@ function NavTreeItem({
           ) : null}
           {renderItemMenu({ item, nested })}
         </div>
-        <CollapsibleContent>
-          <SidebarMenuSub className={treeSubClassName}>
-            {item.pages.map((page) => (
-              <NavTreeItem
-                activeDatabaseId={activeDatabaseId}
-                activeWorkspaceId={activeWorkspaceId}
-                getLinkProps={getLinkProps}
-                item={page}
-                key={page.id}
-                renderItemMenu={renderItemMenu}
-              />
-            ))}
-          </SidebarMenuSub>
-        </CollapsibleContent>
+        {hasPages ? (
+          <CollapsibleContent>
+            <SidebarMenuSub className={treeSubClassName}>
+              {item.pages.map((page) => (
+                <NavTreeItem
+                  activeDatabaseId={activeDatabaseId}
+                  activeDatabaseViewId={activeDatabaseViewId}
+                  activeWorkspaceId={activeWorkspaceId}
+                  defaultDatabaseViewIds={defaultDatabaseViewIds}
+                  getLinkProps={getLinkProps}
+                  item={page}
+                  key={page.id}
+                  renderItemMenu={renderItemMenu}
+                />
+              ))}
+            </SidebarMenuSub>
+          </CollapsibleContent>
+        ) : null}
       </Container>
     </Collapsible>
   )
@@ -240,16 +276,83 @@ function TrailingIndicators({
 export function hasActiveDescendant(
   item: WorkspaceNavItem,
   activeDatabaseId: string | null,
+  activeDatabaseViewId: string | null,
   activeWorkspaceId: string | null,
+  defaultDatabaseViewIds: Map<string, string>,
 ): boolean {
   return item.pages.some(
     (page) =>
-      (page.isDatabase
-        || page.isDatabaseView
-        ? activeDatabaseId === page.databaseId
-        : activeWorkspaceId === page.id) ||
-      hasActiveDescendant(page, activeDatabaseId, activeWorkspaceId),
+      getIsActiveNavItem({
+        activeDatabaseId,
+        activeDatabaseViewId,
+        activeWorkspaceId,
+        defaultDatabaseViewIds,
+        item: page,
+      }) ||
+      hasActiveDescendant(
+        page,
+        activeDatabaseId,
+        activeDatabaseViewId,
+        activeWorkspaceId,
+        defaultDatabaseViewIds,
+      ),
   )
+}
+
+function getIsActiveNavItem({
+  activeDatabaseId,
+  activeDatabaseViewId,
+  activeWorkspaceId,
+  defaultDatabaseViewIds,
+  item,
+}: {
+  activeDatabaseId: string | null
+  activeDatabaseViewId: string | null
+  activeWorkspaceId: string | null
+  defaultDatabaseViewIds: Map<string, string>
+  item: WorkspaceNavItem
+}) {
+  if (item.isDatabaseView) {
+    return (
+      activeDatabaseId === item.databaseId &&
+      item.databaseViewId ===
+        (activeDatabaseViewId ||
+          defaultDatabaseViewIds.get(item.databaseId ?? ""))
+    )
+  }
+
+  if (item.isDatabase) {
+    return activeDatabaseId === item.databaseId && item.pages.length === 0
+  }
+
+  return activeWorkspaceId === item.id
+}
+
+function getDefaultDatabaseViewIds(items: WorkspaceNavItem[]) {
+  const defaultViewIds = new Map<string, string>()
+
+  for (const item of items) {
+    collectDefaultDatabaseViewIds(item, defaultViewIds)
+  }
+
+  return defaultViewIds
+}
+
+function collectDefaultDatabaseViewIds(
+  item: WorkspaceNavItem,
+  defaultViewIds: Map<string, string>,
+) {
+  if (item.isDatabase && item.databaseId) {
+    const defaultView = item.pages.find((page) => page.isDatabaseView)
+
+    if (defaultView?.databaseViewId) {
+      defaultViewIds.set(item.databaseId, defaultView.databaseViewId)
+    }
+  }
+
+  for (const page of item.pages) {
+    collectDefaultDatabaseViewIds(page, defaultViewIds)
+  }
 }
 
 export function getActiveWorkspaceId(pathname: string) {
@@ -270,4 +373,21 @@ export function getActiveDatabaseId(pathname: string) {
   }
 
   return decodeURIComponent(match[1])
+}
+
+export function getActiveDatabaseViewId(search: unknown) {
+  if (
+    search &&
+    typeof search === "object" &&
+    "view" in search &&
+    typeof search.view === "string"
+  ) {
+    return search.view
+  }
+
+  if (typeof search === "string") {
+    return new URLSearchParams(search).get("view")
+  }
+
+  return null
 }

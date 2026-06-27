@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -35,9 +36,11 @@ import {
 } from "./database-view-config"
 
 export type DatabaseViewProps = {
+  activeViewId?: string | null
   databaseId: string | null | undefined
   editable?: boolean
   fullPage?: boolean
+  onActiveViewIdChange?: (viewId: string | null) => void
   onOpenPage?: (pageId: string) => void
   onShowTitleChange?: (showTitle: boolean) => void
   organizationId?: string | null
@@ -46,9 +49,11 @@ export type DatabaseViewProps = {
 }
 
 export function useDatabaseViewController({
+  activeViewId: requestedActiveViewId,
   databaseId,
   editable = true,
   fullPage = false,
+  onActiveViewIdChange,
   onOpenPage,
   onShowTitleChange,
   organizationId,
@@ -75,7 +80,9 @@ export function useDatabaseViewController({
   } = useDatabase(databaseId)
   const [draftDatabaseTitle, setDraftDatabaseTitle] = useState("New database")
   const [draftViewTitle, setDraftViewTitle] = useState("Table")
-  const [activeViewId, setActiveViewId] = useState<string | null>(null)
+  const [activeViewId, setActiveViewId] = useState<string | null>(
+    requestedActiveViewId ?? null,
+  )
   const [activePropertyValueKey, setActivePropertyValueKey] = useState<string | null>(null)
   const [showFilterPill, setShowFilterPill] = useState(true)
   const [showSortPill, setShowSortPill] = useState(true)
@@ -145,6 +152,23 @@ export function useDatabaseViewController({
     ],
     [linkedDatabaseViews, payload?.views]
   )
+  const setSelectedActiveViewId = useCallback<
+    DatabaseViewContextValue["setActiveViewId"]
+  >(
+    (value) => {
+      setActiveViewId((currentViewId) => {
+        const nextViewId =
+          typeof value === "function" ? value(currentViewId) : value
+
+        if (nextViewId !== currentViewId) {
+          onActiveViewIdChange?.(nextViewId)
+        }
+
+        return nextViewId
+      })
+    },
+    [onActiveViewIdChange],
+  )
 
   const viewModel = useMemo(
     () =>
@@ -186,6 +210,10 @@ export function useDatabaseViewController({
     visibleProperties,
     visiblePropertyCount,
   } = viewModel
+  useEffect(() => {
+    setActiveViewId(requestedActiveViewId ?? null)
+  }, [requestedActiveViewId])
+
   useEffect(() => {
     const nextDatabaseTitle =
       activePayload?.database.name ?? activeLinkedDatabaseView?.databaseName
@@ -242,7 +270,7 @@ export function useDatabaseViewController({
         (existingView) => getDatabaseLinkedViewKey(existingView) === linkedViewKey
       )
     ) {
-      setActiveViewId(linkedViewKey)
+      setSelectedActiveViewId(linkedViewKey)
       return
     }
 
@@ -254,7 +282,7 @@ export function useDatabaseViewController({
         databaseId,
       },
       {
-        onSuccess: () => setActiveViewId(linkedViewKey),
+        onSuccess: () => setSelectedActiveViewId(linkedViewKey),
       }
     )
   }
@@ -293,7 +321,7 @@ export function useDatabaseViewController({
           databaseId,
         },
         {
-          onSuccess: () => setActiveViewId(`linked:${linkedViewId}`),
+          onSuccess: () => setSelectedActiveViewId(`linked:${linkedViewId}`),
         }
       )
       return
@@ -324,7 +352,7 @@ export function useDatabaseViewController({
             nextPayload.views.find((databaseView) => !existingViewIds.has(databaseView.id)) ??
             nextPayload.views.at(-1)
 
-          setActiveViewId(addedView?.id ?? null)
+          setSelectedActiveViewId(addedView?.id ?? null)
         },
       }
     )
@@ -357,7 +385,7 @@ export function useDatabaseViewController({
           databaseId,
         },
         {
-          onSuccess: () => setActiveViewId(nextActiveViewId),
+          onSuccess: () => setSelectedActiveViewId(nextActiveViewId),
         }
       )
       return
@@ -369,7 +397,7 @@ export function useDatabaseViewController({
         databaseViewId: view.id,
       },
       {
-        onSuccess: () => setActiveViewId(nextActiveViewId),
+        onSuccess: () => setSelectedActiveViewId(nextActiveViewId),
       }
     )
   }
@@ -394,7 +422,7 @@ export function useDatabaseViewController({
     },
     payload: activePayload,
     properties,
-    setActiveViewId,
+    setActiveViewId: setSelectedActiveViewId,
     setFilterPickerOpen,
     setShowFilterPill,
     setShowSortPill,
@@ -498,7 +526,7 @@ export function useDatabaseViewController({
     saveDatabaseSorts: commands.saveDatabaseSorts,
     saveDatabaseViewTitle: commands.saveDatabaseViewTitle,
     setActivePropertyValueKey,
-    setActiveViewId,
+    setActiveViewId: setSelectedActiveViewId,
     setDraftPropertyValues,
     setDraftDatabaseTitle,
     setDraftViewTitle,

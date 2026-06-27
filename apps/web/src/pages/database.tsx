@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Link, useParams } from "@tanstack/react-router"
+import { Link, useNavigate, useParams, useSearch } from "@tanstack/react-router"
 import { ArrowRight, Maximize2 } from "lucide-react"
 
 import { AppLayout } from "@/components/app-layout"
@@ -49,6 +49,9 @@ export default function DatabasePage() {
 
 function AuthenticatedDatabasePage() {
   const { databaseId } = useParams({ from: "/database/$databaseId" })
+  const { view: activeDatabaseViewId } = useSearch({
+    from: "/database/$databaseId",
+  })
   const { data: payload, isLoading } = useDatabase(databaseId)
   const databasePageId = payload?.database.pageId ?? null
   const { data: workspace } = useWorkspace(databasePageId, {
@@ -87,13 +90,20 @@ function AuthenticatedDatabasePage() {
   return (
     <WorkspaceSidePaneLayout
       className="animate-in fade-in-0 duration-300"
-      main={<DatabaseMainPane databaseId={databaseId} onOpenPage={openPage} />}
+      main={
+        <DatabaseMainPane
+          activeDatabaseViewId={activeDatabaseViewId}
+          databaseId={databaseId}
+          onOpenPage={openPage}
+        />
+      }
       sidePane={
         embeddedItemsOpenAs === "sidepanel" &&
         sidePaneContentReady &&
         renderedSidePaneWorkspaceId ? (
           <WorkspaceEditorPane
             databaseId={sidePaneDatabaseId ?? databaseId}
+            enableComments={false}
             key={renderedSidePaneWorkspaceId}
             onOpenPage={openPage}
             workspaceId={renderedSidePaneWorkspaceId}
@@ -120,6 +130,9 @@ function PublicDatabasePage() {
 }
 
 function PublicDatabaseContent({ databaseId }: { databaseId: string }) {
+  const { view: activeDatabaseViewId } = useSearch({
+    from: "/database/$databaseId",
+  })
   const { data: payload, isLoading } = useDatabase(databaseId)
   const databasePageId = payload?.database.pageId ?? null
   const { data: workspace } = useWorkspace(databasePageId, {
@@ -166,6 +179,7 @@ function PublicDatabaseContent({ databaseId }: { databaseId: string }) {
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <PublicPaneTopbar workspaceId={databasePageId} />
           <DatabaseMainPane
+            activeDatabaseViewId={activeDatabaseViewId}
             className="min-h-0 min-w-0 flex-1 overflow-y-auto"
             databaseId={databaseId}
             onOpenPage={openPage}
@@ -209,6 +223,7 @@ function PublicDatabaseContent({ databaseId }: { databaseId: string }) {
               <WorkspaceEditorPane
                 className="min-h-0 flex-1"
                 databaseId={sidePaneDatabaseId ?? databaseId}
+                enableComments={false}
                 key={renderedSidePaneWorkspaceId}
                 onOpenPage={openPage}
                 readOnly
@@ -230,16 +245,19 @@ function PublicDatabaseContent({ databaseId }: { databaseId: string }) {
 }
 
 function DatabaseMainPane({
+  activeDatabaseViewId,
   className,
   databaseId,
   onOpenPage,
   readOnly = false,
 }: {
+  activeDatabaseViewId?: string
   className?: string
   databaseId: string
   onOpenPage: (pageId: string) => void
   readOnly?: boolean
 }) {
+  const navigate = useNavigate()
   const { data: payload } = useDatabase(databaseId)
   const databasePageId = payload?.database.pageId ?? null
   const { data: workspace } = useWorkspace(databasePageId)
@@ -318,6 +336,16 @@ function DatabaseMainPane({
       },
     })
   }
+  const updateActiveViewSearch = (viewId: string | null) => {
+    const defaultViewId = payload?.views[0]?.id ?? null
+    const searchViewId = viewId && viewId !== defaultViewId ? viewId : null
+
+    void navigate({
+      params: { databaseId },
+      search: { view: searchViewId ?? undefined },
+      to: "/database/$databaseId",
+    })
+  }
 
   return (
     <section className={cn(className, "animate-in fade-in-0 duration-300")}>
@@ -336,9 +364,11 @@ function DatabaseMainPane({
       />
       <div className="tiptap-editor px-5 pb-10 sm:px-8 md:px-20 lg:px-24">
         <DatabaseView
+          activeViewId={activeDatabaseViewId}
           databaseId={databaseId}
           editable={!readOnly}
           fullPage
+          onActiveViewIdChange={updateActiveViewSearch}
           onOpenPage={onOpenPage}
           organizationId={payload?.database.organizationId}
           showTitle={false}

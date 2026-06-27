@@ -31,6 +31,7 @@ export function Editor({
   databaseId,
   editorContentRef,
   editable = true,
+  enableComments = true,
   emoji,
   fullWidth = true,
   onContentChange,
@@ -338,6 +339,7 @@ export function Editor({
           cover={cover}
           databaseId={databaseId}
           editable={editable}
+          enableComments={enableComments}
           icon={emoji}
           onCoverChange={onCoverChange}
           onIconChange={onEmojiChange}

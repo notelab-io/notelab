@@ -178,6 +178,7 @@ export function DatabaseViewToolbar() {
 
     void navigate({
       params: { databaseId: nextDatabaseId },
+      search: { view: undefined },
       to: "/database/$databaseId",
     })
   }
@@ -831,6 +832,7 @@ export function DatabaseViewToolbar() {
             >
               <Link
                 params={{ databaseId }}
+                search={{ view: undefined }}
                 title="Expand database"
                 to="/database/$databaseId"
               >

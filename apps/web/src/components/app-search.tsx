@@ -66,6 +66,7 @@ export function AppSearchProvider({ children }: { children: ReactNode }) {
       void navigate({
         to: "/database/$databaseId",
         params: { databaseId: result.id },
+        search: { view: undefined },
       })
       return
     }

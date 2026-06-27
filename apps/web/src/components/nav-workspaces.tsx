@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/sidebar"
 import {
   getActiveDatabaseId,
+  getActiveDatabaseViewId,
   getActiveWorkspaceId,
   NavTree,
   type WorkspaceNavItem,
@@ -60,6 +61,7 @@ export function NavWorkspaces({
   const location = useLocation()
   const activeWorkspaceId = getActiveWorkspaceId(location.pathname)
   const activeDatabaseId = getActiveDatabaseId(location.pathname)
+  const activeDatabaseViewId = getActiveDatabaseViewId(location.search)
   const [databaseDropTargetId, setDatabaseDropTargetId] = useState<
     string | null
   >(null)
@@ -68,6 +70,7 @@ export function NavWorkspaces({
     <>
       <WorkspaceSection
         activeDatabaseId={activeDatabaseId}
+        activeDatabaseViewId={activeDatabaseViewId}
         activeWorkspaceId={activeWorkspaceId}
         databaseDropTargetId={databaseDropTargetId}
         label="Private"
@@ -80,6 +83,7 @@ export function NavWorkspaces({
       />
       <WorkspaceSection
         activeDatabaseId={activeDatabaseId}
+        activeDatabaseViewId={activeDatabaseViewId}
         activeWorkspaceId={activeWorkspaceId}
         databaseDropTargetId={databaseDropTargetId}
         label="Team"
@@ -93,6 +97,7 @@ export function NavWorkspaces({
 
 function WorkspaceSection({
   activeDatabaseId,
+  activeDatabaseViewId,
   activeWorkspaceId,
   databaseDropTargetId,
   label,
@@ -104,6 +109,7 @@ function WorkspaceSection({
   workspaces,
 }: {
   activeDatabaseId: string | null
+  activeDatabaseViewId: string | null
   activeWorkspaceId: string | null
   databaseDropTargetId: string | null
   label: string
@@ -223,12 +229,13 @@ function WorkspaceSection({
         <SidebarMenu>
           <NavTree
             activeDatabaseId={activeDatabaseId}
+            activeDatabaseViewId={activeDatabaseViewId}
             activeWorkspaceId={activeWorkspaceId}
             getLinkProps={getLinkProps}
             items={workspaces}
-            renderItemMenu={({ item, nested }) =>
+            renderItemMenu={({ item }) =>
               item.isDatabaseView ? null : (
-                <WorkspaceItemMenu item={item} nested={nested} />
+                <WorkspaceItemMenu item={item} />
               )
             }
           />
@@ -253,27 +260,20 @@ function WorkspaceSection({
   )
 }
 
-function WorkspaceItemMenu({
-  item,
-  nested,
-}: {
+function WorkspaceItemMenu({ item }: {
   item: WorkspaceNavItem
-  nested: boolean
 }) {
   const { isMobile } = useSidebar()
   const linkPath =
     (item.isDatabase || item.isDatabaseView) && item.databaseId
       ? `/database/${item.databaseId}`
       : `/workspace/${item.workspaceId}`
-  const hoverClassName = nested
-    ? "top-1 opacity-0 group-hover/nav-row:opacity-100 focus-visible:opacity-100"
-    : "top-1.5 opacity-0 group-hover/nav-row:opacity-100 focus-visible:opacity-100"
 
   return (
     <DropDrawer>
       <DropDrawerTrigger asChild>
         <SidebarMenuAction
-          className={`${hoverClassName} aria-expanded:bg-sidebar-accent aria-expanded:text-sidebar-accent-foreground`}
+          className="opacity-0 group-hover/nav-row:opacity-100 focus-visible:opacity-100 aria-expanded:bg-sidebar-accent aria-expanded:text-sidebar-accent-foreground"
           data-nav-menu-action="more"
         >
           <MoreHorizontalIcon />

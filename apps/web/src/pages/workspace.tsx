@@ -39,6 +39,7 @@ import { Editor, type WorkspaceEditPreviewControls } from "@/packages/editor"
 type WorkspaceEditorPaneProps = {
   className?: string
   databaseId?: string | null
+  enableComments?: boolean
   onOpenPage: (pageId: string) => void
   readOnly?: boolean
   workspaceId: string
@@ -92,6 +93,7 @@ function AuthenticatedWorkspacePage() {
           <WorkspaceOrganizationGate workspaceId={renderedSidePaneWorkspaceId}>
             <WorkspaceEditorPane
               databaseId={sidePaneDatabaseId}
+              enableComments={false}
               key={renderedSidePaneWorkspaceId}
               onOpenPage={openPage}
               workspaceId={renderedSidePaneWorkspaceId}
@@ -188,6 +190,7 @@ function PublicWorkspaceContent({ workspaceId }: { workspaceId: string }) {
               <WorkspaceEditorPane
                 className="min-h-0 flex-1"
                 databaseId={sidePaneDatabaseId}
+                enableComments={false}
                 key={renderedSidePaneWorkspaceId}
                 onOpenPage={openPage}
                 readOnly
@@ -294,6 +297,7 @@ function getWorkspaceBreadcrumbLabel(
 export function WorkspaceEditorPane({
   className,
   databaseId,
+  enableComments = true,
   onOpenPage,
   readOnly = false,
   workspaceId,
@@ -553,6 +557,7 @@ export function WorkspaceEditorPane({
         databaseId={databaseId}
         editorContentRef={editorContentRef}
         editable={pageEditable}
+        enableComments={enableComments}
         onEditorReady={(editor) => {
           editorInstanceRef.current = editor
           lastSavedContentRef.current = editor

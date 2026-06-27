@@ -181,6 +181,12 @@ const workspaceRoute = createRoute({
 const databaseRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/database/$databaseId",
+  validateSearch: (search: Record<string, unknown>) => ({
+    view:
+      typeof search.view === "string" && search.view.trim()
+        ? search.view.trim()
+        : undefined,
+  }),
   beforeLoad: async ({ params }) => {
     const session = await getFreshSession()
 

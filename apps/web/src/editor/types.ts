@@ -56,6 +56,7 @@ export type EditorProps = {
   onEditorReady?: (editor: Editor | null) => void
   emoji?: string
   editable?: boolean
+  enableComments?: boolean
   fullWidth?: boolean
   onContentChange?: (content: unknown) => void
   onCoverChange?: (cover: string) => void

@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/sidebar"
 import {
   getActiveDatabaseId,
+  getActiveDatabaseViewId,
   getActiveWorkspaceId,
   NavTree,
   type WorkspaceNavItem,
@@ -54,6 +55,7 @@ export function NavFavorites({
   const location = useLocation()
   const activeWorkspaceId = getActiveWorkspaceId(location.pathname)
   const activeDatabaseId = getActiveDatabaseId(location.pathname)
+  const activeDatabaseViewId = getActiveDatabaseViewId(location.search)
 
   return (
     <SidebarGroup>
@@ -61,12 +63,12 @@ export function NavFavorites({
       <SidebarMenu>
         <NavTree
           activeDatabaseId={activeDatabaseId}
+          activeDatabaseViewId={activeDatabaseViewId}
           activeWorkspaceId={activeWorkspaceId}
           items={favorites}
           renderItemMenu={({ item, nested }) => (
             <FavoriteItemMenu
               item={item}
-              nested={nested}
               onRemoveDatabaseFavorite={onRemoveDatabaseFavorite}
               onRemoveFavorite={onRemoveFavorite}
               requireRemoveConfirmation={nested}
@@ -87,13 +89,11 @@ export function NavFavorites({
 
 function FavoriteItemMenu({
   item,
-  nested,
   onRemoveDatabaseFavorite,
   onRemoveFavorite,
   requireRemoveConfirmation,
 }: {
   item: WorkspaceNavItem
-  nested: boolean
   onRemoveDatabaseFavorite: (databaseId: string) => void
   onRemoveFavorite: (workspaceId: string) => void
   requireRemoveConfirmation: boolean
@@ -105,9 +105,6 @@ function FavoriteItemMenu({
       ? `/database/${item.databaseId}`
       : `/workspace/${item.workspaceId}`
   const displayName = item.name.trim() || "Untitled"
-  const hoverClassName = nested
-    ? "top-1 opacity-0 group-hover/nav-row:opacity-100 focus-visible:opacity-100"
-    : "top-1.5 opacity-0 group-hover/nav-row:opacity-100 focus-visible:opacity-100"
   const removeFavorite = () => {
     if (item.isDatabase && item.databaseId) {
       onRemoveDatabaseFavorite(item.databaseId)
@@ -122,7 +119,7 @@ function FavoriteItemMenu({
       <DropDrawer>
         <DropDrawerTrigger asChild>
           <SidebarMenuAction
-            className={`${hoverClassName} aria-expanded:bg-sidebar-accent aria-expanded:text-sidebar-accent-foreground`}
+            className="opacity-0 group-hover/nav-row:opacity-100 focus-visible:opacity-100 aria-expanded:bg-sidebar-accent aria-expanded:text-sidebar-accent-foreground"
             data-nav-menu-action="more"
           >
             <MoreHorizontalIcon />
