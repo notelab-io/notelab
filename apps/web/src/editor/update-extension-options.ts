@@ -2,7 +2,7 @@ import type { MutableRefObject } from "react"
 import type { Editor as TiptapEditor } from "@tiptap/react"
 import type { DatabaseBlockEditorRuntime } from "@/packages/editor/extensions/database"
 
-export const syncExtensionOptions = (
+export const updateExtensionOptions = (
   editor: TiptapEditor,
   options: {
     databaseEditorRuntime: DatabaseBlockEditorRuntime

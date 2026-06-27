@@ -8,7 +8,7 @@ import {
   createEditorDropHandler,
 } from "./editor-drop-handlers"
 import { handleProviderLinkPaste, normalizePastedEditorHTML } from "./paste"
-import { syncExtensionOptions } from "./sync-extension-options"
+import { updateExtensionOptions } from "./update-extension-options"
 import type { BlockDropLine, PasteChoiceState } from "./types"
 import { useLatestRef } from "./use-latest-ref"
 
@@ -27,6 +27,7 @@ type UseEditorInstanceOptions = {
   initialContent: Content | undefined
   onContentChange?: (content: unknown) => void
   onEditorReady?: (editor: Editor | null) => void
+  onEmbedPage?: (pageId: string) => void | Promise<void>
   onOpenPage?: (pageId: string) => void
   setPasteChoice: (choice: PasteChoiceState | null) => void
   workspaceId?: string | null
@@ -44,6 +45,7 @@ export const useEditorInstance = ({
   initialContent,
   onContentChange,
   onEditorReady,
+  onEmbedPage,
   onOpenPage,
   setPasteChoice,
   workspaceId,
@@ -51,6 +53,8 @@ export const useEditorInstance = ({
   const [blockDropLine, setBlockDropLine] = useState<BlockDropLine | null>(null)
 
   const onContentChangeRef = useLatestRef(onContentChange)
+  const onEditorReadyRef = useLatestRef(onEditorReady)
+  const onEmbedPageRef = useLatestRef(onEmbedPage)
   const dropPageOnDatabaseRef = useLatestRef(dropPageOnDatabase)
   const handleProviderLinkPasteRef = useLatestRef(
     (view: Parameters<typeof handleProviderLinkPaste>[0], event: ClipboardEvent) =>
@@ -61,9 +65,10 @@ export const useEditorInstance = ({
     () =>
       createEditorDropHandler(
         (event) => dropPageOnDatabaseRef.current(event),
-        setBlockDropLine
+        setBlockDropLine,
+        (pageId) => onEmbedPageRef.current?.(pageId),
       ),
-    []
+    [],
   )
 
   const editorDragHandlers = useMemo(
@@ -76,6 +81,9 @@ export const useEditorInstance = ({
       extensions: editorExtensions,
       content: initialContent,
       editable,
+      onCreate: ({ editor: currentEditor }) => {
+        onEditorReadyRef.current?.(currentEditor)
+      },
       onUpdate: ({ editor: currentEditor }) => {
         if (editable) onContentChangeRef.current?.(currentEditor.getJSON())
       },
@@ -108,7 +116,7 @@ export const useEditorInstance = ({
 
   useEffect(() => {
     if (!editor || editor.isDestroyed || !editor.extensionManager) return
-    syncExtensionOptions(editor, {
+    updateExtensionOptions(editor, {
       databaseEditorRuntime,
       editable,
       editorRuntimeRef,

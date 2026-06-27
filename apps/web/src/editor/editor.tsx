@@ -33,7 +33,6 @@ export function Editor({
   editable = true,
   emoji,
   fullWidth = true,
-  onCollaborationReadyChange,
   onContentChange,
   onCoverChange,
   onCreatePage,
@@ -46,7 +45,6 @@ export function Editor({
   title,
   workspaceEditPreviewRef,
   workspaceId,
-  workspaceUpdatedAt,
 }: EditorProps = {}) {
   const editorId = useId()
   const editorSurfaceRef = useRef<HTMLElement | null>(null)
@@ -70,13 +68,11 @@ export function Editor({
       createEditorDatabase,
       databaseEditorRuntime,
       editable,
-      onCollaborationReadyChange,
       onCreatePage,
       onEmbedPage,
       onOpenPage,
       organizationId,
       workspaceId,
-      workspaceUpdatedAt,
     })
 
   const { blockDropLine, editor } = useEditorInstance({
@@ -91,6 +87,7 @@ export function Editor({
     initialContent,
     onContentChange,
     onEditorReady,
+    onEmbedPage,
     onOpenPage,
     setPasteChoice,
     workspaceId,

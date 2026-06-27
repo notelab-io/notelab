@@ -57,7 +57,6 @@ export type EditorProps = {
   emoji?: string
   editable?: boolean
   fullWidth?: boolean
-  onCollaborationReadyChange?: (ready: boolean) => void
   onContentChange?: (content: unknown) => void
   onCoverChange?: (cover: string) => void
   onCreatePage?: () => Promise<CreatedPage>
@@ -69,7 +68,18 @@ export type EditorProps = {
   title?: string
   workspaceEditPreviewRef?: MutableRefObject<WorkspaceEditPreviewControls | null>
   workspaceId?: string | null
-  workspaceUpdatedAt?: string | null
+}
+
+export type UseEditorExtensionsOptions = {
+  content: unknown
+  createEditorDatabase: () => Promise<string | null>
+  databaseEditorRuntime: import("@/packages/editor/extensions/database").DatabaseBlockEditorRuntime
+  editable: boolean
+  onCreatePage?: () => Promise<CreatedPage>
+  onEmbedPage?: (pageId: string) => void | Promise<void>
+  onOpenPage?: (pageId: string) => void
+  organizationId?: string | null
+  workspaceId?: string | null
 }
 
 export type NodePlacement = {

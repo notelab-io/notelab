@@ -45,7 +45,6 @@ import { SlashCommand } from "@/packages/editor/extensions/slash-command"
 import { VideoBlock } from "@/packages/editor/extensions/video-block"
 
 export type BaseExtensionsOptions = {
-  collaborationEnabled: boolean
   createEditorDatabase: () => Promise<string | null>
   databaseEditorRuntime: DatabaseBlockEditorRuntime
   editable: boolean
@@ -57,8 +56,25 @@ export type BaseExtensionsOptions = {
   workspaceId?: string | null
 }
 
+export function normalizeEditorContent(content: unknown) {
+  if (typeof content === "string") {
+    const trimmed = content.trim()
+
+    if (!trimmed) {
+      return ""
+    }
+
+    try {
+      return JSON.parse(trimmed) as unknown
+    } catch {
+      return content
+    }
+  }
+
+  return content ?? ""
+}
+
 export const createBaseExtensions = ({
-  collaborationEnabled,
   createEditorDatabase,
   databaseEditorRuntime,
   editable,
@@ -71,8 +87,8 @@ export const createBaseExtensions = ({
 }: BaseExtensionsOptions): Extensions => [
   StarterKit.configure({
     codeBlock: false,
+    dropcursor: false,
     link: false,
-    ...(collaborationEnabled ? { undoRedo: false as const } : {}),
   }),
   Placeholder.configure({
     placeholder: ({ node }) =>
