@@ -7,7 +7,6 @@ import {
 } from "react"
 
 import type {
-  DatabasePresenceCollaborator,
   DatabaseProperty,
   DatabaseRow,
   DatabaseView,
@@ -85,7 +84,6 @@ export type DatabaseViewContextValue = {
   addTableView: () => void
   canAddDatabaseFilter: boolean
   canAddDatabaseSort: boolean
-  cellPresenceByKey: Record<string, DatabasePresenceCollaborator[]>
   clearDatabaseFilter: () => void
   clearDatabaseSort: () => void
   copyDatabaseViewLink: () => void
@@ -132,7 +130,6 @@ export type DatabaseViewContextValue = {
   propertyValuesByKey: Record<string, DatabasePropertyValue>
   removeDatabaseFilter: (index: number) => void
   removeDatabaseSort: (index: number) => void
-  realtimeStatus: "connected" | "connecting" | "disconnected" | "offline"
   renameDatabaseProperty: (databasePropertyId: string, name: string) => void
   reorderDatabaseFilters: (filterIds: string[]) => void
   saveDatabaseTitle: (nextTitle: string) => void

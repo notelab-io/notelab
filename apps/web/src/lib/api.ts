@@ -97,15 +97,15 @@ export function toApiUrl(path: string) {
 function resolveApiBaseUrl() {
   const configuredBaseUrl = import.meta.env.VITE_API_URL?.replace(/\/$/, "")
 
-  if (configuredBaseUrl) {
-    return configuredBaseUrl
-  }
-
   if (
     typeof window !== "undefined" &&
     window.location.hostname === "app.notelab.io"
   ) {
     return "https://api.notelab.io"
+  }
+
+  if (configuredBaseUrl) {
+    return configuredBaseUrl
   }
 
   return ""

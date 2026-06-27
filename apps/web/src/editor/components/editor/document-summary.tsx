@@ -11,7 +11,7 @@ export function DocumentSummary() {
       </div>
       <div className="rounded-md border bg-card p-3">
         <span className="font-medium text-foreground">Rich formatting</span>
-        <p>Color, align, quote, code, and track live document counts.</p>
+        <p>Color, align, quote, code, and word counts.</p>
       </div>
     </div>
   )

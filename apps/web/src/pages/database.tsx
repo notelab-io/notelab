@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { Link, useParams } from "@tanstack/react-router"
 import { ArrowRight, Maximize2 } from "lucide-react"
 
@@ -21,7 +21,10 @@ import {
   useDatabase,
   useUpdateDatabase,
 } from "@notelab/features/databases"
+import { EmbeddedPageDialog } from "@/components/embedded-page-dialog"
+import { useOpenEmbeddedPage } from "@/hooks/use-open-embedded-page"
 import { useSession } from "@notelab/features/auth"
+import { useUserSettings } from "@notelab/features/user-settings"
 import { WorkspaceMetadata as WorkspaceMetadataView } from "@/packages/editor/components/editor/workspace-metadata"
 import { DatabaseView } from "@/packages/editor/extensions/database"
 import {
@@ -47,25 +50,23 @@ export default function DatabasePage() {
 function AuthenticatedDatabasePage() {
   const { databaseId } = useParams({ from: "/database/$databaseId" })
   const { data: payload, isLoading } = useDatabase(databaseId)
+  const databasePageId = payload?.database.pageId ?? null
+  const { data: workspace } = useWorkspace(databasePageId, {
+    refetchOnMount: false,
+  })
+  const { data: userSettings } = useUserSettings()
   const {
-    closeSidePane,
-    openSidePane,
     renderedSidePaneWorkspaceId,
     sidePaneAnimatedOpen,
     sidePaneContentReady,
     sidePaneDatabaseId,
-    sidePaneWorkspaceId,
   } = useWorkspaceSidePane()
-  const databasePageId = payload?.database.pageId ?? null
-
-  const openPageInSidePane = useCallback((pageId: string) => {
-    if (pageId === databasePageId || pageId === sidePaneWorkspaceId) {
-      closeSidePane()
-      return
-    }
-
-    openSidePane(pageId, { databaseId })
-  }, [closeSidePane, databaseId, databasePageId, openSidePane, sidePaneWorkspaceId])
+  const { embeddedItemsOpenAs, openPage } = useOpenEmbeddedPage({
+    contextWorkspaceId: databasePageId,
+    databaseId,
+    userSettings,
+    workspace,
+  })
 
   if (isLoading) {
     return (
@@ -86,24 +87,24 @@ function AuthenticatedDatabasePage() {
   return (
     <WorkspaceSidePaneLayout
       className="animate-in fade-in-0 duration-300"
-      main={
-        <DatabaseMainPane
-          databaseId={databaseId}
-          onOpenPage={openPageInSidePane}
-        />
-      }
+      main={<DatabaseMainPane databaseId={databaseId} onOpenPage={openPage} />}
       sidePane={
-        sidePaneContentReady && renderedSidePaneWorkspaceId ? (
+        embeddedItemsOpenAs === "sidepanel" &&
+        sidePaneContentReady &&
+        renderedSidePaneWorkspaceId ? (
           <WorkspaceEditorPane
             databaseId={sidePaneDatabaseId ?? databaseId}
             key={renderedSidePaneWorkspaceId}
-            onOpenPage={openPageInSidePane}
+            onOpenPage={openPage}
             workspaceId={renderedSidePaneWorkspaceId}
           />
         ) : null
       }
       sidePaneOpen={sidePaneAnimatedOpen}
-      sidePaneVisible={renderedSidePaneWorkspaceId !== null}
+      sidePaneVisible={
+        embeddedItemsOpenAs === "sidepanel" &&
+        renderedSidePaneWorkspaceId !== null
+      }
     />
   )
 }
@@ -120,24 +121,24 @@ function PublicDatabasePage() {
 
 function PublicDatabaseContent({ databaseId }: { databaseId: string }) {
   const { data: payload, isLoading } = useDatabase(databaseId)
+  const databasePageId = payload?.database.pageId ?? null
+  const { data: workspace } = useWorkspace(databasePageId, {
+    refetchOnMount: false,
+  })
+  const { data: userSettings } = useUserSettings()
   const {
     closeSidePane,
-    openSidePane,
     renderedSidePaneWorkspaceId,
     sidePaneAnimatedOpen,
     sidePaneContentReady,
     sidePaneDatabaseId,
-    sidePaneWorkspaceId,
   } = useWorkspaceSidePane()
-  const databasePageId = payload?.database.pageId ?? null
-  const openPageInSidePane = useCallback((pageId: string) => {
-    if (pageId === databasePageId || pageId === sidePaneWorkspaceId) {
-      closeSidePane()
-      return
-    }
-
-    openSidePane(pageId, { databaseId })
-  }, [closeSidePane, databaseId, databasePageId, openSidePane, sidePaneWorkspaceId])
+  const { embeddedItemsOpenAs, openPage } = useOpenEmbeddedPage({
+    contextWorkspaceId: databasePageId,
+    databaseId,
+    userSettings,
+    workspace,
+  })
 
   if (isLoading) {
     return (
@@ -156,6 +157,7 @@ function PublicDatabaseContent({ databaseId }: { databaseId: string }) {
   }
 
   return (
+    <>
     <WorkspaceSidePaneLayout
       className="bg-background animate-in fade-in-0 duration-300"
       standalone
@@ -166,13 +168,13 @@ function PublicDatabaseContent({ databaseId }: { databaseId: string }) {
           <DatabaseMainPane
             className="min-h-0 min-w-0 flex-1 overflow-y-auto"
             databaseId={databaseId}
-            onOpenPage={openPageInSidePane}
+            onOpenPage={openPage}
             readOnly
           />
         </div>
       }
       sidePane={
-        renderedSidePaneWorkspaceId ? (
+        embeddedItemsOpenAs === "sidepanel" && renderedSidePaneWorkspaceId ? (
           <div className="flex h-full min-h-0 flex-col">
             <div className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
               <div className="flex shrink-0 items-center gap-1">
@@ -208,7 +210,7 @@ function PublicDatabaseContent({ databaseId }: { databaseId: string }) {
                 className="min-h-0 flex-1"
                 databaseId={sidePaneDatabaseId ?? databaseId}
                 key={renderedSidePaneWorkspaceId}
-                onOpenPage={openPageInSidePane}
+                onOpenPage={openPage}
                 readOnly
                 workspaceId={renderedSidePaneWorkspaceId}
               />
@@ -217,8 +219,13 @@ function PublicDatabaseContent({ databaseId }: { databaseId: string }) {
         ) : null
       }
       sidePaneOpen={sidePaneAnimatedOpen}
-      sidePaneVisible={renderedSidePaneWorkspaceId !== null}
+      sidePaneVisible={
+        embeddedItemsOpenAs === "sidepanel" &&
+        renderedSidePaneWorkspaceId !== null
+      }
     />
+    <EmbeddedPageDialog onOpenPage={openPage} />
+    </>
   )
 }
 

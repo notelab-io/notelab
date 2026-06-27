@@ -8,7 +8,7 @@ export const useEditorDatabaseActions = (
   workspaceId?: string | null
 ) => {
   const createDatabase = useCreateDatabase()
-  const addDatabaseRow = useAddDatabaseRow(organizationId)
+  const addDatabaseRow = useAddDatabaseRow()
 
   const createEditorDatabase = useCallback(async () => {
     if (!organizationId || !workspaceId) return null

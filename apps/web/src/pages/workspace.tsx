@@ -24,16 +24,17 @@ import {
   useUpdateWorkspace,
   useCreateWorkspace,
   useEmbedWorkspaceItem,
-  useWorkspaceRealtime,
   useWorkspace,
   useWorkspaceAccessLevel,
 } from "@notelab/features/workspaces"
+import { EmbeddedPageDialog } from "@/components/embedded-page-dialog"
+import { useOpenEmbeddedPage } from "@/hooks/use-open-embedded-page"
 import { useSession } from "@notelab/features/auth"
 import { useUserSettings } from "@notelab/features/user-settings"
 import { useWorkspaceEditorRegistry } from "@/contexts/workspace-editor-registry"
 import { createWorkspaceEditorHandle } from "@/hooks/use-workspace-edit-applier"
 import { Editor, type WorkspaceEditPreviewControls } from "@/packages/editor"
-import { useWorkspaceContentSnapshot } from "@/packages/editor/use-workspace-content-snapshot"
+
 
 type WorkspaceEditorPaneProps = {
   className?: string
@@ -59,24 +60,19 @@ export default function WorkspacePage() {
 
 function AuthenticatedWorkspacePage() {
   const { workspaceId } = useParams({ from: "/workspace/$workspaceId" })
+  const { data: workspace } = useWorkspace(workspaceId, { refetchOnMount: false })
+  const { data: userSettings } = useUserSettings()
   const {
-    closeSidePane,
-    openSidePane,
     renderedSidePaneWorkspaceId,
     sidePaneAnimatedOpen,
     sidePaneContentReady,
     sidePaneDatabaseId,
-    sidePaneWorkspaceId,
   } = useWorkspaceSidePane()
-
-  const openPageInSidePane = useCallback((pageId: string) => {
-    if (pageId === workspaceId || pageId === sidePaneWorkspaceId) {
-      closeSidePane()
-      return
-    }
-
-    openSidePane(pageId)
-  }, [closeSidePane, openSidePane, sidePaneWorkspaceId, workspaceId])
+  const { embeddedItemsOpenAs, openPage } = useOpenEmbeddedPage({
+    contextWorkspaceId: workspaceId,
+    userSettings,
+    workspace,
+  })
 
   return (
     <WorkspaceSidePaneLayout
@@ -84,25 +80,30 @@ function AuthenticatedWorkspacePage() {
         <WorkspaceOrganizationGate workspaceId={workspaceId}>
           <WorkspaceEditorPane
             key={workspaceId}
-            onOpenPage={openPageInSidePane}
+            onOpenPage={openPage}
             workspaceId={workspaceId}
           />
         </WorkspaceOrganizationGate>
       }
       sidePane={
-        sidePaneContentReady && renderedSidePaneWorkspaceId ? (
+        embeddedItemsOpenAs === "sidepanel" &&
+        sidePaneContentReady &&
+        renderedSidePaneWorkspaceId ? (
           <WorkspaceOrganizationGate workspaceId={renderedSidePaneWorkspaceId}>
             <WorkspaceEditorPane
               databaseId={sidePaneDatabaseId}
               key={renderedSidePaneWorkspaceId}
-              onOpenPage={openPageInSidePane}
+              onOpenPage={openPage}
               workspaceId={renderedSidePaneWorkspaceId}
             />
           </WorkspaceOrganizationGate>
         ) : null
       }
       sidePaneOpen={sidePaneAnimatedOpen}
-      sidePaneVisible={renderedSidePaneWorkspaceId !== null}
+      sidePaneVisible={
+        embeddedItemsOpenAs === "sidepanel" &&
+        renderedSidePaneWorkspaceId !== null
+      }
     />
   )
 }
@@ -118,25 +119,23 @@ function PublicWorkspacePage() {
 }
 
 function PublicWorkspaceContent({ workspaceId }: { workspaceId: string }) {
+  const { data: workspace } = useWorkspace(workspaceId, { refetchOnMount: false })
+  const { data: userSettings } = useUserSettings()
   const {
     closeSidePane,
-    openSidePane,
     renderedSidePaneWorkspaceId,
     sidePaneAnimatedOpen,
     sidePaneContentReady,
     sidePaneDatabaseId,
-    sidePaneWorkspaceId,
   } = useWorkspaceSidePane()
-  const openPageInSidePane = useCallback((pageId: string) => {
-    if (pageId === workspaceId || pageId === sidePaneWorkspaceId) {
-      closeSidePane()
-      return
-    }
-
-    openSidePane(pageId)
-  }, [closeSidePane, openSidePane, sidePaneWorkspaceId, workspaceId])
+  const { embeddedItemsOpenAs, openPage } = useOpenEmbeddedPage({
+    contextWorkspaceId: workspaceId,
+    userSettings,
+    workspace,
+  })
 
   return (
+    <>
     <WorkspaceSidePaneLayout
       className="bg-background"
       standalone
@@ -147,14 +146,14 @@ function PublicWorkspaceContent({ workspaceId }: { workspaceId: string }) {
           <WorkspaceEditorPane
             className="min-h-0 min-w-0 flex-1 overflow-y-auto"
             key={workspaceId}
-            onOpenPage={openPageInSidePane}
+            onOpenPage={openPage}
             readOnly
             workspaceId={workspaceId}
           />
         </div>
       }
       sidePane={
-        renderedSidePaneWorkspaceId ? (
+        embeddedItemsOpenAs === "sidepanel" && renderedSidePaneWorkspaceId ? (
           <div className="flex h-full min-h-0 flex-col">
             <div className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
               <div className="flex shrink-0 items-center gap-1">
@@ -190,7 +189,7 @@ function PublicWorkspaceContent({ workspaceId }: { workspaceId: string }) {
                 className="min-h-0 flex-1"
                 databaseId={sidePaneDatabaseId}
                 key={renderedSidePaneWorkspaceId}
-                onOpenPage={openPageInSidePane}
+                onOpenPage={openPage}
                 readOnly
                 workspaceId={renderedSidePaneWorkspaceId}
               />
@@ -199,8 +198,13 @@ function PublicWorkspaceContent({ workspaceId }: { workspaceId: string }) {
         ) : null
       }
       sidePaneOpen={sidePaneAnimatedOpen}
-      sidePaneVisible={renderedSidePaneWorkspaceId !== null}
+      sidePaneVisible={
+        embeddedItemsOpenAs === "sidepanel" &&
+        renderedSidePaneWorkspaceId !== null
+      }
     />
+    <EmbeddedPageDialog onOpenPage={openPage} />
+    </>
   )
 }
 
@@ -294,7 +298,6 @@ export function WorkspaceEditorPane({
   readOnly = false,
   workspaceId,
 }: WorkspaceEditorPaneProps) {
-  const { data: session } = useSession()
   const { data: workspace, isLoading } = useWorkspace(workspaceId)
   const { data: accessLevel } = useWorkspaceAccessLevel(workspaceId, {
     refetchOnMount: false,
@@ -304,13 +307,13 @@ export function WorkspaceEditorPane({
   const embedWorkspaceItem = useEmbedWorkspaceItem()
   const updateWorkspace = useUpdateWorkspace()
   const contentSaveTimeoutRef = useRef<number | null>(null)
+  const lastSavedContentRef = useRef<string | null>(null)
   const pendingContentRef = useRef<unknown>(null)
   const editorContentRef = useRef<(() => unknown) | null>(null)
   const editorInstanceRef = useRef<import("@tiptap/core").Editor | null>(null)
   const workspaceEditPreviewRef =
     useRef<WorkspaceEditPreviewControls | null>(null)
   const { registerEditor, unregisterEditor } = useWorkspaceEditorRegistry()
-  const [collaborationReady, setCollaborationReady] = useState(false)
   const [name, setName] = useState("")
   const [cover, setCover] = useState("")
   const [emoji, setEmoji] = useState("")
@@ -318,17 +321,6 @@ export function WorkspaceEditorPane({
     workspace,
     userSettings?.workspaceFullWidth,
   )
-
-  useWorkspaceRealtime(workspaceId, {
-    enabled: Boolean(session?.user && workspace),
-    organizationId: workspace?.organizationId,
-  })
-
-  const { scheduleSnapshot } = useWorkspaceContentSnapshot({
-    enabled: collaborationReady,
-    getContent: () => editorContentRef.current?.() ?? null,
-    workspaceId: workspace?.id,
-  })
 
   const flushContentSaveTimeout = useCallback(() => {
     if (contentSaveTimeoutRef.current === null) {
@@ -446,9 +438,17 @@ export function WorkspaceEditorPane({
         return
       }
 
-      if (collaborationReady) {
-        scheduleSnapshot()
+      const serializedContent = serializeWorkspaceContent(content)
+
+      if (
+        serializedContent &&
+        serializedContent === lastSavedContentRef.current
+      ) {
         return
+      }
+
+      if (serializedContent) {
+        lastSavedContentRef.current = serializedContent
       }
 
       clearContentSaveTimeout()
@@ -463,9 +463,7 @@ export function WorkspaceEditorPane({
     [
       accessLevel,
       clearContentSaveTimeout,
-      collaborationReady,
       readOnly,
-      scheduleSnapshot,
       updateWorkspace,
       workspace,
     ],
@@ -557,10 +555,12 @@ export function WorkspaceEditorPane({
         editable={pageEditable}
         onEditorReady={(editor) => {
           editorInstanceRef.current = editor
+          lastSavedContentRef.current = editor
+            ? serializeWorkspaceContent(editor.getJSON())
+            : null
         }}
         emoji={emoji}
         fullWidth={fullWidth}
-        onCollaborationReadyChange={setCollaborationReady}
         onContentChange={updateContent}
         onCoverChange={updateCover}
         onCreatePage={createNestedPage}
@@ -572,7 +572,6 @@ export function WorkspaceEditorPane({
         title={name}
         workspaceEditPreviewRef={workspaceEditPreviewRef}
         workspaceId={workspace.id}
-        workspaceUpdatedAt={workspace.updatedAt}
       />
     </section>
   )
@@ -609,4 +608,12 @@ function WorkspaceEditorSkeleton({ fullWidth }: { fullWidth: boolean }) {
       </div>
     </div>
   )
+}
+
+function serializeWorkspaceContent(content: unknown) {
+  try {
+    return JSON.stringify(content)
+  } catch {
+    return null
+  }
 }

@@ -40,7 +40,9 @@ export function DatabasePageLink({
   const titleEditFinishedRef = useRef(false)
   const [draftTitle, setDraftTitle] = useState("")
   const [isEditingTitle, setIsEditingTitle] = useState(false)
-  const isOpen = sidePane?.sidePaneWorkspaceId === pageId
+  const isOpen =
+    sidePane?.sidePaneWorkspaceId === pageId ||
+    sidePane?.dialogWorkspaceId === pageId
   const title = pageSummary?.name?.trim() || "Untitled"
   const emoji = pageSummary
     ? getWorkspaceEmoji({
@@ -73,7 +75,11 @@ export function DatabasePageLink({
 
   const handleClick = () => {
     if (isOpen) {
-      sidePane?.closeSidePane()
+      if (sidePane?.dialogWorkspaceId === pageId) {
+        sidePane.closeEmbeddedPageDialog()
+      } else {
+        sidePane?.closeSidePane()
+      }
       return
     }
 
