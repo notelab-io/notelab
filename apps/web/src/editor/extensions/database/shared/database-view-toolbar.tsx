@@ -15,6 +15,7 @@ import {
   Database,
   EyeOff,
   Filter,
+  CalendarRange,
   Kanban,
   Loader2,
   Maximize2,
@@ -98,6 +99,7 @@ export function DatabaseViewToolbar() {
     addKanbanView,
     addLinkedDatabaseView,
     addTableView,
+    addTimelineView,
     canAddDatabaseSort,
     canAddDatabaseFilter,
     clearDatabaseFilter,
@@ -141,8 +143,11 @@ export function DatabaseViewToolbar() {
     setDraftDatabaseTitle,
     setDraftViewTitle,
     setFilterPickerOpen,
+    setViewDateProperty,
     setViewGroupProperty,
     setViewType,
+    timelineDateProperties,
+    timelineDateProperty,
     setSortPickerOpen,
     showExpandButton,
     showFilterPill,
@@ -337,7 +342,12 @@ export function DatabaseViewToolbar() {
           <div className="flex min-w-0 items-center gap-2 overflow-x-auto">
             {viewTabs.map((view) => {
               const isActiveView = view.id === activeViewTabId
-              const ViewIcon = view.type === "kanban" ? Kanban : Table2
+              const ViewIcon =
+                view.type === "kanban"
+                  ? Kanban
+                  : view.type === "timeline"
+                    ? CalendarRange
+                    : Table2
               const sourceDatabaseId =
                 view.sourceDatabaseId ?? hostDatabaseId ?? databaseId
               const sourceDatabaseName =
@@ -464,6 +474,19 @@ export function DatabaseViewToolbar() {
                             <Check className="ml-auto text-foreground" />
                           ) : null}
                         </DropDrawerItem>
+                        <DropDrawerItem
+                          disabled={!editable || view.type === "timeline"}
+                          onSelect={() => {
+                            setActiveViewId(view.id)
+                            setViewType("timeline")
+                          }}
+                        >
+                          <CalendarRange />
+                          <span>Timeline</span>
+                          {view.type === "timeline" ? (
+                            <Check className="ml-auto text-foreground" />
+                          ) : null}
+                        </DropDrawerItem>
                       </DropDrawerSubContent>
                     </DropDrawerSub>
                     <DropDrawerItem
@@ -587,6 +610,17 @@ export function DatabaseViewToolbar() {
                 >
                   <Kanban className="size-4" />
                   <span>Kanban</span>
+                </DropDrawerItem>
+                <DropDrawerItem
+                  disabled={
+                    !databaseId ||
+                    isAddingDatabaseView ||
+                    isAddingDatabaseProperty
+                  }
+                  onSelect={addTimelineView}
+                >
+                  <CalendarRange className="size-4" />
+                  <span>Timeline</span>
                 </DropDrawerItem>
               </DropDrawerContent>
             </DropDrawer>
@@ -791,6 +825,9 @@ export function DatabaseViewToolbar() {
                 onReorderDatabaseFilters={reorderDatabaseFilters}
                 onSaveDatabaseConditionalColors={saveDatabaseConditionalColors}
                 onSaveDatabaseViewTitle={saveDatabaseViewTitle}
+                dateProperties={timelineDateProperties}
+                datePropertyId={timelineDateProperty?.property.id ?? null}
+                onSetViewDateProperty={setViewDateProperty}
                 onSetViewGroupProperty={setViewGroupProperty}
                 onSetViewType={setViewType}
                 onTogglePropertyVisibility={togglePropertyVisibility}

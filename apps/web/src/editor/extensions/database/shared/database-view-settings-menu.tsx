@@ -10,6 +10,7 @@ import {
   FileText,
   Filter,
   GripVertical,
+  CalendarRange,
   Kanban,
   Link as LinkIcon,
   Lock,
@@ -607,6 +608,8 @@ export function DatabaseViewSettingsMenu({
   activeDatabaseFilters,
   activeDatabaseSorts,
   activeViewType,
+  dateProperties = [],
+  datePropertyId = null,
   addableFilterFieldOptions,
   addableSortFieldOptions,
   canAddDatabaseFilter,
@@ -636,6 +639,7 @@ export function DatabaseViewSettingsMenu({
   onReorderDatabaseFilters,
   onSaveDatabaseConditionalColors,
   onSaveDatabaseViewTitle,
+  onSetViewDateProperty,
   onSetViewGroupProperty,
   onSetViewType,
   onTogglePropertyVisibility,
@@ -651,6 +655,8 @@ export function DatabaseViewSettingsMenu({
   activeDatabaseFilters: DatabaseActiveFilter[]
   activeDatabaseSorts: DatabaseActiveSort[]
   activeViewType?: string
+  dateProperties?: DatabaseViewProperty[]
+  datePropertyId?: string | null
   addableFilterFieldOptions: DatabaseSearchableMenuOption[]
   addableSortFieldOptions: DatabaseSearchableMenuOption[]
   canAddDatabaseFilter: boolean
@@ -682,8 +688,9 @@ export function DatabaseViewSettingsMenu({
     settings: DatabaseConditionalColorConfig[]
   ) => void
   onSaveDatabaseViewTitle: (title: string) => void
+  onSetViewDateProperty: (datePropertyId: string | null) => void
   onSetViewGroupProperty: (groupPropertyId: string | null) => void
-  onSetViewType: (type: "table" | "kanban") => void
+  onSetViewType: (type: "table" | "kanban" | "timeline") => void
   onTogglePropertyVisibility: (propertyId: string) => void
   onUpdateDatabaseFilter: (index: number, patch: DatabaseFilterUpdatePatch) => void
   onUpdateDatabaseSort: (index: number, patch: DatabaseSortUpdatePatch) => void
@@ -716,8 +723,20 @@ export function DatabaseViewSettingsMenu({
       enabled: manageDataSourcesOpen || showLinkExistingPicker,
     })
   const isKanbanView = activeViewType === "kanban"
-  const ViewTypeIcon = isKanbanView ? Kanban : Table2
-  const viewTypeLabel = isKanbanView ? "Kanban" : "Table"
+  const isTimelineView = activeViewType === "timeline"
+  const ViewTypeIcon = isKanbanView
+    ? Kanban
+    : isTimelineView
+      ? CalendarRange
+      : Table2
+  const viewTypeLabel = isKanbanView
+    ? "Kanban"
+    : isTimelineView
+      ? "Timeline"
+      : "Table"
+  const activeDateProperty = dateProperties.find(
+    (property) => property.property.id === datePropertyId
+  )
   const activeGroupProperty = groupProperties.find(
     (property) => property.property.id === groupPropertyId
   )
@@ -743,7 +762,12 @@ export function DatabaseViewSettingsMenu({
   )
   const linkableDatabaseViewOptions =
     selectedLinkDatabasePayload?.views.map<LinkableDatabaseViewOption>((view) => {
-      const ViewIcon = view.type === "kanban" ? Kanban : Table2
+      const ViewIcon =
+        view.type === "kanban"
+          ? Kanban
+          : view.type === "timeline"
+            ? CalendarRange
+            : Table2
 
       return {
         icon: <ViewIcon />,
@@ -831,7 +855,7 @@ export function DatabaseViewSettingsMenu({
             <DropDrawerItem onSelect={() => onSetViewType("table")}>
               <Table2 />
               <span>Table</span>
-              {!isKanbanView ? (
+              {!isKanbanView && !isTimelineView ? (
                 <Check className="ml-auto text-foreground" />
               ) : null}
             </DropDrawerItem>
@@ -842,8 +866,53 @@ export function DatabaseViewSettingsMenu({
                 <Check className="ml-auto text-foreground" />
               ) : null}
             </DropDrawerItem>
+            <DropDrawerItem onSelect={() => onSetViewType("timeline")}>
+              <CalendarRange />
+              <span>Timeline</span>
+              {isTimelineView ? (
+                <Check className="ml-auto text-foreground" />
+              ) : null}
+            </DropDrawerItem>
           </DropDrawerSubContent>
         </DropDrawerSub>
+        {isTimelineView ? (
+          <DropDrawerSub>
+            <DropDrawerSubTrigger>
+              <ViewSettingsRow
+                icon={<CalendarRange />}
+                label="Date"
+                right={activeDateProperty?.property.name ?? "None"}
+              />
+            </DropDrawerSubTrigger>
+            <DropDrawerSubContent className="w-72">
+              {dateProperties.length > 0 ? (
+                dateProperties.map((property) => {
+                  const PropertyIcon = getDatabasePropertyType(
+                    property.property.type
+                  ).icon
+                  const isSelected = property.property.id === datePropertyId
+
+                  return (
+                    <DropDrawerItem
+                      key={property.id}
+                      onSelect={() =>
+                        onSetViewDateProperty(property.property.id)
+                      }
+                    >
+                      <PropertyIcon />
+                      <span>{property.property.name}</span>
+                      {isSelected ? (
+                        <Check className="ml-auto text-foreground" />
+                      ) : null}
+                    </DropDrawerItem>
+                  )
+                })
+              ) : (
+                <DropDrawerItem disabled>No date properties yet</DropDrawerItem>
+              )}
+            </DropDrawerSubContent>
+          </DropDrawerSub>
+        ) : null}
         <DropDrawerSub>
           <DropDrawerSubTrigger>
             <ViewSettingsRow
