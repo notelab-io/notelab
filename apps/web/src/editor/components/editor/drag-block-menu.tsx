@@ -31,9 +31,9 @@ import { SlashCommandMenu } from "@/packages/editor/extensions/slash-command-men
 
 import { blockContentForItem, insertBlockFromPlus } from "./block-insert"
 import {
-  beginActiveBlockDrag,
-  endPlaneBlockDrag,
-  startPlaneBlockDrag,
+  armBlockDrag,
+  endBlockDrag,
+  startBlockDrag,
 } from "./block-drag"
 import { colorTokens, colorWithAlpha } from "./toolbar-data"
 import type { DragHandleTarget } from "./types"
@@ -233,7 +233,7 @@ export function DragBlockMenu({
         if (!pointer.moved && !suppressGripMenuOpenRef.current) {
           openGripActionsMenu()
         } else if (!pointer.moved) {
-          endPlaneBlockDrag(editor.view)
+          endBlockDrag(editor.view)
         }
 
         gripPointerRef.current = null
@@ -453,7 +453,7 @@ export function DragBlockMenu({
               event.stopPropagation()
             }}
             onDragEnd={() => {
-              endPlaneBlockDrag(editor.view)
+              endBlockDrag(editor.view)
               markGripDragInteraction()
               window.setTimeout(() => {
                 suppressGripMenuOpenRef.current = false
@@ -467,7 +467,7 @@ export function DragBlockMenu({
 
               event.stopPropagation()
               event.nativeEvent.stopImmediatePropagation()
-              const didStartDrag = startPlaneBlockDrag({
+              const didStartDrag = startBlockDrag({
                 editorId,
                 event: event.nativeEvent,
                 target,
@@ -520,7 +520,7 @@ export function DragBlockMenu({
               bindGripPointerTracking()
 
               if (target) {
-                beginActiveBlockDrag(editorId, target)
+                armBlockDrag(editorId, target)
               }
             }}
             role="button"

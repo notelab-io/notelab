@@ -76,11 +76,12 @@ export function Editor({
       workspaceId,
     })
 
-  const { blockDropLine, editor } = useEditorInstance({
+  const { blockDropLine, editor, surfaceDragHandlers } = useEditorInstance({
     databaseEditorRuntime,
     dropPageOnDatabase: handleDatabasePageDrop,
     editable,
     editorContentRef,
+    editorSurfaceRef,
     editorExtensions,
     editorId,
     editorLifecycleKey,
@@ -314,6 +315,10 @@ export function Editor({
         className="relative min-h-0 flex-1"
         data-editor-surface
         ref={editorSurfaceRef}
+        onDragEnd={surfaceDragHandlers.onDragEnd}
+        onDragLeave={surfaceDragHandlers.onDragLeave}
+        onDragOver={surfaceDragHandlers.onDragOver}
+        onDrop={surfaceDragHandlers.onDrop}
         onPointerLeave={() => !dragHandleMenuOpen && clearDesktopDragHandle()}
         onClickCapture={handleMobileNodeClick}
         onPointerMoveCapture={updateDragTargetFromPointer}

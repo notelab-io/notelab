@@ -1,12 +1,24 @@
-import { useEffect, useMemo, useState, type MutableRefObject } from "react"
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MutableRefObject,
+  type RefObject,
+} from "react"
 import { useEditor } from "@tiptap/react"
 import type { Content, Editor, Extensions } from "@tiptap/core"
 import type { DatabaseBlockEditorRuntime } from "@/packages/editor/extensions/database"
-import { registerBlockDragSource } from "@/packages/editor/components/editor/block-drag"
 import {
-  createEditorDragHandlers,
-  createEditorDropHandler,
-} from "./editor-drop-handlers"
+  createEditorDragDrop,
+  registerBlockDragSource,
+} from "@/packages/editor/components/editor/block-drag"
+import {
+  getDropDatabaseElement,
+  insertDraggedDatabasePage,
+  isDraggingPageToEditor,
+  shouldSkipEditorDropLine,
+} from "./database-page-drag"
 import { handleProviderLinkPaste, normalizePastedEditorHTML } from "./paste"
 import { updateExtensionOptions } from "./update-extension-options"
 import type { BlockDropLine, PasteChoiceState } from "./types"
@@ -17,6 +29,7 @@ type UseEditorInstanceOptions = {
   dropPageOnDatabase: (event: DragEvent) => boolean
   editable: boolean
   editorContentRef?: MutableRefObject<(() => unknown) | null>
+  editorSurfaceRef?: RefObject<HTMLElement | null>
   editorExtensions: Extensions
   editorId: string
   editorLifecycleKey: string
@@ -38,6 +51,7 @@ export const useEditorInstance = ({
   dropPageOnDatabase,
   editable,
   editorContentRef,
+  editorSurfaceRef,
   editorExtensions,
   editorId,
   editorLifecycleKey,
@@ -51,6 +65,7 @@ export const useEditorInstance = ({
   workspaceId,
 }: UseEditorInstanceOptions) => {
   const [blockDropLine, setBlockDropLine] = useState<BlockDropLine | null>(null)
+  const editorRef = useRef<Editor | null>(null)
 
   const onContentChangeRef = useLatestRef(onContentChange)
   const onEditorReadyRef = useLatestRef(onEditorReady)
@@ -61,19 +76,24 @@ export const useEditorInstance = ({
       handleProviderLinkPaste(view, event, editable, setPasteChoice)
   )
 
-  const editorDropHandler = useMemo(
+  const dragDrop = useMemo(
     () =>
-      createEditorDropHandler(
-        (event) => dropPageOnDatabaseRef.current(event),
-        setBlockDropLine,
-        (pageId) => onEmbedPageRef.current?.(pageId),
-      ),
-    [],
-  )
-
-  const editorDragHandlers = useMemo(
-    () => createEditorDragHandlers(setBlockDropLine),
-    []
+      createEditorDragDrop(setBlockDropLine, {
+        dropPageOnDatabase: (event) => dropPageOnDatabaseRef.current(event),
+        getView: () =>
+          editorRef.current && !editorRef.current.isDestroyed
+            ? editorRef.current.view
+            : null,
+        insertDraggedPage: (view, event) =>
+          insertDraggedDatabasePage(view, event, (pageId) =>
+            onEmbedPageRef.current?.(pageId),
+          ),
+        isDraggingPage: isDraggingPageToEditor,
+        isOverDatabaseDrop: (event) => Boolean(getDropDatabaseElement(event)),
+        shouldSkipDropLine: shouldSkipEditorDropLine,
+        surfaceRef: editorSurfaceRef,
+      }),
+    [editorSurfaceRef],
   )
 
   const editor = useEditor(
@@ -82,6 +102,7 @@ export const useEditorInstance = ({
       content: initialContent,
       editable,
       onCreate: ({ editor: currentEditor }) => {
+        editorRef.current = currentEditor
         onEditorReadyRef.current?.(currentEditor)
       },
       onUpdate: ({ editor: currentEditor }) => {
@@ -89,15 +110,19 @@ export const useEditorInstance = ({
       },
       editorProps: {
         attributes: { class: "tiptap-editor", "aria-label": "Document editor" },
-        handleDrop: editorDropHandler,
+        handleDrop: dragDrop.handleDrop,
+        handleDOMEvents: dragDrop.domEvents,
         handlePaste: (view, event) =>
           handleProviderLinkPasteRef.current(view, event),
         transformPastedHTML: normalizePastedEditorHTML,
-        handleDOMEvents: editorDragHandlers,
       },
     },
     [editorLifecycleKey]
   )
+
+  useEffect(() => {
+    editorRef.current = editor
+  }, [editor])
 
   useEffect(() => {
     if (!editorContentRef) return
@@ -130,5 +155,5 @@ export const useEditorInstance = ({
     return registerBlockDragSource(editorId, editor)
   }, [editor, editorId])
 
-  return { blockDropLine, editor }
+  return { blockDropLine, editor, surfaceDragHandlers: dragDrop.surfaceProps }
 }

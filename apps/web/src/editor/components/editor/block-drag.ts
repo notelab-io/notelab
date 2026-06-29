@@ -1,3 +1,4 @@
+import type { DragEvent as ReactDragEvent } from "react"
 import type { Editor } from "@tiptap/react"
 import {
   Fragment,
@@ -8,6 +9,7 @@ import {
 import { NodeSelection } from "@tiptap/pm/state"
 import type { EditorView } from "@tiptap/pm/view"
 
+import type { BlockDropLine } from "@/editor/types"
 import type { DragHandleTarget } from "./types"
 
 export const EDITOR_BLOCK_DRAG_MIME =
@@ -21,37 +23,15 @@ export type BlockDragPayload = {
   typeName: string
 }
 
-export type BlockDragDropTarget = {
-  line: {
-    left: number
-    right: number
-    top: number
-  }
-  pos: number
-}
+type DropTarget = { line: BlockDropLine; pos: number }
 
-const dragSourceEditors = new Map<string, Editor>()
-let activeBlockDragPayload: BlockDragPayload | null = null
+const sources = new Map<string, Editor>()
+let activeDrag: BlockDragPayload | null = null
 
-const blockDragSelectors = [
-  "li",
-  "p",
-  ".code-block-shiki",
-  "blockquote",
-  "h1, h2, h3, h4, h5, h6",
-  "[data-type=horizontalRule]",
-  "table",
-  ".image-block",
-  ".video-block",
-  ".embed-block",
-  ".file-block",
-  ".bookmark-block",
-  ".database-block",
-  ".page-block",
-  ".editor-details",
-].join(", ")
+const blockSelectors =
+  "li,p,.code-block-shiki,blockquote,h1,h2,h3,h4,h5,h6,[data-type=horizontalRule],table,.image-block,.video-block,.embed-block,.file-block,.bookmark-block,.database-block,.page-block,.editor-details"
 
-const parentContainerTypes = new Set([
+const parentTypes = new Set([
   "blockquote",
   "details",
   "detailsContent",
@@ -65,53 +45,234 @@ const parentContainerTypes = new Set([
   "columnBlock",
 ])
 
-const DRAG_HANDLE_WIDTH = 56
-const DRAG_HANDLE_GAP = 8
+const isList = (type?: string) => type === "listItem" || type === "taskItem"
 
-export function registerBlockDragSource(editorId: string, editor: Editor) {
-  dragSourceEditors.set(editorId, editor)
+const toPayload = (editorId: string, target: DragHandleTarget): BlockDragPayload => ({
+  editorId,
+  node: target.node.toJSON(),
+  pos: target.pos,
+  textContent: target.node.textContent,
+  typeName: target.node.type.name,
+})
 
-  return () => {
-    if (dragSourceEditors.get(editorId) === editor) {
-      dragSourceEditors.delete(editorId)
+function parsePayload(dataTransfer: DataTransfer | null) {
+  try {
+    const raw = dataTransfer?.getData(EDITOR_BLOCK_DRAG_MIME)
+    const payload = (raw ? JSON.parse(raw) : activeDrag) as BlockDragPayload | null
+    if (
+      !payload ||
+      typeof payload.editorId !== "string" ||
+      typeof payload.pos !== "number" ||
+      typeof payload.typeName !== "string" ||
+      !payload.node
+    ) {
+      return null
     }
+    return payload
+  } catch {
+    return null
   }
 }
 
-export function setDraggedBlockData({
-  dataTransfer,
-  editorId,
-  target,
-}: {
-  dataTransfer: DataTransfer
-  editorId: string
-  target: DragHandleTarget
-}) {
-  const payload =
-    activeBlockDragPayload?.editorId === editorId
-      ? activeBlockDragPayload
-      : createBlockDragPayload(editorId, target)
+export const getDraggedEditorBlockPayload = parsePayload
 
-  activeBlockDragPayload = payload
-  dataTransfer.effectAllowed = "move"
-  dataTransfer.setData(EDITOR_BLOCK_DRAG_MIME, JSON.stringify(payload))
+function clearSession(view?: EditorView) {
+  view?.dom.classList.remove("dragging")
+  activeDrag = null
 }
 
-export function beginActiveBlockDrag(editorId: string, target: DragHandleTarget) {
-  activeBlockDragPayload = createBlockDragPayload(editorId, target)
+function dialogOffset(el: HTMLElement) {
+  const dialog = el.closest('[data-slot="dialog-content"]')
+  if (!(dialog instanceof HTMLElement)) return { left: 0, top: 0 }
+  const { left, top } = dialog.getBoundingClientRect()
+  return { left, top }
 }
 
-export function clearActiveBlockDrag() {
-  activeBlockDragPayload = null
+function lineAt(
+  view: EditorView,
+  pos: number,
+  anchor?: { left: number; right: number },
+): BlockDropLine {
+  const editor = view.dom.getBoundingClientRect()
+  const offset = dialogOffset(view.dom)
+  return {
+    left: (anchor?.left ?? editor.left) - offset.left,
+    right: (anchor?.right ?? editor.right) - offset.left,
+    top: view.coordsAtPos(pos).top - offset.top,
+  }
 }
 
-export function hasDraggedEditorBlock(event: DragEvent) {
-  return Array.from(event.dataTransfer?.types ?? []).includes(
-    EDITOR_BLOCK_DRAG_MIME,
-  ) || Boolean(activeBlockDragPayload)
+function clampedCoords(view: EditorView, x: number, y: number) {
+  const rect = view.dom.getBoundingClientRect()
+  return view.posAtCoords({
+    left: Math.min(Math.max(x, rect.left + 4), rect.right - 4),
+    top: Math.min(Math.max(y, rect.top + 4), rect.bottom - 4),
+  })
 }
 
-export function resolvePlaneDragTargetFromPoint({
+function blockFromPos(view: EditorView, pos: number): DragHandleTarget | null {
+  const $pos = view.state.doc.resolve(Math.max(0, Math.min(pos, view.state.doc.content.size)))
+
+  for (let depth = $pos.depth; depth > 0; depth -= 1) {
+    const node = $pos.node(depth)
+    const parent = depth > 0 ? $pos.node(depth - 1) : null
+    if (node.isInline || node.isText || parentTypes.has(node.type.name)) continue
+    if ($pos.index(depth - 1) === 0 && isList(parent?.type.name)) continue
+    return { node, pos: $pos.before(depth) }
+  }
+
+  const top = view.state.doc.nodeAt(pos)
+  if (!top) return null
+  if (!parentTypes.has(top.type.name)) return { node: top, pos }
+
+  let target: DragHandleTarget | null = null
+  top.forEach((child, offset) => {
+    if (target) return
+    const childPos = pos + offset + 1
+    if (child.isInline || child.isText || parentTypes.has(child.type.name)) {
+      if (!child.isInline && !child.isText) target = blockFromPos(view, childPos)
+      return
+    }
+    target = { node: child, pos: childPos }
+  })
+  return target
+}
+
+function blockFromDOM(view: EditorView, dom: HTMLElement): DragHandleTarget | null {
+  const rect = dom.getBoundingClientRect()
+  const coords = view.posAtCoords({ left: rect.left + 50, top: rect.top + 1 })
+  if (!coords || coords.inside < 0) return null
+
+  if (dom.matches("table")) {
+    const tablePos = Math.max(0, coords.inside - 2)
+    const table = view.state.doc.nodeAt(tablePos)
+    if (table) return { node: table, pos: tablePos }
+  }
+
+  if (dom.matches("blockquote")) {
+    const inside = view.posAtCoords({ left: rect.left + 1, top: rect.top + 1 })?.inside
+    if (inside != null && inside >= 0) return blockFromPos(view, inside)
+  }
+
+  return blockFromPos(view, coords.inside)
+}
+
+function blockAtPoint(view: EditorView, x: number, y: number) {
+  for (const el of view.root.elementsFromPoint(x, y)) {
+    if (!(el instanceof HTMLElement)) continue
+    if (el.matches("table")) return el
+    if (el.closest("table") && !el.matches("table")) continue
+    if (el.matches(blockSelectors)) return el
+  }
+  return null
+}
+
+function dropAnchor(dom: HTMLElement) {
+  const blockquote = dom.closest("blockquote")
+  if (blockquote) return blockquote.getBoundingClientRect()
+  const list = dom.closest("li")?.parentElement?.closest<HTMLElement>("ul, ol")
+  if (list && list.dataset.type !== "taskList") return list.getBoundingClientRect()
+  return null
+}
+
+export function resolveBlockInsertPos(
+  blockPos: number,
+  blockSize: number,
+  blockTop: number,
+  blockHeight: number,
+  clientY: number,
+) {
+  return clientY < blockTop + blockHeight / 2 ? blockPos : blockPos + blockSize
+}
+
+function findColumn(view: EditorView, column: HTMLElement) {
+  let match: { node: ProseMirrorNode; pos: number } | null = null
+  view.state.doc.descendants((node, pos) => {
+    if (node.type.name === "column" && view.nodeDOM(pos) === column) {
+      match = { node, pos }
+      return false
+    }
+  })
+  return match as { node: ProseMirrorNode; pos: number } | null
+}
+
+function columnTarget(view: EditorView, x: number, y: number): DropTarget | null {
+  for (const el of view.root.elementsFromPoint(x, y)) {
+    if (!(el instanceof HTMLElement)) continue
+    const column = el.closest<HTMLElement>(".column[data-type='column']")
+    if (!column || !view.dom.contains(column)) continue
+
+    const match = findColumn(view, column)
+    if (!match) continue
+
+    const children: Array<{ mid: number; pos: number }> = []
+    match.node.forEach((_child, offset) => {
+      const childPos = match.pos + offset + 1
+      const dom = view.nodeDOM(childPos)
+      if (!(dom instanceof HTMLElement)) return
+      const rect = dom.getBoundingClientRect()
+      children.push({ mid: (rect.top + rect.bottom) / 2, pos: childPos })
+    })
+
+    const hit = children.find((child) => y < child.mid)
+    const pos = hit?.pos ?? match.pos + 1 + match.node.content.size
+    const rect = column.getBoundingClientRect()
+    const style = window.getComputedStyle(column)
+    const padL = Number.parseFloat(style.paddingLeft) || 0
+    const padR = Number.parseFloat(style.paddingRight) || 0
+
+    return {
+      pos,
+      line: lineAt(view, pos, {
+        left: rect.left + padL,
+        right: rect.right - padR,
+      }),
+    }
+  }
+  return null
+}
+
+function blockTarget(view: EditorView, x: number, y: number): DropTarget | null {
+  const coords = clampedCoords(view, x, y)
+  if (!coords) return null
+
+  const target = blockFromPos(view, coords.pos)
+  if (!target) {
+    const endPos = view.state.doc.content.size
+    return { line: lineAt(view, endPos), pos: endPos }
+  }
+
+  const dom = view.nodeDOM(target.pos)
+  if (!(dom instanceof HTMLElement)) return null
+
+  const rect = dom.getBoundingClientRect()
+  const pos = resolveBlockInsertPos(
+    target.pos,
+    target.node.nodeSize,
+    rect.top,
+    rect.height,
+    y,
+  )
+
+  return { line: lineAt(view, pos, dropAnchor(dom) ?? rect), pos }
+}
+
+export function getEditorInsertDropTarget(view: EditorView, event: DragEvent) {
+  return columnTarget(view, event.clientX, event.clientY) ?? blockTarget(view, event.clientX, event.clientY)
+}
+
+export function registerBlockDragSource(editorId: string, editor: Editor) {
+  sources.set(editorId, editor)
+  return () => {
+    if (sources.get(editorId) === editor) sources.delete(editorId)
+  }
+}
+
+export function armBlockDrag(editorId: string, target: DragHandleTarget) {
+  activeDrag = toPayload(editorId, target)
+}
+
+export function resolveBlockDragTargetFromPoint({
   clientX,
   clientY,
   currentTarget,
@@ -121,158 +282,47 @@ export function resolvePlaneDragTargetFromPoint({
   clientY: number
   currentTarget?: DragHandleTarget | null
   view: EditorView
-}): DragHandleTarget | null {
-  const editorElement = view.dom
-  const root = view.root
-  const elements = root.elementsFromPoint(clientX, clientY)
-  const isOverDragHandle = elements.some(
-    (element) =>
-      element instanceof HTMLElement && Boolean(element.closest(".drag-handle"))
-  )
-
-  if (isOverDragHandle) {
+}) {
+  const elements = view.root.elementsFromPoint(clientX, clientY)
+  if (elements.some((el) => el instanceof HTMLElement && el.closest(".drag-handle"))) {
     return currentTarget ?? null
   }
-
-  const isInsideEditor = elements.some(
-    (element) =>
-      element instanceof HTMLElement && editorElement.contains(element)
-  )
-
-  if (!isInsideEditor) {
+  if (!elements.some((el) => el instanceof HTMLElement && view.dom.contains(el))) {
     return null
   }
-
-  const domNode = nodeDOMAtCoords({ clientX, clientY })
-
-  if (domNode) {
-    const target = targetFromDOMNode(view, domNode)
-
-    if (target) {
-      return target
-    }
-  }
-
-  return null
+  const dom = blockAtPoint(view, clientX, clientY)
+  return dom ? blockFromDOM(view, dom) : null
 }
 
-function getBlockPaddingInset(domNode: HTMLElement) {
-  const style = window.getComputedStyle(domNode)
-
-  return {
-    left: Number.parseFloat(style.paddingLeft) || 0,
-    top: Number.parseFloat(style.paddingTop) || 0,
-  }
-}
-
-function getDatabaseBlockDragHandleAnchor(domNode: HTMLElement) {
-  const block = domNode.matches(".database-block, .node-databaseBlock")
-    ? domNode
-    : domNode.closest<HTMLElement>(".database-block, .node-databaseBlock")
-
-  if (!block) {
-    return null
-  }
-
-  const toolbarSection = block.querySelector<HTMLElement>(
-    ".database-toolbar-section",
-  )
-  const toolbar = block.querySelector<HTMLElement>(".database-toolbar")
-  const verticalAnchor =
-    toolbar?.firstElementChild instanceof HTMLElement
-      ? toolbar.firstElementChild
-      : toolbarSection
-
-  if (!(verticalAnchor instanceof HTMLElement)) {
-    return null
-  }
-
-  return {
-    horizontalAnchor: toolbarSection ?? block,
-    verticalAnchor,
-  }
-}
-
-function getFixedContainingBlockOffset(element: HTMLElement) {
-  const container = element.closest('[data-slot="dialog-content"]')
-
-  if (!(container instanceof HTMLElement)) {
-    return { left: 0, top: 0 }
-  }
-
-  const rect = container.getBoundingClientRect()
-
-  return {
-    left: rect.left,
-    top: rect.top,
-  }
-}
-
-function adjustDropLineForFixedOverlay(
-  view: EditorView,
-  line: BlockDragDropTarget["line"],
-) {
-  const offset = getFixedContainingBlockOffset(view.dom)
-
-  return {
-    left: line.left - offset.left,
-    right: line.right - offset.left,
-    top: line.top - offset.top,
-  }
-}
-
-export function getPlaneDragHandleRect(
-  view: EditorView,
-  target: DragHandleTarget,
-) {
-  const domNode = view.nodeDOM(target.pos)
-
-  if (!(domNode instanceof HTMLElement)) {
-    return null
-  }
+export function getBlockDragHandleRect(view: EditorView, target: DragHandleTarget) {
+  const dom = view.nodeDOM(target.pos)
+  if (!(dom instanceof HTMLElement)) return null
 
   const editorRect = view.dom.getBoundingClientRect()
-  const databaseAnchor =
-    target.node.type.name === "databaseBlock"
-      ? getDatabaseBlockDragHandleAnchor(domNode)
-      : null
-  const anchorNode = databaseAnchor?.horizontalAnchor ?? domNode
-  const anchorRect = anchorNode.getBoundingClientRect()
-  const inset = getBlockPaddingInset(anchorNode)
-  const contentLeft = anchorRect.left + inset.left
-  const contentTop = databaseAnchor
-    ? databaseAnchor.verticalAnchor.getBoundingClientRect().top
-    : anchorRect.top + inset.top
-  const railLeft = Math.max(
-    editorRect.left + 4,
-    contentLeft - DRAG_HANDLE_WIDTH - DRAG_HANDLE_GAP,
-  )
-  const offset = getFixedContainingBlockOffset(view.dom)
+  let anchor = dom
+  let top = dom.getBoundingClientRect().top
+
+  if (target.node.type.name === "databaseBlock") {
+    const block = dom.closest<HTMLElement>(".database-block, .node-databaseBlock") ?? dom
+    const toolbar = block.querySelector<HTMLElement>(".database-toolbar")
+    const section = block.querySelector<HTMLElement>(".database-toolbar-section")
+    const vertical = toolbar?.firstElementChild
+    if (vertical instanceof HTMLElement) top = vertical.getBoundingClientRect().top
+    anchor = section ?? block
+  }
+
+  const rect = anchor.getBoundingClientRect()
+  const style = window.getComputedStyle(anchor)
+  const left = rect.left + (Number.parseFloat(style.paddingLeft) || 0)
+  const offset = dialogOffset(view.dom)
 
   return {
-    left: railLeft - offset.left,
-    top: contentTop - offset.top,
+    left: Math.max(editorRect.left + 4, left - 64) - offset.left,
+    top: top + (Number.parseFloat(style.paddingTop) || 0) - offset.top,
   }
 }
 
-function getDragHandleAnchorRect(domNode: HTMLElement) {
-  const blockquote = domNode.closest<HTMLElement>("blockquote")
-
-  if (blockquote) {
-    return blockquote.getBoundingClientRect()
-  }
-
-  const listItem = domNode.closest<HTMLElement>("li")
-  const list = listItem?.parentElement?.closest<HTMLElement>("ul, ol")
-
-  if (list && list.dataset.type !== "taskList") {
-    return list.getBoundingClientRect()
-  }
-
-  return null
-}
-
-export function startPlaneBlockDrag({
+export function startBlockDrag({
   editorId,
   event,
   target,
@@ -284,619 +334,253 @@ export function startPlaneBlockDrag({
   view: EditorView
 }) {
   view.focus()
-
   try {
     view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, target.pos)))
   } catch {
     return false
   }
+  if (!event.dataTransfer) return false
 
-  if (!event.dataTransfer) {
-    return false
-  }
-
+  const payload = activeDrag ?? toPayload(editorId, target)
+  activeDrag = payload
   const slice = view.state.selection.content()
   const { dom, text } = view.serializeForClipboard(slice)
-  const dragImage = view.nodeDOM(target.pos)
+  const image = view.nodeDOM(target.pos)
 
-  setDraggedBlockData({
-    dataTransfer: event.dataTransfer,
-    editorId,
-    target,
-  })
+  event.dataTransfer.effectAllowed = "copyMove"
+  event.dataTransfer.setData(EDITOR_BLOCK_DRAG_MIME, JSON.stringify(payload))
   event.dataTransfer.setData("text/html", dom.innerHTML)
   event.dataTransfer.setData("text/plain", text)
-  event.dataTransfer.effectAllowed = "copyMove"
-
-  if (dragImage instanceof Element) {
-    event.dataTransfer.setDragImage(dragImage, 0, 0)
-  }
+  if (image instanceof Element) event.dataTransfer.setDragImage(image, 0, 0)
 
   view.dragging = { slice, move: !event.ctrlKey }
   view.dom.classList.add("dragging")
-
   return true
 }
 
-export function preparePlaneBlockDrop(view: EditorView, event: DragEvent) {
-  view.dom.classList.remove("dragging")
-
-  const dropPos = view.posAtCoords({
-    left: event.clientX,
-    top: event.clientY,
-  })
-
-  if (!dropPos || !(view.state.selection instanceof NodeSelection)) {
-    return false
-  }
-
-  const droppedNode = view.state.selection.node
-
-  if (droppedNode.type.name !== "listItem" && droppedNode.type.name !== "taskItem") {
-    return false
-  }
-
-  const resolvedPos = view.state.doc.resolve(dropPos.pos)
-  let isDroppedInsideList = false
-  let dropDepth = 0
-
-  for (let depth = resolvedPos.depth; depth > 0; depth -= 1) {
-    const typeName = resolvedPos.node(depth).type.name
-
-    if (typeName === "listItem" || typeName === "taskItem") {
-      isDroppedInsideList = true
-      dropDepth = depth
-      break
-    }
-  }
-
-  let slice = view.state.selection.content()
-  let nextFragment = slice.content
-
-  if (!isDroppedInsideList || dropDepth !== resolvedPos.depth) {
-    nextFragment = flattenListStructure(nextFragment, view.state.schema)
-  }
-
-  if (!isDroppedInsideList) {
-    const listType = getClosestListType(view)
-    const listNodeType =
-      listType === "orderedList"
-        ? view.state.schema.nodes.orderedList
-        : view.state.schema.nodes.bulletList
-
-    if (listNodeType) {
-      nextFragment = Fragment.from(listNodeType.create(null, nextFragment))
-    }
-  }
-
-  slice = new Slice(nextFragment, slice.openStart, slice.openEnd)
-  view.dragging = { slice, move: !event.ctrlKey }
-
-  return false
+export function endBlockDrag(view?: EditorView) {
+  clearSession(view)
 }
 
-export function getColumnBlockDragDropTarget(
-  view: EditorView,
-  event: DragEvent,
-): BlockDragDropTarget | null {
-  const columnElement = columnElementAtPoint(view, event.clientX, event.clientY)
-
-  if (!columnElement) {
-    return null
-  }
-
-  const columnMatch = findColumnNodeByDOM(view, columnElement)
-
-  if (!columnMatch) {
-    return null
-  }
-
-  const children: Array<{
-    bottom: number
-    pos: number
-    top: number
-  }> = []
-
-  columnMatch.node.forEach((_child, offset) => {
-    const childPos = columnMatch.pos + offset + 1
-    const dom = view.nodeDOM(childPos)
-
-    if (!(dom instanceof HTMLElement)) {
-      return
+function sourceNode(view: EditorView, payload: BlockDragPayload) {
+  try {
+    const expected = view.state.schema.nodeFromJSON(payload.node)
+    const node = view.state.doc.nodeAt(payload.pos)
+    if (
+      node &&
+      node.type.name === payload.typeName &&
+      node.textContent === payload.textContent &&
+      node.sameMarkup(expected)
+    ) {
+      return node
     }
-
-    const rect = dom.getBoundingClientRect()
-
-    children.push({
-      bottom: rect.bottom,
-      pos: childPos,
-      top: rect.top,
-    })
-  })
-
-  let insertIndex = children.length
-
-  for (let index = 0; index < children.length; index += 1) {
-    const child = children[index]
-
-    if (event.clientY < child.top + (child.bottom - child.top) / 2) {
-      insertIndex = index
-      break
-    }
-  }
-
-  let pos = columnMatch.pos + 1 + columnMatch.node.content.size
-
-  if (insertIndex < children.length) {
-    pos = children[insertIndex].pos
-  }
-
-  const columnRect = columnElement.getBoundingClientRect()
-  const columnStyle = window.getComputedStyle(columnElement)
-  const paddingLeft = Number.parseFloat(columnStyle.paddingLeft) || 0
-  const paddingRight = Number.parseFloat(columnStyle.paddingRight) || 0
-
-  return {
-    line: adjustDropLineForFixedOverlay(view, {
-      left: columnRect.left + paddingLeft,
-      right: columnRect.right - paddingRight,
-      top: view.coordsAtPos(pos).top,
-    }),
-    pos,
-  }
-}
-
-export function getEditorInsertDropTarget(
-  view: EditorView,
-  event: DragEvent,
-): BlockDragDropTarget | null {
-  const columnTarget = getColumnBlockDragDropTarget(view, event)
-
-  if (columnTarget) {
-    return columnTarget
-  }
-
-  return getPlaneBlockDragDropTarget(view, event)
-}
-
-export function getPlaneBlockDragDropTarget(
-  view: EditorView,
-  event: DragEvent,
-): BlockDragDropTarget | null {
-  const domNode = nodeDOMAtCoords({
-    clientX: event.clientX,
-    clientY: event.clientY,
-  })
-
-  if (!domNode) {
+  } catch {
     return null
   }
-
-  const target = targetFromDOMNode(view, domNode)
-
-  if (!target) {
-    return null
-  }
-
-  const targetDOM = view.nodeDOM(target.pos)
-
-  if (!(targetDOM instanceof HTMLElement)) {
-    return null
-  }
-
-  const rect = targetDOM.getBoundingClientRect()
-  const anchorRect = getDragHandleAnchorRect(targetDOM) ?? rect
-  const placeBefore = event.clientY < rect.top + rect.height / 2
-  const pos = placeBefore ? target.pos : target.pos + target.node.nodeSize
-
-  return {
-    line: adjustDropLineForFixedOverlay(view, {
-      left: anchorRect.left,
-      right: anchorRect.right,
-      top: view.coordsAtPos(pos).top,
-    }),
-    pos,
-  }
+  return null
 }
 
-export function dropDraggedEditorBlockAt(
-  view: EditorView,
-  event: DragEvent,
-  pos: number,
-) {
-  const payload = parseDraggedBlockPayload(event.dataTransfer)
+function deleteSource(view: EditorView, payload: BlockDragPayload) {
+  const node = sourceNode(view, payload)
+  if (!node) return false
+  view.dispatch(view.state.tr.delete(payload.pos, payload.pos + node.nodeSize).scrollIntoView())
+  return true
+}
 
-  if (!payload) {
-    return false
-  }
+export function deleteDraggedEditorBlockSource(payload: BlockDragPayload) {
+  const editor = sources.get(payload.editorId)
+  if (!editor || !deleteSource(editor.view, payload)) return false
+  clearSession(editor.view)
+  return true
+}
+
+function dropBlock(view: EditorView, event: DragEvent, pos: number) {
+  const payload = parsePayload(event.dataTransfer)
+  if (!payload) return false
 
   let node: ProseMirrorNode
-
   try {
     node = view.state.schema.nodeFromJSON(payload.node)
   } catch {
     return false
   }
 
-  if (!canInsertNodeAt(view.state.doc, pos, node)) {
-    return false
+  const $pos = view.state.doc.resolve(pos)
+  let canInsert = false
+  for (let depth = $pos.depth; depth >= 0; depth -= 1) {
+    const index = $pos.index(depth)
+    if ($pos.node(depth).canReplaceWith(index, index, node.type, node.marks)) {
+      canInsert = true
+      break
+    }
   }
+  if (!canInsert) return false
 
-  const sourceEditor = dragSourceEditors.get(payload.editorId)
+  const source = sources.get(payload.editorId)
   let insertPos = pos
   let tr = view.state.tr
 
-  if (sourceEditor?.view === view) {
-    const sourceNode = getValidatedSourceNode(view, payload)
-
-    if (!sourceNode) {
-      return false
-    }
-
-    const sourceFrom = payload.pos
-    const sourceTo = sourceFrom + sourceNode.nodeSize
-
-    if (insertPos >= sourceFrom && insertPos <= sourceTo) {
+  if (source?.view === view) {
+    const dragged = sourceNode(view, payload)
+    if (!dragged) return false
+    const from = payload.pos
+    const to = from + dragged.nodeSize
+    if (insertPos >= from && insertPos <= to) {
       event.preventDefault()
       return true
     }
-
-    tr = tr.delete(sourceFrom, sourceTo)
-
-    if (sourceFrom < insertPos) {
-      insertPos -= sourceNode.nodeSize
-    }
+    tr = tr.delete(from, to)
+    if (from < insertPos) insertPos -= dragged.nodeSize
   }
 
   view.dispatch(tr.insert(insertPos, node).scrollIntoView())
   view.focus()
-
-  if (sourceEditor && sourceEditor.view !== view) {
-    deleteDraggedSourceNode(sourceEditor.view, payload)
-  }
+  if (source && source.view !== view) deleteSource(source.view, payload)
 
   event.preventDefault()
-  clearActiveBlockDrag()
-
+  clearSession(view)
   return true
 }
 
-export function getDraggedEditorBlockPayload(dataTransfer: DataTransfer | null) {
-  return parseDraggedBlockPayload(dataTransfer)
-}
-
-export function deleteDraggedEditorBlockSource(payload: BlockDragPayload) {
-  const sourceEditor = dragSourceEditors.get(payload.editorId)
-
-  if (!sourceEditor) {
-    return false
-  }
-
-  const deleted = deleteDraggedSourceNode(sourceEditor.view, payload)
-
-  if (deleted) {
-    clearActiveBlockDrag()
-  }
-
-  return deleted
-}
-
-export function endPlaneBlockDrag(view?: EditorView) {
-  view?.dom.classList.remove("dragging")
-  clearActiveBlockDrag()
-}
-
-function createBlockDragPayload(
-  editorId: string,
-  target: DragHandleTarget,
-): BlockDragPayload {
-  return {
-    editorId,
-    node: target.node.toJSON(),
-    pos: target.pos,
-    textContent: target.node.textContent,
-    typeName: target.node.type.name,
-  }
-}
-
-function parseDraggedBlockPayload(dataTransfer: DataTransfer | null) {
-  const rawPayload = dataTransfer?.getData(EDITOR_BLOCK_DRAG_MIME)
-
-  if (!rawPayload) {
-    return activeBlockDragPayload
-  }
-
-  try {
-    const payload = JSON.parse(rawPayload) as Partial<BlockDragPayload>
-
-    if (
-      typeof payload.editorId !== "string" ||
-      typeof payload.pos !== "number" ||
-      typeof payload.textContent !== "string" ||
-      typeof payload.typeName !== "string" ||
-      !payload.node
-    ) {
-      return null
-    }
-
-    return payload as BlockDragPayload
-  } catch {
-    return null
-  }
-}
-
-function nodeDOMAtCoords({
-  clientX,
-  clientY,
-}: {
-  clientX: number
-  clientY: number
-}) {
-  const elements = document.elementsFromPoint(clientX, clientY)
-
-  for (const element of elements) {
-    if (!(element instanceof HTMLElement)) {
-      continue
-    }
-
-    if (element.matches("table")) {
-      return element
-    }
-
-    if (element.closest("table") && !element.matches("table")) {
-      continue
-    }
-
-    if (element.matches(blockDragSelectors)) {
-      return element
-    }
-  }
-
-  return null
-}
-
-function columnElementAtPoint(
-  view: EditorView,
-  clientX: number,
-  clientY: number,
-) {
-  const elements = view.root.elementsFromPoint(clientX, clientY)
-
-  for (const element of elements) {
-    if (!(element instanceof HTMLElement)) {
-      continue
-    }
-
-    const columnElement = element.closest<HTMLElement>(".column[data-type='column']")
-
-    if (columnElement && view.dom.contains(columnElement)) {
-      return columnElement
-    }
-  }
-
-  return null
-}
-
-function findColumnNodeByDOM(view: EditorView, columnElement: HTMLElement) {
-  let match: { node: ProseMirrorNode; pos: number } | null = null
-
-  view.state.doc.descendants((node, pos) => {
-    if (node.type.name !== "column") {
-      return
-    }
-
-    if (view.nodeDOM(pos) === columnElement) {
-      match = { node, pos }
-      return false
-    }
-  })
-
-  return match as { node: ProseMirrorNode; pos: number } | null
-}
-
-function canInsertNodeAt(
-  doc: ProseMirrorNode,
-  pos: number,
-  node: ProseMirrorNode,
-) {
-  const $pos = doc.resolve(pos)
-
-  for (let depth = $pos.depth; depth >= 0; depth -= 1) {
-    const index = $pos.index(depth)
-
-    if ($pos.node(depth).canReplaceWith(index, index, node.type, node.marks)) {
-      return true
-    }
-  }
-
-  return false
-}
-
-function targetFromDOMNode(view: EditorView, domNode: HTMLElement) {
-  const rect = domNode.getBoundingClientRect()
-  const coords = view.posAtCoords({
-    left: rect.left + 50,
-    top: rect.top + 1,
-  })
-
-  if (!coords || coords.inside < 0) {
-    return null
-  }
-
-  if (domNode.matches("table")) {
-    const tablePos = Math.max(0, coords.inside - 2)
-    const tableNode = view.state.doc.nodeAt(tablePos)
-
-    if (tableNode) {
-      return { node: tableNode, pos: tablePos }
-    }
-  }
-
-  if (domNode.matches("blockquote")) {
-    const blockquoteCoords = view.posAtCoords({
-      left: rect.left + 1,
-      top: rect.top + 1,
-    })
-
-    if (blockquoteCoords && blockquoteCoords.inside >= 0) {
-      return targetFromResolvedPosition(view, blockquoteCoords.inside)
-    }
-  }
-
-  return targetFromResolvedPosition(view, coords.inside)
-}
-
-function targetFromResolvedPosition(view: EditorView, pos: number) {
-  const $pos = view.state.doc.resolve(Math.max(0, Math.min(pos, view.state.doc.content.size)))
-
-  for (let depth = $pos.depth; depth > 0; depth -= 1) {
-    const node = $pos.node(depth)
-    const parent = depth > 0 ? $pos.node(depth - 1) : null
-    const index = depth > 0 ? $pos.index(depth - 1) : 0
-
-    if (node.isInline || node.isText) {
-      continue
-    }
-
-    if (parentContainerTypes.has(node.type.name)) {
-      continue
-    }
-
-    if (
-      index === 0 &&
-      (parent?.type.name === "taskItem" || parent?.type.name === "listItem")
-    ) {
-      continue
-    }
-
-    const nodePos = $pos.before(depth)
-
-    return { node, pos: nodePos }
-  }
-
-  const topNode = view.state.doc.nodeAt(pos)
-
-  if (!topNode) {
-    return null
-  }
-
-  if (parentContainerTypes.has(topNode.type.name)) {
-    return firstDraggableDescendant(topNode, pos)
-  }
-
-  return { node: topNode, pos }
-}
-
-function firstDraggableDescendant(
-  node: ProseMirrorNode,
-  pos: number,
-): DragHandleTarget | null {
-  let target: DragHandleTarget | null = null
-
-  node.forEach((child, offset) => {
-    if (target) {
-      return
-    }
-
-    const childPos = pos + offset + 1
-
-    if (
-      child.isInline ||
-      child.isText ||
-      parentContainerTypes.has(child.type.name)
-    ) {
-      if (!child.isInline && !child.isText) {
-        target = firstDraggableDescendant(child, childPos)
-      }
-
-      return
-    }
-
-    target = { node: child, pos: childPos }
-  })
-
-  return target
-}
-
-function getClosestListType(view: EditorView) {
-  const { from } = view.state.selection
-  const $pos = view.state.doc.resolve(from)
-
-  for (let depth = $pos.depth; depth > 0; depth -= 1) {
-    const typeName = $pos.node(depth).type.name
-
-    if (typeName === "orderedList" || typeName === "bulletList") {
-      return typeName
-    }
-  }
-
-  return "bulletList"
-}
-
-function flattenListStructure(fragment: Fragment, schema: Schema) {
+function flattenList(fragment: Fragment, schema: Schema) {
   const result: ProseMirrorNode[] = []
-
   fragment.forEach((node) => {
-    if (node.type !== schema.nodes.listItem && node.type !== schema.nodes.taskItem) {
-      return
-    }
-
+    if (!isList(node.type.name)) return
     result.push(node)
-
-    const firstChild = node.content.firstChild
-
-    if (
-      firstChild &&
-      (firstChild.type === schema.nodes.bulletList ||
-        firstChild.type === schema.nodes.orderedList)
-    ) {
-      flattenListStructure(firstChild.content, schema).forEach((child) => {
-        result.push(child)
-      })
+    const list = node.content.firstChild
+    if (list && (list.type === schema.nodes.bulletList || list.type === schema.nodes.orderedList)) {
+      flattenList(list.content, schema).forEach((child) => result.push(child))
     }
   })
-
   return Fragment.from(result)
 }
 
-function deleteDraggedSourceNode(view: EditorView, payload: BlockDragPayload) {
-  const sourceNode = getValidatedSourceNode(view, payload)
+function prepareListDrop(view: EditorView, event: DragEvent) {
+  view.dom.classList.remove("dragging")
+  const dropPos = view.posAtCoords({ left: event.clientX, top: event.clientY })
+  if (!dropPos || !(view.state.selection instanceof NodeSelection)) return false
 
-  if (!sourceNode) {
+  const dropped = view.state.selection.node
+  if (!isList(dropped.type.name)) return false
+
+  const $drop = view.state.doc.resolve(dropPos.pos)
+  let inList = false
+  let listDepth = 0
+  for (let depth = $drop.depth; depth > 0; depth -= 1) {
+    if (isList($drop.node(depth).type.name)) {
+      inList = true
+      listDepth = depth
+      break
+    }
+  }
+
+  let slice = view.state.selection.content()
+  let content = slice.content
+  if (!inList || listDepth !== $drop.depth) content = flattenList(content, view.state.schema)
+
+  if (!inList) {
+    const $from = view.state.doc.resolve(view.state.selection.from)
+    let listType = "bulletList"
+    for (let depth = $from.depth; depth > 0; depth -= 1) {
+      const name = $from.node(depth).type.name
+      if (name === "orderedList" || name === "bulletList") {
+        listType = name
+        break
+      }
+    }
+    const listNode =
+      listType === "orderedList"
+        ? view.state.schema.nodes.orderedList
+        : view.state.schema.nodes.bulletList
+    if (listNode) content = Fragment.from(listNode.create(null, content))
+  }
+
+  view.dragging = { slice: new Slice(content, slice.openStart, slice.openEnd), move: !event.ctrlKey }
+  return false
+}
+
+type DragDropBridge = {
+  dropPageOnDatabase: (event: DragEvent) => boolean
+  getView: () => EditorView | null
+  insertDraggedPage: (view: EditorView, event: DragEvent) => boolean
+  isDraggingPage: (event: DragEvent) => boolean
+  isOverDatabaseDrop: (event: DragEvent) => boolean
+  shouldSkipDropLine: (event: DragEvent) => boolean
+  surfaceRef?: { current: HTMLElement | null }
+}
+
+export function createEditorDragDrop(
+  setDropLine: (line: BlockDropLine | null) => void,
+  bridge: DragDropBridge,
+) {
+  const dragging = (event: DragEvent) =>
+    Array.from(event.dataTransfer?.types ?? []).includes(EDITOR_BLOCK_DRAG_MIME) ||
+    Boolean(activeDrag)
+
+  const onDragOver = (view: EditorView, event: DragEvent) => {
+    if (!dragging(event) && !bridge.isDraggingPage(event)) {
+      setDropLine(null)
+      return false
+    }
+
+    if (!bridge.shouldSkipDropLine(event) && !bridge.isOverDatabaseDrop(event)) {
+      setDropLine(getEditorInsertDropTarget(view, event)?.line ?? null)
+    } else {
+      setDropLine(null)
+    }
+
+    if (bridge.isOverDatabaseDrop(event) && bridge.isDraggingPage(event)) {
+      event.preventDefault()
+      if (event.dataTransfer) event.dataTransfer.dropEffect = "move"
+      return false
+    }
+    if (bridge.shouldSkipDropLine(event)) return false
+
+    event.preventDefault()
+    if (event.dataTransfer) event.dataTransfer.dropEffect = dragging(event) ? "move" : "copy"
     return false
   }
 
-  view.dispatch(
-    view.state.tr
-      .delete(payload.pos, payload.pos + sourceNode.nodeSize)
-      .scrollIntoView(),
-  )
+  const onDrop = (view: EditorView, event: DragEvent) => {
+    setDropLine(null)
+    if (bridge.dropPageOnDatabase(event)) return true
 
-  return true
-}
+    const payload = parsePayload(event.dataTransfer)
+    if (payload && !isList(payload.typeName)) {
+      const target = getEditorInsertDropTarget(view, event)
+      if (target && dropBlock(view, event, target.pos)) return true
+    }
 
-function getValidatedSourceNode(
-  view: EditorView,
-  payload: BlockDragPayload,
-) {
-  let expectedNode: ProseMirrorNode
-
-  try {
-    expectedNode = view.state.schema.nodeFromJSON(payload.node)
-  } catch {
-    return null
+    if (bridge.insertDraggedPage(view, event)) return true
+    return prepareListDrop(view, event)
   }
 
-  const sourceNode = view.state.doc.nodeAt(payload.pos)
-
-  if (
-    !sourceNode ||
-    sourceNode.type.name !== payload.typeName ||
-    sourceNode.textContent !== payload.textContent ||
-    !sourceNode.sameMarkup(expectedNode)
-  ) {
-    return null
+  const onLeave = (container: Node | null, event: DragEvent) => {
+    if (container && event.relatedTarget instanceof Node && container.contains(event.relatedTarget)) {
+      return
+    }
+    setDropLine(null)
   }
 
-  return sourceNode
+  return {
+    handleDrop: onDrop,
+    domEvents: {
+      dragover: onDragOver,
+      dragend: () => (setDropLine(null), false),
+      dragleave: (view: EditorView, event: DragEvent) => (onLeave(view.dom, event), false),
+    },
+    surfaceProps: {
+      onDragEnd: () => setDropLine(null),
+      onDragLeave: (event: ReactDragEvent<HTMLElement>) => onLeave(bridge.surfaceRef?.current ?? null, event.nativeEvent),
+      onDragOver: (event: ReactDragEvent<HTMLElement>) => {
+        const view = bridge.getView()
+        if (view) onDragOver(view, event.nativeEvent)
+      },
+      onDrop: (event: ReactDragEvent<HTMLElement>) => {
+        const view = bridge.getView()
+        if (!view || (event.target instanceof Node && view.dom.contains(event.target))) return
+        onDrop(view, event.nativeEvent)
+      },
+    },
+  }
 }

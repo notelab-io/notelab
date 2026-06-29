@@ -127,6 +127,13 @@ export const hasDraggedDatabasePage = (event: DragEvent) =>
 export const hasDraggedPageBlock = (event: DragEvent) =>
   getDraggedPageBlockPayload(event) !== null
 
+export const isDraggingPageToEditor = (event: DragEvent) =>
+  hasDraggedDatabasePage(event) || hasDraggedPageBlock(event)
+
+export const shouldSkipEditorDropLine = (event: DragEvent) =>
+  event.target instanceof HTMLElement &&
+  Boolean(event.target.closest(".database-table-wrap"))
+
 export const dropPageOnDatabase = (
   event: DragEvent,
   options: {

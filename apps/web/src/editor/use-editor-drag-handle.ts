@@ -2,8 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import type { PointerEvent as ReactPointerEvent } from "react"
 import type { Editor as TiptapEditor } from "@tiptap/react"
 import {
-  getPlaneDragHandleRect,
-  resolvePlaneDragTargetFromPoint,
+  getBlockDragHandleRect,
+  resolveBlockDragTargetFromPoint,
 } from "@/packages/editor/components/editor/block-drag"
 import type { DragHandleState } from "./types"
 
@@ -17,7 +17,7 @@ export const useEditorDragHandle = (
   const resolveDragTargetFromPoint = useCallback(
     (clientX: number, clientY: number) =>
       editor
-        ? resolvePlaneDragTargetFromPoint({
+        ? resolveBlockDragTargetFromPoint({
             clientX,
             clientY,
             currentTarget: dragHandleRef.current?.target ?? null,
@@ -51,7 +51,7 @@ export const useEditorDragHandle = (
       if (dragHandleMenuOpen || !editor) return
       const nextTarget = resolveDragTargetFromPoint(event.clientX, event.clientY)
       if (!nextTarget) return clearDesktopDragHandle()
-      const position = getPlaneDragHandleRect(editor.view, nextTarget)
+      const position = getBlockDragHandleRect(editor.view, nextTarget)
       if (!position) return clearDesktopDragHandle()
       showDesktopDragHandle({ position, target: nextTarget })
     },
