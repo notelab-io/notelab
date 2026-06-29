@@ -13,6 +13,8 @@
   "dependencies": {
     "@base-ui/react": "^1.5.0",
     "@cloudflare/ai-chat": "^0.6.0",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/modifiers": "^9.0.0",
     "@faker-js/faker": "^10.4.0",
     "@fontsource-variable/geist": "^5.2.9",
     "@linear/sdk": "^86.0.0",
@@ -48,6 +50,7 @@
     "@tiptap/react": "^3.23.6",
     "@tiptap/starter-kit": "^3.23.6",
     "@tiptap/suggestion": "^3.23.6",
+    "@uidotdev/usehooks": "^2.4.1",
     "@xyflow/react": "^12.11.0",
     "agents": "^0.12.1",
     "ai": "^6.0.193",
@@ -61,6 +64,8 @@
     "framer-motion": "^12.40.0",
     "frimousse": "^0.3.0",
     "input-otp": "^1.4.2",
+    "jotai": "^2.20.1",
+    "lodash.throttle": "^4.1.1",
     "lucide-react": "^1.21.0",
     "motion": "^12.40.0",
     "nanoid": "^5.1.11",
@@ -85,6 +90,7 @@
     "zustand": "^5.0.13"
   },
   "devDependencies": {
+    "@types/lodash.throttle": "^4.1.9",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",
