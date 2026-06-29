@@ -8,7 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
-import { buildStoredSvgFromRenderedSvg } from "@/lib/workspace-icon-utils"
+import { buildStoredSvgFromRenderedSvg } from "@/lib/page-icon-utils"
 
 type LucideCatalogEntry = {
   Icon: LucideIcon

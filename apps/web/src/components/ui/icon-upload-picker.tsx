@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils"
 import {
   buildColoredIconSvg,
   parseUploadedSvg,
-} from "@/lib/workspace-icon-utils"
+} from "@/lib/page-icon-utils"
 
 type IconUploadPickerProps = {
   className?: string

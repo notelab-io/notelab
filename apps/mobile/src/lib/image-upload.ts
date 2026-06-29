@@ -32,30 +32,30 @@ type ReactNativeFileBody = {
   uri: string;
 };
 
-export type UploadWorkspaceImageInput = {
+export type UploadPageImageInput = {
   body: Blob | File | ReactNativeFileBody;
   byteSize: number;
   contentType: string;
   databaseId?: string | null;
   filename: string;
-  organizationId: string;
   workspaceId: string;
+  pageId: string;
 };
 
-export type UploadedWorkspaceImage = {
+export type UploadedPageImage = {
   asset: ImageAsset;
   url: string;
 };
 
-export async function uploadWorkspaceImage({
+export async function uploadPageImage({
   body,
   byteSize,
   contentType,
   databaseId,
   filename,
-  organizationId,
   workspaceId,
-}: UploadWorkspaceImageInput): Promise<UploadedWorkspaceImage> {
+  pageId,
+}: UploadPageImageInput): Promise<UploadedPageImage> {
   if (!contentType.startsWith('image/')) {
     throw new Error('Only image uploads are supported.');
   }
@@ -66,8 +66,8 @@ export async function uploadWorkspaceImage({
       contentType,
       databaseId: databaseId || undefined,
       filename,
-      organizationId,
       workspaceId,
+      pageId,
     }),
     method: 'POST',
   });
@@ -85,7 +85,7 @@ export async function uploadWorkspaceImage({
   };
 }
 
-async function putImageBody(upload: ImageUploadTarget, body: UploadWorkspaceImageInput['body']) {
+async function putImageBody(upload: ImageUploadTarget, body: UploadPageImageInput['body']) {
   const headers =
     upload.storageMode === 'binding'
       ? getApiRequestHeaders(upload.headers)

@@ -1,6 +1,6 @@
 export function register({ assert, loadModule, test }) {
   test("image upload client uses S3 PUT without app credentials", async () => {
-    const { uploadWorkspaceImage } = await loadModule("/src/lib/image-upload.ts")
+    const { uploadPageImage } = await loadModule("/src/lib/image-upload.ts")
     const calls = mockFetch([
       jsonResponse({
         asset: createAsset("asset-s3"),
@@ -17,10 +17,10 @@ export function register({ assert, loadModule, test }) {
     ])
 
     try {
-      const result = await uploadWorkspaceImage({
+      const result = await uploadPageImage({
         file: createImageFile(),
-        organizationId: "org-1",
-        workspaceId: "workspace-1",
+        workspaceId: "org-1",
+        pageId: "page-1",
       })
 
       assert.equal(result.url, "https://api.notelab.test/images/asset-s3")
@@ -34,7 +34,7 @@ export function register({ assert, loadModule, test }) {
   })
 
   test("image upload client uses app auth headers for binding uploads", async () => {
-    const { uploadWorkspaceImage } = await loadModule("/src/lib/image-upload.ts")
+    const { uploadPageImage } = await loadModule("/src/lib/image-upload.ts")
     const previousWindow = globalThis.window
     globalThis.window = {
       __NOTELAB_MOBILE_AUTH_COOKIE__: "session=mobile",
@@ -55,11 +55,11 @@ export function register({ assert, loadModule, test }) {
     ])
 
     try {
-      const result = await uploadWorkspaceImage({
+      const result = await uploadPageImage({
         databaseId: "database-1",
         file: createImageFile(),
-        organizationId: "org-1",
-        workspaceId: "workspace-1",
+        workspaceId: "org-1",
+        pageId: "page-1",
       })
 
       assert.equal(result.url, "https://api.notelab.test/images/asset-binding")

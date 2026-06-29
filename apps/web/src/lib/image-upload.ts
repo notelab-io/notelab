@@ -29,24 +29,24 @@ type CompleteImageUploadResponse = {
   asset: ImageAsset
 }
 
-export type UploadWorkspaceImageInput = {
+export type UploadPageImageInput = {
   databaseId?: string | null
   file: File
-  organizationId: string
   workspaceId: string
+  pageId: string
 }
 
-export type UploadedWorkspaceImage = {
+export type UploadedPageImage = {
   asset: ImageAsset
   url: string
 }
 
-export async function uploadWorkspaceImage({
+export async function uploadPageImage({
   databaseId,
   file,
-  organizationId,
   workspaceId,
-}: UploadWorkspaceImageInput): Promise<UploadedWorkspaceImage> {
+  pageId,
+}: UploadPageImageInput): Promise<UploadedPageImage> {
   if (!file.type.startsWith("image/")) {
     throw new Error("Only image uploads are supported.")
   }
@@ -59,8 +59,8 @@ export async function uploadWorkspaceImage({
         contentType: file.type,
         databaseId: databaseId || undefined,
         filename: file.name,
-        organizationId,
         workspaceId,
+        pageId,
       }),
       method: "POST",
     },
