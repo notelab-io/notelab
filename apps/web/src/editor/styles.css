@@ -809,8 +809,13 @@
   }
 
   .database-table-wrap,
-  .database-kanban-wrap {
+  .database-kanban-wrap,
+  .database-timeline-view {
     @apply relative mt-2 max-w-full overflow-visible;
+  }
+
+  .database-timeline-view {
+    @apply min-h-[28rem] overflow-auto;
   }
 
   .database-inline-scroll {
