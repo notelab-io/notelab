@@ -1,15 +1,9 @@
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import {
   GanttFeatureItem,
-  GanttFeatureList,
-  GanttFeatureListGroup,
   GanttHeader,
   GanttProvider,
-  GanttSidebar,
-  GanttSidebarGroup,
-  GanttSidebarItem,
-  GanttTimeline,
-  GanttToday,
+  type Range,
 } from "@/components/kibo-ui/gantt"
 import {
   Select,
@@ -19,163 +13,198 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-import { defaultStatusOptions, getDatabasePropertyType } from "../constants"
-import { formatDatabaseDateValue } from "../shared/database-date-config"
+import { getDatabasePropertyType } from "../constants"
 import { getRawDatabaseGroupValue } from "../shared/database-group-values"
 import { useDatabaseViewContext } from "../shared/database-view-context"
 import {
   buildTimelineRowItem,
   getGanttStatusForValue,
   getTimelineDatePropertyId,
-  groupTimelineRows,
   ganttMoveToCellValue,
-  UNSCHEDULED_GROUP_NAME,
   type TimelineRowItem,
 } from "./database-timeline-config"
+import {
+  getTimelineBodyEntries,
+  getTimelineEntryHeight,
+  getTimelineEntryKey,
+  getTimelineSidebarEntries,
+  TimelineNameHeaderRow,
+  TimelineSidebarEntryCell,
+  timelineTableStyle,
+  type TimelineSidebarEntry,
+} from "./database-timeline-sidebar"
+import { DatabaseTimelineToolbarChrome } from "./database-timeline-toolbar"
 
-function getTimelineGroupLabel({
-  groupValue,
-  property,
+function TimelineGanttEntryCell({
+  entry,
+  onMoveFeature,
+  onSelectRow,
+  timelineRowById,
 }: {
-  groupValue: string
-  property: NonNullable<
-    ReturnType<typeof useDatabaseViewContext>["groupProperty"]
-  >
+  entry: TimelineSidebarEntry
+  onMoveFeature: (id: string, startAt: Date, endAt: Date | null) => void
+  onSelectRow: (rowId: string) => void
+  timelineRowById: Map<string, TimelineRowItem>
 }) {
-  if (!groupValue) {
-    return "Empty"
+  if (entry.type !== "row") {
+    return <div aria-hidden className="database-timeline-gantt-cell" />
   }
 
-  if (property.property.type === "checkbox") {
-    return groupValue === "true" ? "Checked" : "Unchecked"
-  }
+  const timelineRow = timelineRowById.get(entry.row.id)
 
-  if (property.property.type === "date") {
+  if (!timelineRow?.feature) {
     return (
-      formatDatabaseDateValue(groupValue, property.property.config) || groupValue
+      <div
+        className="database-timeline-gantt-cell"
+        data-timeline-row-id={entry.row.id}
+      />
     )
   }
 
-  return groupValue
-}
-
-function getTimelineGroupName({
-  groupProperty,
-  row,
-  values,
-}: {
-  groupProperty: ReturnType<typeof useDatabaseViewContext>["groupProperty"]
-  row: ReturnType<typeof useDatabaseViewContext>["sortedItems"][number]
-  values: ReturnType<typeof useDatabaseViewContext>["propertyValuesByKey"]
-}) {
-  if (!groupProperty) {
-    return "All items"
-  }
-
-  if (groupProperty.id === "name") {
-    return row.page.name?.trim() || "Empty"
-  }
-
-  const key = `${row.pageId}:${groupProperty.property.id}`
-  const rawValue = getRawDatabaseGroupValue(values[key] ?? "")
-
-  if (!rawValue && groupProperty.property.type === "status") {
-    return defaultStatusOptions[0]?.name ?? "Not started"
-  }
-
-  return getTimelineGroupLabel({
-    groupValue: rawValue,
-    property: groupProperty,
-  })
-}
-
-function TimelineUnscheduledSidebarItem({
-  item,
-  onSelect,
-}: {
-  item: TimelineRowItem
-  onSelect: (id: string) => void
-}) {
   return (
-    <button
-      className="relative flex w-full items-center gap-2.5 p-2.5 text-left text-xs hover:bg-secondary"
-      onClick={() => onSelect(item.id)}
-      style={{ height: "var(--gantt-row-height)" }}
-      type="button"
+    <div
+      className="database-timeline-gantt-cell"
+      data-timeline-row-id={entry.row.id}
     >
-      <div
-        className="h-2 w-2 shrink-0 rounded-full"
-        style={{ backgroundColor: item.status.color }}
-      />
-      <p className="flex-1 truncate font-medium">{item.name}</p>
-      <p className="text-muted-foreground">Unscheduled</p>
-    </button>
+      <GanttFeatureItem
+        {...timelineRow.feature}
+        className="database-timeline-bar"
+        onMove={onMoveFeature}
+        stacked
+      >
+        <button
+          className="flex h-full w-full items-center px-2 text-left"
+          onClick={() => onSelectRow(entry.row.id)}
+          type="button"
+        >
+          <span className="truncate text-xs text-foreground/90">
+            {timelineRow.name}
+          </span>
+        </button>
+      </GanttFeatureItem>
+    </div>
   )
 }
 
 export function DatabaseTimelineView() {
   const {
     activeView,
+    addDatabaseRow,
+    databaseConfig,
+    editable,
+    databaseId,
     groupProperty,
+    isAddingDatabaseRow,
     onOpenPage,
+    personOptions,
     properties,
     propertyValuesByKey,
     savePropertyValue,
     setViewDateProperty,
+    showPageIconInTitle,
     sortedItems,
     timelineDateProperties,
     timelineDateProperty,
+    titlePropertyLabel,
     addTimelineRow,
   } = useDatabaseViewContext()
+
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(
+    {}
+  )
+  const [timelineRange, setTimelineRange] = useState<Range>("daily")
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   const statusProperty =
     properties.find((property) => property.property.type === "status") ?? null
   const configuredDatePropertyId = getTimelineDatePropertyId(activeView?.config)
+  const isGrouped = Boolean(groupProperty)
 
-  const groupedTimelineRows = useMemo(() => {
+  const personOptionsById = useMemo(
+    () => new Map(personOptions.map((option) => [option.id, option.name])),
+    [personOptions]
+  )
+
+  const timelineRowById = useMemo(() => {
     if (!timelineDateProperty) {
-      return []
+      return new Map<string, TimelineRowItem>()
     }
 
-    const rows = sortedItems.map((row) => {
-      const dateValue = propertyValuesByKey[
-        `${row.pageId}:${timelineDateProperty.property.id}`
-      ] ?? ""
-      const statusValue = statusProperty
-        ? getRawDatabaseGroupValue(
-            propertyValuesByKey[`${row.pageId}:${statusProperty.property.id}`] ??
-              ""
-          )
-        : ""
-      const groupName = getTimelineGroupName({
-        groupProperty,
-        row,
-        values: propertyValuesByKey,
-      })
-      const status = getGanttStatusForValue(statusValue, statusProperty)
-      const timelineRow = buildTimelineRowItem({
-        dateValue,
-        groupName: timelineDateProperty ? groupName : UNSCHEDULED_GROUP_NAME,
-        rowId: row.id,
-        rowName: row.page.name ?? "Untitled",
-        pageId: row.pageId,
-        status,
-      })
+    return new Map(
+      sortedItems.map((row) => {
+        const dateValue =
+          propertyValuesByKey[
+            `${row.pageId}:${timelineDateProperty.property.id}`
+          ] ?? ""
+        const statusValue = statusProperty
+          ? getRawDatabaseGroupValue(
+              propertyValuesByKey[
+                `${row.pageId}:${statusProperty.property.id}`
+              ] ?? ""
+            )
+          : ""
+        const status = getGanttStatusForValue(statusValue, statusProperty)
 
-      return {
-        ...timelineRow,
-        groupName: timelineRow.feature ? groupName : UNSCHEDULED_GROUP_NAME,
-      }
-    })
-
-    return groupTimelineRows(rows)
+        return [
+          row.id,
+          buildTimelineRowItem({
+            dateValue,
+            groupName: "",
+            rowId: row.id,
+            rowName: row.page.name ?? "Untitled",
+            pageId: row.pageId,
+            status,
+          }),
+        ] as const
+      })
+    )
   }, [
-    groupProperty,
     propertyValuesByKey,
     sortedItems,
     statusProperty,
     timelineDateProperty,
   ])
+
+  const sidebarEntryParams = useMemo(
+    () => ({
+      collapsedGroups,
+      editable,
+      groupProperty,
+      isGrouped,
+      personOptionsById,
+      propertyValuesByKey,
+      rows: sortedItems,
+    }),
+    [
+      collapsedGroups,
+      editable,
+      groupProperty,
+      isGrouped,
+      personOptionsById,
+      propertyValuesByKey,
+      sortedItems,
+    ]
+  )
+
+  const bodyEntries = useMemo(
+    () =>
+      getTimelineBodyEntries(
+        getTimelineSidebarEntries(sidebarEntryParams),
+        isGrouped
+      ),
+    [isGrouped, sidebarEntryParams]
+  )
+
+  const gridTemplateRows = useMemo(
+    () =>
+      [
+        "var(--gantt-header-height)",
+        ...bodyEntries.map(
+          (entry) => `${getTimelineEntryHeight(entry)}px`
+        ),
+      ].join(" "),
+    [bodyEntries]
+  )
 
   const handleSelectRow = (rowId: string) => {
     const row = sortedItems.find((item) => item.id === rowId)
@@ -205,6 +234,27 @@ export function DatabaseTimelineView() {
       currentValue,
       ganttMoveToCellValue(startAt, endAt)
     )
+  }
+
+  const toggleGroupCollapsed = (sectionId: string) => {
+    setCollapsedGroups((current) => ({
+      ...current,
+      [sectionId]: !current[sectionId],
+    }))
+  }
+
+  const sidebarCellProps = {
+    collapsedGroups,
+    databaseConfig,
+    databaseId,
+    editable,
+    groupProperty,
+    isAddingDatabaseRow,
+    nameColumnLabel: titlePropertyLabel,
+    onAddPage: addDatabaseRow,
+    onOpenPage,
+    onToggleGroup: toggleGroupCollapsed,
+    showPageIcon: showPageIconInTitle,
   }
 
   if (!timelineDateProperty) {
@@ -237,67 +287,77 @@ export function DatabaseTimelineView() {
   }
 
   return (
-    <div className="database-timeline-view min-h-0 flex-1 overflow-hidden">
+    <div
+      className="database-timeline-view min-h-0 flex-1 overflow-hidden"
+      data-sidebar-collapsed={sidebarCollapsed ? "true" : undefined}
+    >
       <GanttProvider
-        className="h-full min-h-[28rem] border"
+        className="database-timeline-gantt h-full min-h-[28rem]"
+        headerHeight={32}
+        hideHeaderTitle
         onAddItem={addTimelineRow}
-        range="monthly"
+        range={timelineRange}
+        rowHeight={32}
+        scrollClassName="database-timeline-gantt-scroll"
+        style={{ gridTemplateRows }}
+        toolbar={
+          <DatabaseTimelineToolbarChrome
+            onRangeChange={setTimelineRange}
+            onSidebarCollapsedChange={setSidebarCollapsed}
+            range={timelineRange}
+            sidebarCollapsed={sidebarCollapsed}
+          />
+        }
         zoom={100}
       >
-        <GanttSidebar>
-          {groupedTimelineRows.map((group) => (
-            <GanttSidebarGroup key={group.groupName} name={group.groupName}>
-              {group.items.map((item) =>
-                item.feature ? (
-                  <GanttSidebarItem
-                    feature={item.feature}
-                    key={item.id}
-                    onSelectItem={handleSelectRow}
-                  />
-                ) : (
-                  <TimelineUnscheduledSidebarItem
-                    item={item}
-                    key={item.id}
-                    onSelect={handleSelectRow}
-                  />
-                )
-              )}
-            </GanttSidebarGroup>
-          ))}
-        </GanttSidebar>
-        <GanttTimeline>
-          <GanttHeader />
-          <GanttFeatureList>
-            {groupedTimelineRows.map((group) => (
-              <GanttFeatureListGroup key={group.groupName}>
-                {group.items.map((item) =>
-                  item.feature ? (
-                    <div className="flex" key={item.id}>
-                      <button
-                        className="w-full"
-                        onClick={() => handleSelectRow(item.id)}
-                        type="button"
-                      >
-                        <GanttFeatureItem
-                          {...item.feature}
-                          onMove={handleMoveFeature}
-                        >
-                          <p className="flex-1 truncate text-xs">{item.name}</p>
-                        </GanttFeatureItem>
-                      </button>
-                    </div>
-                  ) : (
-                    <div
-                      key={item.id}
-                      style={{ height: "var(--gantt-row-height)" }}
-                    />
-                  )
-                )}
-              </GanttFeatureListGroup>
-            ))}
-          </GanttFeatureList>
-          <GanttToday />
-        </GanttTimeline>
+        <div className="database-timeline-gantt-grid-overlay">
+          <GanttHeader
+            className="database-timeline-gantt-grid h-full"
+            variant="grid"
+          />
+        </div>
+
+        {isGrouped ? (
+          <div
+            aria-hidden
+            className="database-timeline-sidebar-cell database-timeline-sidebar-header-cell database-timeline-header-spacer"
+            data-roadmap-ui="gantt-sidebar"
+            style={timelineTableStyle}
+          />
+        ) : (
+          <div
+            className="database-timeline-sidebar-cell database-timeline-sidebar-header-cell"
+            data-roadmap-ui="gantt-sidebar"
+            style={timelineTableStyle}
+          >
+            <TimelineNameHeaderRow label={titlePropertyLabel} />
+          </div>
+        )}
+        <div className="database-timeline-gantt-header-cell">
+          <GanttHeader
+            className="database-timeline-gantt-dates"
+            variant="dates"
+          />
+        </div>
+
+        {bodyEntries.flatMap((entry, index) => {
+          const key = getTimelineEntryKey(entry, index)
+
+          return [
+            <TimelineSidebarEntryCell
+              {...sidebarCellProps}
+              entry={entry}
+              key={`sidebar-${key}`}
+            />,
+            <TimelineGanttEntryCell
+              entry={entry}
+              key={`gantt-${key}`}
+              onMoveFeature={handleMoveFeature}
+              onSelectRow={handleSelectRow}
+              timelineRowById={timelineRowById}
+            />,
+          ]
+        })}
       </GanttProvider>
     </div>
   )
