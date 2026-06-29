@@ -1,5 +1,7 @@
 import { useState, type DragEvent } from "react"
-import { useLocation } from "@tanstack/react-router"
+import { useLocation, useNavigate } from "@tanstack/react-router"
+import { useDeleteDatabase } from "@notelab/features/databases"
+import { useDeleteWorkspace } from "@notelab/features/workspaces"
 import {
   ArrowUpRightIcon,
   DatabaseIcon,
@@ -7,7 +9,20 @@ import {
   LinkIcon,
   MoreHorizontalIcon,
   PlusIcon,
+  Trash2Icon,
 } from "lucide-react"
+import { toast } from "sonner"
+
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 import {
   DropDrawer,
@@ -264,48 +279,137 @@ function WorkspaceItemMenu({ item }: {
   item: WorkspaceNavItem
 }) {
   const { isMobile } = useSidebar()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const deleteWorkspace = useDeleteWorkspace()
+  const deleteDatabase = useDeleteDatabase()
+  const activeWorkspaceId = getActiveWorkspaceId(location.pathname)
+  const activeDatabaseId = getActiveDatabaseId(location.pathname)
   const linkPath =
     (item.isDatabase || item.isDatabaseView) && item.databaseId
       ? `/database/${item.databaseId}`
       : `/workspace/${item.workspaceId}`
+  const displayName = item.name.trim() || "Untitled"
+  const isDeleting = deleteWorkspace.isPending || deleteDatabase.isPending
+
+  const redirectIfDeleted = (result: {
+    deletedDatabaseIds: string[]
+    deletedWorkspaceIds: string[]
+  }) => {
+    const deletedActiveWorkspace =
+      activeWorkspaceId &&
+      result.deletedWorkspaceIds.includes(activeWorkspaceId)
+    const deletedActiveDatabase =
+      activeDatabaseId && result.deletedDatabaseIds.includes(activeDatabaseId)
+
+    if (deletedActiveWorkspace || deletedActiveDatabase) {
+      void navigate({ to: "/" })
+    }
+  }
+
+  const runDelete = () => {
+    if (item.isDatabase && item.databaseId) {
+      deleteDatabase.mutate(item.databaseId, {
+        onSuccess: (result) => {
+          setConfirmOpen(false)
+          toast.success("Moved to trash.")
+          redirectIfDeleted(result)
+        },
+        onError: (error) => {
+          toast.error(
+            error instanceof Error ? error.message : "Could not delete database.",
+          )
+        },
+      })
+      return
+    }
+
+    deleteWorkspace.mutate(item.workspaceId, {
+      onSuccess: (result) => {
+        setConfirmOpen(false)
+        toast.success("Moved to trash.")
+        redirectIfDeleted(result)
+      },
+      onError: (error) => {
+        toast.error(
+          error instanceof Error ? error.message : "Could not delete page.",
+        )
+      },
+    })
+  }
 
   return (
-    <DropDrawer>
-      <DropDrawerTrigger asChild>
-        <SidebarMenuAction
-          className="opacity-0 group-hover/nav-row:opacity-100 focus-visible:opacity-100 aria-expanded:bg-sidebar-accent aria-expanded:text-sidebar-accent-foreground"
-          data-nav-menu-action="more"
+    <>
+      <DropDrawer>
+        <DropDrawerTrigger asChild>
+          <SidebarMenuAction
+            className="opacity-0 group-hover/nav-row:opacity-100 focus-visible:opacity-100 aria-expanded:bg-sidebar-accent aria-expanded:text-sidebar-accent-foreground"
+            data-nav-menu-action="more"
+          >
+            <MoreHorizontalIcon />
+            <span className="sr-only">More</span>
+          </SidebarMenuAction>
+        </DropDrawerTrigger>
+        <DropDrawerContent
+          align={isMobile ? "end" : "start"}
+          className="w-56 rounded-lg"
+          side={isMobile ? "bottom" : "right"}
         >
-          <MoreHorizontalIcon />
-          <span className="sr-only">More</span>
-        </SidebarMenuAction>
-      </DropDrawerTrigger>
-      <DropDrawerContent
-        align={isMobile ? "end" : "start"}
-        className="w-56 rounded-lg"
-        side={isMobile ? "bottom" : "right"}
-      >
-        <DropDrawerItem
-          onSelect={() => {
-            void navigator.clipboard?.writeText(
-              `${window.location.origin}${linkPath}`,
-            )
-          }}
-        >
-          <LinkIcon className="text-muted-foreground" />
-          <span>Copy Link</span>
-        </DropDrawerItem>
-        <DropDrawerSeparator />
-        <DropDrawerItem
-          onSelect={() => {
-            window.open(linkPath, "_blank", "noopener")
-          }}
-        >
-          <ArrowUpRightIcon className="text-muted-foreground" />
-          <span>Open in New Tab</span>
-        </DropDrawerItem>
-      </DropDrawerContent>
-    </DropDrawer>
+          <DropDrawerItem
+            onSelect={() => {
+              void navigator.clipboard?.writeText(
+                `${window.location.origin}${linkPath}`,
+              )
+            }}
+          >
+            <LinkIcon className="text-muted-foreground" />
+            <span>Copy Link</span>
+          </DropDrawerItem>
+          <DropDrawerSeparator />
+          <DropDrawerItem
+            onSelect={() => {
+              window.open(linkPath, "_blank", "noopener")
+            }}
+          >
+            <ArrowUpRightIcon className="text-muted-foreground" />
+            <span>Open in New Tab</span>
+          </DropDrawerItem>
+          <DropDrawerSeparator />
+          <DropDrawerItem
+            className="text-destructive focus:text-destructive"
+            onSelect={() => {
+              setConfirmOpen(true)
+            }}
+          >
+            <Trash2Icon className="text-destructive" />
+            <span>Delete</span>
+          </DropDrawerItem>
+        </DropDrawerContent>
+      </DropDrawer>
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Move to trash?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {item.isDatabase
+                ? `${displayName} and its row pages will be moved to trash.`
+                : `${displayName} and its subpages will be moved to trash. Linked pages elsewhere will not be deleted.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isDeleting}
+              onClick={runDelete}
+              variant="destructive"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }
 
