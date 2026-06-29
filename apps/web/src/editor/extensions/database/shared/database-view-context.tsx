@@ -82,6 +82,8 @@ export type DatabaseViewContextValue = {
   addKanbanView: () => void
   addLinkedDatabaseView: (view: DatabaseLinkedViewConfig) => void
   addTableView: () => void
+  addTimelineRow: (startAt: Date) => void
+  addTimelineView: () => void
   canAddDatabaseFilter: boolean
   canAddDatabaseSort: boolean
   clearDatabaseFilter: () => void
@@ -119,6 +121,7 @@ export type DatabaseViewContextValue = {
   isAddingDatabaseProperty: boolean
   isAddingDatabaseRow: boolean
   isAddingDatabaseView: boolean
+  isTimelineView: boolean
   isFetchingNextPage: boolean
   items: DatabaseRow[]
   linkedDatabaseViews: DatabaseLinkedViewConfig[]
@@ -155,8 +158,11 @@ export type DatabaseViewContextValue = {
   >
   setDraftViewTitle: Dispatch<SetStateAction<string>>
   setFilterPickerOpen: Dispatch<SetStateAction<boolean>>
+  setViewDateProperty: (datePropertyId: string | null) => void
   setViewGroupProperty: (groupPropertyId: string | null) => void
-  setViewType: (type: "table" | "kanban") => void
+  setViewType: (type: "table" | "kanban" | "timeline") => void
+  timelineDateProperties: DatabasePropertyListItem[]
+  timelineDateProperty: DatabasePropertyListItem | null
   setSortPickerOpen: Dispatch<SetStateAction<boolean>>
   showExpandButton: boolean
   showFilterPill: boolean

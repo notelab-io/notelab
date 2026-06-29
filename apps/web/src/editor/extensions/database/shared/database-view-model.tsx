@@ -11,6 +11,10 @@ import {
   getKanbanGroupProperty,
   getKanbanOptions,
 } from "../kanban/database-kanban-config"
+import {
+  getTimelineDateProperties,
+  getTimelineDateProperty,
+} from "../timeline/database-timeline-config"
 import { getDatabasePropertyType } from "../constants"
 import { getPropertyValue, type DatabasePropertyValue } from "../utils"
 import {
@@ -86,6 +90,7 @@ export function getDatabaseViewModel({
   const sortFieldOptions = getSortFieldOptions(titlePropertyLabel, properties)
   const activeViewConfig = activeView?.config ?? payload?.database.config
   const isKanbanView = activeView?.type === "kanban"
+  const isTimelineView = activeView?.type === "timeline"
   const activeVisibilityConfig = getActiveVisibilityConfig({
     activeViewConfig,
     isKanbanView,
@@ -116,6 +121,10 @@ export function getDatabaseViewModel({
     ? groupProperty
     : groupProperty ?? getKanbanGroupProperty(properties, activeViewConfig)
   const kanbanOptions = getKanbanOptions(kanbanGroupProperty)
+  const timelineDateProperty = isTimelineView
+    ? getTimelineDateProperty(properties, activeViewConfig)
+    : null
+  const timelineDateProperties = getTimelineDateProperties(properties)
   const activeDatabaseSorts = getActiveDatabaseSorts(
     databaseSorts,
     sortFieldOptions
@@ -190,8 +199,11 @@ export function getDatabaseViewModel({
     groupProperty,
     groupableProperties,
     isKanbanView,
+    isTimelineView,
     items,
     kanbanGroupProperty,
+    timelineDateProperties,
+    timelineDateProperty,
     kanbanOptions,
     personOptions,
     properties,
