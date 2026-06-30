@@ -12,6 +12,7 @@ import {
   useUpdateWorkspace,
   type WorkspaceMetadata,
 } from "@notelab/features/workspaces"
+import { WorkspaceIconDisplay } from "@/lib/workspace-icon"
 
 type DatabasePageSummary = {
   id?: string
@@ -141,7 +142,9 @@ export function DatabasePageLink({
     <div className="database-page-link">
       <span className="database-page-main">
         {showPageIcon ? (
-          <span className="database-page-icon">{emoji || <FileText />}</span>
+          <span className="database-page-icon">
+            {emoji ? <WorkspaceIconDisplay size="sm" value={emoji} /> : <FileText />}
+          </span>
         ) : null}
         {isEditingTitle ? (
           <input

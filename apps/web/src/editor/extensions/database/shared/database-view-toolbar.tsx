@@ -31,12 +31,8 @@ import {
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import {
-  EmojiPicker,
-  EmojiPickerContent,
-  EmojiPickerFooter,
-  EmojiPickerSearch,
-} from "@/components/ui/emoji-picker"
+import { IconEmojiPicker } from "@/components/ui/icon-emoji-picker"
+import { WorkspaceIconDisplay } from "@/lib/workspace-icon"
 import {
   DropDrawer,
   DropDrawerContent,
@@ -188,17 +184,18 @@ export function DatabaseViewToolbar() {
     })
   }
   const renderDatabaseEmojiPicker = (onSelect?: () => void) => (
-    <EmojiPicker
-      onEmojiSelect={({ emoji }) => {
+    <IconEmojiPicker
+      onEmojiSelect={(emoji) => {
         saveDatabaseEmoji(emoji)
         setEmojiPickerOpen(false)
         onSelect?.()
       }}
-    >
-      <EmojiPickerSearch autoFocus placeholder="Search emoji..." />
-      <EmojiPickerContent />
-      <EmojiPickerFooter />
-    </EmojiPicker>
+      onIconSelect={(svg) => {
+        saveDatabaseEmoji(svg)
+        setEmojiPickerOpen(false)
+        onSelect?.()
+      }}
+    />
   )
   const databaseEmojiPopoverContent = (
     <PopoverContent
@@ -221,7 +218,7 @@ export function DatabaseViewToolbar() {
               className="flex size-9 items-center justify-center rounded-md text-2xl leading-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none"
               type="button"
             >
-              {databaseEmoji}
+              <WorkspaceIconDisplay size="lg" value={databaseEmoji} />
             </button>
           </PopoverTrigger>
           {databaseEmojiPopoverContent}
@@ -243,7 +240,7 @@ export function DatabaseViewToolbar() {
         aria-label="Database icon"
         className="flex size-9 shrink-0 items-center justify-center rounded-md text-2xl leading-none"
       >
-        {databaseEmoji}
+        <WorkspaceIconDisplay size="lg" value={databaseEmoji} />
       </span>
     )
   ) : null
