@@ -202,6 +202,7 @@ export function DatabaseTimelineView() {
         ...bodyEntries.map(
           (entry) => `${getTimelineEntryHeight(entry)}px`
         ),
+        "minmax(0, 1fr)",
       ].join(" "),
     [bodyEntries]
   )
@@ -358,6 +359,16 @@ export function DatabaseTimelineView() {
             />,
           ]
         })}
+        <div
+          aria-hidden
+          className="database-timeline-sidebar-cell database-timeline-sidebar-fill"
+          data-roadmap-ui="gantt-sidebar"
+          style={timelineTableStyle}
+        />
+        <div
+          aria-hidden
+          className="database-timeline-gantt-cell database-timeline-gantt-fill"
+        />
       </GanttProvider>
     </div>
   )

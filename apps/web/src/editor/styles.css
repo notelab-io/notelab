@@ -916,7 +916,7 @@
   }
 
   .database-timeline-view .database-timeline-gantt-scroll {
-    @apply items-stretch rounded-none border-0 bg-transparent shadow-none;
+    @apply min-h-full items-stretch rounded-none border-0 bg-transparent shadow-none;
     grid-auto-flow: row;
     background-color: transparent !important;
   }
@@ -963,13 +963,18 @@
   }
 
   .database-timeline-view .database-timeline-sidebar-cell {
-    @apply sticky left-0 z-50 min-h-0 min-w-0 bg-background;
+    @apply sticky left-0 z-50 min-h-0 min-w-0 border-r border-border bg-background;
     width: var(--database-table-min-width, 220px);
     max-width: var(--database-table-min-width, 220px);
   }
 
-  .database-timeline-view .database-timeline-sidebar-cell:not(.database-timeline-sidebar-header-cell) {
+  .database-timeline-view .database-timeline-sidebar-cell:not(.database-timeline-sidebar-header-cell):not(.database-timeline-sidebar-fill) {
     @apply overflow-clip;
+  }
+
+  .database-timeline-view .database-timeline-sidebar-fill,
+  .database-timeline-view .database-timeline-gantt-fill {
+    @apply min-h-0;
   }
 
   .database-timeline-view .database-timeline-sidebar-header-cell {
@@ -977,7 +982,7 @@
   }
 
   .database-timeline-view .database-timeline-header-spacer {
-    @apply border-b border-r border-border;
+    @apply border-b border-border;
   }
 
   .database-timeline-view .database-timeline-gantt-header-cell {
@@ -997,7 +1002,7 @@
   }
 
   .database-timeline-view .database-timeline-sidebar-row {
-    @apply flex h-8 min-h-8 items-center border-b border-r border-border;
+    @apply flex h-8 min-h-8 items-center border-b border-border;
   }
 
   .database-timeline-view .database-timeline-sidebar-row .database-page-link {
@@ -1028,7 +1033,7 @@
   }
 
   .database-timeline-view .database-timeline-sidebar-name-header {
-    @apply flex h-8 shrink-0 items-center border-0 border-b border-r border-t-0 border-border text-sm font-medium text-muted-foreground;
+    @apply flex h-8 shrink-0 items-center border-0 border-b border-t-0 border-border text-sm font-medium text-muted-foreground;
   }
 
   .database-timeline-view[data-sidebar-collapsed="true"] {
