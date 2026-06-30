@@ -47,6 +47,7 @@ import {
 } from "./database-setup-templates"
 import {
   getDatabaseLinkedViews,
+  getDatabaseSetupDismissed,
   getMergedDatabaseConfig,
   type DatabaseLinkedViewConfig,
 } from "./database-view-config"
@@ -161,6 +162,18 @@ export function DatabaseSetupCard({
     })
   const { data: selectedLinkDatabasePayload, isLoading: isLoadingLinkViews } =
     useDatabase(selectedLinkDatabaseId)
+  const dismissSetup = useCallback(async () => {
+    if (databasePayload && !getDatabaseSetupDismissed(databasePayload.database.config)) {
+      await updateDatabase.mutateAsync({
+        config: getMergedDatabaseConfig(databasePayload.database.config, {
+          setupDismissed: true,
+        }),
+        databaseId,
+      })
+    }
+
+    onDismiss()
+  }, [databaseId, databasePayload, onDismiss, updateDatabase])
 
   const linkableDatabases = useMemo(
     () =>
@@ -225,6 +238,8 @@ export function DatabaseSetupCard({
       setIsSubmitting(true)
 
       try {
+        let setupDismissedPersisted = false
+
         if (linkedView) {
           const linkedDatabaseViews = getDatabaseLinkedViews(
             databasePayload?.database.config,
@@ -233,9 +248,11 @@ export function DatabaseSetupCard({
           await updateDatabase.mutateAsync({
             config: getMergedDatabaseConfig(databasePayload?.database.config, {
               linkedDatabaseViews: [...linkedDatabaseViews, linkedView],
+              setupDismissed: true,
             }),
             databaseId,
           })
+          setupDismissedPersisted = true
         } else if (templateId) {
           const template = getDatabaseSetupTemplate(templateId)
 
@@ -274,6 +291,11 @@ export function DatabaseSetupCard({
           })
         }
 
+        if (setupDismissedPersisted) {
+          onDismiss()
+        } else {
+          await dismissSetup()
+        }
         onComplete()
       } catch (error) {
         const message =
@@ -288,7 +310,9 @@ export function DatabaseSetupCard({
       applyTemplateProperties,
       databaseId,
       databasePayload,
+      dismissSetup,
       onComplete,
+      onDismiss,
       updateDatabase,
     ],
   )
@@ -571,7 +595,9 @@ export function DatabaseSetupCard({
         <Button
           aria-label="Close database setup"
           className="database-setup-close"
-          onClick={onDismiss}
+          onClick={() => {
+            void dismissSetup()
+          }}
           size="icon-sm"
           type="button"
           variant="ghost"

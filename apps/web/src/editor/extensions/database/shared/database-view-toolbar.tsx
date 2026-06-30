@@ -254,7 +254,7 @@ export function DatabaseViewToolbar() {
   return (
     <div className="database-toolbar">
       {showTitle ? (
-        <div className="group/title flex min-w-0 items-center gap-1">
+        <div className="group/title flex min-w-0 items-center gap-3">
           {databaseEmojiPicker}
           {activeViewTab?.isLinked ? (
             <ArrowUpRightIcon

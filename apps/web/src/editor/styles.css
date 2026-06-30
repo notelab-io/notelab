@@ -780,6 +780,10 @@
     @apply w-full overflow-visible bg-background;
   }
 
+  .database-block-shell .database-scroll-section {
+    @apply relative min-w-0 overflow-visible;
+  }
+
   .database-scroll-section:has(.database-setup-overlay) {
     @apply min-h-[24rem];
   }

@@ -70,6 +70,7 @@ type DatabaseConfig = {
   hiddenPropertyIds?: string[]
   linkedDatabaseViews?: DatabaseLinkedViewConfig[]
   nameColumn?: DatabaseNameColumnConfig
+  setupDismissed?: boolean
   sort?: DatabaseSortConfig
   sorts?: DatabaseSortConfig[]
 }
@@ -326,6 +327,15 @@ export function getDatabaseLinkedViewKey(view: DatabaseLinkedViewConfig) {
   }
 
   return `linked:${view.databaseId}:${view.viewId}`
+}
+
+export function getDatabaseSetupDismissed(config: unknown) {
+  return Boolean(
+    config &&
+      typeof config === "object" &&
+      !Array.isArray(config) &&
+      (config as DatabaseConfig).setupDismissed === true,
+  )
 }
 
 export function getMergedDatabaseConfig(

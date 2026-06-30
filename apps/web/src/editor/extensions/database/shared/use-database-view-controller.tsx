@@ -31,6 +31,7 @@ import { getDatabaseViewModel } from "./database-view-model"
 import {
   getDatabaseLinkedViewKey,
   getDatabaseLinkedViews,
+  getDatabaseSetupDismissed,
   getMergedDatabaseConfig,
   type DatabaseLinkedViewConfig,
 } from "./database-view-config"
@@ -100,6 +101,16 @@ export function useDatabaseViewController({
   const linkedDatabaseViews = useMemo(
     () => getDatabaseLinkedViews(payload?.database.config),
     [payload?.database.config]
+  )
+  const setupDismissed = getDatabaseSetupDismissed(payload?.database.config)
+  const hasDatabaseSetupContent = Boolean(
+    payload &&
+      (payload.properties.length > 0 ||
+        (payload.rowCount ?? payload.rows.length) > 0 ||
+        linkedDatabaseViews.length > 0),
+  )
+  const effectiveSetupMode = Boolean(
+    editable && payload && !setupDismissed && (setupMode || !hasDatabaseSetupContent),
   )
   const activeLinkedDatabaseView = useMemo(
     () =>
@@ -602,7 +613,7 @@ export function useDatabaseViewController({
     onSetupComplete,
     organizationId,
     payload: activePayload,
-    setupMode,
+    setupMode: effectiveSetupMode,
     viewType: activeView?.type,
     workspaceId,
   }
