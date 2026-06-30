@@ -640,7 +640,9 @@ function hasWorkspaceChildPlacements(
 }
 
 function buildFavoriteTreeItems(items: WorkspaceNavItem[]) {
-  const favoriteItems = items.flatMap((item) => cloneFavoriteTreeItems(item, false))
+  const favoriteItems = items.flatMap((item) =>
+    cloneFavoriteTreeItems(item, false),
+  )
   const nestedFavoriteIds = new Set<string>()
 
   for (const item of favoriteItems) {
@@ -654,19 +656,23 @@ function cloneFavoriteTreeItems(
   item: WorkspaceNavItem,
   hasFavoriteAncestor: boolean,
 ): WorkspaceNavItem[] {
-  const favoritePages = getFavoriteDescendantPages(item)
-
-  if (item.isDatabase) {
-    if (hasFavoriteAncestor) {
-      return []
-    }
-
-    return item.isFavorite || favoritePages.length > 0
-      ? [{ ...item, pages: favoritePages }]
-      : []
+  if (item.isDatabaseView) {
+    return []
   }
 
-  if (item.isFavorite && !hasFavoriteAncestor) {
+  if (hasFavoriteAncestor || item.isFavorite) {
+    return [
+      {
+        ...item,
+        isFavorite: true,
+        pages: item.pages.flatMap((page) => cloneFavoriteTreeItems(page, true)),
+      },
+    ]
+  }
+
+  const favoritePages = getFavoriteDescendantPages(item)
+
+  if (item.isDatabase && favoritePages.length > 0) {
     return [{ ...item, pages: favoritePages }]
   }
 
@@ -674,15 +680,7 @@ function cloneFavoriteTreeItems(
 }
 
 function getFavoriteDescendantPages(item: WorkspaceNavItem): WorkspaceNavItem[] {
-  return item.pages.flatMap((page) => {
-    const pages = getFavoriteDescendantPages(page)
-
-    if (page.isFavorite) {
-      return [{ ...page, pages }]
-    }
-
-    return pages
-  })
+  return item.pages.flatMap((page) => cloneFavoriteTreeItems(page, false))
 }
 
 function collectFavoriteDescendantIds(
