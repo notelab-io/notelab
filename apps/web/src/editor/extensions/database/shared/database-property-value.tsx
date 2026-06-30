@@ -12,6 +12,7 @@ import { DatabasePropertySelect } from "../database-property-select"
 import { DatabaseFormulaValue } from "../formula"
 import { type DatabasePropertyValue } from "../utils"
 import { formatDatabaseDateValue } from "./database-date-config"
+import { DatabasePageLink } from "./database-page-link"
 import {
   getReadOnlyTimePropertyRawValue,
   isReadOnlyTimeProperty,
@@ -35,6 +36,13 @@ type PersonOption = {
   id: string
   name: string
   suffix?: string
+}
+
+type RelationPageSummary = {
+  iconKind?: "database" | "page"
+  id?: string
+  metadata?: unknown
+  name?: string
 }
 
 type DatabasePropertyValueProps = {
@@ -118,6 +126,7 @@ export function DatabasePropertyValue({
   const isFilesProperty = workspaceProperty.type === "files"
   const isFormulaProperty = workspaceProperty.type === "formula"
   const isPersonProperty = workspaceProperty.type === "person"
+  const isRelationProperty = workspaceProperty.type === "relation"
   const isReadOnlyTimeCell = isReadOnlyTimeProperty(workspaceProperty.type)
   const isMultiSelectProperty =
     workspaceProperty.type === "multi_select" ||
@@ -242,6 +251,12 @@ export function DatabasePropertyValue({
       value={value}
       workspaceId={row.pageId}
     />
+  ) : isRelationProperty ? (
+    <DatabaseRelationPropertyValue
+      onOpen={databaseContext.onOpenPage}
+      propertyConfig={workspaceProperty.config}
+      value={value}
+    />
   ) : (
     <DatabasePropertyInput
       editable={editable}
@@ -284,4 +299,55 @@ export function DatabasePropertyValue({
   )
 
   return content
+}
+
+function DatabaseRelationPropertyValue({
+  onOpen,
+  propertyConfig,
+  value,
+}: {
+  onOpen?: (pageId: string) => void
+  propertyConfig: unknown
+  value: DatabasePropertyValue
+}) {
+  const pageId = Array.isArray(value) ? value[0] : value
+
+  if (!pageId) {
+    return null
+  }
+
+  const pageSummary = getRelationPageSummary(propertyConfig, pageId)
+
+  return (
+    <DatabasePageLink
+      editable={false}
+      onOpen={onOpen}
+      pageId={pageId}
+      pageSummary={pageSummary}
+      showPageIcon
+    />
+  )
+}
+
+function getRelationPageSummary(
+  propertyConfig: unknown,
+  pageId: string
+): RelationPageSummary | null {
+  if (!propertyConfig || typeof propertyConfig !== "object" || Array.isArray(propertyConfig)) {
+    return null
+  }
+
+  const pageSummaries = (propertyConfig as { pageSummaries?: unknown }).pageSummaries
+
+  if (!pageSummaries || typeof pageSummaries !== "object" || Array.isArray(pageSummaries)) {
+    return null
+  }
+
+  const pageSummary = (pageSummaries as Record<string, unknown>)[pageId]
+
+  if (!pageSummary || typeof pageSummary !== "object" || Array.isArray(pageSummary)) {
+    return null
+  }
+
+  return pageSummary as RelationPageSummary
 }

@@ -40,6 +40,8 @@ import type {
 
 type HomepageView = "recents" | "favourites" | "shared" | "private"
 
+type DashboardMode = "home" | "trash"
+
 type HomepageRow = {
   createdAt: string
   createdBy: string
@@ -54,7 +56,15 @@ type HomepageRow = {
   metadata: Workspace["metadata"] | null
   name: string
   source: string
+  sourcePage: HomepageSourcePage | null
   updatedAt: string
+}
+
+type HomepageSourcePage = {
+  iconKind: "database" | "page"
+  id: string
+  metadata: Workspace["metadata"] | null
+  name: string
 }
 
 const homepageViews: Array<{ id: HomepageView; label: string }> = [
@@ -65,7 +75,7 @@ const homepageViews: Array<{ id: HomepageView; label: string }> = [
 ]
 
 const homepagePropertyDefinitions = [
-  { id: "source", name: "Source", type: "text", width: 220 },
+  { id: "source", name: "Source", type: "relation", width: 220 },
   { id: "createdBy", name: "Created by", type: "text", width: 190 },
   { id: "lastVisitedAt", name: "Last visited time", type: "date", width: 210 },
   { id: "updatedAt", name: "Last edited time", type: "date", width: 210 },
@@ -74,7 +84,7 @@ const homepagePropertyDefinitions = [
 
 const emptyAsync = async () => undefined
 
-export default function DashboardPage() {
+export default function DashboardPage({ mode = "home" }: { mode?: DashboardMode }) {
   const navigate = useNavigate()
   const organizationId = useActiveOrganizationId()
   const { data: workspaces = [], isLoading } = useWorkspaces(organizationId)
@@ -93,12 +103,15 @@ export default function DashboardPage() {
       sorts: [{ column: "lastVisitedAt", direction: "descending" }],
     },
   })
-  const rows = useMemo(() => buildHomepageRows(workspaces), [workspaces])
+  const rows = useMemo(() => buildHomepageRows(workspaces, mode), [workspaces, mode])
+  const pageTitle = mode === "trash" ? "Trash" : "Home"
+  const emptyLabel = mode === "trash" ? "Loading trash..." : "Loading pages..."
   const payload = useMemo(
     () =>
       buildHomepagePayload({
         activeViewId: activeViewId ?? "recents",
         databaseConfig,
+        mode,
         organizationId,
         propertyConfigs,
         rows,
@@ -107,6 +120,7 @@ export default function DashboardPage() {
     [
       activeViewId,
       databaseConfig,
+      mode,
       organizationId,
       propertyConfigs,
       rows,
@@ -258,7 +272,7 @@ export default function DashboardPage() {
               databaseName: payload.database.name,
               databaseOrganizationId: organizationId ?? undefined,
               deleteDatabaseView: () => {},
-              draftDatabaseTitle: "Home",
+              draftDatabaseTitle: pageTitle,
               draftPropertyValues: {},
               draftViewTitle:
                 homepageViews.find((view) => view.id === activeViewId)?.label ??
@@ -333,42 +347,44 @@ export default function DashboardPage() {
                   <div className="min-w-0 flex-1">
                     <DatabaseViewToolbar />
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        className="database-new-button mt-2 shrink-0"
-                        disabled={!organizationId || isCreating}
-                        type="button"
-                      >
-                        {isCreating ? (
-                          <Loader2 className="animate-spin" />
-                        ) : (
-                          <Plus />
-                        )}
-                        <span>New</span>
-                        <ChevronDown className="size-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-44">
-                      <DropdownMenuItem
-                        onSelect={() => void createStandaloneDatabase()}
-                      >
-                        <Database />
-                        <span>Database</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => void createPage()}>
-                        <FileText />
-                        <span>Page</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  {mode === "home" ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          className="database-new-button mt-2 shrink-0"
+                          disabled={!organizationId || isCreating}
+                          type="button"
+                        >
+                          {isCreating ? (
+                            <Loader2 className="animate-spin" />
+                          ) : (
+                            <Plus />
+                          )}
+                          <span>New</span>
+                          <ChevronDown className="size-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-44">
+                        <DropdownMenuItem
+                          onSelect={() => void createStandaloneDatabase()}
+                        >
+                          <Database />
+                          <span>Database</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => void createPage()}>
+                          <FileText />
+                          <span>Page</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : null}
                 </div>
               </div>
               <div className="database-scroll-section">
                 {isLoading ? (
                   <div className="database-empty-state">
                     <Loader2 className="animate-spin" />
-                    <span>Loading pages...</span>
+                    <span>{emptyLabel}</span>
                   </div>
                 ) : (
                   <DatabaseTableView />
@@ -385,6 +401,7 @@ export default function DashboardPage() {
 function buildHomepagePayload({
   activeViewId,
   databaseConfig,
+  mode,
   organizationId,
   propertyConfigs,
   rows,
@@ -392,32 +409,49 @@ function buildHomepagePayload({
 }: {
   activeViewId: string
   databaseConfig: unknown
+  mode: DashboardMode
   organizationId: string | null | undefined
   propertyConfigs: Record<string, unknown>
   rows: HomepageRow[]
   viewConfigs: Record<string, unknown>
 }): DatabasePayload {
+  const homepageDatabaseId = mode === "trash" ? "trash" : "homepage"
   const filteredRows = applyHomepageView(rows, activeViewId as HomepageView)
   const properties: DatabaseProperty[] = homepagePropertyDefinitions.map(
-    (definition, index) => ({
-      createdAt: "",
-      databaseId: "homepage",
-      id: definition.id,
-      position: index,
-      property: {
-        config: propertyConfigs[definition.id],
+    (definition, index) => {
+      const propertyConfig = propertyConfigs[definition.id]
+      const config =
+        definition.id === "source"
+          ? {
+              ...(isRecord(propertyConfig) ? propertyConfig : {}),
+              pageSummaries: Object.fromEntries(
+                rows.flatMap((row) =>
+                  row.sourcePage ? [[row.sourcePage.id, row.sourcePage]] : [],
+                ),
+              ),
+            }
+          : propertyConfig
+
+      return {
         createdAt: "",
+        databaseId: homepageDatabaseId,
         id: definition.id,
-        name: definition.name,
-        organizationId: organizationId ?? "homepage",
-        type: definition.type,
+        position: index,
+        property: {
+          config,
+          createdAt: "",
+          id: definition.id,
+          name: definition.name,
+          organizationId: organizationId ?? "homepage",
+          type: definition.type,
+          updatedAt: "",
+        },
+        propertyId: definition.id,
         updatedAt: "",
-      },
-      propertyId: definition.id,
-      updatedAt: "",
-      visible: true,
-      width: definition.width,
-    }),
+        visible: true,
+        width: definition.width,
+      }
+    },
   )
   const values: WorkspacePropertyValue[] = filteredRows.flatMap((row) =>
     homepagePropertyDefinitions.map((definition) => ({
@@ -434,16 +468,16 @@ function buildHomepagePayload({
     database: {
       config: databaseConfig,
       createdAt: "",
-      id: "homepage",
-      name: "Home",
-      organizationId: organizationId ?? "homepage",
-      pageId: "homepage",
+      id: homepageDatabaseId,
+      name: mode === "trash" ? "Trash" : "Home",
+      organizationId: organizationId ?? homepageDatabaseId,
+      pageId: homepageDatabaseId,
       updatedAt: "",
     },
     properties,
     rows: filteredRows.map((row, index) => ({
       createdAt: row.createdAt,
-      databaseId: "homepage",
+      databaseId: homepageDatabaseId,
       id: row.id,
       page: {
         createdAt: row.createdAt,
@@ -461,7 +495,7 @@ function buildHomepagePayload({
     views: homepageViews.map((view, index): DatabaseView => ({
       config: viewConfigs[view.id],
       createdAt: "",
-      databaseId: "homepage",
+      databaseId: homepageDatabaseId,
       id: view.id,
       name: view.label,
       position: index,
@@ -471,11 +505,18 @@ function buildHomepagePayload({
   }
 }
 
-function buildHomepageRows(workspaces: Workspace[]): HomepageRow[] {
+function buildHomepageRows(workspaces: Workspace[], mode: DashboardMode): HomepageRow[] {
   const workspacesById = new Map(workspaces.map((workspace) => [workspace.id, workspace]))
   const databases = workspaces.flatMap((workspace) =>
     (workspace.databases ?? []).map((database) => ({ database, workspace })),
   )
+  const showTrash = mode === "trash"
+  const includeWorkspace = (workspace: Workspace) =>
+    showTrash ? Boolean(workspace.deletedAt) : !workspace.deletedAt
+  const includeDatabase = (database: WorkspaceDatabase, workspace: Workspace) =>
+    showTrash
+      ? Boolean(database.deletedAt ?? workspace.deletedAt)
+      : !database.deletedAt && !workspace.deletedAt
   const databasesById = new Map(
     databases.map(({ database, workspace }) => [database.id, { database, workspace }]),
   )
@@ -487,10 +528,16 @@ function buildHomepageRows(workspaces: Workspace[]): HomepageRow[] {
   const placements = workspaces.flatMap(
     (workspace) => workspace.navigationPlacements ?? [],
   )
+  const parentKeys = new Set(
+    placements.map((placement) => `${placement.parentKind}:${placement.parentId}`),
+  )
 
   return [
     ...workspaces
-      .filter((workspace) => !standaloneDatabasePageIds.has(workspace.id))
+      .filter(
+        (workspace) =>
+          includeWorkspace(workspace) && !standaloneDatabasePageIds.has(workspace.id),
+      )
       .map((workspace) => ({
         createdAt: workspace.createdAt,
         createdBy: formatCreator(workspace.createdBy),
@@ -504,52 +551,68 @@ function buildHomepageRows(workspaces: Workspace[]): HomepageRow[] {
         lastVisitedAt: workspace.lastVisitedAt ?? null,
         metadata: workspace.metadata ?? null,
         name: workspace.name || "Untitled",
-        source: resolveSourceLabel(
-          placements,
-          workspacesById,
-          databasesById,
-          "workspace",
-          workspace.id,
-        ),
+        source: parentKeys.has(`workspace:${workspace.id}`)
+          ? ""
+          : resolveSourcePage(
+              placements,
+              workspacesById,
+              databasesById,
+              "workspace",
+              workspace.id,
+            )?.id ?? "",
+        sourcePage: parentKeys.has(`workspace:${workspace.id}`)
+          ? null
+          : resolveSourcePage(
+              placements,
+              workspacesById,
+              databasesById,
+              "workspace",
+              workspace.id,
+            ),
         updatedAt: workspace.updatedAt,
       })),
-    ...databases.map(({ database, workspace }) => {
-      const databaseEmoji = getDatabaseEmoji(database)
+    ...databases
+      .filter(({ database, workspace }) => includeDatabase(database, workspace))
+      .map(({ database, workspace }) => {
+        const databaseEmoji = getDatabaseEmoji(database)
+        const sourcePage = parentKeys.has(`database:${database.id}`)
+          ? null
+          : resolveSourcePage(
+              placements,
+              workspacesById,
+              databasesById,
+              "database",
+              database.id,
+            ) ?? getWorkspaceSourcePage(workspace)
 
-      return {
-        createdAt: database.createdAt,
-        createdBy: formatCreator(database.createdBy ?? workspace.createdBy),
-        iconKind: "database" as const,
-        id: `database:${database.id}`,
-        isDatabase: true,
-        isFavorite: Boolean(database.isFavorite),
-        isTeamspace: Boolean(workspace.isTeamspace),
-        itemId: database.id,
-        itemKind: "database" as const,
-        lastVisitedAt: database.lastVisitedAt ?? null,
-        metadata: databaseEmoji ? { emoji: databaseEmoji } : null,
-        name: database.name || "Untitled",
-        source:
-          resolveSourceLabel(
-            placements,
-            workspacesById,
-            databasesById,
-            "database",
-            database.id,
-          ) || workspace.name || "Workspace",
-        updatedAt: database.updatedAt,
-      }
-    }),
+        return {
+          createdAt: database.createdAt,
+          createdBy: formatCreator(database.createdBy ?? workspace.createdBy),
+          iconKind: "database" as const,
+          id: `database:${database.id}`,
+          isDatabase: true,
+          isFavorite: Boolean(database.isFavorite),
+          isTeamspace: Boolean(workspace.isTeamspace),
+          itemId: database.id,
+          itemKind: "database" as const,
+          lastVisitedAt: database.lastVisitedAt ?? null,
+          metadata: databaseEmoji ? { emoji: databaseEmoji } : null,
+          name: database.name || "Untitled",
+          source: sourcePage?.id ?? "",
+          sourcePage,
+          updatedAt: database.updatedAt,
+        }
+      }),
   ]
 }
 
-function resolveSourceLabel(
+function resolveSourcePage(
   placements: WorkspaceItemPlacement[],
   workspacesById: Map<string, Workspace>,
   databasesById: Map<string, { database: WorkspaceDatabase; workspace: Workspace }>,
   itemKind: "database" | "workspace",
   itemId: string,
-) {
+): HomepageSourcePage | null {
   const placement = placements.find(
     (candidate) =>
       candidate.itemKind === itemKind &&
@@ -559,18 +622,46 @@ function resolveSourceLabel(
   )
 
   if (!placement) {
-    return ""
+    return null
   }
 
   if (placement.parentKind === "workspace") {
-    return workspacesById.get(placement.parentId)?.name ?? ""
+    const parentWorkspace = workspacesById.get(placement.parentId)
+
+    return parentWorkspace ? getWorkspaceSourcePage(parentWorkspace) : null
   }
 
   if (placement.parentKind === "database") {
-    return databasesById.get(placement.parentId)?.database.name ?? ""
+    const parentDatabase = databasesById.get(placement.parentId)?.database
+
+    return parentDatabase ? getDatabaseSourcePage(parentDatabase) : null
   }
 
-  return ""
+  return null
+}
+
+function getWorkspaceSourcePage(workspace: Workspace): HomepageSourcePage {
+  return {
+    iconKind: "page",
+    id: `workspace:${workspace.id}`,
+    metadata: workspace.metadata ?? null,
+    name: workspace.name?.trim() || "Untitled",
+  }
+}
+
+function getDatabaseSourcePage(database: WorkspaceDatabase): HomepageSourcePage {
+  const emoji = getDatabaseEmoji(database)
+
+  return {
+    iconKind: "database",
+    id: `database:${database.id}`,
+    metadata: emoji ? { emoji } : null,
+    name: database.name?.trim() || "Untitled",
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value)
 }
 
 function isStandaloneDatabase(database: WorkspaceDatabase) {
