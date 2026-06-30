@@ -28,9 +28,28 @@ export function createDatabaseBlockContent(databaseId: string) {
   ]
 }
 
+export function createDatabaseSetupBlockContent(databaseId: string) {
+  return [
+    {
+      type: "databaseBlock",
+      attrs: createDatabaseSetupBlockAttrs(databaseId),
+    },
+    { type: "paragraph" },
+  ]
+}
+
 export function createDatabaseBlockAttrs(databaseId: string) {
   return {
     databaseId,
+    setupMode: false,
+  }
+}
+
+export function createDatabaseSetupBlockAttrs(databaseId: string) {
+  return {
+    databaseId,
+    setupMode: true,
+    showTitle: true,
   }
 }
 
