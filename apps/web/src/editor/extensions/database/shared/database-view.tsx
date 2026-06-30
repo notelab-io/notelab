@@ -1,5 +1,6 @@
 import { Loader2 } from "lucide-react"
 
+import { DatabaseSetupCard } from "./database-setup-card"
 import { DatabaseViewContent } from "./database-view-content"
 import { DatabaseViewProvider } from "./database-view-context"
 import { DatabaseViewToolbar } from "./database-view-toolbar"
@@ -18,8 +19,13 @@ export function DatabaseView(props: DatabaseViewProps) {
     handleDatabaseBlockDragOver,
     handleDatabaseBlockDrop,
     isLoading,
+    onDismissSetup,
+    onSetupComplete,
+    organizationId,
     payload,
+    setupMode,
     viewType,
+    workspaceId,
   } = useDatabaseViewController(props)
 
   return (
@@ -46,6 +52,15 @@ export function DatabaseView(props: DatabaseViewProps) {
           ) : (
             <DatabaseViewContent viewType={viewType} />
           )}
+          {setupMode && databaseId ? (
+            <DatabaseSetupCard
+              databaseId={databaseId}
+              onComplete={onSetupComplete ?? (() => {})}
+              onDismiss={onDismissSetup ?? (() => {})}
+              organizationId={organizationId}
+              workspaceId={workspaceId}
+            />
+          ) : null}
         </div>
       </div>
     </DatabaseViewProvider>

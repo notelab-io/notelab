@@ -37,6 +37,7 @@ function DatabaseBlockView({
 }: ReactNodeViewProps) {
   const options = extension.options as DatabaseBlockOptions
   const databaseId = node.attrs.databaseId as string | null
+  const setupMode = node.attrs.setupMode === true
   const showTitle = node.attrs.showTitle !== false
   // Subscribe through the editor-owned runtime so this node view updates when read-only mode changes.
   const isEditable = useSyncExternalStore(
@@ -58,12 +59,16 @@ function DatabaseBlockView({
         databaseId={databaseId}
         editable={isEditable}
         onOpenPage={options.onOpenPage}
+        onDismissSetup={() => updateAttributes({ setupMode: false })}
+        onSetupComplete={() => updateAttributes({ setupMode: false })}
         onShowTitleChange={(nextShowTitle) =>
           updateAttributes({ showTitle: nextShowTitle })
         }
         organizationId={options.organizationId}
+        setupMode={setupMode}
         showExpandButton
         showTitle={showTitle}
+        workspaceId={options.currentPageId}
       />
     </NodeViewWrapper>
   )
@@ -116,6 +121,13 @@ export const DatabaseBlock = Node.create<DatabaseBlockOptions>({
           element.getAttribute("data-show-title") !== "false",
         renderHTML: (attributes) =>
           attributes.showTitle === false ? { "data-show-title": "false" } : {},
+      },
+      setupMode: {
+        default: false,
+        parseHTML: (element) =>
+          element.getAttribute("data-setup-mode") === "true",
+        renderHTML: (attributes) =>
+          attributes.setupMode ? { "data-setup-mode": "true" } : {},
       },
     }
   },

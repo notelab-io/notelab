@@ -42,10 +42,14 @@ export type DatabaseViewProps = {
   fullPage?: boolean
   onActiveViewIdChange?: (viewId: string | null) => void
   onOpenPage?: (pageId: string) => void
+  onDismissSetup?: () => void
+  onSetupComplete?: () => void
   onShowTitleChange?: (showTitle: boolean) => void
   organizationId?: string | null
+  setupMode?: boolean
   showExpandButton?: boolean
   showTitle?: boolean
+  workspaceId?: string | null
 }
 
 export function useDatabaseViewController({
@@ -55,10 +59,14 @@ export function useDatabaseViewController({
   fullPage = false,
   onActiveViewIdChange,
   onOpenPage,
+  onDismissSetup,
+  onSetupComplete,
   onShowTitleChange,
   organizationId,
+  setupMode = false,
   showExpandButton = false,
   showTitle = true,
+  workspaceId = null,
 }: DatabaseViewProps) {
   const [draftPropertyValues, setDraftPropertyValues] = useState<
     Record<string, DatabasePropertyValue>
@@ -573,7 +581,12 @@ export function useDatabaseViewController({
     handleDatabaseBlockDragOver,
     handleDatabaseBlockDrop,
     isLoading: isLoading || Boolean(activeLinkedDatabaseView && isLoadingLinkedPayload),
+    onDismissSetup,
+    onSetupComplete,
+    organizationId,
     payload: activePayload,
+    setupMode,
     viewType: activeView?.type,
+    workspaceId,
   }
 }
