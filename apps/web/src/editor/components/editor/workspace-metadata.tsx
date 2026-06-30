@@ -3,12 +3,8 @@ import { ImagePlus, MessageSquare, SmilePlus, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-  EmojiPicker,
-  EmojiPickerContent,
-  EmojiPickerFooter,
-  EmojiPickerSearch,
-} from "@/components/ui/emoji-picker"
+import { IconEmojiPicker } from "@/components/ui/icon-emoji-picker"
+import { WorkspaceIconDisplay } from "@/lib/workspace-icon"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
 import { useWorkspaceEditorComments } from "@/components/workspace-editor-comments"
@@ -236,7 +232,7 @@ export function WorkspaceMetadata({
             disabled={!editable}
             type="button"
           >
-            {icon}
+            <WorkspaceIconDisplay size="xl" value={icon} />
           </button>
         </PopoverTrigger>
         <PopoverContent
@@ -246,16 +242,16 @@ export function WorkspaceMetadata({
           onPointerDown={(event) => event.stopPropagation()}
           sideOffset={6}
         >
-          <EmojiPicker
-            onEmojiSelect={({ emoji }) => {
+          <IconEmojiPicker
+            onEmojiSelect={(emoji) => {
               updateIcon(emoji)
               setIconOpen(false)
             }}
-          >
-            <EmojiPickerSearch autoFocus placeholder="Search emoji..." />
-            <EmojiPickerContent />
-            <EmojiPickerFooter />
-          </EmojiPicker>
+            onIconSelect={(svg) => {
+              updateIcon(svg)
+              setIconOpen(false)
+            }}
+          />
         </PopoverContent>
       </Popover>
       <button
@@ -292,16 +288,16 @@ export function WorkspaceMetadata({
         onPointerDown={(event) => event.stopPropagation()}
         sideOffset={6}
       >
-        <EmojiPicker
-          onEmojiSelect={({ emoji }) => {
+        <IconEmojiPicker
+          onEmojiSelect={(emoji) => {
             updateIcon(emoji)
             setIconOpen(false)
           }}
-        >
-          <EmojiPickerSearch autoFocus placeholder="Search emoji..." />
-          <EmojiPickerContent />
-          <EmojiPickerFooter />
-        </EmojiPicker>
+          onIconSelect={(svg) => {
+            updateIcon(svg)
+            setIconOpen(false)
+          }}
+        />
       </PopoverContent>
     </Popover>
   ) : null
@@ -409,7 +405,7 @@ export function WorkspaceMetadata({
               iconPicker
             ) : (
               <div className="flex size-11 shrink-0 items-center justify-center rounded-md text-3xl">
-                {icon}
+                <WorkspaceIconDisplay size="xl" value={icon} />
               </div>
             )
           ) : null}
