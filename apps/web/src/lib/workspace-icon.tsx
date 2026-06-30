@@ -1,6 +1,14 @@
 import { FileIcon, FileTextIcon } from "lucide-react"
 
 import { getWorkspaceEmoji, type Workspace } from "@notelab/features/workspaces"
+import { getDatabaseEmoji } from "@notelab/features/databases"
+import { getIconColorClassName } from "@/lib/icon-colors"
+import { cn } from "@/lib/utils"
+import {
+  getStoredIconColor,
+  isSvgIcon,
+  sanitizeStoredSvg,
+} from "@/lib/workspace-icon-utils"
 
 export function hasWorkspaceContent(content: unknown): boolean {
   if (content === null || content === undefined) {
@@ -40,13 +48,80 @@ export function hasWorkspaceContent(content: unknown): boolean {
   return hasWorkspaceContent(node.content)
 }
 
-export function getWorkspaceIcon(
+const iconSizeClasses = {
+  sm: "size-4 text-base [&_svg]:size-4",
+  md: "size-5 text-lg [&_svg]:size-5",
+  lg: "size-9 text-2xl [&_svg]:size-9",
+  xl: "size-11 text-3xl [&_svg]:size-11",
+} as const
+
+export function WorkspaceIconDisplay({
+  className,
+  size = "md",
+  value,
+}: {
+  className?: string
+  size?: keyof typeof iconSizeClasses
+  value: string | null | undefined
+}) {
+  if (!value) {
+    return null
+  }
+
+  if (isSvgIcon(value)) {
+    const sanitized = sanitizeStoredSvg(value)
+
+    if (!sanitized) {
+      return null
+    }
+
+    return (
+      <span
+        className={cn(
+          "inline-flex shrink-0 items-center justify-center leading-none",
+          iconSizeClasses[size],
+          getIconColorClassName(getStoredIconColor(sanitized)),
+          className,
+        )}
+        dangerouslySetInnerHTML={{ __html: sanitized }}
+      />
+    )
+  }
+
+  return (
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center justify-center leading-none",
+        iconSizeClasses[size],
+        className,
+      )}
+    >
+      {value}
+    </span>
+  )
+}
+
+export function getStoredIconValue(
+  value: string | null | undefined,
+): string | null {
+  if (!value) {
+    return null
+  }
+
+  if (isSvgIcon(value)) {
+    return sanitizeStoredSvg(value) ? value : null
+  }
+
+  return value
+}
+
+export function getWorkspaceIconNode(
   workspace: Pick<Workspace, "content" | "metadata">,
 ) {
-  const emoji = getWorkspaceEmoji(workspace)
+  const icon = getWorkspaceEmoji(workspace)
 
-  if (emoji) {
-    return emoji
+  if (icon) {
+    return <WorkspaceIconDisplay size="sm" value={icon} />
   }
 
   return hasWorkspaceContent(workspace.content) ? (
@@ -56,16 +131,39 @@ export function getWorkspaceIcon(
   )
 }
 
+export function getDatabaseIconNode(database: { config?: unknown }) {
+  const icon = getDatabaseEmoji(database)
+
+  if (icon) {
+    return <WorkspaceIconDisplay size="sm" value={icon} />
+  }
+
+  return null
+}
+
+export function getWorkspaceIcon(
+  workspace: Pick<Workspace, "content" | "metadata">,
+) {
+  return getWorkspaceIconNode(workspace)
+}
+
 export function WorkspacePageIcon({
   workspace,
 }: {
   workspace: Pick<Workspace, "content" | "metadata">
 }) {
-  const icon = getWorkspaceIcon(workspace)
+  return getWorkspaceIconNode(workspace)
+}
 
-  if (typeof icon === "string") {
-    return <span className="text-lg leading-none">{icon}</span>
+export function formatWorkspaceBreadcrumbLabel(
+  workspace: Pick<Workspace, "metadata" | "name">,
+) {
+  const label = workspace.name.trim() || "Untitled"
+  const icon = getWorkspaceEmoji(workspace)
+
+  if (!icon || isSvgIcon(icon)) {
+    return label
   }
 
-  return icon
+  return `${icon} ${label}`
 }
