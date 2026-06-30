@@ -96,6 +96,7 @@ export function useDatabaseViewController({
   const [showSortPill, setShowSortPill] = useState(true)
   const [filterPickerOpen, setFilterPickerOpen] = useState(false)
   const [sortPickerOpen, setSortPickerOpen] = useState(false)
+  const isControlledActiveView = Boolean(onActiveViewIdChange)
   const linkedDatabaseViews = useMemo(
     () => getDatabaseLinkedViews(payload?.database.config),
     [payload?.database.config]
@@ -222,10 +223,6 @@ export function useDatabaseViewController({
     visiblePropertyCount,
   } = viewModel
   useEffect(() => {
-    setActiveViewId(requestedActiveViewId ?? null)
-  }, [requestedActiveViewId])
-
-  useEffect(() => {
     const nextDatabaseTitle =
       activePayload?.database.name ?? activeLinkedDatabaseView?.databaseName
 
@@ -244,10 +241,26 @@ export function useDatabaseViewController({
       return
     }
 
-    if (!activeViewId || !viewTabs.some((view) => view.id === activeViewId)) {
-      setActiveViewId(viewTabs[0]?.id ?? null)
-    }
-  }, [activeViewId, viewTabs])
+    const requestedViewId =
+      requestedActiveViewId &&
+      viewTabs.some((view) => view.id === requestedActiveViewId)
+        ? requestedActiveViewId
+        : null
+
+    setActiveViewId((currentViewId) => {
+      if (requestedViewId) {
+        return requestedViewId
+      }
+
+      if (isControlledActiveView) {
+        return viewTabs[0]?.id ?? null
+      }
+
+      return currentViewId && viewTabs.some((view) => view.id === currentViewId)
+        ? currentViewId
+        : viewTabs[0]?.id ?? null
+    })
+  }, [isControlledActiveView, requestedActiveViewId, viewTabs])
 
   useEffect(() => {
     const nextViewTitle = activeView?.name ?? activeLinkedDatabaseView?.viewName
@@ -483,6 +496,9 @@ export function useDatabaseViewController({
     addTimelineRow: commands.addTimelineRow,
     addTimelineView: commands.addTimelineView,
     canAddDatabaseFilter,
+    canAddDatabaseProperties: true,
+    canAddDatabaseRows: true,
+    canAddDatabaseViews: true,
     canAddDatabaseSort,
     propertyValuesByKey,
     clearDatabaseFilter: commands.clearDatabaseFilter,
@@ -511,6 +527,7 @@ export function useDatabaseViewController({
     groupableProperties,
     hasDatabasePageDragPayload,
     hasNextPage: activeHasNextPage,
+    headerMenusEnabled: editable,
     hostDatabaseId: databaseId,
     hostDatabaseName: payload?.database.name,
     hostDatabaseOrganizationId: payload?.database.organizationId,

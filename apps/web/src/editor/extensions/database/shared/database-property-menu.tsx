@@ -81,9 +81,12 @@ export function DatabasePropertyMenu({
   onInsertProperty,
   onEditFormula,
   onRename,
+  onSort,
   open,
   onToggleGroup,
+  onUpdateConfig,
   isGrouped = false,
+  schemaActionsEnabled = true,
   type,
 }: {
   config?: unknown
@@ -96,8 +99,11 @@ export function DatabasePropertyMenu({
   onInsertProperty: (side: "left" | "right") => void
   onEditFormula?: () => void
   onRename: (name: string) => void
+  onSort?: (direction: DatabaseSortDirection) => void
   onToggleGroup?: () => void
+  onUpdateConfig?: (config: DatabasePropertyConfig) => void
   open?: boolean
+  schemaActionsEnabled?: boolean
   type: string
 }) {
   const [automationDialogOpen, setAutomationDialogOpen] = useState(false)
@@ -116,6 +122,11 @@ export function DatabasePropertyMenu({
   const isFormulaProperty = type === "formula"
   const wrapContent = getPropertyWrapContent(config)
   const updatePropertyConfig = (nextConfig: DatabasePropertyConfig) => {
+    if (onUpdateConfig) {
+      onUpdateConfig(nextConfig)
+      return
+    }
+
     updateProperty.mutate({
       config: getMergedPropertyConfig(config, nextConfig),
       databaseId,
@@ -123,6 +134,11 @@ export function DatabasePropertyMenu({
     })
   }
   const updateSort = (direction: DatabaseSortDirection) => {
+    if (onSort) {
+      onSort(direction)
+      return
+    }
+
     updateDatabase.mutate({
       config: getMergedDatabaseConfig(databaseConfig, {
         sort: undefined,
@@ -181,12 +197,12 @@ export function DatabasePropertyMenu({
             />
           </div>
           <DropDrawerSeparator />
-          {isButtonProperty ? (
+          {isButtonProperty && schemaActionsEnabled ? (
             <DropDrawerItem onSelect={() => setAutomationDialogOpen(true)}>
               <Sparkles />
               <span>Edit automation</span>
             </DropDrawerItem>
-          ) : isFormulaProperty ? (
+          ) : isFormulaProperty && schemaActionsEnabled ? (
             <DropDrawerItem
               disabled={!onEditFormula}
               onSelect={() => onEditFormula?.()}
@@ -194,7 +210,7 @@ export function DatabasePropertyMenu({
               <Sigma />
               <span>Edit formula</span>
             </DropDrawerItem>
-          ) : (
+          ) : schemaActionsEnabled ? (
             <DatabasePropertyEditSubmenu
               config={config}
               databaseId={databaseId}
@@ -204,7 +220,7 @@ export function DatabasePropertyMenu({
               <Settings2 />
               <span>Edit property</span>
             </DatabasePropertyEditSubmenu>
-          )}
+          ) : null}
           <DropDrawerItem
             aria-pressed={wrapContent}
             onSelect={(event) => {
@@ -215,6 +231,7 @@ export function DatabasePropertyMenu({
             <TextWrap />
             <span>{wrapContent ? "Unwrap content" : "Wrap content"}</span>
           </DropDrawerItem>
+          {schemaActionsEnabled ? (
           <DropDrawerSub>
             <DropDrawerSubTrigger>
               <ChevronsUpDown />
@@ -227,7 +244,8 @@ export function DatabasePropertyMenu({
               </DropDrawerItem>
             </DropDrawerSubContent>
           </DropDrawerSub>
-          {isFormulaProperty ? null : (
+          ) : null}
+          {isFormulaProperty || !schemaActionsEnabled ? null : (
             <DropDrawerSub>
               <DropDrawerSubTrigger>
                 <Sparkles />
@@ -282,45 +300,51 @@ export function DatabasePropertyMenu({
               </DropDrawerItem>
             </DropDrawerSubContent>
           </DropDrawerSub>
+          {schemaActionsEnabled ? (
           <DropDrawerItem disabled>
             <Pin />
             <span>Freeze</span>
           </DropDrawerItem>
+          ) : null}
           <DropDrawerItem
             onSelect={() => updatePropertyConfig({ hidden: true })}
           >
             <EyeOff />
             <span>Hide</span>
           </DropDrawerItem>
-          <DropDrawerSeparator />
-          <DropDrawerItem onSelect={() => onInsertProperty("left")}>
-            <ArrowLeftToLine />
-            <span>Insert left</span>
-          </DropDrawerItem>
-          <DropDrawerItem onSelect={() => onInsertProperty("right")}>
-            <ArrowRightToLine />
-            <span>Insert right</span>
-          </DropDrawerItem>
-          <DropDrawerItem
-            disabled={duplicateProperty.isPending}
-            onSelect={() => setDuplicateDialogOpen(true)}
-          >
-            <Copy />
-            <span>Duplicate property</span>
-          </DropDrawerItem>
-          <DropDrawerItem
-            disabled={deleteProperty.isPending}
-            onSelect={() =>
-              deleteProperty.mutate({
-                databaseId,
-                databasePropertyId,
-              })
-            }
-            variant="destructive"
-          >
-            <Trash2 />
-            <span>Delete property</span>
-          </DropDrawerItem>
+          {schemaActionsEnabled ? (
+            <>
+              <DropDrawerSeparator />
+              <DropDrawerItem onSelect={() => onInsertProperty("left")}>
+                <ArrowLeftToLine />
+                <span>Insert left</span>
+              </DropDrawerItem>
+              <DropDrawerItem onSelect={() => onInsertProperty("right")}>
+                <ArrowRightToLine />
+                <span>Insert right</span>
+              </DropDrawerItem>
+              <DropDrawerItem
+                disabled={duplicateProperty.isPending}
+                onSelect={() => setDuplicateDialogOpen(true)}
+              >
+                <Copy />
+                <span>Duplicate property</span>
+              </DropDrawerItem>
+              <DropDrawerItem
+                disabled={deleteProperty.isPending}
+                onSelect={() =>
+                  deleteProperty.mutate({
+                    databaseId,
+                    databasePropertyId,
+                  })
+                }
+                variant="destructive"
+              >
+                <Trash2 />
+                <span>Delete property</span>
+              </DropDrawerItem>
+            </>
+          ) : null}
         </DropDrawerContent>
       </DropDrawer>
       <AlertDialog

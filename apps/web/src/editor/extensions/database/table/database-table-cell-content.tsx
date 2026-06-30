@@ -1,6 +1,7 @@
 import {
+  useEffect,
+  useRef,
   type ReactNode,
-  type WheelEvent as ReactWheelEvent,
 } from "react"
 
 import {
@@ -8,9 +9,11 @@ import {
   preserveDatabaseScrollLeftOnVerticalWheel,
 } from "../shared/database-wheel-scroll"
 
-function handleDatabaseCellWheel(event: ReactWheelEvent<HTMLDivElement>) {
+function handleDatabaseCellWheel(
+  event: WheelEvent,
+  scrollElement: HTMLDivElement
+) {
   const horizontalDelta = getDatabaseHorizontalWheelDelta(event)
-  const scrollElement = event.currentTarget
   const tableScrollElement = scrollElement.closest<HTMLDivElement>(
     ".database-table-scroll"
   )
@@ -24,6 +27,11 @@ function handleDatabaseCellWheel(event: ReactWheelEvent<HTMLDivElement>) {
   }
 
   const maxScrollLeft = scrollElement.scrollWidth - scrollElement.clientWidth
+  const preventCancelableDefault = () => {
+    if (event.cancelable) {
+      event.preventDefault()
+    }
+  }
 
   const scrollTable = (delta: number) => {
     if (!tableScrollElement) {
@@ -47,7 +55,7 @@ function handleDatabaseCellWheel(event: ReactWheelEvent<HTMLDivElement>) {
 
   if (maxScrollLeft <= 1) {
     if (scrollTable(horizontalDelta)) {
-      event.preventDefault()
+      preventCancelableDefault()
       event.stopPropagation()
     }
 
@@ -68,7 +76,7 @@ function handleDatabaseCellWheel(event: ReactWheelEvent<HTMLDivElement>) {
     scrollTable(remainingDelta)
   }
 
-  event.preventDefault()
+  preventCancelableDefault()
   event.stopPropagation()
 }
 
@@ -79,12 +87,32 @@ export function DatabaseTableCellContent({
   children: ReactNode
   wrapContent?: boolean
 }) {
+  const scrollRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    const scrollElement = scrollRef.current
+
+    if (!scrollElement) {
+      return
+    }
+
+    const handleWheel = (event: WheelEvent) => {
+      handleDatabaseCellWheel(event, scrollElement)
+    }
+
+    scrollElement.addEventListener("wheel", handleWheel, { passive: false })
+
+    return () => {
+      scrollElement.removeEventListener("wheel", handleWheel)
+    }
+  }, [])
+
   return (
     <div
       className="database-cell-scroll"
       data-database-cell-scroll
       data-wrap-content={wrapContent ? "true" : "false"}
-      onWheel={handleDatabaseCellWheel}
+      ref={scrollRef}
     >
       {children}
     </div>

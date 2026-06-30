@@ -49,7 +49,9 @@ export type WorkspaceDatabase = {
   pageId: string
   name: string
   config?: unknown
+  createdBy?: WorkspaceCreator | null
   isFavorite?: boolean
+  lastVisitedAt?: string | null
   views: WorkspaceDatabaseView[]
   deletedById?: string | null
   deletedAt?: string | null
@@ -72,8 +74,10 @@ export type WorkspaceItemPlacement = {
 export type Workspace = {
   id: string
   databases?: WorkspaceDatabase[]
+  createdBy?: WorkspaceCreator | null
   isFavorite?: boolean
   isTeamspace?: boolean
+  lastVisitedAt?: string | null
   navigationPlacements?: WorkspaceItemPlacement[]
   organizationId: string
   createdById?: string | null
@@ -86,6 +90,13 @@ export type Workspace = {
   deletedAt?: string | null
   createdAt: string
   updatedAt: string
+}
+
+export type WorkspaceCreator = {
+  email: string
+  id: string
+  image?: string | null
+  name: string
 }
 
 export type NotelabAiWorkspaceSummary = {

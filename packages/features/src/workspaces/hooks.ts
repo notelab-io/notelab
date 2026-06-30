@@ -111,6 +111,12 @@ type SetWorkspaceFavoriteInput = {
   workspaceId: string
 }
 
+type RecordItemVisitInput = {
+  itemId: string
+  itemKind: "database" | "workspace"
+  organizationId: string
+}
+
 export function useWorkspaces(
   organizationId: string | null | undefined,
   options?: { enabled?: boolean },
@@ -705,6 +711,27 @@ export function useSetWorkspaceFavorite() {
       )
       await queryClient.invalidateQueries({
         queryKey: workspacesQueryKey(workspace.organizationId),
+      })
+    },
+  })
+}
+
+export function useRecordItemVisit() {
+  const { apiFetch, queryClient } = useNotelabFeatures()
+
+  return useMutation({
+    mutationFn: async (input: RecordItemVisitInput) =>
+      apiFetch<{
+        itemId: string
+        itemKind: RecordItemVisitInput["itemKind"]
+        lastVisitedAt: string
+      }>("/workspaces/item-visits", {
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
+    onSuccess: async (_result, variables) => {
+      await queryClient.invalidateQueries({
+        queryKey: workspacesQueryKey(variables.organizationId),
       })
     },
   })

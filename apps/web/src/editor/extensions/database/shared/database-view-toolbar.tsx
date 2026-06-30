@@ -1,7 +1,9 @@
 import {
   useRef,
   useState,
+  type KeyboardEvent,
   type MouseEvent,
+  type PointerEvent,
   type ReactNode,
 } from "react"
 import { Link, useNavigate } from "@tanstack/react-router"
@@ -98,6 +100,8 @@ export function DatabaseViewToolbar() {
     addTimelineView,
     canAddDatabaseSort,
     canAddDatabaseFilter,
+    canAddDatabaseRows,
+    canAddDatabaseViews,
     clearDatabaseFilter,
     clearDatabaseSort,
     copyDatabaseViewLink,
@@ -159,6 +163,8 @@ export function DatabaseViewToolbar() {
     visiblePropertyCount,
     viewTabs,
   } = useDatabaseViewContext()
+  const canRenderAddView = canAddDatabaseViews ?? editable
+  const canRenderAddRow = canAddDatabaseRows ?? editable
   const activeViewTab = viewTabs.find((view) => view.id === activeViewTabId)
   const hostDisplayTitle =
     activeViewTab?.isLinked
@@ -382,6 +388,47 @@ export function DatabaseViewToolbar() {
                     setActiveViewId(view.id)
                     setOpenViewMenuId(view.id)
                   }
+                  const handleViewClick = (
+                    event: MouseEvent<HTMLButtonElement>
+                  ) => {
+                    if (isActiveView) {
+                      return
+                    }
+
+                    event.preventDefault()
+                    event.stopPropagation()
+                    setOpenViewMenuId(null)
+                    setActiveViewId(view.id)
+                  }
+                  const selectInactiveView = () => {
+                    setOpenViewMenuId(null)
+                    setActiveViewId(view.id)
+                  }
+                  const handleViewPointerDownCapture = (
+                    event: PointerEvent<HTMLButtonElement>
+                  ) => {
+                    if (isActiveView || event.button !== 0) {
+                      return
+                    }
+
+                    event.preventDefault()
+                    event.stopPropagation()
+                    selectInactiveView()
+                  }
+                  const handleViewKeyDownCapture = (
+                    event: KeyboardEvent<HTMLButtonElement>
+                  ) => {
+                    if (
+                      isActiveView ||
+                      (event.key !== "Enter" && event.key !== " ")
+                    ) {
+                      return
+                    }
+
+                    event.preventDefault()
+                    event.stopPropagation()
+                    selectInactiveView()
+                  }
 
                   return (
                     <DropDrawer
@@ -395,33 +442,19 @@ export function DatabaseViewToolbar() {
                       }}
                       open={openViewMenuId === view.id}
                     >
-                      {isActiveView ? (
-                        <DropDrawerTrigger asChild>
-                          <TabsTrigger
-                            className="h-8 shrink-0 grow-0 gap-2 px-3"
-                            onContextMenu={handleViewContextMenu}
-                            value={view.id}
-                          >
-                            <ViewIcon className="size-4 shrink-0" />
-                            <span className="truncate">
-                              {draftViewTitle}
-                            </span>
-                            {view.isLinked ? (
-                              <ArrowUpRightIcon
-                                aria-label={`Linked from ${view.sourceDatabaseName ?? "another database"}`}
-                                className="size-3 shrink-0 text-muted-foreground"
-                              />
-                            ) : null}
-                          </TabsTrigger>
-                        </DropDrawerTrigger>
-                      ) : (
+                      <DropDrawerTrigger asChild>
                         <TabsTrigger
                           className="h-8 shrink-0 grow-0 gap-2 px-3"
+                          onClick={handleViewClick}
                           onContextMenu={handleViewContextMenu}
+                          onKeyDownCapture={handleViewKeyDownCapture}
+                          onPointerDownCapture={handleViewPointerDownCapture}
                           value={view.id}
                         >
                           <ViewIcon className="size-4 shrink-0" />
-                          <span className="truncate">{view.name}</span>
+                          <span className="truncate">
+                            {isActiveView ? draftViewTitle : view.name}
+                          </span>
                           {view.isLinked ? (
                             <ArrowUpRightIcon
                               aria-label={`Linked from ${view.sourceDatabaseName ?? "another database"}`}
@@ -429,7 +462,7 @@ export function DatabaseViewToolbar() {
                             />
                           ) : null}
                         </TabsTrigger>
-                      )}
+                      </DropDrawerTrigger>
                       <DropDrawerContent
                         align="start"
                         className="w-72"
@@ -579,6 +612,7 @@ export function DatabaseViewToolbar() {
                 })}
               </TabsList>
             </Tabs>
+            {canRenderAddView ? (
             <DropDrawer>
               <DropDrawerTrigger asChild>
                 <Button
@@ -628,6 +662,7 @@ export function DatabaseViewToolbar() {
                 </DropDrawerItem>
               </DropDrawerContent>
             </DropDrawer>
+            ) : null}
           </div>
           {(activeDatabaseFilters.length > 0 && showFilterPill) ||
           (activeDatabaseSorts.length > 0 && showSortPill) ? (
@@ -847,6 +882,7 @@ export function DatabaseViewToolbar() {
                 viewConfig={activeVisibilityConfig}
                 visiblePropertyCount={visiblePropertyCount}
               />
+              {canRenderAddRow ? (
               <Button
                 className="database-new-button"
                 disabled={!databaseId || isAddingDatabaseRow}
@@ -860,6 +896,7 @@ export function DatabaseViewToolbar() {
                 )}
                 <span>New</span>
               </Button>
+              ) : null}
             </>
           ) : null}
           {showExpandButton && databaseId ? (

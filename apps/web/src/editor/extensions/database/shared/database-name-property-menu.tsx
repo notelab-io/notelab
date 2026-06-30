@@ -45,16 +45,22 @@ export function DatabaseNamePropertyMenu({
   isGrouped = false,
   onOpenChange,
   onInsertProperty,
+  onSort,
   onToggleGroup,
+  onUpdateConfig,
   open,
+  schemaActionsEnabled = true,
 }: {
   config?: unknown
   databaseId: string
   isGrouped?: boolean
   onOpenChange?: (open: boolean) => void
   onInsertProperty: (side: "left" | "right") => void
+  onSort?: (direction: DatabaseSortDirection) => void
   onToggleGroup?: () => void
+  onUpdateConfig?: (config: DatabaseNameColumnConfig) => void
   open?: boolean
+  schemaActionsEnabled?: boolean
 }) {
   const updateDatabase = useUpdateDatabase()
   const label = getNameColumnLabel(config)
@@ -65,12 +71,22 @@ export function DatabaseNamePropertyMenu({
   const showPageIcon = getNameColumnShowPageIcon(config)
   const wrapContent = getNameColumnWrapContent(config)
   const updateNameColumnConfig = (nextConfig: DatabaseNameColumnConfig) => {
+    if (onUpdateConfig) {
+      onUpdateConfig(nextConfig)
+      return
+    }
+
     updateDatabase.mutate({
       config: getMergedNameColumnConfig(config, nextConfig),
       databaseId,
     })
   }
   const updateSort = (direction: DatabaseSortDirection) => {
+    if (onSort) {
+      onSort(direction)
+      return
+    }
+
     updateDatabase.mutate({
       config: getMergedDatabaseConfig(config, {
         sort: undefined,
@@ -207,10 +223,12 @@ export function DatabaseNamePropertyMenu({
           <span>{wrapContent ? "Unwrap content" : "Wrap content"}</span>
         </DropDrawerItem>
         <DropDrawerSeparator />
-        <DropDrawerItem onSelect={() => onInsertProperty("right")}>
-          <ArrowRightToLine />
-          <span>Insert right</span>
-        </DropDrawerItem>
+        {schemaActionsEnabled ? (
+          <DropDrawerItem onSelect={() => onInsertProperty("right")}>
+            <ArrowRightToLine />
+            <span>Insert right</span>
+          </DropDrawerItem>
+        ) : null}
       </DropDrawerContent>
     </DropDrawer>
   )

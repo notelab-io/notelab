@@ -85,6 +85,9 @@ export type DatabaseViewContextValue = {
   addTimelineRow: (startAt: Date) => void
   addTimelineView: () => void
   canAddDatabaseFilter: boolean
+  canAddDatabaseProperties?: boolean
+  canAddDatabaseRows?: boolean
+  canAddDatabaseViews?: boolean
   canAddDatabaseSort: boolean
   clearDatabaseFilter: () => void
   clearDatabaseSort: () => void
@@ -114,6 +117,7 @@ export type DatabaseViewContextValue = {
   groupableProperties: DatabasePropertyListItem[]
   hasDatabasePageDragPayload: (dataTransfer: DataTransfer | null) => boolean
   hasNextPage: boolean
+  headerMenusEnabled?: boolean
   hostDatabaseId: string | null | undefined
   hostDatabaseName?: string
   hostDatabaseOrganizationId?: string
@@ -181,6 +185,7 @@ export type DatabaseViewContextValue = {
     databasePropertyId: string,
     config: unknown
   ) => Promise<unknown>
+  updateNameColumnConfig?: (config: unknown) => Promise<unknown> | void
   updateDatabaseFilter: (index: number, patch: DatabaseFilterUpdatePatch) => void
   updateDatabaseSort: (index: number, patch: DatabaseSortUpdatePatch) => void
   visibleProperties: DatabaseProperty[]

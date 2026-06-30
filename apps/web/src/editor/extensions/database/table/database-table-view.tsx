@@ -230,6 +230,7 @@ export function DatabaseTableView() {
     activePropertyValueKey,
     activeDatabaseFilters,
     activeDatabaseSorts,
+    canAddDatabaseProperties,
     addDatabaseProperty,
     addDraggedPageRow,
     propertyValuesByKey,
@@ -240,6 +241,7 @@ export function DatabaseTableView() {
     fetchNextPage,
     getDatabasePageDragPayload,
     groupProperty,
+    headerMenusEnabled,
     hasDatabasePageDragPayload,
     hasNextPage,
     isAddingDatabaseProperty,
@@ -260,11 +262,14 @@ export function DatabaseTableView() {
     sortedItems: sortedRows,
     renameDatabaseProperty,
     updateDatabasePropertyConfig,
+    updateNameColumnConfig,
     visibleProperties,
   } = useDatabaseViewContext()
   const moveRow = useMoveDatabaseRow()
   const reorderRows = useReorderDatabaseRows()
   const loadedDatabaseId = requireDatabaseId(databaseId)
+  const canEditStructure = editable && (canAddDatabaseProperties ?? true)
+  const canUseHeaderMenus = headerMenusEnabled ?? editable
   const nameColumnWrapContent = getNameColumnWrapContent(databaseConfig)
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({})
   const [hoveredRowId, setHoveredRowId] = useState<string | null>(null)
@@ -363,7 +368,7 @@ export function DatabaseTableView() {
         : [property.id, insertKey]
     })
 
-    return [...nameKeys, ...propertyKeys, ...(editable ? ["add-property"] : [])]
+    return [...nameKeys, ...propertyKeys, ...(canEditStructure ? ["add-property"] : [])]
   })()
   const tableMinWidth = columnKeys.reduce(
     (width, key) => width + getColumnWidth(columnWidths, key),
@@ -1055,7 +1060,7 @@ export function DatabaseTableView() {
           ? renderInsertPropertyHeader("insert-property-name-left", 0)
           : null}
         <th className="database-name-header">
-          {editable ? (
+        {canUseHeaderMenus ? (
             <DatabaseNamePropertyMenu
               config={databaseConfig}
               databaseId={loadedDatabaseId}
@@ -1068,6 +1073,16 @@ export function DatabaseTableView() {
                 togglePropertyGrouping("name", groupProperty?.id === "name")
               }
               open={editingPropertyKey === getHeaderEditingKey(headerScope, "name")}
+              schemaActionsEnabled={canEditStructure}
+              onSort={(direction) =>
+                void saveDatabaseSorts([
+                  ...activeDatabaseSorts.filter((sort) => sort.column !== "name"),
+                  { column: "name", direction },
+                ])
+              }
+              onUpdateConfig={(config) =>
+                void updateNameColumnConfig?.(config)
+              }
             />
           ) : (
             <span className="database-name-header-content">
@@ -1099,7 +1114,7 @@ export function DatabaseTableView() {
                   )
                 : null}
               <th className="database-property-header">
-                {editable ? (
+                {canUseHeaderMenus ? (
                   <DatabasePropertyMenu
                     config={property.property.config}
                     databaseConfig={databaseConfig}
@@ -1131,6 +1146,18 @@ export function DatabaseTableView() {
                       editingPropertyKey ===
                       getHeaderEditingKey(headerScope, property.id)
                     }
+                    schemaActionsEnabled={canEditStructure}
+                    onSort={(direction) =>
+                      void saveDatabaseSorts([
+                        ...activeDatabaseSorts.filter(
+                          (sort) => sort.column !== property.id
+                        ),
+                        { column: property.id, direction },
+                      ])
+                    }
+                    onUpdateConfig={(config) =>
+                      void updateDatabasePropertyConfig(property.id, config)
+                    }
                     type={property.property.type}
                   />
                 ) : (
@@ -1153,7 +1180,7 @@ export function DatabaseTableView() {
             </Fragment>
           )
         })}
-        {editable ? (
+        {canEditStructure ? (
           <th className="database-add-property-cell">
             <AddDatabasePropertyMenu
               disabled={isAddingDatabaseProperty}

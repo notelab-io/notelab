@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react"
 import type { ReactNode } from "react"
@@ -48,7 +49,10 @@ import {
 } from "@/components/ui/sidebar"
 import { isEmbeddedMobileViewer } from "@/lib/embedded-view"
 import { useDatabase } from "@notelab/features/databases"
-import { useWorkspace } from "@notelab/features/workspaces"
+import {
+  useRecordItemVisit,
+  useWorkspace,
+} from "@notelab/features/workspaces"
 import { useUserSettings } from "@notelab/features/user-settings"
 import { EmbeddedPageDialog } from "@/components/embedded-page-dialog"
 import {
@@ -91,6 +95,8 @@ function AppLayoutContent({ children }: { children?: ReactNode }) {
   const { data: hostWorkspace } = useWorkspace(hostWorkspaceId, {
     refetchOnMount: false,
   })
+  const recordItemVisit = useRecordItemVisit()
+  const recordedVisitKeyRef = useRef<string | null>(null)
   const { data: userSettings } = useUserSettings()
   const openPagesAs = useResolvedOpenPagesAs(hostWorkspace, userSettings)
   const discussionsEnabled = Boolean(workspaceId && !databaseId)
@@ -141,6 +147,38 @@ function AppLayoutContent({ children }: { children?: ReactNode }) {
       setDiscussionsSidebarOpen(false)
     }
   }, [databaseId])
+
+  useEffect(() => {
+    const itemKind = databaseId ? "database" : workspaceId ? "workspace" : null
+    const itemId = databaseId ?? workspaceId
+    const organizationId =
+      databaseId
+        ? databasePayload?.database.organizationId
+        : hostWorkspace?.organizationId
+
+    if (!itemKind || !itemId || !organizationId) {
+      return
+    }
+
+    const visitKey = `${itemKind}:${itemId}:${organizationId}`
+
+    if (recordedVisitKeyRef.current === visitKey) {
+      return
+    }
+
+    recordedVisitKeyRef.current = visitKey
+    recordItemVisit.mutate({
+      itemId,
+      itemKind,
+      organizationId,
+    })
+  }, [
+    databaseId,
+    databasePayload?.database.organizationId,
+    hostWorkspace?.organizationId,
+    recordItemVisit.mutate,
+    workspaceId,
+  ])
 
   useEffect(() => {
     if (appSidebarOpen && sidePaneWorkspaceId && chatSidebarOpen) {
@@ -388,5 +426,3 @@ function CollapsedSidebarTrigger() {
     </>
   )
 }
-
-
