@@ -27,6 +27,7 @@ import {
 } from "@notelab/features/workspaces"
 import { useNotelabFeatures } from "@notelab/features"
 import type { DatabasePayload } from "@notelab/features/databases"
+import { resolveEventTextColorValue } from "@/lib/icon-colors"
 import { colorWithAlpha } from "@/packages/editor/components/editor/toolbar-data"
 import { DATABASE_PAGE_DRAG_MIME } from "@/packages/editor/extensions/database/constants"
 
@@ -110,7 +111,7 @@ function PageBlockView({
     ...(backgroundColor
       ? { backgroundColor: colorWithAlpha(backgroundColor, 0.18) }
       : {}),
-    ...(textColor ? { color: textColor } : {}),
+    ...(textColor ? { color: resolveEventTextColorValue(textColor) ?? textColor } : {}),
   }
 
   useEffect(() => {

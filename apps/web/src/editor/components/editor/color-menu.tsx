@@ -7,6 +7,12 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 
+import {
+  getEventTextColorValue,
+  getIconColorClassName,
+  isEventTextColorActive,
+} from "@/lib/icon-colors"
+
 import { colorTokens, colorWithAlpha } from "./toolbar-data"
 import type { ColorToken, EditorControlProps } from "./types"
 
@@ -17,12 +23,17 @@ function ColorSwatch({
   token: ColorToken
   variant: "text" | "background"
 }) {
+  const textClass =
+    variant === "text"
+      ? getIconColorClassName(token.value ?? "default")
+      : token.textClass
+
   return (
     <span
       className={`flex size-6 shrink-0 items-center justify-center rounded-md border ${variant === "text" ? "bg-card" : token.backgroundClass}`}
     >
       {variant === "text" ? (
-        <span className={`text-base font-semibold ${token.textClass}`}>A</span>
+        <span className={`text-base font-semibold ${textClass}`}>A</span>
       ) : null}
     </span>
   )
@@ -39,7 +50,12 @@ export function ColorMenu({ editor }: EditorControlProps) {
     }
 
     if (color) {
-      editor.chain().focus().unsetBackgroundColor().setColor(color).run()
+      editor
+        .chain()
+        .focus()
+        .unsetBackgroundColor()
+        .setColor(getEventTextColorValue(color) ?? color)
+        .run()
       return
     }
 
@@ -101,7 +117,7 @@ export function ColorMenu({ editor }: EditorControlProps) {
             >
               <ColorSwatch token={token} variant="text" />
               <span>{token.name} text</span>
-              {textColor === token.value ? (
+              {isEventTextColorActive(textColor, token.value) ? (
                 <span className="ml-auto text-xs text-muted-foreground">
                   Selected
                 </span>
