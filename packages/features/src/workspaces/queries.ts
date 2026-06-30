@@ -50,6 +50,7 @@ export type WorkspaceDatabase = {
   name: string
   config?: unknown
   createdBy?: WorkspaceCreator | null
+  deletedBy?: WorkspaceCreator | null
   isFavorite?: boolean
   lastVisitedAt?: string | null
   views: WorkspaceDatabaseView[]
@@ -75,6 +76,7 @@ export type Workspace = {
   id: string
   databases?: WorkspaceDatabase[]
   createdBy?: WorkspaceCreator | null
+  deletedBy?: WorkspaceCreator | null
   isFavorite?: boolean
   isTeamspace?: boolean
   lastVisitedAt?: string | null
@@ -263,8 +265,12 @@ export type WorkspacePersonAccessTargetsPayload = {
   members: WorkspaceAccessTargetMember[]
 }
 
-export const workspacesQueryKey = (organizationId: string | null | undefined) =>
-  ["workspaces", organizationId ?? "none", "nav"] as const
+export type WorkspacesDeletedFilter = "active" | "only"
+
+export const workspacesQueryKey = (
+  organizationId: string | null | undefined,
+  deleted: WorkspacesDeletedFilter = "active",
+) => ["workspaces", organizationId ?? "none", "nav", deleted] as const
 
 export const notelabAiWorkspacesQueryKey = (
   organizationId: string | null | undefined,
@@ -320,9 +326,10 @@ export const workspacePersonAccessTargetsQueryKey = (
 export const workspacesQueryOptions = (
   apiFetch: ApiFetcher,
   organizationId: string | null | undefined,
+  options?: { deleted?: WorkspacesDeletedFilter },
 ) =>
   queryOptions({
-    queryKey: workspacesQueryKey(organizationId),
+    queryKey: workspacesQueryKey(organizationId, options?.deleted ?? "active"),
     enabled: Boolean(organizationId),
     queryFn: async () => {
       if (!organizationId) {
@@ -330,13 +337,19 @@ export const workspacesQueryOptions = (
       }
 
       try {
+        const params = new URLSearchParams({
+          fields: "nav",
+          organizationId,
+        })
+
+        if (options?.deleted === "only") {
+          params.set("deleted", "only")
+        }
+
         const result = await apiFetch<{
           placements?: WorkspaceItemPlacement[]
           workspaces: Workspace[]
-        }>(
-          `/workspaces?organizationId=${encodeURIComponent(organizationId)}&fields=nav`,
-          { method: "GET" },
-        )
+        }>(`/workspaces?${params.toString()}`, { method: "GET" })
 
         return result.workspaces.map((workspace) => ({
           ...workspace,

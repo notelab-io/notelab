@@ -43,6 +43,7 @@ import {
   type WorkspaceDetail,
   type AccessLevel,
   type AccessTargetType,
+  type WorkspacesDeletedFilter,
   type Workspace,
   type WorkspaceCommentsPayload,
   type WorkspaceCommentMessage,
@@ -124,12 +125,14 @@ type RecordItemVisitInput = {
 
 export function useWorkspaces(
   organizationId: string | null | undefined,
-  options?: { enabled?: boolean },
+  options?: { deleted?: WorkspacesDeletedFilter; enabled?: boolean },
 ) {
   const { apiFetch } = useNotelabFeatures()
 
   return useQuery({
-    ...workspacesQueryOptions(apiFetch, organizationId),
+    ...workspacesQueryOptions(apiFetch, organizationId, {
+      deleted: options?.deleted,
+    }),
     enabled:
       Boolean(organizationId) && (options?.enabled ?? true),
   })

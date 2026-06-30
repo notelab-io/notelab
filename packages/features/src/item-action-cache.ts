@@ -74,7 +74,7 @@ export async function invalidateDeletedItems({
 
   await Promise.all([
     queryClient.invalidateQueries({
-      queryKey: workspacesQueryKey(organizationId),
+      queryKey: ["workspaces", organizationId, "nav"],
     }),
     includeNotelabAi
       ? queryClient.invalidateQueries({
