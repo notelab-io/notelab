@@ -425,7 +425,7 @@ function DropDrawerItem({
         data-inset={inset}
         data-disabled={disabled}
         className={cn(
-          "flex min-h-9 cursor-pointer items-center justify-between gap-2 rounded-md px-2 py-2 text-sm text-popover-foreground outline-hidden select-none hover:bg-accent hover:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground",
+          "flex min-h-9 cursor-pointer items-center justify-between gap-2 rounded-md px-2 py-2 text-sm text-popover-foreground outline-hidden select-none hover:bg-accent [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground",
           inset && "pl-8",
           variant === "destructive" &&
             "text-destructive hover:bg-destructive/10 hover:text-destructive [&_svg]:text-destructive",
@@ -837,7 +837,7 @@ function DropDrawerSubTrigger({
         data-slot="drop-drawer-sub-trigger"
         data-inset={inset}
         className={cn(
-          "flex min-h-9 cursor-pointer items-center justify-between gap-2 rounded-md px-2 py-2 text-sm text-popover-foreground outline-hidden select-none hover:bg-accent hover:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground",
+          "flex min-h-9 cursor-pointer items-center justify-between gap-2 rounded-md px-2 py-2 text-sm text-popover-foreground outline-hidden select-none hover:bg-accent [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground",
           inset && "pl-8",
           className
         )}
