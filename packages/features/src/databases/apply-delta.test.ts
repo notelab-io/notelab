@@ -23,7 +23,7 @@ test("applyDatabaseDelta patches an existing cell value", () => {
         propertyId: "property-status",
         updatedAt: "2026-06-24T12:00:00.000Z",
         value: "Done",
-        workspaceId: "page-1",
+        pageId: "page-1",
       },
     ],
   })
@@ -41,7 +41,7 @@ test("applyDatabaseDelta inserts a new cell value", () => {
         propertyId: "property-name",
         updatedAt: "2026-06-24T12:00:00.000Z",
         value: "Gamma",
-        workspaceId: "page-2",
+        pageId: "page-2",
       },
     ],
   })
@@ -50,7 +50,7 @@ test("applyDatabaseDelta inserts a new cell value", () => {
   assert.deepEqual(
     next.values.find(
       (value) =>
-        value.workspaceId === "page-2" &&
+        value.pageId === "page-2" &&
         value.propertyId === "property-name",
     ),
     {
@@ -59,7 +59,7 @@ test("applyDatabaseDelta inserts a new cell value", () => {
       propertyId: "property-name",
       updatedAt: "2026-06-24T12:00:00.000Z",
       value: "Gamma",
-      workspaceId: "page-2",
+      pageId: "page-2",
     },
   )
 })
@@ -195,7 +195,7 @@ test("applyDatabaseDelta applies combined patches in one pass", () => {
         propertyId: "property-status",
         updatedAt: "2026-06-24T12:00:00.000Z",
         value: "In progress",
-        workspaceId: "page-1",
+        pageId: "page-1",
       },
     ],
   })

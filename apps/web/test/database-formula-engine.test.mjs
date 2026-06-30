@@ -194,7 +194,7 @@ function createProperty(databasePropertyId, propertyId, name, type, config) {
       createdAt: "2026-06-14T00:00:00.000Z",
       id: propertyId,
       name,
-      organizationId: "organization-1",
+      workspaceId: "workspace-1",
       type,
       updatedAt: "2026-06-14T00:00:00.000Z",
     },

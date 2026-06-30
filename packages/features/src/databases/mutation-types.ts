@@ -17,7 +17,7 @@ export type DatabaseDelta = {
     propertyId: string
     updatedAt: string
     value: unknown
-    workspaceId: string
+    pageId: string
   }>
   views?: Array<Record<string, unknown>>
 }

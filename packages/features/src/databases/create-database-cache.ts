@@ -1,13 +1,13 @@
 import type { DatabasePayload } from "./queries"
-import { readDatabaseParentItemId } from "../workspaces/item-relationships"
-import { applyNavDelta, type NavDelta } from "../workspaces/nav-delta"
+import { readDatabaseParentItemId } from "../pages/item-relationships"
+import { applyNavDelta, type NavDelta } from "../pages/nav-delta"
 import type {
-  Workspace,
-  WorkspaceDatabase,
-  WorkspaceItemPlacement,
-} from "../workspaces/queries"
+  Page,
+  PageDatabase,
+  PageItemPlacement,
+} from "../pages/queries"
 
-function toWorkspaceDatabase(payload: DatabasePayload): WorkspaceDatabase {
+function toPageDatabase(payload: DatabasePayload): PageDatabase {
   return {
     ...payload.database,
     views: payload.views,
@@ -16,7 +16,7 @@ function toWorkspaceDatabase(payload: DatabasePayload): WorkspaceDatabase {
 
 function getPrimaryDatabasePlacement(
   payload: DatabasePayload,
-): WorkspaceItemPlacement | null {
+): PageItemPlacement | null {
   const parentItemId = readDatabaseParentItemId(payload.database.config)
 
   if (!parentItemId) {
@@ -24,12 +24,12 @@ function getPrimaryDatabasePlacement(
   }
 
   return {
-    id: `legacy:primary:workspace:${parentItemId}:database:${payload.database.id}:`,
+    id: `legacy:primary:page:${parentItemId}:database:${payload.database.id}:`,
     itemId: payload.database.id,
     itemKind: "database",
-    organizationId: payload.database.organizationId,
+    workspaceId: payload.database.workspaceId,
     parentId: parentItemId,
-    parentKind: "workspace",
+    parentKind: "page",
     placementKind: "primary",
     position: 0,
     sourceRowId: null,
@@ -37,7 +37,7 @@ function getPrimaryDatabasePlacement(
 }
 
 export function getCreatedDatabaseNavDelta(payload: DatabasePayload): NavDelta {
-  const database = toWorkspaceDatabase(payload)
+  const database = toPageDatabase(payload)
   const placement = getPrimaryDatabasePlacement(payload)
 
   return {
@@ -46,9 +46,9 @@ export function getCreatedDatabaseNavDelta(payload: DatabasePayload): NavDelta {
   }
 }
 
-export function applyCreatedDatabaseToWorkspaceNav(
-  workspaces: Workspace[] | undefined,
+export function applyCreatedDatabaseToPageNav(
+  pages: Page[] | undefined,
   payload: DatabasePayload,
 ) {
-  return applyNavDelta(workspaces, getCreatedDatabaseNavDelta(payload))
+  return applyNavDelta(pages, getCreatedDatabaseNavDelta(payload))
 }

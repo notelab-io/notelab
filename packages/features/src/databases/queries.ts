@@ -4,7 +4,7 @@ import type { ApiFetcher } from "../context"
 
 export type DatabaseRecord = {
   id: string
-  organizationId: string
+  workspaceId: string
   pageId: string
   name: string
   config?: unknown
@@ -50,14 +50,14 @@ export type DatabaseProperty = {
   position: number
   width?: number | null
   visible: boolean
-  property: WorkspaceProperty
+  property: PageProperty
   createdAt: string
   updatedAt: string
 }
 
-export type WorkspaceProperty = {
+export type PageProperty = {
   id: string
-  organizationId: string
+  workspaceId: string
   name: string
   type: string
   config?: unknown
@@ -99,9 +99,9 @@ export type DatabaseRow = {
   updatedAt: string
 }
 
-export type WorkspacePropertyValue = {
+export type PagePropertyValue = {
   id: string
-  workspaceId: string
+  pageId: string
   propertyId: string
   value: unknown
   createdAt: string
@@ -120,7 +120,7 @@ export type DatabasePayload = {
   rows: DatabaseRow[]
   rowCount?: number
   rowsPagination?: DatabaseRowsPagination
-  values: WorkspacePropertyValue[]
+  values: PagePropertyValue[]
 }
 
 export const databaseQueryKey = (

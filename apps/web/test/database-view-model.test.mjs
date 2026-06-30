@@ -35,12 +35,12 @@ export function register({ assert, loadModule, test }) {
         {
           propertyId: "property-priority",
           value: 2,
-          workspaceId: "page-1",
+          pageId: "page-1",
         },
         {
           propertyId: "property-priority",
           value: 1,
-          workspaceId: "page-2",
+          pageId: "page-2",
         },
       ],
       views: [
@@ -161,32 +161,32 @@ export function register({ assert, loadModule, test }) {
         {
           propertyId: "property-status",
           value: "Done",
-          workspaceId: "page-1",
+          pageId: "page-1",
         },
         {
           propertyId: "property-priority",
           value: 3,
-          workspaceId: "page-1",
+          pageId: "page-1",
         },
         {
           propertyId: "property-status",
           value: "Not started",
-          workspaceId: "page-2",
+          pageId: "page-2",
         },
         {
           propertyId: "property-priority",
           value: 1,
-          workspaceId: "page-2",
+          pageId: "page-2",
         },
         {
           propertyId: "property-status",
           value: "Done",
-          workspaceId: "page-3",
+          pageId: "page-3",
         },
         {
           propertyId: "property-priority",
           value: 2,
-          workspaceId: "page-3",
+          pageId: "page-3",
         },
       ],
       views: [
@@ -289,7 +289,7 @@ export function register({ assert, loadModule, test }) {
         {
           propertyId: "property-due",
           value: "2026-01-01",
-          workspaceId: "page-1",
+          pageId: "page-1",
         },
       ],
       views: [

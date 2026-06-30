@@ -1,7 +1,7 @@
 import type {
   DatabasePayload,
   DatabaseRow,
-  WorkspacePropertyValue,
+  PagePropertyValue,
 } from "./queries"
 
 export type AddRowCacheInput = {
@@ -21,7 +21,7 @@ export type AddRowResponse = {
   rowId: string
   title: string
   updatedAt: string
-  values?: WorkspacePropertyValue[]
+  values?: PagePropertyValue[]
 }
 
 export type OptimisticAddRowResult = {
@@ -153,7 +153,7 @@ export function applyConfirmedAddedDatabaseRow(
   for (const value of response.values ?? []) {
     const index = values.findIndex(
       (current) =>
-        current.workspaceId === value.workspaceId &&
+        current.pageId === value.pageId &&
         current.propertyId === value.propertyId,
     )
 

@@ -19,32 +19,32 @@ function subscribeToDatabaseQueries(
 }
 
 export function useDatabaseIdForRowPage(
-  workspaceId: string | null | undefined,
+  pageId: string | null | undefined,
   explicitDatabaseId?: string | null,
 ) {
   const { queryClient } = useNotelabFeatures()
 
   const resolvedFromCache = useSyncExternalStore(
     (onStoreChange) => {
-      if (!workspaceId) {
+      if (!pageId) {
         return () => {}
       }
 
       return subscribeToDatabaseQueries(queryClient, onStoreChange)
     },
     () => {
-      if (!workspaceId) {
+      if (!pageId) {
         return null
       }
 
-      return findDatabaseIdForRowPage(queryClient, workspaceId)
+      return findDatabaseIdForRowPage(queryClient, pageId)
     },
     () => {
-      if (!workspaceId) {
+      if (!pageId) {
         return null
       }
 
-      return findDatabaseIdForRowPage(queryClient, workspaceId)
+      return findDatabaseIdForRowPage(queryClient, pageId)
     },
   )
 

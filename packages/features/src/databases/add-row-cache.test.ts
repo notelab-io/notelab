@@ -67,7 +67,7 @@ test("applyConfirmedAddedDatabaseRow replaces optimistic ids and adds values", (
           propertyId: "property-status",
           updatedAt: "2026-06-24T12:00:00.000Z",
           value: "Not started",
-          workspaceId: "page-3",
+          pageId: "page-3",
         },
       ],
     },

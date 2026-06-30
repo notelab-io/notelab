@@ -1,9 +1,9 @@
 import type { QueryClient } from "@tanstack/react-query"
 
 import type {
-  Workspace,
-  WorkspacePropertiesPayload,
-} from "../workspaces/queries"
+  Page,
+  PagePropertiesPayload,
+} from "../pages/queries"
 
 import {
   databasePayloadRootQueryKey,
@@ -14,14 +14,14 @@ import {
 } from "./queries"
 export function findDatabaseIdForRowPage(
   queryClient: QueryClient,
-  workspaceId: string,
+  pageId: string,
 ) {
-  return findDatabaseIdsForRowPage(queryClient, workspaceId)[0] ?? null
+  return findDatabaseIdsForRowPage(queryClient, pageId)[0] ?? null
 }
 
 export function findDatabaseIdsForRowPage(
   queryClient: QueryClient,
-  workspaceId: string,
+  pageId: string,
 ) {
   const databaseIds: string[] = []
 
@@ -34,7 +34,7 @@ export function findDatabaseIdsForRowPage(
       continue
     }
 
-    if (data.rows.some((row) => row.pageId === workspaceId)) {
+    if (data.rows.some((row) => row.pageId === pageId)) {
       databaseIds.push(databaseId)
     }
   }
@@ -44,16 +44,16 @@ export function findDatabaseIdsForRowPage(
 
 export function isDatabaseRowPage(
   payload: DatabasePayload,
-  workspaceId: string,
+  pageId: string,
 ) {
-  return payload.rows.some((row) => row.pageId === workspaceId)
+  return payload.rows.some((row) => row.pageId === pageId)
 }
 
-export function buildWorkspacePropertiesPayloadFromDatabase(
+export function buildPagePropertiesPayloadFromDatabase(
   payload: DatabasePayload,
-  workspaceId: string,
-): WorkspacePropertiesPayload | null {
-  if (!isDatabaseRowPage(payload, workspaceId)) {
+  pageId: string,
+): PagePropertiesPayload | null {
+  if (!isDatabaseRowPage(payload, pageId)) {
     return null
   }
 
@@ -65,30 +65,30 @@ export function buildWorkspacePropertiesPayloadFromDatabase(
     .map(({ property }) => property)
 
   const values = payload.values.filter(
-    (value) => value.workspaceId === workspaceId,
+    (value) => value.pageId === pageId,
   )
 
   return { properties, values }
 }
 
-export function patchDatabaseCacheWorkspacePropertyValues(
+export function patchDatabaseCachePagePropertyValues(
   queryClient: QueryClient,
   databaseId: string,
-  workspaceId: string,
-  workspaceProperties: WorkspacePropertiesPayload,
+  pageId: string,
+  pageProperties: PagePropertiesPayload,
 ) {
   queryClient.setQueryData<DatabasePayload>(
     databaseQueryKey(databaseId),
     (current) => {
-      if (!current || !isDatabaseRowPage(current, workspaceId)) {
+      if (!current || !isDatabaseRowPage(current, pageId)) {
         return current
       }
 
       const remainingValues = current.values.filter(
-        (value) => value.workspaceId !== workspaceId,
+        (value) => value.pageId !== pageId,
       )
-      const nextValues = workspaceProperties.values.filter(
-        (value) => value.workspaceId === workspaceId,
+      const nextValues = pageProperties.values.filter(
+        (value) => value.pageId === pageId,
       )
 
       return {
@@ -99,32 +99,32 @@ export function patchDatabaseCacheWorkspacePropertyValues(
   )
 }
 
-export function patchDatabaseCacheWorkspacePage(
+export function patchDatabaseCachePage(
   queryClient: QueryClient,
-  workspace: Workspace,
+  page: Page,
 ) {
-  const databaseIds = findDatabaseIdsForRowPage(queryClient, workspace.id)
+  const databaseIds = findDatabaseIdsForRowPage(queryClient, page.id)
 
   for (const databaseId of databaseIds) {
     queryClient.setQueriesData<DatabasePayload>(
       { queryKey: databasePayloadRootQueryKey(databaseId) },
-      (current) => patchDatabasePayloadWorkspacePage(current, workspace),
+      (current) => patchDatabasePayloadPage(current, page),
     )
   }
 
   return databaseIds
 }
 
-function patchDatabasePayloadWorkspacePage(
+function patchDatabasePayloadPage(
   current: DatabasePayload | undefined,
-  workspace: Workspace,
+  page: Page,
 ) {
-  if (!current || !isDatabaseRowPage(current, workspace.id)) {
+  if (!current || !isDatabaseRowPage(current, page.id)) {
     return current
   }
 
   const rows = current.rows.map((row) => {
-    if (row.pageId !== workspace.id) {
+    if (row.pageId !== page.id) {
       return row
     }
 
@@ -132,10 +132,10 @@ function patchDatabasePayloadWorkspacePage(
       ...row,
       page: {
         ...row.page,
-        id: workspace.id,
-        metadata: workspace.metadata,
-        name: workspace.name,
-        updatedAt: workspace.updatedAt,
+        id: page.id,
+        metadata: page.metadata,
+        name: page.name,
+        updatedAt: page.updatedAt,
       },
     }
   })

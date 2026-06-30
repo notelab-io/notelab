@@ -23,23 +23,23 @@ import {
   type AddRowResponse,
 } from "./add-row-cache"
 import {
-  applyCreatedDatabaseToWorkspaceNav,
+  applyCreatedDatabaseToPageNav,
 } from "./create-database-cache"
 import {
   applyDatabaseFavoriteToNav,
   applyNavDelta,
   type NavDelta,
-} from "../workspaces/nav-delta"
+} from "../pages/nav-delta"
 import {
-  workspacesNavRootQueryKey,
-  workspacesQueryKey,
-  workspacesRootQueryKey,
-  type Workspace,
-} from "../workspaces/queries"
+  pagesNavRootQueryKey,
+  pagesQueryKey,
+  pagesRootQueryKey,
+  type Page,
+} from "../pages/queries"
 
 type CreateDatabaseInput = {
   name?: string
-  organizationId: string
+  workspaceId: string
   pageId: string
   standalone?: boolean
 }
@@ -181,16 +181,16 @@ function updateDatabasePropertyValue(
   }
 
   const row = payload.rows.find((candidate) => candidate.id === input.rowId)
-  const workspaceId = row?.pageId
+  const pageId = row?.pageId
 
-  if (!workspaceId) {
+  if (!pageId) {
     return payload
   }
 
   const now = new Date().toISOString()
   const existingValue = payload.values.find(
     (value) =>
-      value.workspaceId === workspaceId &&
+      value.pageId === pageId &&
       value.propertyId === input.propertyId,
   )
   const nextValue = {
@@ -201,7 +201,7 @@ function updateDatabasePropertyValue(
     propertyId: input.propertyId,
     updatedAt: now,
     value: input.value,
-    workspaceId,
+    pageId,
   }
   const values = existingValue
     ? payload.values.map((value) =>
@@ -244,12 +244,12 @@ export function useCreateDatabase() {
     },
     onSuccess: async (payload) => {
       setDatabasePayloadQueryData(queryClient, payload.database.id, payload)
-      queryClient.setQueriesData<Workspace[] | undefined>(
-        { queryKey: workspacesNavRootQueryKey(payload.database.organizationId) },
+      queryClient.setQueriesData<Page[] | undefined>(
+        { queryKey: pagesNavRootQueryKey(payload.database.workspaceId) },
         (current) =>
           payload.navDelta
             ? applyNavDelta(current, payload.navDelta)
-            : applyCreatedDatabaseToWorkspaceNav(current, payload),
+            : applyCreatedDatabaseToPageNav(current, payload),
       )
     },
   })
@@ -316,7 +316,7 @@ export function useUpdateDatabase() {
 
       if (payload) {
         await queryClient.invalidateQueries({
-          queryKey: workspacesQueryKey(payload.database.organizationId),
+          queryKey: pagesQueryKey(payload.database.workspaceId),
         })
       }
     },
@@ -366,7 +366,7 @@ export function useAddDatabaseView() {
 type DeleteDatabaseResult = {
   database: DatabasePayload["database"] | null
   deletedDatabaseIds: string[]
-  deletedWorkspaceIds: string[]
+  deletedPageIds: string[]
 }
 
 export function useDeleteDatabase() {
@@ -379,7 +379,7 @@ export function useDeleteDatabase() {
       }),
     onSuccess: async (result) =>
       invalidateDeletedItems({
-        organizationId: result.database?.organizationId,
+        workspaceId: result.database?.workspaceId,
         queryClient,
         result,
       }),
@@ -553,7 +553,7 @@ export function useAddDatabaseRow() {
         (!isAddRowResponse(response) && current?.database.isFavorite)
       ) {
         await queryClient.invalidateQueries({
-          queryKey: workspacesQueryKey(payload.database.organizationId),
+          queryKey: pagesQueryKey(payload.database.workspaceId),
         })
       }
 
@@ -719,15 +719,15 @@ export function useSetDatabaseFavorite() {
         queryClient.cancelQueries({
           queryKey: databasePayloadRootQueryKey(variables.databaseId),
         }),
-        queryClient.cancelQueries({ queryKey: workspacesRootQueryKey() }),
+        queryClient.cancelQueries({ queryKey: pagesRootQueryKey() }),
       ])
       const previous = queryClient.getQueryData<DatabasePayload | null>(
         databaseQueryKey(variables.databaseId),
       )
-      const previousNavQueries = queryClient.getQueriesData<Workspace[]>({
+      const previousNavQueries = queryClient.getQueriesData<Page[]>({
         queryKey: previous
-          ? workspacesNavRootQueryKey(previous.database.organizationId)
-          : workspacesRootQueryKey(),
+          ? pagesNavRootQueryKey(previous.database.workspaceId)
+          : pagesRootQueryKey(),
       })
 
       queryClient.setQueriesData<DatabasePayload | null>(
@@ -745,8 +745,8 @@ export function useSetDatabaseFavorite() {
       )
 
       if (previous) {
-        queryClient.setQueriesData<Workspace[] | undefined>(
-          { queryKey: workspacesNavRootQueryKey(previous.database.organizationId) },
+        queryClient.setQueriesData<Page[] | undefined>(
+          { queryKey: pagesNavRootQueryKey(previous.database.workspaceId) },
           (current) =>
             applyDatabaseFavoriteToNav(current, {
               ...previous.database,
@@ -773,8 +773,8 @@ export function useSetDatabaseFavorite() {
     },
     onSuccess: async (payload) => {
       setDatabasePayloadQueryData(queryClient, payload.database.id, payload)
-      queryClient.setQueriesData<Workspace[] | undefined>(
-        { queryKey: workspacesNavRootQueryKey(payload.database.organizationId) },
+      queryClient.setQueriesData<Page[] | undefined>(
+        { queryKey: pagesNavRootQueryKey(payload.database.workspaceId) },
         (current) =>
           applyDatabaseFavoriteToNav(current, {
             ...payload.database,

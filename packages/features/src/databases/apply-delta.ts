@@ -178,7 +178,7 @@ export function applyDatabaseDelta(
     for (const patch of delta.values) {
       const index = values.findIndex(
         (value) =>
-          value.workspaceId === patch.workspaceId &&
+          value.pageId === patch.pageId &&
           value.propertyId === patch.propertyId,
       )
       const merged = {
