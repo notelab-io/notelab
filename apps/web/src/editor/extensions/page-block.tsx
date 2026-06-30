@@ -27,8 +27,7 @@ import {
 } from "@notelab/features/workspaces"
 import { useNotelabFeatures } from "@notelab/features"
 import type { DatabasePayload } from "@notelab/features/databases"
-import { resolveEventTextColorValue } from "@/lib/icon-colors"
-import { colorWithAlpha } from "@/packages/editor/components/editor/toolbar-data"
+import { colorWithAlpha, getPaletteColor } from "@/lib/color-tokens"
 import { DATABASE_PAGE_DRAG_MIME } from "@/packages/editor/extensions/database/constants"
 
 export type CreatedPage = {
@@ -109,9 +108,9 @@ function PageBlockView({
   const optionCount = linkablePages.length + (options.onCreatePage ? 1 : 0)
   const cardStyle = {
     ...(backgroundColor
-      ? { backgroundColor: colorWithAlpha(backgroundColor, 0.18) }
+      ? { backgroundColor: colorWithAlpha(backgroundColor, 0.18) ?? undefined }
       : {}),
-    ...(textColor ? { color: resolveEventTextColorValue(textColor) ?? textColor } : {}),
+    ...(textColor ? { color: getPaletteColor(textColor) ?? undefined } : {}),
   }
 
   useEffect(() => {

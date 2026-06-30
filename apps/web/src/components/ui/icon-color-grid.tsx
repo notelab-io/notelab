@@ -1,5 +1,5 @@
 import { BoxiconPreview } from "@/components/ui/boxicon-preview"
-import { iconColorOptions } from "@/lib/icon-colors"
+import { iconColorOptions } from "@/lib/color-tokens"
 import { cn } from "@/lib/utils"
 
 export function IconColorGrid({
@@ -35,7 +35,7 @@ export function IconColorGrid({
             }
             className={cn(
               "flex aspect-square items-center justify-center rounded-md border border-transparent transition-colors hover:border-border hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:outline-none",
-              color.colorClass,
+              color.textClass,
             )}
             key={color.value}
             onClick={() => onSelect(color.value)}

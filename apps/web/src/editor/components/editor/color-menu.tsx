@@ -8,12 +8,11 @@ import {
 } from "@/components/ui/popover"
 
 import {
-  getEventTextColorValue,
-  getIconColorClassName,
-  isEventTextColorActive,
-} from "@/lib/icon-colors"
-
-import { colorTokens, colorWithAlpha } from "./toolbar-data"
+  colorTokens,
+  colorWithAlpha,
+  getPaletteColor,
+  isPaletteColorActive,
+} from "@/lib/color-tokens"
 import type { ColorToken, EditorControlProps } from "./types"
 
 function ColorSwatch({
@@ -23,10 +22,7 @@ function ColorSwatch({
   token: ColorToken
   variant: "text" | "background"
 }) {
-  const textClass =
-    variant === "text"
-      ? getIconColorClassName(token.value ?? "default")
-      : token.textClass
+  const textClass = token.textClass
 
   return (
     <span
@@ -54,7 +50,7 @@ export function ColorMenu({ editor }: EditorControlProps) {
         .chain()
         .focus()
         .unsetBackgroundColor()
-        .setColor(getEventTextColorValue(color) ?? color)
+        .setColor(getPaletteColor(color)!)
         .run()
       return
     }
@@ -72,7 +68,7 @@ export function ColorMenu({ editor }: EditorControlProps) {
         .chain()
         .focus()
         .unsetColor()
-        .setBackgroundColor(colorWithAlpha(color, 0.18))
+        .setBackgroundColor(colorWithAlpha(color, 0.18)!)
         .run()
       return
     }
@@ -117,7 +113,7 @@ export function ColorMenu({ editor }: EditorControlProps) {
             >
               <ColorSwatch token={token} variant="text" />
               <span>{token.name} text</span>
-              {isEventTextColorActive(textColor, token.value) ? (
+              {isPaletteColorActive(textColor, token.value) ? (
                 <span className="ml-auto text-xs text-muted-foreground">
                   Selected
                 </span>

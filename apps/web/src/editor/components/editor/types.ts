@@ -32,12 +32,7 @@ export type ToolbarItem = {
   attrs?: ToolbarAttrs
 }
 
-export type ColorToken = {
-  name: string
-  value: string | null
-  textClass: string
-  backgroundClass: string
-}
+export type { ColorToken } from "@/lib/color-tokens"
 
 export type DragHandleTarget = {
   node: ProseMirrorNode

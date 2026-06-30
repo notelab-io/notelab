@@ -2,7 +2,7 @@ import { FileIcon, FileTextIcon } from "lucide-react"
 
 import { getWorkspaceEmoji, type Workspace } from "@notelab/features/workspaces"
 import { getDatabaseEmoji } from "@notelab/features/databases"
-import { getIconColorClassName } from "@/lib/icon-colors"
+import { getIconColorClassName } from "@/lib/color-tokens"
 import { cn } from "@/lib/utils"
 import {
   getStoredIconColor,

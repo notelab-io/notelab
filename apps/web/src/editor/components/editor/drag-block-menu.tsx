@@ -36,11 +36,10 @@ import {
   startBlockDrag,
 } from "./block-drag"
 import {
-  getEventTextColorValue,
-  getIconColorClassName,
-} from "@/lib/icon-colors"
-
-import { colorTokens, colorWithAlpha } from "./toolbar-data"
+  colorTokens,
+  colorWithAlpha,
+  getPaletteColor,
+} from "@/lib/color-tokens"
 import type { DragHandleTarget } from "./types"
 import { DATABASE_PAGE_DRAG_MIME } from "@/packages/editor/extensions/database"
 
@@ -370,12 +369,12 @@ export function DragBlockMenu({
       if (variant === "text") {
         chain
           .unsetBackgroundColor()
-          .setColor(getEventTextColorValue(color) ?? color)
+          .setColor(getPaletteColor(color)!)
           .run()
         return
       }
 
-      chain.unsetColor().setBackgroundColor(colorWithAlpha(color, 0.18)).run()
+      chain.unsetColor().setBackgroundColor(colorWithAlpha(color, 0.18)!).run()
     })
   }
 
@@ -598,7 +597,7 @@ export function DragBlockMenu({
                   onSelect={() => applyColor(token.value, "text")}
                 >
                   <span
-                    className={`size-4 rounded-sm border bg-card ${getIconColorClassName(token.value ?? "default")}`}
+                    className={`size-4 rounded-sm border bg-card ${token.textClass}`}
                   >
                     A
                   </span>
