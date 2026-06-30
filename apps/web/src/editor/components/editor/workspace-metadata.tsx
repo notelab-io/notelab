@@ -260,7 +260,7 @@ export function WorkspaceMetadata({
       </Popover>
       <button
         aria-label="Remove workspace icon"
-        className="absolute -right-1 -top-1 hidden size-5 items-center justify-center rounded-full border bg-background text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none group-hover/icon:flex [&_svg]:size-3"
+        className="absolute -right-1 -top-1 hidden size-5 items-center justify-center rounded-full border bg-background text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground focus-visible:flex focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none group-focus-within/metadata:flex group-hover/icon:flex group-hover/metadata:flex [&_svg]:size-3"
         onClick={() => {
           updateIcon("")
           setIconOpen(false)
@@ -274,14 +274,16 @@ export function WorkspaceMetadata({
   ) : !icon && editable ? (
     <Popover open={iconOpen} onOpenChange={setIconOpen}>
       <PopoverTrigger asChild>
-        <button
-          className="inline-flex h-7 items-center gap-1 rounded-md px-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none [&_svg]:size-4"
+        <Button
+          className="text-muted-foreground"
           disabled={!editable}
+          size="sm"
           type="button"
+          variant="ghost"
         >
           <SmilePlus />
           Add icon
-        </button>
+        </Button>
       </PopoverTrigger>
       <PopoverContent
         align="start"
@@ -304,15 +306,25 @@ export function WorkspaceMetadata({
     </Popover>
   ) : null
 
+  const showMetadataActions =
+    (!icon && editable) ||
+    (!cover && editable) ||
+    (commentsEnabled &&
+      !showCommentsSection &&
+      (editable || totalCommentCount > 0))
+
+  const metadataActionVisibilityClassName =
+    "opacity-0 transition-opacity pointer-events-none group-focus-within/metadata:opacity-100 group-focus-within/metadata:pointer-events-auto group-has-[[data-state=open]]/metadata:opacity-100 group-has-[[data-state=open]]/metadata:pointer-events-auto group-hover/metadata:opacity-100 group-hover/metadata:pointer-events-auto"
+
   return (
-    <section contentEditable={false}>
+    <section className="group/metadata" contentEditable={false}>
       {cover ? (
         <div className="relative h-40 w-full overflow-hidden bg-muted">
           <img alt="Cover" className="size-full object-cover" src={cover} />
           {editable ? (
             <Button
               aria-label="Remove cover"
-              className="absolute right-3 top-3 bg-background/80 shadow-sm backdrop-blur"
+              className="absolute right-3 top-3 bg-background/80 opacity-0 shadow-sm backdrop-blur transition-opacity group-focus-within/metadata:opacity-100 group-hover/metadata:opacity-100 focus-visible:opacity-100"
               disabled={!editable}
               onClick={() => updateCover("")}
               size="icon-sm"
@@ -328,62 +340,68 @@ export function WorkspaceMetadata({
       <div
         className={`${contentClassName ?? ""} px-5 py-6 sm:px-8 md:px-20 md:py-8 lg:px-24`}
       >
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          {!icon ? iconPicker : null}
-          {!cover && editable ? (
-            <Popover onOpenChange={setCoverOpen} open={coverOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  className="text-muted-foreground"
-                  disabled={!editable}
-                  size="sm"
-                  type="button"
-                  variant="ghost"
-                >
-                  <ImagePlus />
-                  Add cover
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent
-                align="start"
-                className="w-[min(42rem,calc(100vw-2rem))] p-4"
-                onMouseDown={(event) => event.stopPropagation()}
-                onPointerDown={(event) => event.stopPropagation()}
-                side="bottom"
-                sideOffset={8}
-              >
-                <ImageSourcePicker
-                  databaseId={databaseId}
-                  onSelect={(url) => {
-                    updateCover(url)
-                    setCoverOpen(false)
-                  }}
-                  organizationId={organizationId}
-                  workspaceId={workspaceId}
-                />
-              </PopoverContent>
-            </Popover>
-          ) : null}
-          {commentsEnabled &&
-          !showCommentsSection &&
-          (editable || totalCommentCount > 0) ? (
-            <Button
-              className="text-muted-foreground"
-              onClick={() => {
-                setCommentsOpen((open) => !open)
-                if (totalCommentCount === 0) {
-                  setCommentsOpen(true)
-                }
-              }}
-              size="sm"
-              type="button"
-              variant="ghost"
+        {showMetadataActions ? (
+          <div className="relative mb-3 min-h-8">
+            <div
+              className={`absolute inset-0 flex flex-wrap items-center gap-2 ${metadataActionVisibilityClassName}`}
             >
-              <MessageSquare />
-              {formatCommentButtonLabel(totalCommentCount)}
-            </Button>
-          ) : null}
-        </div>
+            {!icon ? iconPicker : null}
+            {!cover && editable ? (
+              <Popover onOpenChange={setCoverOpen} open={coverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    className="text-muted-foreground"
+                    disabled={!editable}
+                    size="sm"
+                    type="button"
+                    variant="ghost"
+                  >
+                    <ImagePlus />
+                    Add cover
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  align="start"
+                  className="w-[min(42rem,calc(100vw-2rem))] p-4"
+                  onMouseDown={(event) => event.stopPropagation()}
+                  onPointerDown={(event) => event.stopPropagation()}
+                  side="bottom"
+                  sideOffset={8}
+                >
+                  <ImageSourcePicker
+                    databaseId={databaseId}
+                    onSelect={(url) => {
+                      updateCover(url)
+                      setCoverOpen(false)
+                    }}
+                    organizationId={organizationId}
+                    workspaceId={workspaceId}
+                  />
+                </PopoverContent>
+              </Popover>
+            ) : null}
+            {commentsEnabled &&
+            !showCommentsSection &&
+            (editable || totalCommentCount > 0) ? (
+              <Button
+                className="text-muted-foreground"
+                onClick={() => {
+                  setCommentsOpen((open) => !open)
+                  if (totalCommentCount === 0) {
+                    setCommentsOpen(true)
+                  }
+                }}
+                size="sm"
+                type="button"
+                variant="ghost"
+              >
+                <MessageSquare />
+                {formatCommentButtonLabel(totalCommentCount)}
+              </Button>
+            ) : null}
+            </div>
+          </div>
+        ) : null}
 
         <div className="flex items-start gap-3">
           {icon ? (
@@ -397,7 +415,7 @@ export function WorkspaceMetadata({
           ) : null}
           <textarea
             aria-label="Workspace title"
-            className="min-h-10 min-w-0 flex-1 resize-none overflow-hidden border-0 bg-transparent px-0 py-0 text-4xl font-semibold leading-tight tracking-normal whitespace-pre-wrap text-balance text-foreground shadow-none outline-none placeholder:text-muted-foreground/40 focus-visible:ring-0 dark:bg-transparent"
+            className="min-h-10 min-w-0 flex-1 resize-none overflow-hidden border-0 bg-transparent px-3 py-0 text-4xl font-semibold leading-tight tracking-normal whitespace-pre-wrap text-balance text-foreground shadow-none outline-none placeholder:text-muted-foreground/40 focus-visible:ring-0 dark:bg-transparent"
             onChange={(event) => updateTitle(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === "Enter") {
