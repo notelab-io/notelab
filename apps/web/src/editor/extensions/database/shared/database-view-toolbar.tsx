@@ -2,7 +2,6 @@ import {
   useRef,
   useState,
   type MouseEvent,
-  type PointerEvent,
   type ReactNode,
 } from "react"
 import { Link, useNavigate } from "@tanstack/react-router"
@@ -31,6 +30,7 @@ import {
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { IconEmojiPicker } from "@/components/ui/icon-emoji-picker"
 import { WorkspaceIconDisplay } from "@/lib/workspace-icon"
 import {
@@ -337,99 +337,104 @@ export function DatabaseViewToolbar() {
       <div className="flex min-w-0 items-center gap-2">
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2 overflow-x-auto">
-            {viewTabs.map((view) => {
-              const isActiveView = view.id === activeViewTabId
-              const ViewIcon =
-                view.type === "kanban"
-                  ? Kanban
-                  : view.type === "timeline"
-                    ? CalendarRange
-                    : Table2
-              const sourceDatabaseId =
-                view.sourceDatabaseId ?? hostDatabaseId ?? databaseId
-              const sourceDatabaseName =
-                view.sourceDatabaseName ?? hostDisplayTitle
-              const renameView = () => {
-                const currentTitle = isActiveView ? draftViewTitle : view.name
-                const nextTitle = window
-                  .prompt("Rename view", currentTitle)
-                  ?.trim()
-
-                if (!nextTitle || nextTitle === currentTitle) {
+            <Tabs
+              onValueChange={(value) => {
+                if (value == null) {
                   return
                 }
 
-                setActiveViewId(view.id)
-                setDraftViewTitle(nextTitle)
-                window.setTimeout(() => saveDatabaseViewTitle(nextTitle), 0)
-              }
-              const handleViewPointerDown = (
-                event: PointerEvent<HTMLButtonElement>
-              ) => {
-                if (!isActiveView && event.button === 0) {
-                  event.preventDefault()
-                  setOpenViewMenuId(null)
-                  setActiveViewId(view.id)
-                }
-              }
-              const handleViewClick = (event: MouseEvent<HTMLButtonElement>) => {
-                if (!isActiveView) {
-                  event.preventDefault()
-                  setOpenViewMenuId(null)
-                  setActiveViewId(view.id)
-                }
-              }
-              const handleViewContextMenu = (
-                event: MouseEvent<HTMLButtonElement>
-              ) => {
-                event.preventDefault()
-                setActiveViewId(view.id)
-                setOpenViewMenuId(view.id)
-              }
+                setOpenViewMenuId(null)
+                setActiveViewId(String(value))
+              }}
+              value={activeViewTabId}
+            >
+              <TabsList variant="underline" className="min-w-0 w-full justify-start overflow-x-auto">
+                {viewTabs.map((view) => {
+                  const isActiveView = view.id === activeViewTabId
+                  const ViewIcon =
+                    view.type === "kanban"
+                      ? Kanban
+                      : view.type === "timeline"
+                        ? CalendarRange
+                        : Table2
+                  const sourceDatabaseId =
+                    view.sourceDatabaseId ?? hostDatabaseId ?? databaseId
+                  const sourceDatabaseName =
+                    view.sourceDatabaseName ?? hostDisplayTitle
+                  const renameView = () => {
+                    const currentTitle = isActiveView ? draftViewTitle : view.name
+                    const nextTitle = window
+                      .prompt("Rename view", currentTitle)
+                      ?.trim()
 
-              return (
-                <DropDrawer
-                  key={view.id}
-                  onOpenChange={(open) => {
-                    setOpenViewMenuId(open ? view.id : null)
-
-                    if (open) {
-                      setActiveViewId(view.id)
+                    if (!nextTitle || nextTitle === currentTitle) {
+                      return
                     }
-                  }}
-                  open={openViewMenuId === view.id}
-                >
-                  <DropDrawerTrigger asChild>
-                    <button
-                      aria-pressed={isActiveView}
-                      className={cn(
-                        "inline-flex h-8 shrink-0 items-center rounded-full px-3 text-sm font-medium transition-colors",
-                        isActiveView
-                          ? "bg-secondary text-secondary-foreground"
-                          : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
-                      )}
-                      onClick={handleViewClick}
-                      onContextMenu={handleViewContextMenu}
-                      onPointerDown={handleViewPointerDown}
-                      type="button"
+
+                    setActiveViewId(view.id)
+                    setDraftViewTitle(nextTitle)
+                    window.setTimeout(() => saveDatabaseViewTitle(nextTitle), 0)
+                  }
+                  const handleViewContextMenu = (
+                    event: MouseEvent<HTMLButtonElement>
+                  ) => {
+                    event.preventDefault()
+                    setActiveViewId(view.id)
+                    setOpenViewMenuId(view.id)
+                  }
+
+                  return (
+                    <DropDrawer
+                      key={view.id}
+                      onOpenChange={(open) => {
+                        setOpenViewMenuId(open ? view.id : null)
+
+                        if (open) {
+                          setActiveViewId(view.id)
+                        }
+                      }}
+                      open={openViewMenuId === view.id}
                     >
-                      <ViewIcon className="mr-2 size-4 shrink-0" />
-                      <span className="truncate">
-                        {isActiveView ? draftViewTitle : view.name}
-                      </span>
-                      {view.isLinked ? (
-                        <ArrowUpRightIcon
-                          aria-label={`Linked from ${view.sourceDatabaseName ?? "another database"}`}
-                          className="ml-2 size-3 shrink-0 text-muted-foreground"
-                        />
-                      ) : null}
-                    </button>
-                  </DropDrawerTrigger>
-                  <DropDrawerContent
-                    align="start"
-                    className="w-72"
-                    onCloseAutoFocus={(event) => event.preventDefault()}
-                  >
+                      {isActiveView ? (
+                        <DropDrawerTrigger asChild>
+                          <TabsTrigger
+                            className="h-8 shrink-0 grow-0 gap-2 px-3"
+                            onContextMenu={handleViewContextMenu}
+                            value={view.id}
+                          >
+                            <ViewIcon className="size-4 shrink-0" />
+                            <span className="truncate">
+                              {draftViewTitle}
+                            </span>
+                            {view.isLinked ? (
+                              <ArrowUpRightIcon
+                                aria-label={`Linked from ${view.sourceDatabaseName ?? "another database"}`}
+                                className="size-3 shrink-0 text-muted-foreground"
+                              />
+                            ) : null}
+                          </TabsTrigger>
+                        </DropDrawerTrigger>
+                      ) : (
+                        <TabsTrigger
+                          className="h-8 shrink-0 grow-0 gap-2 px-3"
+                          onContextMenu={handleViewContextMenu}
+                          value={view.id}
+                        >
+                          <ViewIcon className="size-4 shrink-0" />
+                          <span className="truncate">{view.name}</span>
+                          {view.isLinked ? (
+                            <ArrowUpRightIcon
+                              aria-label={`Linked from ${view.sourceDatabaseName ?? "another database"}`}
+                              className="size-3 shrink-0 text-muted-foreground"
+                            />
+                          ) : null}
+                        </TabsTrigger>
+                      )}
+                      <DropDrawerContent
+                        align="start"
+                        className="w-72"
+                        onCloseAutoFocus={(event) => event.preventDefault()}
+                      >
                     <DropDrawerItem
                       disabled={!editable || !databaseId}
                       onSelect={renameView}
@@ -569,9 +574,11 @@ export function DatabaseViewToolbar() {
                       <span>Delete view</span>
                     </DropDrawerItem>
                   </DropDrawerContent>
-                </DropDrawer>
-              )
-            })}
+                    </DropDrawer>
+                  )
+                })}
+              </TabsList>
+            </Tabs>
             <DropDrawer>
               <DropDrawerTrigger asChild>
                 <Button
