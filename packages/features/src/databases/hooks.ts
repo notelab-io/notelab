@@ -2,11 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query"
 import { useCallback } from "react"
 
 import { useNotelabFeatures } from "../context"
-import {
-  favoriteWorkspacePages,
-  invalidateDeletedItems,
-  isWorkspaceFavoriteInCache,
-} from "../item-action-cache"
+import { invalidateDeletedItems } from "../item-action-cache"
 
 import { applyMutationToCache } from "./mutation-cache"
 import { setDatabasePayloadQueryData } from "./query-cache"
@@ -15,14 +11,35 @@ import {
   databaseQueryOptions,
   type DatabasePayload,
 } from "./queries"
-import type { DatabaseMutationResponse } from "./mutation-types"
-import { workspacesQueryKey } from "../workspaces/queries"
+import {
+  isDatabaseMutationResponse,
+  type DatabaseMutationResponse,
+} from "./mutation-types"
+import {
+  applyConfirmedAddedDatabaseRow,
+  applyOptimisticAddedDatabaseRow,
+  isAddRowResponse,
+  type AddRowResponse,
+} from "./add-row-cache"
+import {
+  applyCreatedDatabaseToWorkspaceNav,
+} from "./create-database-cache"
+import {
+  applyDatabaseFavoriteToNav,
+  applyNavDelta,
+  type NavDelta,
+} from "../workspaces/nav-delta"
+import { workspacesQueryKey, type Workspace } from "../workspaces/queries"
 
 type CreateDatabaseInput = {
   name?: string
   organizationId: string
   pageId: string
   standalone?: boolean
+}
+
+type CreateDatabaseResponse = DatabasePayload & {
+  navDelta?: NavDelta
 }
 
 type UpdateDatabaseInput = {
@@ -152,30 +169,20 @@ export function useCreateDatabase() {
 
   return useMutation({
     mutationFn: async (input: CreateDatabaseInput) => {
-      const shouldInheritFavorite = isWorkspaceFavoriteInCache(
-        queryClient,
-        input.pageId,
-        input.organizationId,
-      )
-      const payload = await apiFetch<DatabasePayload>("/databases", {
+      return apiFetch<CreateDatabaseResponse>("/databases", {
         method: "POST",
         body: JSON.stringify(input),
       })
-
-      if (!shouldInheritFavorite || payload.database.isFavorite) {
-        return payload
-      }
-
-      return apiFetch<DatabasePayload>(
-        `/databases/${payload.database.id}/favorite`,
-        { method: "PUT" },
-      )
     },
     onSuccess: async (payload) => {
       setDatabasePayloadQueryData(queryClient, payload.database.id, payload)
-      await queryClient.invalidateQueries({
-        queryKey: workspacesQueryKey(payload.database.organizationId),
-      })
+      queryClient.setQueriesData<Workspace[] | undefined>(
+        { queryKey: ["workspaces", payload.database.organizationId, "nav"] },
+        (current) =>
+          payload.navDelta
+            ? applyNavDelta(current, payload.navDelta)
+            : applyCreatedDatabaseToWorkspaceNav(current, payload),
+      )
     },
   })
 }
@@ -372,39 +379,74 @@ export function useAddDatabaseRow() {
 
   return useMutation({
     mutationFn: async ({ databaseId, ...input }: AddRowInput) => {
+      await queryClient.cancelQueries({ queryKey: databaseQueryKey(databaseId) })
+
       const current = queryClient.getQueryData<DatabasePayload | null>(
         databaseQueryKey(databaseId),
       )
-      const existingRowIds = new Set(
-        current?.rows.map((row) => row.id) ?? [],
-      )
-      const shouldInheritFavorite = Boolean(current?.database.isFavorite)
-      const response = await apiFetch<DatabaseMutationResponse>(
-        `/databases/${databaseId}/rows`,
-        {
-          method: "POST",
-          body: JSON.stringify(input),
-        },
-      )
+      const optimistic = current
+        ? applyOptimisticAddedDatabaseRow(current, input)
+        : null
 
-      const payload = await commitDatabaseMutation(
-        queryClient,
-        databaseId,
-        response,
-      )
+      if (optimistic) {
+        setDatabasePayloadQueryData(queryClient, databaseId, optimistic.payload)
+      }
 
-      if (shouldInheritFavorite) {
-        const inheritedPageIds = input.pageId
-          ? [input.pageId]
-          : payload.rows
-              .filter((row) => !existingRowIds.has(row.id))
-              .map((row) => row.pageId)
+      let response: AddRowResponse | DatabaseMutationResponse
+      let payload: DatabasePayload
 
-        await favoriteWorkspacePages({
-          apiFetch,
-          organizationId: payload.database.organizationId,
-          pageIds: inheritedPageIds,
-          queryClient,
+      try {
+        response = await apiFetch<AddRowResponse | DatabaseMutationResponse>(
+          `/databases/${databaseId}/rows`,
+          {
+            method: "POST",
+            body: JSON.stringify(input),
+          },
+        )
+
+        if (isAddRowResponse(response)) {
+          const latest =
+            queryClient.getQueryData<DatabasePayload | null>(
+              databaseQueryKey(databaseId),
+            ) ??
+            optimistic?.payload ??
+            current
+
+          if (!latest) {
+            throw new Error("Failed to apply database mutation")
+          }
+
+          payload = applyConfirmedAddedDatabaseRow(
+            latest,
+            optimistic
+              ? { pageId: optimistic.pageId, rowId: optimistic.rowId }
+              : null,
+            response,
+          )
+          setDatabasePayloadQueryData(queryClient, databaseId, payload)
+        } else if (isDatabaseMutationResponse(response)) {
+          if (current) {
+            setDatabasePayloadQueryData(queryClient, databaseId, current)
+          }
+
+          payload = await commitDatabaseMutation(queryClient, databaseId, response)
+        } else {
+          throw new Error("Failed to apply database mutation")
+        }
+      } catch (error) {
+        if (current) {
+          setDatabasePayloadQueryData(queryClient, databaseId, current)
+        }
+
+        throw error
+      }
+
+      if (
+        (isAddRowResponse(response) && response.isFavorite) ||
+        (!isAddRowResponse(response) && current?.database.isFavorite)
+      ) {
+        await queryClient.invalidateQueries({
+          queryKey: workspacesQueryKey(payload.database.organizationId),
         })
       }
 
@@ -495,9 +537,14 @@ export function useSetDatabaseFavorite() {
       }),
     onSuccess: async (payload) => {
       setDatabasePayloadQueryData(queryClient, payload.database.id, payload)
-      await queryClient.invalidateQueries({
-        queryKey: workspacesQueryKey(payload.database.organizationId),
-      })
+      queryClient.setQueriesData<Workspace[] | undefined>(
+        { queryKey: ["workspaces", payload.database.organizationId, "nav"] },
+        (current) =>
+          applyDatabaseFavoriteToNav(current, {
+            ...payload.database,
+            views: payload.views,
+          }),
+      )
     },
   })
 }

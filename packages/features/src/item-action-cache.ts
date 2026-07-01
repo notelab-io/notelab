@@ -2,6 +2,7 @@ import type { QueryClient } from "@tanstack/react-query"
 
 import type { ApiFetcher } from "./context"
 import { databaseQueryKey } from "./databases/queries"
+import { applyWorkspaceFavoriteToNav } from "./workspaces/nav-delta"
 import {
   notelabAiWorkspacesQueryKey,
   workspaceQueryKey,
@@ -25,7 +26,6 @@ export function isWorkspaceFavoriteInCache(
 
 export async function favoriteWorkspacePages({
   apiFetch,
-  organizationId,
   pageIds,
   queryClient,
 }: {
@@ -50,11 +50,11 @@ export async function favoriteWorkspacePages({
 
   for (const { workspace } of results) {
     setWorkspaceDetailCache(queryClient, workspace)
+    queryClient.setQueriesData<Workspace[] | undefined>(
+      { queryKey: ["workspaces", workspace.organizationId, "nav"] },
+      (current) => applyWorkspaceFavoriteToNav(current, workspace),
+    )
   }
-
-  await queryClient.invalidateQueries({
-    queryKey: workspacesQueryKey(organizationId),
-  })
 }
 
 export async function invalidateDeletedItems({
