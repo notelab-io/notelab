@@ -133,6 +133,12 @@ export const databaseQueryKey = (
     options?.schemaOnly ? "schema" : "full",
   ] as const
 
+export const databaseRootQueryKey = () => ["database"] as const
+
+export const databasePayloadRootQueryKey = (
+  databaseId: string | null | undefined,
+) => ["database", databaseId ?? "none"] as const
+
 export const databaseQueryOptions = (
   apiFetch: ApiFetcher,
   databaseId: string | null | undefined,
@@ -141,7 +147,7 @@ export const databaseQueryOptions = (
   queryOptions({
     queryKey: databaseQueryKey(databaseId, options),
     enabled: Boolean(databaseId),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!databaseId) {
         throw new Error("databaseId is required")
       }
@@ -153,6 +159,7 @@ export const databaseQueryOptions = (
           `/databases/${databaseId}${params}`,
           {
             method: "GET",
+            signal,
           },
         )
       } catch (error) {

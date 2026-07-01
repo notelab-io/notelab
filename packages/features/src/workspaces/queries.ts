@@ -272,12 +272,20 @@ export const workspacesQueryKey = (
   deleted: WorkspacesDeletedFilter = "active",
 ) => ["workspaces", organizationId ?? "none", "nav", deleted] as const
 
+export const workspacesRootQueryKey = () => ["workspaces"] as const
+
+export const workspacesNavRootQueryKey = (
+  organizationId: string | null | undefined,
+) => ["workspaces", organizationId ?? "none", "nav"] as const
+
 export const notelabAiWorkspacesQueryKey = (
   organizationId: string | null | undefined,
-) => ["workspaces", "notelab-ai", organizationId ?? "none"] as const
+) => ["workspaces", organizationId ?? "none", "notelab-ai"] as const
 
 export const workspaceQueryKey = (workspaceId: string | null | undefined) =>
   ["workspace", workspaceId ?? "none"] as const
+
+export const workspaceRootQueryKey = () => ["workspace"] as const
 
 export type WorkspaceDetail = {
   accessLevel?: AccessLevel | null
@@ -300,28 +308,29 @@ export function getWorkspaceFromDetail(
 
 export const workspacePropertiesQueryKey = (
   workspaceId: string | null | undefined,
-) => ["workspace-properties", workspaceId ?? "none"] as const
+) => ["workspace", workspaceId ?? "none", "properties"] as const
 
 export const workspaceCommentsQueryKey = (
   workspaceId: string | null | undefined,
   threadId?: string | null,
-) => ["workspace-comments", workspaceId ?? "none", threadId ?? "active"] as const
+) =>
+  ["workspace", workspaceId ?? "none", "comments", threadId ?? "active"] as const
 
 export const workspaceThreadsQueryKey = (
   workspaceId: string | null | undefined,
-) => ["workspace-threads", workspaceId ?? "none"] as const
+) => ["workspace", workspaceId ?? "none", "threads"] as const
 
 export const workspaceAccessQueryKey = (
   workspaceId: string | null | undefined,
-) => ["workspace-access", workspaceId ?? "none"] as const
+) => ["workspace", workspaceId ?? "none", "access"] as const
 
 export const workspaceAccessTargetsQueryKey = (
   organizationId: string | null | undefined,
-) => ["workspace-access-targets", organizationId ?? "none"] as const
+) => ["workspaces", organizationId ?? "none", "access-targets"] as const
 
 export const workspacePersonAccessTargetsQueryKey = (
   workspaceId: string | null | undefined,
-) => ["workspace-person-access-targets", workspaceId ?? "none"] as const
+) => ["workspace", workspaceId ?? "none", "access-targets"] as const
 
 export const workspacesQueryOptions = (
   apiFetch: ApiFetcher,
@@ -331,7 +340,7 @@ export const workspacesQueryOptions = (
   queryOptions({
     queryKey: workspacesQueryKey(organizationId, options?.deleted ?? "active"),
     enabled: Boolean(organizationId),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!organizationId) {
         return []
       }
@@ -349,7 +358,7 @@ export const workspacesQueryOptions = (
         const result = await apiFetch<{
           placements?: WorkspaceItemPlacement[]
           workspaces: Workspace[]
-        }>(`/workspaces?${params.toString()}`, { method: "GET" })
+        }>(`/workspaces?${params.toString()}`, { method: "GET", signal })
 
         return result.workspaces.map((workspace) => ({
           ...workspace,
@@ -377,7 +386,7 @@ export const notelabAiWorkspacesQueryOptions = (
   queryOptions({
     queryKey: notelabAiWorkspacesQueryKey(organizationId),
     enabled: Boolean(organizationId),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!organizationId) {
         return []
       }
@@ -390,7 +399,7 @@ export const notelabAiWorkspacesQueryOptions = (
         })
         const result = await apiFetch<{ workspaces: NotelabAiWorkspaceSummary[] }>(
           `/workspaces?${params.toString()}`,
-          { method: "GET" },
+          { method: "GET", signal },
         )
 
         return result.workspaces
@@ -417,7 +426,7 @@ export const workspaceQueryOptions = (
     queryKey: workspaceQueryKey(workspaceId),
     enabled: Boolean(workspaceId),
     staleTime: 30_000,
-    queryFn: async (): Promise<WorkspaceDetail | null> => {
+    queryFn: async ({ signal }): Promise<WorkspaceDetail | null> => {
       if (!workspaceId) {
         throw new Error("workspaceId is required")
       }
@@ -428,7 +437,7 @@ export const workspaceQueryOptions = (
           workspace: Workspace
         }>(
           `/workspaces/${workspaceId}`,
-          { method: "GET" },
+          { method: "GET", signal },
         )
 
         return {
@@ -497,7 +506,7 @@ export const workspaceAccessQueryOptions = (
   queryOptions({
     queryKey: workspaceAccessQueryKey(workspaceId),
     enabled: Boolean(workspaceId),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!workspaceId) {
         return { access: [] }
       }
@@ -505,7 +514,7 @@ export const workspaceAccessQueryOptions = (
       try {
         return await apiFetch<WorkspaceAccessPayload>(
           `/workspaces/${workspaceId}/access`,
-          { method: "GET" },
+          { method: "GET", signal },
         )
       } catch (error) {
         if (
@@ -529,14 +538,14 @@ export const workspaceAccessTargetsQueryOptions = (
   queryOptions({
     queryKey: workspaceAccessTargetsQueryKey(organizationId),
     enabled: Boolean(organizationId),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!organizationId) {
         return { members: [], teams: [] }
       }
 
       return apiFetch<WorkspaceAccessTargetsPayload>(
         `/organizations/${organizationId}/access-targets`,
-        { method: "GET" },
+        { method: "GET", signal },
       )
     },
   })
@@ -548,14 +557,14 @@ export const workspacePersonAccessTargetsQueryOptions = (
   queryOptions({
     queryKey: workspacePersonAccessTargetsQueryKey(workspaceId),
     enabled: Boolean(workspaceId),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!workspaceId) {
         return { members: [] }
       }
 
       return apiFetch<WorkspacePersonAccessTargetsPayload>(
         `/workspaces/${workspaceId}/access-targets`,
-        { method: "GET" },
+        { method: "GET", signal },
       )
     },
   })
@@ -569,14 +578,14 @@ export const workspacePropertiesQueryOptions = (
   queryOptions({
     queryKey: workspacePropertiesQueryKey(workspaceId),
     enabled: Boolean(workspaceId),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!workspaceId) {
         throw new Error("workspaceId is required")
       }
 
       return apiFetch<WorkspacePropertiesPayload>(
         `/workspaces/${workspaceId}/properties`,
-        { method: "GET" },
+        { method: "GET", signal },
       )
     },
   })
@@ -590,7 +599,7 @@ export const workspaceCommentsQueryOptions = (
   queryOptions({
     queryKey: workspaceCommentsQueryKey(workspaceId, threadId),
     enabled: Boolean(workspaceId) && enabled,
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!workspaceId) {
         return { comments: [], thread: null }
       }
@@ -599,7 +608,7 @@ export const workspaceCommentsQueryOptions = (
         ? `/workspaces/${workspaceId}/comments?threadId=${encodeURIComponent(threadId)}`
         : `/workspaces/${workspaceId}/comments`
 
-      return apiFetch<WorkspaceCommentsPayload>(url, { method: "GET" })
+      return apiFetch<WorkspaceCommentsPayload>(url, { method: "GET", signal })
     },
   })
 
@@ -611,14 +620,14 @@ export const workspaceThreadsQueryOptions = (
   queryOptions({
     queryKey: workspaceThreadsQueryKey(workspaceId),
     enabled: Boolean(workspaceId) && enabled,
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!workspaceId) {
         return { threads: [] }
       }
 
       return apiFetch<WorkspaceThreadsPayload>(
         `/workspaces/${workspaceId}/threads`,
-        { method: "GET" },
+        { method: "GET", signal },
       )
     },
   })

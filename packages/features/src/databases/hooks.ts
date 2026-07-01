@@ -7,6 +7,7 @@ import { invalidateDeletedItems } from "../item-action-cache"
 import { applyMutationToCache } from "./mutation-cache"
 import { setDatabasePayloadQueryData } from "./query-cache"
 import {
+  databasePayloadRootQueryKey,
   databaseQueryKey,
   databaseQueryOptions,
   type DatabasePayload,
@@ -29,7 +30,12 @@ import {
   applyNavDelta,
   type NavDelta,
 } from "../workspaces/nav-delta"
-import { workspacesQueryKey, type Workspace } from "../workspaces/queries"
+import {
+  workspacesNavRootQueryKey,
+  workspacesQueryKey,
+  workspacesRootQueryKey,
+  type Workspace,
+} from "../workspaces/queries"
 
 type CreateDatabaseInput = {
   name?: string
@@ -144,6 +150,68 @@ async function commitDatabaseMutation(
   return payload
 }
 
+function reorderDatabaseRows(
+  payload: DatabasePayload | null | undefined,
+  rowIds: string[],
+) {
+  if (!payload) {
+    return payload
+  }
+
+  const requestedPositions = new Map(
+    rowIds.map((rowId, position) => [rowId, position]),
+  )
+  const rows = payload.rows
+    .map((row) => {
+      const position = requestedPositions.get(row.id)
+
+      return position === undefined ? row : { ...row, position }
+    })
+    .sort((left, right) => left.position - right.position)
+
+  return { ...payload, rows }
+}
+
+function updateDatabasePropertyValue(
+  payload: DatabasePayload | null | undefined,
+  input: UpdatePropertyValueInput,
+) {
+  if (!payload) {
+    return payload
+  }
+
+  const row = payload.rows.find((candidate) => candidate.id === input.rowId)
+  const workspaceId = row?.pageId
+
+  if (!workspaceId) {
+    return payload
+  }
+
+  const now = new Date().toISOString()
+  const existingValue = payload.values.find(
+    (value) =>
+      value.workspaceId === workspaceId &&
+      value.propertyId === input.propertyId,
+  )
+  const nextValue = {
+    createdAt: existingValue?.createdAt ?? now,
+    id:
+      existingValue?.id ??
+      `optimistic-property-value-${crypto.randomUUID()}`,
+    propertyId: input.propertyId,
+    updatedAt: now,
+    value: input.value,
+    workspaceId,
+  }
+  const values = existingValue
+    ? payload.values.map((value) =>
+        value.id === existingValue.id ? nextValue : value,
+      )
+    : [...payload.values, nextValue]
+
+  return { ...payload, values }
+}
+
 export function useDatabase(
   databaseId: string | null | undefined,
   options?: { schemaOnly?: boolean },
@@ -177,7 +245,7 @@ export function useCreateDatabase() {
     onSuccess: async (payload) => {
       setDatabasePayloadQueryData(queryClient, payload.database.id, payload)
       queryClient.setQueriesData<Workspace[] | undefined>(
-        { queryKey: ["workspaces", payload.database.organizationId, "nav"] },
+        { queryKey: workspacesNavRootQueryKey(payload.database.organizationId) },
         (current) =>
           payload.navDelta
             ? applyNavDelta(current, payload.navDelta)
@@ -201,6 +269,45 @@ export function useUpdateDatabase() {
       )
 
       return commitDatabaseMutation(queryClient, databaseId, response)
+    },
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({
+        queryKey: databasePayloadRootQueryKey(variables.databaseId),
+      })
+      const previous = queryClient.getQueryData<DatabasePayload | null>(
+        databaseQueryKey(variables.databaseId),
+      )
+
+      queryClient.setQueriesData<DatabasePayload | null>(
+        { queryKey: databasePayloadRootQueryKey(variables.databaseId) },
+        (current) =>
+          current
+            ? {
+                ...current,
+                database: {
+                  ...current.database,
+                  ...(variables.name !== undefined
+                    ? { name: variables.name }
+                    : {}),
+                  ...(variables.config !== undefined
+                    ? { config: variables.config }
+                    : {}),
+                  updatedAt: new Date().toISOString(),
+                },
+              }
+            : current,
+      )
+
+      return { previous }
+    },
+    onError: (_error, variables, context) => {
+      if (context?.previous) {
+        setDatabasePayloadQueryData(
+          queryClient,
+          variables.databaseId,
+          context.previous,
+        )
+      }
     },
     onSuccess: async (_result, variables) => {
       const payload = queryClient.getQueryData<DatabasePayload | null>(
@@ -459,6 +566,21 @@ export function useReorderDatabaseRows() {
   const { apiFetch, queryClient } = useNotelabFeatures()
 
   return useMutation({
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({
+        queryKey: databasePayloadRootQueryKey(variables.databaseId),
+      })
+      const previous = queryClient.getQueryData<DatabasePayload | null>(
+        databaseQueryKey(variables.databaseId),
+      )
+
+      queryClient.setQueriesData<DatabasePayload | null>(
+        { queryKey: databasePayloadRootQueryKey(variables.databaseId) },
+        (current) => reorderDatabaseRows(current, variables.rowIds),
+      )
+
+      return { previous }
+    },
     mutationFn: async ({ databaseId, rowIds }: ReorderRowsInput) => {
       const response = await apiFetch<DatabaseMutationResponse>(
         `/databases/${databaseId}/rows/reorder`,
@@ -470,6 +592,15 @@ export function useReorderDatabaseRows() {
 
       return commitDatabaseMutation(queryClient, databaseId, response)
     },
+    onError: (_error, variables, context) => {
+      if (context?.previous) {
+        setDatabasePayloadQueryData(
+          queryClient,
+          variables.databaseId,
+          context.previous,
+        )
+      }
+    },
   })
 }
 
@@ -477,6 +608,21 @@ export function useMoveDatabaseRow() {
   const { apiFetch, queryClient } = useNotelabFeatures()
 
   return useMutation({
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({
+        queryKey: databasePayloadRootQueryKey(variables.databaseId),
+      })
+      const previous = queryClient.getQueryData<DatabasePayload | null>(
+        databaseQueryKey(variables.databaseId),
+      )
+
+      queryClient.setQueriesData<DatabasePayload | null>(
+        { queryKey: databasePayloadRootQueryKey(variables.databaseId) },
+        (current) => reorderDatabaseRows(current, variables.rowIds),
+      )
+
+      return { previous }
+    },
     mutationFn: async ({
       databaseId,
       rowId,
@@ -498,6 +644,15 @@ export function useMoveDatabaseRow() {
 
       return commitDatabaseMutation(queryClient, databaseId, response)
     },
+    onError: (_error, variables, context) => {
+      if (context?.previous) {
+        setDatabasePayloadQueryData(
+          queryClient,
+          variables.databaseId,
+          context.previous,
+        )
+      }
+    },
   })
 }
 
@@ -505,6 +660,21 @@ export function useUpdateDatabasePropertyValue() {
   const { apiFetch, queryClient } = useNotelabFeatures()
 
   return useMutation({
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({
+        queryKey: databasePayloadRootQueryKey(variables.databaseId),
+      })
+      const previous = queryClient.getQueryData<DatabasePayload | null>(
+        databaseQueryKey(variables.databaseId),
+      )
+
+      queryClient.setQueriesData<DatabasePayload | null>(
+        { queryKey: databasePayloadRootQueryKey(variables.databaseId) },
+        (current) => updateDatabasePropertyValue(current, variables),
+      )
+
+      return { previous }
+    },
     mutationFn: async ({
       databaseId,
       propertyId,
@@ -521,6 +691,15 @@ export function useUpdateDatabasePropertyValue() {
 
       return commitDatabaseMutation(queryClient, databaseId, response)
     },
+    onError: (_error, variables, context) => {
+      if (context?.previous) {
+        setDatabasePayloadQueryData(
+          queryClient,
+          variables.databaseId,
+          context.previous,
+        )
+      }
+    },
   })
 }
 
@@ -535,10 +714,67 @@ export function useSetDatabaseFavorite() {
       apiFetch<DatabasePayload>(`/databases/${databaseId}/favorite`, {
         method: isFavorite ? "PUT" : "DELETE",
       }),
+    onMutate: async (variables) => {
+      await Promise.all([
+        queryClient.cancelQueries({
+          queryKey: databasePayloadRootQueryKey(variables.databaseId),
+        }),
+        queryClient.cancelQueries({ queryKey: workspacesRootQueryKey() }),
+      ])
+      const previous = queryClient.getQueryData<DatabasePayload | null>(
+        databaseQueryKey(variables.databaseId),
+      )
+      const previousNavQueries = queryClient.getQueriesData<Workspace[]>({
+        queryKey: previous
+          ? workspacesNavRootQueryKey(previous.database.organizationId)
+          : workspacesRootQueryKey(),
+      })
+
+      queryClient.setQueriesData<DatabasePayload | null>(
+        { queryKey: databasePayloadRootQueryKey(variables.databaseId) },
+        (current) =>
+          current
+            ? {
+                ...current,
+                database: {
+                  ...current.database,
+                  isFavorite: variables.isFavorite,
+                },
+              }
+            : current,
+      )
+
+      if (previous) {
+        queryClient.setQueriesData<Workspace[] | undefined>(
+          { queryKey: workspacesNavRootQueryKey(previous.database.organizationId) },
+          (current) =>
+            applyDatabaseFavoriteToNav(current, {
+              ...previous.database,
+              isFavorite: variables.isFavorite,
+              views: previous.views,
+            }),
+        )
+      }
+
+      return { previous, previousNavQueries }
+    },
+    onError: (_error, variables, context) => {
+      if (context?.previous) {
+        setDatabasePayloadQueryData(
+          queryClient,
+          variables.databaseId,
+          context.previous,
+        )
+      }
+
+      for (const [queryKey, data] of context?.previousNavQueries ?? []) {
+        queryClient.setQueryData(queryKey, data)
+      }
+    },
     onSuccess: async (payload) => {
       setDatabasePayloadQueryData(queryClient, payload.database.id, payload)
       queryClient.setQueriesData<Workspace[] | undefined>(
-        { queryKey: ["workspaces", payload.database.organizationId, "nav"] },
+        { queryKey: workspacesNavRootQueryKey(payload.database.organizationId) },
         (current) =>
           applyDatabaseFavoriteToNav(current, {
             ...payload.database,

@@ -1,6 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query"
 
-import type { DatabasePayload } from "./queries"
+import { databasePayloadRootQueryKey, type DatabasePayload } from "./queries"
 
 export function setDatabasePayloadQueryData(
   queryClient: QueryClient,
@@ -8,7 +8,7 @@ export function setDatabasePayloadQueryData(
   payload: DatabasePayload,
 ) {
   queryClient.setQueriesData<DatabasePayload | null>(
-    { queryKey: ["database", databaseId] },
+    { queryKey: databasePayloadRootQueryKey(databaseId) },
     payload,
   )
 }

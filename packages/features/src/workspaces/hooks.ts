@@ -37,8 +37,10 @@ import {
   workspaceThreadsQueryOptions,
   notelabAiWorkspacesQueryKey,
   notelabAiWorkspacesQueryOptions,
+  workspacesNavRootQueryKey,
   workspacesQueryKey,
   workspacesQueryOptions,
+  workspacesRootQueryKey,
   type WorkspaceDetail,
   type AccessLevel,
   type AccessTargetType,
@@ -334,6 +336,20 @@ function updateCommentReaction(
   }
 }
 
+function applyWorkspaceFavoriteToList(
+  workspaces: Workspace[] | undefined,
+  workspaceId: string,
+  isFavorite: boolean,
+) {
+  return workspaces?.map((workspace) =>
+    workspace.id === workspaceId ? { ...workspace, isFavorite } : workspace,
+  )
+}
+
+function isWorkspaceNavQueryKey(queryKey: readonly unknown[]) {
+  return queryKey[0] === "workspaces" && queryKey[2] === "nav"
+}
+
 export function useCreateWorkspace() {
   const { apiFetch, queryClient } = useNotelabFeatures()
 
@@ -409,7 +425,7 @@ export function useCreateWorkspace() {
         }),
       )
       queryClient.setQueriesData<Workspace[] | undefined>(
-        { queryKey: ["workspaces", workspaceRecord.organizationId, "nav"] },
+        { queryKey: workspacesNavRootQueryKey(workspaceRecord.organizationId) },
         (current) =>
           applyNavDelta(
             current,
@@ -602,18 +618,20 @@ export function useUpdateWorkspace() {
       return result.workspace
     },
     onMutate: async (variables) => {
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey: workspaceQueryKey(variables.id) }),
+        queryClient.cancelQueries({ queryKey: workspacesRootQueryKey() }),
+      ])
       const previous = queryClient.getQueryData<WorkspaceDetail | null>(
         workspaceQueryKey(variables.id),
       )
       const currentWorkspace = previous?.workspace
-      const previousNav = currentWorkspace
-        ? queryClient.getQueryData<Workspace[]>(
-            workspacesQueryKey(currentWorkspace.organizationId),
-          )
-        : undefined
+      const previousNavQueries = queryClient.getQueriesData<Workspace[]>({
+        queryKey: workspacesRootQueryKey(),
+      })
 
       if (!currentWorkspace) {
-        return { previous, previousNav }
+        return { previous, previousNavQueries }
       }
 
       const optimisticWorkspace: Workspace = {
@@ -637,12 +655,12 @@ export function useUpdateWorkspace() {
       )
       patchDatabaseCacheWorkspacePage(queryClient, optimisticWorkspace)
       queryClient.setQueriesData<Workspace[] | undefined>(
-        { queryKey: ["workspaces", optimisticWorkspace.organizationId, "nav"] },
+        { queryKey: workspacesNavRootQueryKey(optimisticWorkspace.organizationId) },
         (current) =>
           applyNavDelta(current, { upsertWorkspaces: [optimisticWorkspace] }),
       )
 
-      return { previous, previousNav }
+      return { previous, previousNavQueries }
     },
     onError: (_error, variables, context) => {
       if (!context?.previous) {
@@ -655,11 +673,8 @@ export function useUpdateWorkspace() {
       )
       patchDatabaseCacheWorkspacePage(queryClient, context.previous.workspace)
 
-      if (context.previousNav) {
-        queryClient.setQueryData(
-          workspacesQueryKey(context.previous.workspace.organizationId),
-          context.previousNav,
-        )
+      for (const [queryKey, data] of context.previousNavQueries) {
+        queryClient.setQueryData(queryKey, data)
       }
     },
     onSuccess: async (workspace, variables) => {
@@ -687,7 +702,7 @@ export function useUpdateWorkspace() {
       }
 
       queryClient.setQueriesData<Workspace[] | undefined>(
-        { queryKey: ["workspaces", workspace.organizationId, "nav"] },
+        { queryKey: workspacesNavRootQueryKey(workspace.organizationId) },
         (current) => applyNavDelta(current, { upsertWorkspaces: [workspace] }),
       )
 
@@ -739,10 +754,62 @@ export function useSetWorkspaceFavorite() {
 
       return result.workspace
     },
+    onMutate: async (variables) => {
+      await Promise.all([
+        queryClient.cancelQueries({
+          queryKey: workspaceQueryKey(variables.workspaceId),
+        }),
+        queryClient.cancelQueries({ queryKey: workspacesRootQueryKey() }),
+      ])
+
+      const previousDetail = queryClient.getQueryData<WorkspaceDetail | null>(
+        workspaceQueryKey(variables.workspaceId),
+      )
+      const previousNavQueries = queryClient
+        .getQueriesData<Workspace[]>({ queryKey: workspacesRootQueryKey() })
+        .filter(([queryKey]) => isWorkspaceNavQueryKey(queryKey))
+
+      queryClient.setQueryData<WorkspaceDetail | null>(
+        workspaceQueryKey(variables.workspaceId),
+        (current) =>
+          current
+            ? {
+                ...current,
+                workspace: {
+                  ...current.workspace,
+                  isFavorite: variables.isFavorite,
+                },
+              }
+            : current,
+      )
+      for (const [queryKey] of previousNavQueries) {
+        queryClient.setQueryData<Workspace[] | undefined>(
+          queryKey,
+          (current) =>
+            applyWorkspaceFavoriteToList(
+              current,
+              variables.workspaceId,
+              variables.isFavorite,
+            ),
+        )
+      }
+
+      return { previousDetail, previousNavQueries }
+    },
+    onError: (_error, variables, context) => {
+      queryClient.setQueryData(
+        workspaceQueryKey(variables.workspaceId),
+        context?.previousDetail,
+      )
+
+      for (const [queryKey, data] of context?.previousNavQueries ?? []) {
+        queryClient.setQueryData(queryKey, data)
+      }
+    },
     onSuccess: async (workspace) => {
       setWorkspaceDetailCache(queryClient, workspace)
       queryClient.setQueriesData<Workspace[] | undefined>(
-        { queryKey: ["workspaces", workspace.organizationId, "nav"] },
+        { queryKey: workspacesNavRootQueryKey(workspace.organizationId) },
         (current) => applyWorkspaceFavoriteToNav(current, workspace),
       )
     },

@@ -6,7 +6,9 @@ import type {
 } from "../workspaces/queries"
 
 import {
+  databasePayloadRootQueryKey,
   databaseQueryKey,
+  databaseRootQueryKey,
   type DatabasePayload,
   type DatabaseProperty,
 } from "./queries"
@@ -24,7 +26,7 @@ export function findDatabaseIdsForRowPage(
   const databaseIds: string[] = []
 
   for (const [queryKey, data] of queryClient.getQueriesData<DatabasePayload>({
-    queryKey: ["database"],
+    queryKey: databaseRootQueryKey(),
   })) {
     const databaseId = queryKey[1]
 
@@ -105,7 +107,7 @@ export function patchDatabaseCacheWorkspacePage(
 
   for (const databaseId of databaseIds) {
     queryClient.setQueriesData<DatabasePayload>(
-      { queryKey: ["database", databaseId] },
+      { queryKey: databasePayloadRootQueryKey(databaseId) },
       (current) => patchDatabasePayloadWorkspacePage(current, workspace),
     )
   }

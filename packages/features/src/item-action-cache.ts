@@ -5,7 +5,9 @@ import { databaseQueryKey } from "./databases/queries"
 import { applyWorkspaceFavoriteToNav } from "./workspaces/nav-delta"
 import {
   notelabAiWorkspacesQueryKey,
+  workspacesNavRootQueryKey,
   workspaceQueryKey,
+  workspacesRootQueryKey,
   workspacesQueryKey,
   type Workspace,
   type WorkspaceDetail,
@@ -51,7 +53,7 @@ export async function favoriteWorkspacePages({
   for (const { workspace } of results) {
     setWorkspaceDetailCache(queryClient, workspace)
     queryClient.setQueriesData<Workspace[] | undefined>(
-      { queryKey: ["workspaces", workspace.organizationId, "nav"] },
+      { queryKey: workspacesNavRootQueryKey(workspace.organizationId) },
       (current) => applyWorkspaceFavoriteToNav(current, workspace),
     )
   }
@@ -74,7 +76,7 @@ export async function invalidateDeletedItems({
 
   await Promise.all([
     queryClient.invalidateQueries({
-      queryKey: ["workspaces", organizationId, "nav"],
+      queryKey: workspacesNavRootQueryKey(organizationId),
     }),
     includeNotelabAi
       ? queryClient.invalidateQueries({
@@ -130,7 +132,7 @@ function getWorkspaceFromCache(
   }
 
   for (const [, workspaces] of queryClient.getQueriesData<Workspace[]>({
-    queryKey: ["workspaces"],
+    queryKey: workspacesRootQueryKey(),
   })) {
     const workspace = workspaces?.find(
       (candidate) => candidate.id === workspaceId,

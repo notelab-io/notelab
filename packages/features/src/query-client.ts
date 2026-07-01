@@ -1,0 +1,44 @@
+import { QueryClient } from "@tanstack/react-query"
+
+function getErrorStatus(error: unknown) {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "status" in error &&
+    typeof error.status === "number"
+  ) {
+    return error.status
+  }
+
+  return null
+}
+
+export function shouldRetryQuery(failureCount: number, error: unknown) {
+  if (failureCount >= 1) {
+    return false
+  }
+
+  const status = getErrorStatus(error)
+
+  if (status && status >= 400 && status < 500) {
+    return false
+  }
+
+  return true
+}
+
+export function createNotelabQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: {
+        gcTime: 5 * 60_000,
+        refetchOnWindowFocus: false,
+        retry: shouldRetryQuery,
+        staleTime: 30_000,
+      },
+      mutations: {
+        retry: false,
+      },
+    },
+  })
+}

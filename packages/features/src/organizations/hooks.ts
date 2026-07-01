@@ -3,6 +3,10 @@ import { useMutation, useQuery } from "@tanstack/react-query"
 import { useNotelabFeatures } from "../context"
 import { sessionQueryKey, sessionQueryOptions } from "../auth/queries"
 import {
+  workspaceRootQueryKey,
+  workspacesRootQueryKey,
+} from "../workspaces/queries"
+import {
   type AcceptOrganizationInvitationResponse,
   organizationAccessTargetsQueryKey,
   organizationAccessTargetsQueryOptions,
@@ -124,8 +128,8 @@ export function useSetActiveOrganization() {
       setPreferredActiveOrganizationId?.(organizationId)
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: sessionQueryKey }),
-        queryClient.invalidateQueries({ queryKey: ["workspace"] }),
-        queryClient.invalidateQueries({ queryKey: ["workspaces"] }),
+        queryClient.invalidateQueries({ queryKey: workspaceRootQueryKey() }),
+        queryClient.invalidateQueries({ queryKey: workspacesRootQueryKey() }),
       ])
       await queryClient.fetchQuery({
         ...sessionQueryOptions(auth),

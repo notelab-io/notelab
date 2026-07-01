@@ -26,7 +26,10 @@ import {
   type Workspace,
 } from "@notelab/features/workspaces"
 import { useNotelabFeatures } from "@notelab/features"
-import type { DatabasePayload } from "@notelab/features/databases"
+import {
+  databaseRootQueryKey,
+  type DatabasePayload,
+} from "@notelab/features/databases"
 import { colorWithAlpha, getPaletteColor } from "@/lib/color-tokens"
 import { DATABASE_PAGE_DRAG_MIME } from "@/packages/editor/extensions/database/constants"
 
@@ -53,7 +56,7 @@ function findCachedDatabaseRowPage(
   }
 
   for (const [, data] of queryClient.getQueriesData<DatabasePayload>({
-    queryKey: ["database"],
+    queryKey: databaseRootQueryKey(),
   })) {
     const row = data?.rows.find((item) => item.pageId === pageId)
 

@@ -1,5 +1,6 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import {
+  createNotelabQueryClient,
   NotelabFeaturesProvider,
   type NotelabAuthClient,
 } from '@notelab/features';
@@ -102,16 +103,7 @@ const mobileAuthClient: NotelabAuthClient = {
 type ProviderProps = React.PropsWithChildren;
 
 export function MobileFeaturesProvider({ children }: ProviderProps) {
-  const [queryClient] = React.useState<QueryClient>(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: {
-            retry: false,
-          },
-        },
-      })
-  );
+  const [queryClient] = React.useState(() => createNotelabQueryClient());
 
   return (
     <QueryClientProvider client={queryClient}>
