@@ -26,7 +26,7 @@ export type CreatedApiKeyRecord = ApiKeyRecord & {
 
 export const apiKeysQueryKey = (
   organizationId: string | null | undefined,
-) => ["api-keys", organizationId ?? "none"] as const
+) => ["organizations", organizationId ?? "none", "api-keys"] as const
 
 export const apiKeysQueryOptions = (
   apiFetch: ApiFetcher,
@@ -34,13 +34,14 @@ export const apiKeysQueryOptions = (
 ) => queryOptions({
   queryKey: apiKeysQueryKey(organizationId),
   enabled: Boolean(organizationId),
-  queryFn: () => {
+  queryFn: ({ signal }) => {
     if (!organizationId) {
       throw new Error("Select an organization before loading API keys.")
     }
 
     return apiFetch<ApiKeysResponse>(
       `/api/keys?organizationId=${encodeURIComponent(organizationId)}`,
+      { signal },
     )
   },
 })

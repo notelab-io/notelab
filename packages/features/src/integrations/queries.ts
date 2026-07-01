@@ -210,11 +210,11 @@ export type OrganizationAiModelsResponse = {
 }
 
 export const integrationsQueryKey = (organizationId: string | null | undefined) =>
-  ["organization-integrations", organizationId ?? "none"] as const
+  ["organizations", organizationId ?? "none", "integrations"] as const
 export const aiModelsQueryKey = (organizationId: string | null | undefined) =>
-  ["organization-ai-models", organizationId ?? "none"] as const
+  ["organizations", organizationId ?? "none", "ai-models"] as const
 export const aiProvidersQueryKey = (organizationId: string | null | undefined) =>
-  ["organization-ai-providers", organizationId ?? "none"] as const
+  ["organizations", organizationId ?? "none", "ai-providers"] as const
 
 export const integrationsQueryOptions = (
   apiFetch: ApiFetcher,
@@ -222,7 +222,7 @@ export const integrationsQueryOptions = (
 ) => queryOptions({
   queryKey: integrationsQueryKey(organizationId),
   enabled: Boolean(organizationId),
-  queryFn: async (): Promise<IntegrationStatuses> => {
+  queryFn: async ({ signal }): Promise<IntegrationStatuses> => {
     if (!organizationId) {
       throw new Error("Select an organization before loading integrations.")
     }
@@ -231,27 +231,27 @@ export const integrationsQueryOptions = (
       await Promise.all([
         apiFetch<GmailIntegrationStatus>(
           "/api/organization/settings/integrations/gmail",
-          integrationRequestOptions(organizationId),
+          integrationRequestOptions(organizationId, { signal }),
         ),
         apiFetch<GithubIntegrationStatus>(
           "/api/organization/settings/integrations/github",
-          integrationRequestOptions(organizationId),
+          integrationRequestOptions(organizationId, { signal }),
         ),
         apiFetch<GoogleCalendarIntegrationStatus>(
           "/api/organization/settings/integrations/google-calendar",
-          integrationRequestOptions(organizationId),
+          integrationRequestOptions(organizationId, { signal }),
         ),
         apiFetch<GoogleDriveIntegrationStatus>(
           "/api/organization/settings/integrations/google-drive",
-          integrationRequestOptions(organizationId),
+          integrationRequestOptions(organizationId, { signal }),
         ),
         apiFetch<SlackIntegrationStatus>(
           "/api/organization/settings/integrations/slack",
-          integrationRequestOptions(organizationId),
+          integrationRequestOptions(organizationId, { signal }),
         ),
         apiFetch<LinearIntegrationStatus>(
           "/api/organization/settings/integrations/linear",
-          integrationRequestOptions(organizationId),
+          integrationRequestOptions(organizationId, { signal }),
         ),
       ])
 
@@ -265,10 +265,10 @@ export const aiModelsQueryOptions = (
 ) => queryOptions({
   queryKey: aiModelsQueryKey(organizationId),
   enabled: Boolean(organizationId),
-  queryFn: () =>
+  queryFn: ({ signal }) =>
     apiFetch<OrganizationAiModelsResponse>(
       "/api/organization/settings/ai/models",
-      integrationRequestOptions(organizationId),
+      integrationRequestOptions(organizationId, { signal }),
     ),
 })
 
@@ -278,17 +278,23 @@ export const aiProvidersQueryOptions = (
 ) => queryOptions({
   queryKey: aiProvidersQueryKey(organizationId),
   enabled: Boolean(organizationId),
-  queryFn: () =>
+  queryFn: ({ signal }) =>
     apiFetch<OrganizationAiProvidersResponse>(
       "/api/organization/settings/ai",
-      integrationRequestOptions(organizationId),
+      integrationRequestOptions(organizationId, { signal }),
     ),
 })
 
 export function integrationRequestOptions(
   organizationId: string | null | undefined,
+  init?: RequestInit,
 ): RequestInit {
-  return organizationId
-    ? { headers: { "x-notelab-organization-id": organizationId } }
-    : {}
+  if (!organizationId) {
+    return init ?? {}
+  }
+
+  const headers = new Headers(init?.headers)
+  headers.set("x-notelab-organization-id", organizationId)
+
+  return { ...init, headers }
 }

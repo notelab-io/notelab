@@ -25,7 +25,7 @@ export const appSearchQueryOptions = (
     queryKey: appSearchQueryKey(organizationId, query),
     enabled: Boolean(organizationId) && enabled,
     staleTime: 15_000,
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!organizationId) {
         return []
       }
@@ -38,7 +38,7 @@ export const appSearchQueryOptions = (
       try {
         const result = await apiFetch<{ results: AppSearchResult[] }>(
           `/search?${params.toString()}`,
-          { method: "GET" },
+          { method: "GET", signal },
         )
 
         return result.results

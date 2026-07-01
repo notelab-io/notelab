@@ -27,12 +27,20 @@ export type AiChatThreadMessagesResponse = {
 
 export const aiChatThreadsQueryKey = (
   organizationId: string | null | undefined,
-) => ["ai-chat-threads", organizationId] as const
+) => ["organizations", organizationId ?? "none", "ai-chat", "threads"] as const
 
 export const aiChatThreadMessagesQueryKey = (
   organizationId: string | null | undefined,
   threadId: string | null | undefined,
-) => ["ai-chat-thread-messages", organizationId, threadId] as const
+) =>
+  [
+    "organizations",
+    organizationId ?? "none",
+    "ai-chat",
+    "threads",
+    threadId ?? "none",
+    "messages",
+  ] as const
 
 export const aiChatThreadsQueryOptions = (
   apiFetch: ApiFetcher,
@@ -41,10 +49,10 @@ export const aiChatThreadsQueryOptions = (
   queryOptions({
     queryKey: aiChatThreadsQueryKey(organizationId),
     enabled: Boolean(organizationId),
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       apiFetch<AiChatThreadsResponse>(
         "/api/ai/threads",
-        integrationRequestOptions(organizationId),
+        integrationRequestOptions(organizationId, { signal }),
       ),
   })
 
@@ -56,9 +64,9 @@ export const aiChatThreadMessagesQueryOptions = (
   queryOptions({
     queryKey: aiChatThreadMessagesQueryKey(organizationId, threadId),
     enabled: Boolean(organizationId && threadId),
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       apiFetch<AiChatThreadMessagesResponse>(
         `/api/ai/threads/${encodeURIComponent(threadId!)}/messages`,
-        integrationRequestOptions(organizationId),
+        integrationRequestOptions(organizationId, { signal }),
       ),
   })

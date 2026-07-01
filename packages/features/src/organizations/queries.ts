@@ -56,10 +56,10 @@ export type AcceptOrganizationInvitationResponse = {
 export const organizationsQueryKey = ["organizations"] as const
 export const organizationAccessTargetsQueryKey = (
   organizationId: string | null | undefined,
-) => ["organization-access-targets", organizationId ?? "none"] as const
+) => ["organizations", organizationId ?? "none", "access-targets"] as const
 export const organizationInvitationsQueryKey = (
   organizationId: string | null | undefined,
-) => ["organization-invitations", organizationId ?? "none"] as const
+) => ["organizations", organizationId ?? "none", "invitations"] as const
 
 export const organizationsQueryOptions = (auth: NotelabAuthClient) =>
   queryOptions({
@@ -89,14 +89,14 @@ export const organizationAccessTargetsQueryOptions = (
   queryOptions({
     queryKey: organizationAccessTargetsQueryKey(organizationId),
     enabled: Boolean(organizationId),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!organizationId) {
         return { members: [], teams: [] }
       }
 
       return apiFetch<OrganizationAccessTargetsPayload>(
         `/organizations/${organizationId}/access-targets`,
-        { method: "GET" },
+        { method: "GET", signal },
       )
     },
   })

@@ -19,10 +19,11 @@ export const userSettingsQueryKey = ["user-settings"] as const
 export const userSettingsQueryOptions = (apiFetch: ApiFetcher) =>
   queryOptions({
     queryKey: userSettingsQueryKey,
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       try {
         const result = await apiFetch<{ settings: UserSettings }>(
           "/user-settings",
+          { signal },
         )
 
         return result.settings
