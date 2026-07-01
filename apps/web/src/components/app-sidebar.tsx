@@ -95,7 +95,7 @@ const data = {
     },
     {
       title: "Trash",
-      url: "#",
+      url: "/trash",
       icon: (
         <Trash2Icon
         />
@@ -139,7 +139,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const setFavorite = useSetWorkspaceFavorite()
   const addDatabaseRow = useAddDatabaseRow()
   const setDatabaseFavorite = useSetDatabaseFavorite()
-  const workspaceSections = buildWorkspaceTreeSections(workspaceRecords)
+  const activeWorkspaceRecords = workspaceRecords
+    .filter((workspace) => !workspace.deletedAt)
+    .map((workspace) => ({
+      ...workspace,
+      databases: workspace.databases?.filter((database) => !database.deletedAt),
+    }))
+  const workspaceSections = buildWorkspaceTreeSections(activeWorkspaceRecords)
   const favorites = buildFavoriteTreeItems([
     ...workspaceSections.privateWorkspaces,
     ...workspaceSections.teamspaceWorkspaces,

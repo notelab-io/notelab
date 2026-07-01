@@ -137,6 +137,12 @@ const dashboardRoute = createRoute({
   component: DashboardPage,
 })
 
+const trashRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/trash",
+  component: () => <DashboardPage mode="trash" />,
+})
+
 const canvasRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/canvas",
@@ -262,6 +268,7 @@ const routeTree = rootRoute.addChildren([
     aiRoute,
     canvasRoute,
     dashboardRoute,
+    trashRoute,
     settingsRoute,
     profileSettingsRoute,
     organizationSettingsRoute,

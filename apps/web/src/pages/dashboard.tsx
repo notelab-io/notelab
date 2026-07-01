@@ -45,6 +45,8 @@ type DashboardMode = "home" | "trash"
 type HomepageRow = {
   createdAt: string
   createdBy: string
+  deletedAt: string
+  deletedBy: string
   iconKind: "database" | "page"
   id: string
   isDatabase: boolean
@@ -82,12 +84,19 @@ const homepagePropertyDefinitions = [
   { id: "createdAt", name: "Created time", type: "date", width: 210 },
 ] as const
 
+const trashPropertyDefinitions = [
+  { id: "deletedAt", name: "Deleted at", type: "date", width: 210 },
+  { id: "deletedBy", name: "Deleted by", type: "text", width: 190 },
+] as const
+
 const emptyAsync = async () => undefined
 
 export default function DashboardPage({ mode = "home" }: { mode?: DashboardMode }) {
   const navigate = useNavigate()
   const organizationId = useActiveOrganizationId()
-  const { data: workspaces = [], isLoading } = useWorkspaces(organizationId)
+  const { data: workspaces = [], isLoading } = useWorkspaces(organizationId, {
+    deleted: mode === "trash" ? "only" : "active",
+  })
   const createWorkspace = useCreateWorkspace()
   const createDatabase = useCreateDatabase()
   const [activeViewId, setActiveViewId] = useState<string | null>("recents")
@@ -416,8 +425,12 @@ function buildHomepagePayload({
   viewConfigs: Record<string, unknown>
 }): DatabasePayload {
   const homepageDatabaseId = mode === "trash" ? "trash" : "homepage"
+  const propertyDefinitions =
+    mode === "trash"
+      ? [...homepagePropertyDefinitions, ...trashPropertyDefinitions]
+      : homepagePropertyDefinitions
   const filteredRows = applyHomepageView(rows, activeViewId as HomepageView)
-  const properties: DatabaseProperty[] = homepagePropertyDefinitions.map(
+  const properties: DatabaseProperty[] = propertyDefinitions.map(
     (definition, index) => {
       const propertyConfig = propertyConfigs[definition.id]
       const config =
@@ -454,7 +467,7 @@ function buildHomepagePayload({
     },
   )
   const values: WorkspacePropertyValue[] = filteredRows.flatMap((row) =>
-    homepagePropertyDefinitions.map((definition) => ({
+    propertyDefinitions.map((definition) => ({
       createdAt: row.createdAt,
       id: `${row.id}:${definition.id}`,
       propertyId: definition.id,
@@ -541,6 +554,8 @@ function buildHomepageRows(workspaces: Workspace[], mode: DashboardMode): Homepa
       .map((workspace) => ({
         createdAt: workspace.createdAt,
         createdBy: formatCreator(workspace.createdBy),
+        deletedAt: workspace.deletedAt ?? "",
+        deletedBy: formatCreator(workspace.deletedBy),
         iconKind: "page" as const,
         id: `workspace:${workspace.id}`,
         isDatabase: false,
@@ -588,6 +603,10 @@ function buildHomepageRows(workspaces: Workspace[], mode: DashboardMode): Homepa
         return {
           createdAt: database.createdAt,
           createdBy: formatCreator(database.createdBy ?? workspace.createdBy),
+          deletedAt: database.deletedAt ?? workspace.deletedAt ?? "",
+          deletedBy: formatCreator(
+            database.deletedBy ?? workspace.deletedBy,
+          ),
           iconKind: "database" as const,
           id: `database:${database.id}`,
           isDatabase: true,
