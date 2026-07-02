@@ -1,6 +1,27 @@
+const API_ORIGIN = "https://api.notelab.io";
+const API_PATH_PREFIXES = [
+  "/api",
+  "/agents",
+  "/session",
+  "/sign-in",
+  "/sign-up",
+  "/sign-out",
+  "/email-otp",
+  "/workspace",
+  "/search",
+  "/pages",
+  "/databases",
+  "/images",
+  "/user-settings",
+];
+
 export default {
   async fetch(request, env, _ctx) {
     const url = new URL(request.url);
+
+    if (isApiRoute(url.pathname)) {
+      return proxyApiRequest(request);
+    }
 
     if (
       request.method === "GET" &&
@@ -23,6 +44,55 @@ export default {
     return response;
   },
 };
+
+async function proxyApiRequest(request) {
+  const sourceUrl = new URL(request.url);
+  const targetUrl = new URL(sourceUrl.pathname + sourceUrl.search, API_ORIGIN);
+  const response = await fetch(new Request(targetUrl, request));
+
+  return rewriteApiResponseCookies(response);
+}
+
+function rewriteApiResponseCookies(response) {
+  const headers = new Headers(response.headers);
+  const setCookieHeaders = getSetCookieHeaders(headers);
+
+  if (setCookieHeaders.length === 0) {
+    return response;
+  }
+
+  headers.delete("set-cookie");
+
+  for (const cookie of setCookieHeaders) {
+    headers.append("set-cookie", rewriteApiCookieDomain(cookie));
+  }
+
+  return new Response(response.body, {
+    headers,
+    status: response.status,
+    statusText: response.statusText,
+  });
+}
+
+function getSetCookieHeaders(headers) {
+  if (typeof headers.getSetCookie === "function") {
+    return headers.getSetCookie();
+  }
+
+  const setCookie = headers.get("set-cookie");
+
+  return setCookie ? [setCookie] : [];
+}
+
+function rewriteApiCookieDomain(cookie) {
+  return cookie.replace(/;\s*Domain=api\.notelab\.io/gi, "");
+}
+
+function isApiRoute(pathname) {
+  return API_PATH_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+}
 
 function isSpaRoute(pathname) {
   if (pathname === "/") {
