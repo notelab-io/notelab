@@ -6,3 +6,7 @@ export const healthRoutes = new Hono<AppBindings>();
 healthRoutes.get("/", (c) => {
   return c.json({ ok: true, service: "notelab-server" });
 });
+
+healthRoutes.get("/health", (c) => {
+  return c.json({ ok: true, service: "notelab-server" });
+});
