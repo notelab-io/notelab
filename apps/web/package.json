@@ -8,7 +8,7 @@
     "build": "tsc && vite build",
     "test": "node test/run-tests.mjs",
     "preview": "vite preview",
-    "deploy": "npm run build && npx --prefix ../../../notelab-server wrangler deploy"
+    "deploy": "npm run build && npm run deploy --workspace @notelab/server"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",

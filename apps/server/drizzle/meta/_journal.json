@@ -1,0 +1,174 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1779816234141,
+      "tag": "0000_talented_wong",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1779831789089,
+      "tag": "0001_majestic_skaar",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780009065375,
+      "tag": "0002_outstanding_the_leader",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1780011659253,
+      "tag": "0003_sharp_cobalt_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1780019872662,
+      "tag": "0004_illegal_true_believers",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1780020912830,
+      "tag": "0005_tough_violations",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1780032353987,
+      "tag": "0006_organization_integrations_ai",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1780107641665,
+      "tag": "0007_cuddly_spitfire",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1780199097640,
+      "tag": "0008_material_pyro",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1781443374511,
+      "tag": "0009_magical_spencer_smythe",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1781444805951,
+      "tag": "0010_ancient_hulk",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1781447101641,
+      "tag": "0011_workspace_comment_threads",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1781448700284,
+      "tag": "0012_youthful_scarecrow",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1781692200000,
+      "tag": "0013_database_realtime_version",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1781695800000,
+      "tag": "0014_image_assets",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1781699400000,
+      "tag": "0015_ai_chat_threads",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1781744281424,
+      "tag": "0016_supreme_rictor",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1781800000000,
+      "tag": "0017_database_mutation_log",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1781900000000,
+      "tag": "0018_drop_database_realtime",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1782000000000,
+      "tag": "0019_embedded_items_open_as",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1782100000000,
+      "tag": "0020_workspace_item_placements",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1782200000000,
+      "tag": "0021_item_visits",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1782300000000,
+      "tag": "0022_page_workspace_rename",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1782303600000,
+      "tag": "0023_page_settings_rename",
+      "breakpoints": true
+    }
+  ]
+}

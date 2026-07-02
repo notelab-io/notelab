@@ -1,0 +1,300 @@
+import { and, eq, isNull } from "drizzle-orm";
+import { db } from "./db";
+import { database, databaseRow, page } from "./db/schema";
+import { readLinkedItems, readParentItemId } from "./item-relationships";
+
+export type PageGraphPage = {
+  createdById?: string | null;
+  id: string;
+  metadata: unknown;
+  name?: string;
+};
+
+type PageGraphDatabase = {
+  id: string;
+  pageId: string;
+};
+
+type PageGraphDatabaseRow = {
+  databaseId: string;
+  pageId: string;
+};
+
+export class PageGraph {
+  private readonly childIdsByParentId = new Map<string, Set<string>>();
+  private readonly primaryChildIdsByParentId = new Map<string, Set<string>>();
+  private readonly databasePageIdByDatabaseId: Map<string, string>;
+  private readonly pageById: Map<string, PageGraphPage>;
+
+  constructor(
+    private readonly options: {
+      databaseRecords?: PageGraphDatabase[];
+      databaseRows?: PageGraphDatabaseRow[];
+      pages: PageGraphPage[];
+    },
+  ) {
+    this.pageById = new Map(
+      options.pages.map((item) => [item.id, item]),
+    );
+    this.databasePageIdByDatabaseId = new Map(
+      (options.databaseRecords ?? []).map((record) => [record.id, record.pageId]),
+    );
+
+    this.indexPageChildren();
+    this.indexDatabaseRowChildren();
+    this.indexLinkedItems();
+  }
+
+  getAncestorIds(pageId: string) {
+    const ids: string[] = [];
+    const visited = new Set<string>();
+    let current = this.pageById.get(pageId);
+
+    while (current && !visited.has(current.id)) {
+      ids.push(current.id);
+      visited.add(current.id);
+
+      const parentItemId = readParentItemId(current.metadata);
+      current = parentItemId
+        ? this.pageById.get(parentItemId)
+        : undefined;
+    }
+
+    return ids;
+  }
+
+  hasOwnedRootAccess(ancestorIds: string[], userId: string) {
+    for (let index = 0; index < ancestorIds.length; index += 1) {
+      const ancestor = this.pageById.get(ancestorIds[index]);
+      const parentIds = ancestorIds.slice(index + 1);
+
+      if (
+        ancestor?.createdById === userId &&
+        parentIds.every(
+          (parentId) => this.pageById.get(parentId)?.createdById === userId,
+        )
+      ) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  getNestedPageIds(rootPageId: string, accessibleIds?: Set<string>) {
+    return this.collectNestedPageIds(
+      [rootPageId],
+      accessibleIds,
+      this.childIdsByParentId,
+    );
+  }
+
+  getPrimaryNestedPageIds(
+    rootPageId: string,
+    accessibleIds?: Set<string>,
+  ) {
+    return this.collectNestedPageIds(
+      [rootPageId],
+      accessibleIds,
+      this.primaryChildIdsByParentId,
+    );
+  }
+
+  getNestedDatabasePageIds(rootDatabaseId: string, accessibleIds?: Set<string>) {
+    const rootPageIds = (this.options.databaseRows ?? [])
+      .filter((row) => row.databaseId === rootDatabaseId)
+      .map((row) => row.pageId);
+
+    return this.collectNestedPageIds(
+      rootPageIds,
+      accessibleIds,
+      this.childIdsByParentId,
+    );
+  }
+
+  getPrimaryNestedDatabasePageIds(
+    rootDatabaseId: string,
+    accessibleIds?: Set<string>,
+  ) {
+    const rootPageIds = (this.options.databaseRows ?? [])
+      .filter((row) => row.databaseId === rootDatabaseId)
+      .map((row) => row.pageId);
+
+    return this.collectNestedPageIds(
+      rootPageIds,
+      accessibleIds,
+      this.primaryChildIdsByParentId,
+    );
+  }
+
+  getDatabaseIdsForPageIds(pageIds: Iterable<string>, accessibleIds?: Set<string>) {
+    const pageIdSet = new Set(pageIds);
+
+    return (this.options.databaseRecords ?? [])
+      .filter(
+        (record) =>
+          pageIdSet.has(record.pageId) &&
+          (!accessibleIds || accessibleIds.has(record.pageId)),
+      )
+      .map((record) => record.id);
+  }
+
+  getPagePath(
+    record: PageGraphPage & { name: string },
+    getTitle: (value: string) => string,
+  ) {
+    const path: string[] = [];
+    const visited = new Set<string>();
+    let current: (PageGraphPage & { name?: string }) | undefined =
+      record;
+
+    while (current && !visited.has(current.id)) {
+      path.unshift(getTitle(current.name ?? ""));
+      visited.add(current.id);
+
+      const parentItemId = readParentItemId(current.metadata);
+      current = parentItemId
+        ? this.pageById.get(parentItemId)
+        : undefined;
+    }
+
+    return path.join(" / ");
+  }
+
+  getLinkedItemIds(pageId: string) {
+    const record = this.pageById.get(pageId);
+
+    if (!record) {
+      return [];
+    }
+
+    return readLinkedItems(record.metadata);
+  }
+
+  private collectNestedPageIds(
+    rootPageIds: Iterable<string>,
+    accessibleIds: Set<string> | undefined,
+    childIdsByParentId: Map<string, Set<string>>,
+  ) {
+    const nestedIds = new Set<string>();
+    const pendingIds = [...rootPageIds];
+
+    while (pendingIds.length > 0) {
+      const pageId = pendingIds.shift();
+
+      if (
+        !pageId ||
+        nestedIds.has(pageId) ||
+        (accessibleIds && !accessibleIds.has(pageId))
+      ) {
+        continue;
+      }
+
+      nestedIds.add(pageId);
+
+      for (const childId of childIdsByParentId.get(pageId) ?? []) {
+        pendingIds.push(childId);
+      }
+    }
+
+    return [...nestedIds];
+  }
+
+  private indexPageChildren() {
+    for (const record of this.options.pages) {
+      const parentItemId = readParentItemId(record.metadata);
+
+      if (!parentItemId) {
+        continue;
+      }
+
+      this.addPrimaryChild(parentItemId, record.id);
+    }
+  }
+
+  private indexDatabaseRowChildren() {
+    for (const row of this.options.databaseRows ?? []) {
+      const parentItemId = this.databasePageIdByDatabaseId.get(row.databaseId);
+
+      if (!parentItemId) {
+        continue;
+      }
+
+      this.addPrimaryChild(parentItemId, row.pageId);
+    }
+  }
+
+  private indexLinkedItems() {
+    for (const record of this.options.pages) {
+      for (const linkedItem of readLinkedItems(record.metadata)) {
+        if (linkedItem.kind === "page") {
+          this.addChild(record.id, linkedItem.id);
+        }
+      }
+    }
+  }
+
+  private addPrimaryChild(parentItemId: string, childPageId: string) {
+    const primaryChildIds =
+      this.primaryChildIdsByParentId.get(parentItemId) ?? new Set();
+
+    primaryChildIds.add(childPageId);
+    this.primaryChildIdsByParentId.set(parentItemId, primaryChildIds);
+    this.addChild(parentItemId, childPageId);
+  }
+
+  private addChild(parentItemId: string, childPageId: string) {
+    const childIds = this.childIdsByParentId.get(parentItemId) ?? new Set();
+
+    childIds.add(childPageId);
+    this.childIdsByParentId.set(parentItemId, childIds);
+  }
+}
+
+export async function loadWorkspacePageGraph(workspaceId: string) {
+  const [pages, databaseRecords, databaseRows] = await Promise.all([
+    db
+      .select({
+        createdById: page.createdById,
+        id: page.id,
+        metadata: page.metadata,
+      })
+      .from(page)
+      .where(
+        and(
+          eq(page.workspaceId, workspaceId),
+          isNull(page.deletedAt),
+        ),
+      ),
+    db
+      .select({
+        id: database.id,
+        pageId: database.pageId,
+      })
+      .from(database)
+      .where(
+        and(
+          eq(database.workspaceId, workspaceId),
+          isNull(database.deletedAt),
+        ),
+      ),
+    db
+      .select({
+        databaseId: databaseRow.databaseId,
+        pageId: databaseRow.pageId,
+      })
+      .from(databaseRow)
+      .innerJoin(database, eq(databaseRow.databaseId, database.id))
+      .where(
+        and(
+          eq(database.workspaceId, workspaceId),
+          isNull(database.deletedAt),
+          isNull(databaseRow.deletedAt),
+        ),
+      ),
+  ]);
+
+  return new PageGraph({ databaseRecords, databaseRows, pages });
+}
+
+export { readParentItemId } from "./item-relationships";

@@ -1,0 +1,1 @@
+ALTER TABLE "workspace_settings" ADD COLUMN "embedded_items_open_as" text DEFAULT 'sidepanel' NOT NULL;
