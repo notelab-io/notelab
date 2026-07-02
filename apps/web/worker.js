@@ -1,6 +1,7 @@
 const API_ORIGIN = "https://api.notelab.io";
+const API_PREFIX = "/api";
+const RAW_API_PREFIX = "/api/_raw";
 const API_PATH_PREFIXES = [
-  "/api",
   "/agents",
   "/session",
   "/sign-in",
@@ -47,10 +48,31 @@ export default {
 
 async function proxyApiRequest(request) {
   const sourceUrl = new URL(request.url);
-  const targetUrl = new URL(sourceUrl.pathname + sourceUrl.search, API_ORIGIN);
+  const targetPathname = getApiTargetPathname(sourceUrl.pathname);
+  const targetUrl = new URL(targetPathname + sourceUrl.search, API_ORIGIN);
   const response = await fetch(new Request(targetUrl, request));
 
   return rewriteApiResponseCookies(response);
+}
+
+function getApiTargetPathname(pathname) {
+  if (pathname === RAW_API_PREFIX) {
+    return API_PREFIX;
+  }
+
+  if (pathname.startsWith(`${RAW_API_PREFIX}/`)) {
+    return pathname.slice(RAW_API_PREFIX.length);
+  }
+
+  if (pathname === API_PREFIX) {
+    return "/";
+  }
+
+  if (pathname.startsWith(`${API_PREFIX}/`)) {
+    return pathname.slice(API_PREFIX.length);
+  }
+
+  return pathname;
 }
 
 function rewriteApiResponseCookies(response) {
@@ -89,8 +111,12 @@ function rewriteApiCookieDomain(cookie) {
 }
 
 function isApiRoute(pathname) {
-  return API_PATH_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  return (
+    pathname === API_PREFIX ||
+    pathname.startsWith(`${API_PREFIX}/`) ||
+    API_PATH_PREFIXES.some(
+      (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+    )
   );
 }
 

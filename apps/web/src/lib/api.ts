@@ -1,4 +1,6 @@
 export const API_BASE_URL = resolveApiBaseUrl()
+const SAME_ORIGIN_API_BASE_URL = "/api"
+const RAW_API_PREFIX = "/api/_raw"
 
 declare global {
   interface Window {
@@ -46,7 +48,7 @@ export async function apiFetch<T>(
     requestHeaders.set("content-type", "application/json")
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(toApiUrl(path), {
     ...init,
     body,
     credentials: auth ? "include" : "same-origin",
@@ -87,11 +89,18 @@ export function toApiUrl(path: string) {
     return path
   }
 
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`
+
+  if (
+    API_BASE_URL === SAME_ORIGIN_API_BASE_URL &&
+    normalizedPath.startsWith(`${SAME_ORIGIN_API_BASE_URL}/`)
+  ) {
+    return `${RAW_API_PREFIX}${normalizedPath}`
+  }
+
   return API_BASE_URL
-    ? `${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`
-    : path.startsWith("/")
-      ? path
-      : `/${path}`
+    ? `${API_BASE_URL}${normalizedPath}`
+    : normalizedPath
 }
 
 function resolveApiBaseUrl() {
@@ -99,6 +108,13 @@ function resolveApiBaseUrl() {
 
   if (configuredBaseUrl) {
     return configuredBaseUrl
+  }
+
+  if (
+    typeof window !== "undefined" &&
+    window.location.hostname === "app.notelab.io"
+  ) {
+    return SAME_ORIGIN_API_BASE_URL
   }
 
   return ""
