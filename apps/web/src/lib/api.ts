@@ -1,6 +1,7 @@
-export const API_BASE_URL = resolveApiBaseUrl()
 const SAME_ORIGIN_API_BASE_URL = "/api"
 const RAW_API_PREFIX = "/api/_raw"
+
+export const API_BASE_URL = resolveApiBaseUrl()
 
 declare global {
   interface Window {
