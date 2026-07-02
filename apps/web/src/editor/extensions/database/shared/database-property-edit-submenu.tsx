@@ -13,7 +13,7 @@ import {
   UserRound,
 } from "lucide-react"
 import { Reorder, useDragControls } from "framer-motion"
-import { useState, type ReactNode } from "react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
 
 import {
   DropDrawerItem,
@@ -551,8 +551,20 @@ function SelectPropertyOptions({
   const [showCreateInput, setShowCreateInput] = useState(false)
   const optionIds = options.map((option) => option.id)
   const [draftOptionIds, setDraftOptionIds] = useState<string[] | null>(null)
+  const draftOptionIdsRef = useRef<string[] | null>(null)
+  const draftOptionFrameRef = useRef<number | null>(null)
   const renderedOptionIds = draftOptionIds ?? optionIds
   const renderedOptions = reorderOptionsByIds(options, renderedOptionIds)
+  useEffect(() => {
+    if (
+      draftOptionIds &&
+      (areSameOrderedIds(draftOptionIds, optionIds) ||
+        !haveSameIds(draftOptionIds, optionIds))
+    ) {
+      draftOptionIdsRef.current = null
+      setDraftOptionIds(null)
+    }
+  }, [draftOptionIds, optionIds])
   const updateOption = (
     optionId: string,
     patch: Partial<DatabaseSelectOption>
@@ -588,15 +600,45 @@ function SelectPropertyOptions({
       selectOptionSort,
     })
   }
-  const commitOptionReorder = () => {
-    if (!draftOptionIds) {
+  const queueOptionReorder = (nextOptionIds: string[]) => {
+    draftOptionIdsRef.current = nextOptionIds
+
+    if (draftOptionFrameRef.current !== null) {
       return
     }
 
-    const nextOptionIds = draftOptionIds
-    setDraftOptionIds(null)
+    draftOptionFrameRef.current = requestAnimationFrame(() => {
+      draftOptionFrameRef.current = null
+      const latestOptionIds = draftOptionIdsRef.current
+
+      if (!latestOptionIds) {
+        return
+      }
+
+      setDraftOptionIds((currentOptionIds) =>
+        areSameOrderedIds(currentOptionIds ?? optionIds, latestOptionIds)
+          ? currentOptionIds
+          : latestOptionIds
+      )
+    })
+  }
+  const commitOptionReorder = () => {
+    const nextOptionIds = draftOptionIdsRef.current
+
+    if (!nextOptionIds) {
+      return
+    }
+
+    if (draftOptionFrameRef.current !== null) {
+      cancelAnimationFrame(draftOptionFrameRef.current)
+      draftOptionFrameRef.current = null
+    }
+
+    draftOptionIdsRef.current = null
+    setDraftOptionIds(nextOptionIds)
 
     if (areSameOrderedIds(nextOptionIds, optionIds)) {
+      setDraftOptionIds(null)
       return
     }
 
@@ -644,7 +686,7 @@ function SelectPropertyOptions({
           axis="y"
           layoutScroll
           values={renderedOptionIds}
-          onReorder={setDraftOptionIds}
+          onReorder={queueOptionReorder}
         >
           {renderedOptions.map((option) => (
             <OptionEditorSubmenu
@@ -697,6 +739,31 @@ function StatusPropertyOptions({
   const [draftGroupOptionIdsByName, setDraftGroupOptionIdsByName] = useState<
     Record<string, string[]>
   >({})
+  const draftGroupOptionIdsByNameRef = useRef<Record<string, string[]>>({})
+  const draftGroupOptionFrameRef = useRef<number | null>(null)
+  useEffect(() => {
+    const nextDrafts = { ...draftGroupOptionIdsByNameRef.current }
+    let changed = false
+
+    for (const group of groups) {
+      const draftOptionIds = nextDrafts[group.name]
+      const groupOptionIds = group.options.map((option) => option.id)
+
+      if (
+        draftOptionIds &&
+        (areSameOrderedIds(draftOptionIds, groupOptionIds) ||
+          !haveSameIds(draftOptionIds, groupOptionIds))
+      ) {
+        delete nextDrafts[group.name]
+        changed = true
+      }
+    }
+
+    if (changed) {
+      draftGroupOptionIdsByNameRef.current = nextDrafts
+      setDraftGroupOptionIdsByName(nextDrafts)
+    }
+  }, [options])
   const updateOption = (optionId: string, patch: Partial<StatusOption>) => {
     onUpdateConfig({
       defaultOptionId: resolvedDefaultOptionId,
@@ -726,27 +793,48 @@ function StatusPropertyOptions({
     })
   }
   const setDraftGroupOptionIds = (groupName: string, optionIds: string[]) => {
-    setDraftGroupOptionIdsByName((drafts) => ({
-      ...drafts,
+    draftGroupOptionIdsByNameRef.current = {
+      ...draftGroupOptionIdsByNameRef.current,
       [groupName]: optionIds,
-    }))
+    }
+
+    if (draftGroupOptionFrameRef.current !== null) {
+      return
+    }
+
+    draftGroupOptionFrameRef.current = requestAnimationFrame(() => {
+      draftGroupOptionFrameRef.current = null
+      setDraftGroupOptionIdsByName({
+        ...draftGroupOptionIdsByNameRef.current,
+      })
+    })
+  }
+  const clearDraftGroupOptionIds = (groupName: string) => {
+    if (draftGroupOptionFrameRef.current !== null) {
+      cancelAnimationFrame(draftGroupOptionFrameRef.current)
+      draftGroupOptionFrameRef.current = null
+    }
+
+    const nextDrafts = { ...draftGroupOptionIdsByNameRef.current }
+    delete nextDrafts[groupName]
+    draftGroupOptionIdsByNameRef.current = nextDrafts
+
+    setDraftGroupOptionIdsByName((drafts) => {
+      const nextStateDrafts = { ...drafts }
+      delete nextStateDrafts[groupName]
+
+      return nextStateDrafts
+    })
   }
   const commitGroupOptionReorder = (
     groupName: string,
     groupOptions: StatusOption[]
   ) => {
-    const draftOptionIds = draftGroupOptionIdsByName[groupName]
+    const draftOptionIds = draftGroupOptionIdsByNameRef.current[groupName]
 
     if (!draftOptionIds) {
       return
     }
-
-    setDraftGroupOptionIdsByName((drafts) => {
-      const nextDrafts = { ...drafts }
-      delete nextDrafts[groupName]
-
-      return nextDrafts
-    })
 
     if (
       areSameOrderedIds(
@@ -754,6 +842,7 @@ function StatusPropertyOptions({
         groupOptions.map((option) => option.id)
       )
     ) {
+      clearDraftGroupOptionIds(groupName)
       return
     }
 
@@ -1431,6 +1520,16 @@ function areSameOrderedIds(firstIds: string[], secondIds: string[]) {
     firstIds.length === secondIds.length &&
     firstIds.every((id, index) => id === secondIds[index])
   )
+}
+
+function haveSameIds(firstIds: string[], secondIds: string[]) {
+  if (firstIds.length !== secondIds.length) {
+    return false
+  }
+
+  const secondIdSet = new Set(secondIds)
+
+  return firstIds.every((id) => secondIdSet.has(id))
 }
 
 function getNextOptionColor(options: DatabaseSelectOption[]) {
