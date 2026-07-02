@@ -1453,7 +1453,15 @@
   }
 
   .database-input-cell-link {
-    @apply absolute left-0 top-0 inline-flex h-8 max-w-full items-center truncate px-3 py-1 text-sm leading-6 text-primary underline underline-offset-2 focus-visible:ring-2 focus-visible:ring-ring/40;
+    @apply inline-flex h-8 max-w-full items-center truncate px-3 py-1 text-sm leading-6 text-primary underline underline-offset-2 focus-visible:ring-2 focus-visible:ring-ring/40;
+  }
+
+  .database-input-cell-trigger {
+    @apply relative;
+  }
+
+  .database-input-cell-trigger > .database-input-cell-link {
+    @apply absolute left-0 top-0;
   }
 
   .database-input-cell-wrap {
