@@ -1,5 +1,5 @@
 import { Loader2, Plus, Search } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import {
   DropDrawer,
@@ -26,27 +26,83 @@ export function AddDatabasePropertyMenu({
   open?: boolean
   triggerLabel?: string
 }) {
+  const [internalOpen, setInternalOpen] = useState(false)
+  const [propertyTitle, setPropertyTitle] = useState("")
   const [query, setQuery] = useState("")
+  const titleInputRef = useRef<HTMLInputElement | null>(null)
+  const actualOpen = open ?? internalOpen
   const normalizedQuery = query.trim().toLowerCase()
   const filteredPropertyTypes = databasePropertyTypes.map((group) =>
     normalizedQuery
       ? group.filter((item) => item.label.toLowerCase().includes(normalizedQuery))
       : group
   )
+  const handleOpenChange = (nextOpen: boolean) => {
+    setInternalOpen(nextOpen)
+    onOpenChange?.(nextOpen)
+
+    if (!nextOpen) {
+      setPropertyTitle("")
+      setQuery("")
+    }
+  }
+  const handleAdd = (type: string, label: string) => {
+    onAdd(type, propertyTitle.trim() || label)
+    setPropertyTitle("")
+    setQuery("")
+  }
+
+  useEffect(() => {
+    if (!actualOpen) {
+      return
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      titleInputRef.current?.focus()
+      titleInputRef.current?.select()
+    })
+
+    return () => window.cancelAnimationFrame(frame)
+  }, [actualOpen])
 
   return (
-    <DropDrawer open={open} onOpenChange={onOpenChange}>
+    <DropDrawer open={actualOpen} onOpenChange={handleOpenChange}>
       <DropDrawerTrigger asChild>
-        <button
-          className="database-add-property"
-          disabled={disabled}
-          type="button"
-        >
-          {isPending ? <Loader2 className="animate-spin" /> : <Plus />}
-          <span>{triggerLabel}</span>
-        </button>
+        {actualOpen ? (
+          <div
+            aria-disabled={disabled}
+            className="database-add-property"
+            role="button"
+            tabIndex={disabled ? -1 : 0}
+          >
+            {isPending ? <Loader2 className="animate-spin" /> : <Plus />}
+            <input
+              aria-label="Property title"
+              className="database-add-property-input"
+              onChange={(event) => setPropertyTitle(event.target.value)}
+              onClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => event.stopPropagation()}
+              onPointerDown={(event) => event.stopPropagation()}
+              placeholder="Property title"
+              ref={titleInputRef}
+              value={propertyTitle}
+            />
+          </div>
+        ) : (
+          <button
+            className="database-add-property"
+            disabled={disabled}
+            type="button"
+          >
+            {isPending ? <Loader2 className="animate-spin" /> : <Plus />}
+            <span>{triggerLabel}</span>
+          </button>
+        )}
       </DropDrawerTrigger>
-      <DropDrawerContent className="w-100">
+      <DropDrawerContent
+        className="w-100"
+        onOpenAutoFocus={(event) => event.preventDefault()}
+      >
         <div className="flex items-center gap-1.5 rounded-md px-1.5 py-1 text-sm">
           <Search className="size-4" />
           <input
@@ -68,7 +124,7 @@ export function AddDatabasePropertyMenu({
               return (
                 <DropDrawerItem
                   key={item.type}
-                  onSelect={() => onAdd(item.type, item.label)}
+                  onSelect={() => handleAdd(item.type, item.label)}
                 >
                   <Icon />
                   <span>{item.label}</span>
