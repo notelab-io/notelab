@@ -1,6 +1,7 @@
 {
   "name": "notelab",
   "private": true,
+  "license": "MIT",
   "dependencies": {
     "expo-router": "~56.2.8"
   },

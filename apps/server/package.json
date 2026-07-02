@@ -1,5 +1,6 @@
 {
   "name": "@notelab/server",
+  "license": "MIT",
   "type": "module",
   "exports": {
     ".": {

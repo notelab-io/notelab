@@ -2,6 +2,7 @@
   "name": "@notelab/features",
   "type": "module",
   "version": "0.0.0",
+  "license": "MIT",
   "scripts": {
     "test": "tsx --test \"src/**/*.test.ts\"",
     "test:databases": "tsx --test src/databases/*.test.ts"
