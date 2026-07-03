@@ -5,6 +5,7 @@ export type ServerRuntimeAdapter = {
   createImageStorage?(env: RuntimeEnv): ImageStorage | null;
   getDatabaseUrl?(env: RuntimeEnv): string | null | undefined;
   getImageStorageMode?(env: RuntimeEnv): "s3" | "binding" | null | undefined;
+  selfHosted?: false;
 };
 
 let runtimeAdapter: ServerRuntimeAdapter = {};
@@ -25,6 +26,10 @@ export function getDatabaseUrl(env: RuntimeEnv) {
 
 export function getRuntimeAdapter() {
   return runtimeAdapter;
+}
+
+export function isSelfHostedRuntime() {
+  return runtimeAdapter.selfHosted !== false;
 }
 
 export function getConfiguredImageStorageMode(env: RuntimeEnv) {

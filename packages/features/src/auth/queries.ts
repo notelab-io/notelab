@@ -22,6 +22,7 @@ export type Session = {
 export type SessionResponse = {
   user: SessionUser | null
   session: Session | null
+  workspacePinned?: boolean
 }
 
 export type SignInWithOtpInput = {

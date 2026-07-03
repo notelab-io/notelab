@@ -1,6 +1,9 @@
+import { asc } from "drizzle-orm";
 import { Hono } from "hono";
 import { createAuth } from "../auth";
-import { createDbClient, runWithDbClient } from "../db";
+import { createDbClient, db, runWithDbClient } from "../db";
+import { workspace } from "../db/schema";
+import { isSelfHostedRuntime } from "../runtime-adapter";
 import type { AppBindings } from "../types";
 
 export const authRoutes = new Hono<AppBindings>();
@@ -159,7 +162,16 @@ authRoutes.on(["GET", "POST"], "/api/auth/*", async (c) => {
   const dbClient = createDbClient(c.env);
   const { request, rewritten } = await getWorkspaceAuthRequest(c.req.raw);
 
-  return runWithDbClient(dbClient, () => {
+  return runWithDbClient(dbClient, async () => {
+    if (await isBlockedSelfHostedWorkspaceCreate(request)) {
+      return c.json(
+        {
+          error: "Self-hosted deployments can only have one workspace.",
+        },
+        409,
+      );
+    }
+
     const auth = createAuth(c.env, request);
 
     return auth
@@ -167,3 +179,24 @@ authRoutes.on(["GET", "POST"], "/api/auth/*", async (c) => {
       .then((response) => toWorkspaceAuthResponse(response, rewritten));
   });
 });
+
+async function isBlockedSelfHostedWorkspaceCreate(request: Request) {
+  const url = new URL(request.url);
+
+  return (
+    isSelfHostedRuntime() &&
+    request.method === "POST" &&
+    url.pathname === "/api/auth/organization/create" &&
+    Boolean(await getPinnedWorkspaceId())
+  );
+}
+
+async function getPinnedWorkspaceId() {
+  const [pinnedWorkspace] = await db
+    .select({ id: workspace.id })
+    .from(workspace)
+    .orderBy(asc(workspace.createdAt))
+    .limit(1);
+
+  return pinnedWorkspace?.id ?? null;
+}

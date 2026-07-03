@@ -39,9 +39,66 @@ import { useAppStore } from "@/stores/app-store"
 import { Building2Icon, ChevronDownIcon, PlusIcon } from "lucide-react"
 
 export function WorkspaceSwitcher() {
+  const { data: sessionData } = useSession()
+  const isWorkspacePinned = sessionData?.workspacePinned !== false
+
+  if (isWorkspacePinned) {
+    return <SingleWorkspaceLabel sessionData={sessionData} />
+  }
+
+  return <MultiWorkspaceSwitcher sessionData={sessionData} />
+}
+
+function SingleWorkspaceLabel({
+  sessionData,
+}: {
+  sessionData: ReturnType<typeof useSession>["data"]
+}) {
+  const { data: rawWorkspaces = [], isError, isLoading } = useWorkspaces()
+  const workspaces = rawWorkspaces.filter(Boolean)
+  const storedActiveWorkspaceId = useAppStore((state) => state.activeWorkspaceId)
+  const activeWorkspaceId =
+    sessionData?.session?.activeWorkspaceId ?? storedActiveWorkspaceId
+  const activeWorkspace =
+    workspaces.find((workspace) => workspace.id === activeWorkspaceId) ??
+    workspaces[0]
+
+  return (
+    <SidebarMenu>
+      <SidebarMenuItem>
+        <SidebarMenuButton
+          className="w-fit max-w-full cursor-default px-1.5"
+          disabled={isLoading}
+        >
+          <div className="flex aspect-square size-5 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
+            {activeWorkspace ? (
+              <span className="text-[10px] font-semibold">
+                {getWorkspaceInitials(activeWorkspace.name)}
+              </span>
+            ) : (
+              <Building2Icon className="size-3.5" />
+            )}
+          </div>
+          <span className="truncate font-medium">
+            {readTriggerLabel({
+              activeWorkspaceName: activeWorkspace?.name,
+              isError,
+              isLoading,
+            })}
+          </span>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    </SidebarMenu>
+  )
+}
+
+function MultiWorkspaceSwitcher({
+  sessionData,
+}: {
+  sessionData: ReturnType<typeof useSession>["data"]
+}) {
   const navigate = useNavigate()
   const [isCreateDialogOpen, setIsCreateDialogOpen] = React.useState(false)
-  const { data: sessionData } = useSession()
   const { data: rawWorkspaces = [], isError, isLoading } = useWorkspaces()
   const workspaces = rawWorkspaces.filter(Boolean)
   const createWorkspace = useCreateWorkspace()
