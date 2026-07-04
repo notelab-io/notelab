@@ -476,6 +476,73 @@ export function register({ assert, loadModule, test }) {
     })
   })
 
+  test("database view commands trim relation values when switching to one page", async () => {
+    const { getDatabaseViewCommands } = await loadModule(
+      "/src/editor/extensions/database/shared/database-view-commands.ts"
+    )
+    const updateProperty = createMutation()
+    const updateValue = createMutation()
+    const relationConfig = {
+      relation: {
+        limit: "no_limit",
+        relatedDatabaseId: "database-b",
+        relatedPropertyId: "property-b",
+      },
+    }
+    const property = createProperty(
+      "database-property-relation",
+      "property-relation",
+      "Related",
+      "relation",
+      relationConfig
+    )
+    const commands = getDatabaseViewCommands({
+      activeDatabaseFilters: [],
+      activeDatabaseSorts: [],
+      activeView: null,
+      databaseId,
+      editable: true,
+      isKanbanView: false,
+      items: [],
+      kanbanGroupProperty: null,
+      mutations: createMutations({ updateProperty, updateValue }),
+      payload: createPayload({
+        properties: [property],
+        rows: [
+          {
+            id: "row-1",
+            page: { id: "page-1", name: "Page 1" },
+            pageId: "page-1",
+          },
+        ],
+        values: [
+          {
+            pageId: "page-1",
+            propertyId: "property-relation",
+            value: ["page-a", "page-b"],
+          },
+        ],
+      }),
+      properties: [property],
+      setActiveViewId: () => {},
+      setFilterPickerOpen: () => {},
+      setShowFilterPill: () => {},
+      setShowSortPill: () => {},
+      setSortPickerOpen: () => {},
+    })
+
+    await commands.updateDatabasePropertyConfig("database-property-relation", {
+      relation: { limit: "one_page" },
+    })
+
+    assert.deepEqual(updateValue.calls[0][0], {
+      databaseId,
+      propertyId: "property-relation",
+      rowId: "row-1",
+      value: "page-a",
+    })
+  })
+
   test("database view commands update group config", async () => {
     const { getDatabaseViewCommands } = await loadModule(
       "/src/editor/extensions/database/shared/database-view-commands.ts"

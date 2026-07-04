@@ -1,0 +1,6 @@
+services:
+  notelab:
+    # Use with:
+    # docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+    image: ghcr.io/owner/repo:v0.0.1
+    build: null

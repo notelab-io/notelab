@@ -1,9 +1,3 @@
-<p align="center">
-  <a href="https://github.com/sreeragh-s/notelab">
-    <img src="./docs/assets/readme/notelab-hero-placeholder.svg" alt="Notelab product screenshot placeholder" width="920" />
-  </a>
-</p>
-
 <h1 align="center">Notelab</h1>
 
 <p align="center">
@@ -13,9 +7,9 @@
 <p align="center">
   <a href="https://app.notelab.io">App</a>
   |
-  <a href="./apps/docs">Docs</a>
+  <a href="https://docs.notelab.io">Docs</a>
   |
-  <a href="./docs/self-hosting.md">Self-host</a>
+  <a href="https://docs.notelab.io/self-hosting">Self-host</a>
   |
   <a href="./CONTRIBUTING.md">Contribute</a>
   |
@@ -33,8 +27,6 @@
 
 Notelab is an open-source workspace for building and organizing knowledge with structured pages, database views, comments, AI-assisted workflows, and connected tools. It is designed to run as a hosted product or as a self-hosted Docker deployment.
 
-> Screenshot placeholder: replace `docs/assets/readme/notelab-hero-placeholder.svg` with a real product screenshot when the public launch visuals are ready.
-
 ## What You Can Do
 
 - **Write and organize pages** with a rich editor, nested navigation, comments, and workspace context.
@@ -48,12 +40,6 @@ Notelab is an open-source workspace for building and organizing knowledge with s
 | Workspace | Databases | AI workflows |
 | --- | --- | --- |
 | Replace with a workspace screenshot. | Replace with a database screenshot. | Replace with an AI/chat screenshot. |
-
-Suggested screenshot paths:
-
-- `docs/assets/readme/workspace.png`
-- `docs/assets/readme/database.png`
-- `docs/assets/readme/ai.png`
 
 ## Quick Start
 
@@ -78,9 +64,8 @@ docker compose up -d --build
 
 Read the self-hosting guide:
 
-- [Self-hosting overview](./docs/self-hosting.md)
-- [Docs site self-hosting page](./apps/docs/self-hosting/index.mdx)
-- [Operations guide](./apps/docs/self-hosting/operations.mdx)
+- [Self-hosting overview](https://docs.notelab.io/self-hosting)
+- [Operations guide](https://docs.notelab.io/self-hosting/operations)
 
 ## Development
 
@@ -106,8 +91,6 @@ Common commands:
 | `npm run dev:server` | Start the serverful API. |
 | `npm run build:server` | Type-check the server. |
 | `npm run dev:desktop` | Start the Tauri desktop shell. |
-| `npm run dev:docs` | Start the docs site. |
-| `npm run check:docs` | Check docs links. |
 
 ## Project Structure
 
@@ -117,15 +100,13 @@ notelab/
 |   |-- web       # Vite React web client
 |   |-- server    # Hono API, auth, persistence, AI, integrations
 |   |-- mobile    # Expo mobile client
-|   |-- desktop   # Tauri desktop shell
-|   `-- docs      # Mint documentation site
+|   `-- desktop   # Tauri desktop shell
 |-- packages/
 |   |-- features  # Shared client feature hooks and cache logic
 |   |-- connectors
 |   |-- page-context
 |   `-- markdown-text-splitter
 |-- docker/
-|-- docs/
 `-- docker-compose.yml
 ```
 

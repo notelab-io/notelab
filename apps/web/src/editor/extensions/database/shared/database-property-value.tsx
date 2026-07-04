@@ -478,6 +478,7 @@ function DatabaseRollupPropertyValue({
           onUpdateConfig={(config) => {
             void onPropertyConfigChange?.(config)
           }}
+          surface="popover"
         />
       </PopoverContent>
     </Popover>

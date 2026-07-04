@@ -8,7 +8,6 @@ Notelab is an npm-workspaces monorepo for a notes, pages, databases, comments, A
 - `apps/server`: Hono server. It owns auth, workspace APIs, database persistence, image upload signing, AI chat tools, integration OAuth flows, and the serverful runtime.
 - `apps/mobile`: Expo client that reuses shared feature packages and talks to the Notelab API.
 - `apps/desktop`: Tauri shell for the desktop app.
-- `apps/docs`: Mint documentation site.
 - `packages/features`: shared TanStack Query hooks, query keys, mutations, and cache update logic used by clients.
 - `packages/connectors`: shared connector domain logic and connector-specific UI exports.
 - `packages/page-context`: editor/page context extraction, database markdown construction, and ProseMirror-to-markdown helpers.
@@ -51,4 +50,4 @@ Hosted Notelab Cloud may use private deployment infrastructure. The open-source 
 - Keep API validation and authorization in `apps/server`.
 - Keep editor/page conversion helpers in `packages/page-context` when they are useful outside a single component.
 - Prefer adding focused tests next to the package or app behavior being changed.
-- Update `README.md`, `CONTRIBUTING.md`, or docs pages when setup or public behavior changes.
+- Update `README.md`, `CONTRIBUTING.md`, or the external docs site when setup or public behavior changes.

@@ -43,6 +43,15 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Switch } from "@/components/ui/switch"
 import {
@@ -76,7 +85,6 @@ import {
   getNumberDisplayShowNumber,
   getNumberDisplayStyle,
   getNumberFormat,
-  getMergedPropertyConfig,
   getShowFullUrl,
   getStatusDefaultOptionId,
   type DatabaseNumberDisplayStyle,
@@ -84,6 +92,7 @@ import {
   type DatabaseSelectOption,
   type NumberDecimalPlacesValue,
 } from "./database-view-config"
+import { useDatabaseViewContext } from "./database-view-context"
 import {
   DatabaseSearchableMenuItems,
   type DatabaseSearchableMenuOption,
@@ -201,7 +210,7 @@ function DatabasePropertyEditMenuItems({
   type: string
   workspaceId?: string | null
 }) {
-  const updateProperty = useUpdateDatabaseProperty()
+  const { updateDatabasePropertyConfig } = useDatabaseViewContext()
   const isStatusProperty = type === "status"
   const isSelectProperty = type === "select" || type === "multi_select"
   const isPersonProperty = type === "person"
@@ -217,11 +226,7 @@ function DatabasePropertyEditMenuItems({
   const statusOptions = getStatusOptions(config)
   const selectOptions = getSelectOptions(config)
   const updatePropertyConfig = (nextConfig: DatabasePropertyConfig) => {
-    updateProperty.mutate({
-      config: getMergedPropertyConfig(config, nextConfig),
-      databaseId,
-      databasePropertyId,
-    })
+    void updateDatabasePropertyConfig(databasePropertyId, nextConfig)
   }
 
   if (isNumberProperty) {
@@ -350,10 +355,12 @@ export function DatabaseRollupPropertySettings({
   config,
   databaseId,
   onUpdateConfig,
+  surface = "menu",
 }: {
   config?: unknown
   databaseId: string
   onUpdateConfig: (config: DatabasePropertyConfig) => void
+  surface?: "menu" | "popover"
 }) {
   const rollupConfig = getRollupConfig(config)
   const { data: currentDatabasePayload, isLoading: isLoadingCurrentDatabase } =
@@ -402,6 +409,84 @@ export function DatabaseRollupPropertySettings({
         },
         patch
       )
+    )
+  }
+
+  if (surface === "popover") {
+    if (isLoadingCurrentDatabase) {
+      return <RollupPopoverMessage>Loading relations...</RollupPopoverMessage>
+    }
+
+    if (relationProperties.length === 0) {
+      return (
+        <RollupPopoverMessage>Add a relation property first.</RollupPopoverMessage>
+      )
+    }
+
+    return (
+      <div className="flex flex-col gap-2 p-1">
+        <RollupSelect
+          icon={<ArrowUpRight />}
+          label="Relation"
+          onValueChange={(relationPropertyId) => {
+            const nextRelationProperty = relationProperties.find(
+              (property) => property.id === relationPropertyId
+            )
+
+            updateRollupConfig({
+              calculation: "show_original",
+              relationPropertyId,
+              targetPropertyId:
+                nextRelationProperty?.id === rollupConfig.relationPropertyId
+                  ? rollupConfig.targetPropertyId
+                  : undefined,
+            })
+          }}
+          options={relationProperties.map((property) => ({
+            label: property.property.name,
+            value: property.id,
+          }))}
+          value={selectedRelationProperty?.id ?? ""}
+        />
+        <RollupSelect
+          icon={<Type />}
+          label="Target property"
+          onValueChange={(targetPropertyId) => {
+            const nextTarget = targetProperties.find(
+              (property) => property.id === targetPropertyId
+            )
+
+            updateRollupConfig({
+              calculation: getValidRollupCalculation(
+                rollupConfig.calculation,
+                nextTarget?.type ?? "text"
+              ),
+              targetPropertyId,
+            })
+          }}
+          options={targetProperties.map((property) => ({
+            label: property.name,
+            value: property.id,
+          }))}
+          value={effectiveTargetProperty?.id ?? ""}
+        />
+        {!selectedRelationProperty ? (
+          <RollupPopoverMessage>Select a relation.</RollupPopoverMessage>
+        ) : !relationConfig.relatedDatabaseId ? (
+          <RollupPopoverMessage>Configure relation first.</RollupPopoverMessage>
+        ) : isLoadingRelatedDatabase ? (
+          <RollupPopoverMessage>Loading properties...</RollupPopoverMessage>
+        ) : targetProperties.length === 0 ? (
+          <RollupPopoverMessage>No properties available.</RollupPopoverMessage>
+        ) : null}
+        <RollupCalculationSelect
+          calculation={calculation}
+          onValueChange={(nextCalculation) =>
+            updateRollupConfig({ calculation: nextCalculation })
+          }
+          options={calculationOptions}
+        />
+      </div>
     )
   }
 
@@ -486,6 +571,130 @@ export function DatabaseRollupPropertySettings({
         </>
       ) : null}
     </>
+  )
+}
+
+function RollupSelect<TValue extends string>({
+  icon,
+  label,
+  onValueChange,
+  options,
+  value,
+}: {
+  icon: ReactNode
+  label: string
+  onValueChange: (value: TValue) => void
+  options: {
+    label: string
+    value: TValue
+  }[]
+  value: TValue
+}) {
+  return (
+    <label className="grid gap-1.5 px-1.5 py-1 text-sm">
+      <span className="flex items-center gap-2 text-muted-foreground [&_svg]:size-4 [&_svg]:shrink-0">
+        {icon}
+        {label}
+      </span>
+      <Select
+        onValueChange={(nextValue) => onValueChange(nextValue as TValue)}
+        value={value}
+      >
+        <SelectTrigger className="w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </label>
+  )
+}
+
+function RollupPopoverMessage({ children }: { children: ReactNode }) {
+  return (
+    <div className="px-1.5 py-1 text-sm text-muted-foreground">{children}</div>
+  )
+}
+
+function RollupCalculationSelect({
+  calculation,
+  onValueChange,
+  options,
+}: {
+  calculation: DatabaseRollupConfig["calculation"]
+  onValueChange: (value: NonNullable<DatabaseRollupConfig["calculation"]>) => void
+  options: {
+    label: string
+    value: NonNullable<DatabaseRollupConfig["calculation"]>
+  }[]
+}) {
+  const visibleValues = new Set(options.map((option) => option.value))
+  const showOptions = rollupShowCalculations.filter((option) =>
+    visibleValues.has(option.value)
+  )
+  const countOptions = rollupCountCalculations.filter((option) =>
+    visibleValues.has(option.value)
+  )
+  const percentOptions = rollupPercentCalculations.filter((option) =>
+    visibleValues.has(option.value)
+  )
+  const dateOptions = rollupDateCalculations.filter((option) =>
+    visibleValues.has(option.value)
+  )
+  const otherOptions = options.filter(
+    (option) =>
+      !showOptions.some((item) => item.value === option.value) &&
+      !countOptions.some((item) => item.value === option.value) &&
+      !percentOptions.some((item) => item.value === option.value) &&
+      !dateOptions.some((item) => item.value === option.value)
+  )
+  const groups = [
+    { label: "Count", options: countOptions },
+    { label: "Percent", options: percentOptions },
+    { label: "Date", options: dateOptions },
+  ].filter((group) => group.options.length > 0)
+
+  return (
+    <label className="grid gap-1.5 px-1.5 py-1 text-sm">
+      <span className="flex items-center gap-2 text-muted-foreground [&_svg]:size-4 [&_svg]:shrink-0">
+        <Sigma />
+        Calculate
+      </span>
+      <Select
+        onValueChange={(nextValue) =>
+          onValueChange(
+            nextValue as NonNullable<DatabaseRollupConfig["calculation"]>
+          )
+        }
+        value={calculation ?? options[0]?.value}
+      >
+        <SelectTrigger className="w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {[...showOptions, ...otherOptions].map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+          {groups.map((group) => (
+            <SelectGroup key={group.label}>
+              <SelectLabel>{group.label}</SelectLabel>
+              {group.options.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          ))}
+        </SelectContent>
+      </Select>
+    </label>
   )
 }
 

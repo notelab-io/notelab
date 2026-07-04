@@ -19,7 +19,6 @@ Do not open public issues for vulnerabilities. See `SECURITY.md` and report priv
 Start with:
 
 - `README.md`
-- `docs/self-hosting.md`
-- `apps/docs/self-hosting/index.mdx`
+- `https://docs.notelab.io/self-hosting`
 
 When asking for help, include your deployment method, relevant environment variable names without secret values, container status, and logs with secrets redacted.

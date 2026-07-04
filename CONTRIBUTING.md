@@ -24,8 +24,6 @@ npm run build:web
 npm run test:web
 npm run dev:server
 npm run build:server
-npm run dev:docs
-npm run check:docs
 ```
 
 For local self-hosting:
@@ -42,7 +40,6 @@ Then open `http://localhost`.
 - `apps/server`: Hono API, auth, database access, AI tools, integrations, and serverful runtime.
 - `apps/mobile`: Expo mobile client.
 - `apps/desktop`: Tauri desktop shell.
-- `apps/docs`: Mint documentation site.
 - `packages/features`: shared client-side feature queries, hooks, and cache logic.
 - `packages/connectors`: connector implementations and connector UI surfaces.
 - `packages/page-context`: editor/page context extraction and markdown helpers.
