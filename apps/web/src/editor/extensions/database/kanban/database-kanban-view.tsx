@@ -877,6 +877,7 @@ export function DatabaseKanbanView() {
     const wrapContent = getPropertyWrapContent(pageProperty.config)
     const isGrouped = groupProperty?.property.id === pageProperty.id
     const propertyMenuKey = `${row.pageId}:${property.id}`
+    const PropertyIcon = getDatabasePropertyType(pageProperty.type).icon
     const propertyLabel =
       canUsePropertyMenus && databaseId ? (
         <DatabasePropertyMenu
@@ -918,7 +919,10 @@ export function DatabaseKanbanView() {
           workspaceId={workspaceId ?? databaseWorkspaceId}
         />
       ) : (
-        pageProperty.name
+        <span className="database-kanban-property-label-content">
+          <PropertyIcon className="size-4 shrink-0" />
+          <span className="truncate">{pageProperty.name}</span>
+        </span>
       )
 
     return (
