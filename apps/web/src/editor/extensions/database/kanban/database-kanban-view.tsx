@@ -44,7 +44,9 @@ import {
 import { DatabasePropertyDate } from "../database-property-date"
 import { DatabasePropertyInput } from "../database-property-input"
 import { DatabasePageLink } from "../shared/database-page-link"
+import { DatabasePropertyMenu } from "../shared/database-property-menu"
 import { DatabasePropertyValue } from "../shared/database-property-value"
+import { DatabaseTableCellContent } from "../table/database-table-cell-content"
 import {
   firstScalarValue,
   serializePropertyValue,
@@ -53,6 +55,7 @@ import {
 } from "../utils"
 import {
   getMergedPropertyConfig,
+  getPropertyWrapContent,
   type DatabasePropertyConfig,
 } from "../shared/database-view-config"
 import {
@@ -305,12 +308,17 @@ export function DatabaseKanbanView() {
     activeDatabaseFilters,
     activeDatabaseSorts,
     propertyValuesByKey,
+    canAddDatabaseProperties,
+    databaseConfig,
     databaseId,
+    databaseName,
+    databaseWorkspaceId,
     draftPropertyValues,
     editable,
     fetchNextPage,
     groupProperty,
     groupableProperties,
+    headerMenusEnabled,
     hasNextPage,
     isAddingDatabaseRow,
     isFetchingNextPage,
@@ -327,9 +335,12 @@ export function DatabaseKanbanView() {
     saveDatabaseSorts,
     sortedItems: items,
     titlePropertyLabel,
+    renameDatabaseProperty,
     updateDatabasePropertyConfig,
     visibleProperties,
+    workspaceId,
     options,
+    addDatabaseProperty,
   } = useDatabaseViewContext()
   const moveRow = useMoveDatabaseRow()
   const reorderRows = useReorderDatabaseRows()
@@ -350,8 +361,14 @@ export function DatabaseKanbanView() {
     useState<KanbanCardDropTarget | null>(null)
   const [pendingSortedKanbanCardMove, setPendingSortedKanbanCardMove] =
     useState<KanbanCardMove | null>(null)
+  const [editingPropertyKey, setEditingPropertyKey] = useState<string | null>(
+    null
+  )
   const isKanbanSorted = activeDatabaseSorts.length > 0
   const isKanbanFiltered = activeDatabaseFilters.length > 0
+  const canEditStructure = editable && (canAddDatabaseProperties ?? true)
+  const canUsePropertyMenus =
+    Boolean(databaseId) && (headerMenusEnabled ?? editable)
   const personOptionsById = useMemo(
     () => new Map(personOptions.map((person) => [person.id, person.name])),
     [personOptions]
@@ -857,30 +874,78 @@ export function DatabaseKanbanView() {
     const key = `${row.pageId}:${pageProperty.id}`
     const persistedValue = propertyValuesByKey[key] ?? ""
     const value = draftPropertyValues[key] ?? persistedValue
+    const wrapContent = getPropertyWrapContent(pageProperty.config)
+    const isGrouped = groupProperty?.property.id === pageProperty.id
+    const propertyMenuKey = `${row.pageId}:${property.id}`
+    const propertyLabel =
+      canUsePropertyMenus && databaseId ? (
+        <DatabasePropertyMenu
+          config={pageProperty.config}
+          databaseConfig={databaseConfig}
+          databaseId={databaseId}
+          databasePropertyId={property.id}
+          isGrouped={isGrouped}
+          name={pageProperty.name}
+          onInsertProperty={(side) =>
+            addDatabaseProperty(
+              undefined,
+              undefined,
+              side === "left" ? property.position : property.position + 1
+            )
+          }
+          onOpenChange={(open) =>
+            setEditingPropertyKey(open ? propertyMenuKey : null)
+          }
+          onRename={(name) => renameDatabaseProperty(property.id, name)}
+          onSort={(direction) =>
+            void saveDatabaseSorts([
+              ...activeDatabaseSorts.filter((sort) => sort.column !== property.id),
+              { column: property.id, direction },
+            ])
+          }
+          onToggleGroup={() =>
+            setViewGroupProperty(isGrouped ? null : pageProperty.id)
+          }
+          onUpdateConfig={(config) =>
+            void updateDatabasePropertyConfig(property.id, config)
+          }
+          open={editingPropertyKey === propertyMenuKey}
+          schemaActionsEnabled={canEditStructure}
+          sourceDatabaseId={databaseId}
+          sourceDatabaseName={databaseName}
+          sourcePropertyId={pageProperty.id}
+          type={pageProperty.type}
+          workspaceId={workspaceId ?? databaseWorkspaceId}
+        />
+      ) : (
+        pageProperty.name
+      )
 
     return (
       <div className="database-kanban-property" key={property.id}>
         <div className="database-kanban-property-label">
-          {pageProperty.name}
+          {propertyLabel}
         </div>
         <div className="database-kanban-property-value">
-          <DatabasePropertyValue
-            disabledSelect={disabledSelect}
-            draftValues={draftPropertyValues}
-            editable={editable}
-            properties={properties}
-            propertyValuesByKey={propertyValuesByKey}
-            onActiveValueChange={setActivePropertyValueKey}
-            onDraftValuesChange={setDraftPropertyValues}
-            onPropertyConfigChange={onPropertyConfigChange}
-            onSaveValue={savePropertyValue}
-            persistedValue={persistedValue}
-            personOptions={personOptions}
-            property={property}
-            row={row}
-            titlePropertyLabel={titlePropertyLabel}
-            value={value}
-          />
+          <DatabaseTableCellContent wrapContent={wrapContent}>
+            <DatabasePropertyValue
+              disabledSelect={disabledSelect}
+              draftValues={draftPropertyValues}
+              editable={editable}
+              properties={properties}
+              propertyValuesByKey={propertyValuesByKey}
+              onActiveValueChange={setActivePropertyValueKey}
+              onDraftValuesChange={setDraftPropertyValues}
+              onPropertyConfigChange={onPropertyConfigChange}
+              onSaveValue={savePropertyValue}
+              persistedValue={persistedValue}
+              personOptions={personOptions}
+              property={property}
+              row={row}
+              titlePropertyLabel={titlePropertyLabel}
+              value={value}
+            />
+          </DatabaseTableCellContent>
         </div>
       </div>
     )

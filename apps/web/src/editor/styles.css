@@ -1266,8 +1266,20 @@
     @apply truncate pt-1 text-xs font-medium text-muted-foreground;
   }
 
+  .database-kanban-property-label > button {
+    @apply h-auto gap-1 px-0 py-0 text-xs font-medium text-muted-foreground hover:text-foreground focus-visible:text-foreground;
+  }
+
+  .database-kanban-property-label > button > svg:first-child {
+    display: none;
+  }
+
   .database-kanban-property-value {
-    @apply relative min-w-0 overflow-hidden;
+    @apply relative min-w-0;
+  }
+
+  .database-kanban-property-value .database-cell-scroll {
+    @apply min-h-7;
   }
 
   .database-kanban-property-value .database-input-cell-link {
