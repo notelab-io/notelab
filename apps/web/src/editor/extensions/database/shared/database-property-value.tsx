@@ -3,11 +3,6 @@ import { Check, FileText } from "lucide-react"
 
 import { Checkbox } from "@/components/ui/checkbox"
 import {
-  DropDrawer,
-  DropDrawerContent,
-  DropDrawerTrigger,
-} from "@/components/ui/dropdrawer"
-import {
   useDatabase,
   useUpdateDatabaseProperty,
   useUpdateDatabasePropertyValue,
@@ -451,8 +446,8 @@ function DatabaseRollupPropertyValue({
   }
 
   return (
-    <DropDrawer onOpenChange={onOpenChange}>
-      <DropDrawerTrigger asChild>
+    <Popover onOpenChange={onOpenChange}>
+      <PopoverTrigger asChild>
         <div
           className={
             pageLinks && pageLinks.length > 0
@@ -464,10 +459,12 @@ function DatabaseRollupPropertyValue({
         >
           {displayContent}
         </div>
-      </DropDrawerTrigger>
-      <DropDrawerContent
-        className="w-80"
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        className="w-80 gap-1 p-1"
         onCloseAutoFocus={(event) => event.preventDefault()}
+        sideOffset={0}
       >
         <DatabaseRollupPropertySettings
           config={propertyConfig}
@@ -476,8 +473,8 @@ function DatabaseRollupPropertyValue({
             void onPropertyConfigChange?.(config)
           }}
         />
-      </DropDrawerContent>
-    </DropDrawer>
+      </PopoverContent>
+    </Popover>
   )
 }
 
