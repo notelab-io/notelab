@@ -44,7 +44,7 @@ import {
 } from "./read-only-time-property"
 import { DatabaseRollupPropertySettings } from "./database-property-edit-submenu"
 import { useDatabaseViewContext } from "./database-view-context"
-import { getPersonLimit } from "./database-view-config"
+import { getPersonLimit, getPropertyWrapContent } from "./database-view-config"
 import { type DatabasePropertyListItem } from "../kanban/database-kanban-config"
 import {
   evaluateDatabaseRollup,
@@ -166,6 +166,7 @@ export function DatabasePropertyValue({
   const isMultiSelectProperty =
     pageProperty.type === "multi_select" ||
     (isPersonProperty && getPersonLimit(pageProperty.config) !== "one_person")
+  const wrapContent = getPropertyWrapContent(pageProperty.config)
   const displayValue =
     pageProperty.type === "status" && !persistedValue
       ? defaultStatusOptions[0]?.name ?? "Not started"
@@ -307,6 +308,7 @@ export function DatabasePropertyValue({
       propertyConfig={pageProperty.config}
       row={row}
       value={value}
+      wrapContent={wrapContent}
     />
   ) : isRollupProperty ? (
     <DatabaseRollupPropertyValue
@@ -321,6 +323,7 @@ export function DatabasePropertyValue({
       propertyConfig={pageProperty.config}
       propertyValuesByKey={propertyValuesByKey}
       row={row}
+      wrapContent={wrapContent}
     />
   ) : (
     <DatabasePropertyInput
@@ -376,6 +379,7 @@ function DatabaseRollupPropertyValue({
   propertyConfig,
   propertyValuesByKey,
   row,
+  wrapContent,
 }: {
   databaseId: string | null | undefined
   editable: boolean
@@ -386,6 +390,7 @@ function DatabaseRollupPropertyValue({
   propertyConfig: unknown
   propertyValuesByKey: Record<string, DatabasePropertyValue>
   row: DatabaseRow
+  wrapContent: boolean
 }) {
   const config = getRollupConfig(propertyConfig)
   const relationProperty = getRollupRelationProperty(
@@ -420,6 +425,7 @@ function DatabaseRollupPropertyValue({
     shouldShowRelationLinks
       ? getRollupPageLinks({
           onOpen,
+          openMode: wrapContent ? "button" : "title",
           pageIds: toStringArray(
             relationProperty
               ? propertyValuesByKey[`${row.pageId}:${relationProperty.property.id}`]
@@ -480,10 +486,12 @@ function DatabaseRollupPropertyValue({
 
 function getRollupPageLinks({
   onOpen,
+  openMode,
   pageIds,
   relatedDatabasePayload,
 }: {
   onOpen?: (pageId: string) => void
+  openMode: "button" | "title"
   pageIds: string[]
   relatedDatabasePayload: DatabasePayload | null | undefined
 }) {
@@ -507,7 +515,7 @@ function getRollupPageLinks({
         editable={false}
         key={pageId}
         onOpen={onOpen}
-        openMode="title"
+        openMode={openMode}
         pageId={pageId}
         pageSummary={{
           id: relatedRow.page.id,
@@ -530,6 +538,7 @@ function DatabaseRelationPropertyValue({
   propertyConfig,
   row,
   value,
+  wrapContent,
 }: {
   editable: boolean
   label: string
@@ -540,6 +549,7 @@ function DatabaseRelationPropertyValue({
   propertyConfig: unknown
   row: DatabaseRow
   value: DatabasePropertyValue
+  wrapContent: boolean
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const [query, setQuery] = useState("")
@@ -633,7 +643,7 @@ function DatabaseRelationPropertyValue({
       editable={false}
       key={pageId}
       onOpen={onOpen}
-      openMode="title"
+      openMode={wrapContent ? "button" : "title"}
       pageId={pageId}
       pageSummary={getRelationPageSummary(propertyConfig, pageId)}
       showPageIcon
