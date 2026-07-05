@@ -1,7 +1,26 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { normalizePropertyConfig } from "./database-mutations";
+import {
+  normalizePropertyConfig,
+  ServiceMutationError,
+  validateCellValue,
+} from "./database-mutations";
+import {
+  databasePropertyTypes,
+  normalizeDatabasePropertyType,
+} from "./database-property-types";
+
+test("normalizeDatabasePropertyType accepts known types and defaults blanks to text", () => {
+  for (const type of databasePropertyTypes) {
+    assert.equal(normalizeDatabasePropertyType(type), type);
+  }
+
+  assert.equal(normalizeDatabasePropertyType(undefined), "text");
+  assert.equal(normalizeDatabasePropertyType(" STATUS "), "status");
+  assert.equal(normalizeDatabasePropertyType(123), null);
+  assert.equal(normalizeDatabasePropertyType("made_up"), null);
+});
 
 test("normalizePropertyConfig seeds default status options with colors and groups", () => {
   const config = normalizePropertyConfig("status", null) as {
@@ -63,4 +82,59 @@ test("normalizePropertyConfig preserves explicit select colors", () => {
   assert.deepEqual(config.options, [
     { color: "red", id: "blocked", name: "Blocked" },
   ]);
+});
+
+test("normalizePropertyConfig rejects unknown property types", () => {
+  assert.throws(
+    () => normalizePropertyConfig("made_up", {}),
+    (error) =>
+      error instanceof ServiceMutationError &&
+      error.status === 400 &&
+      error.message === "Unsupported property type",
+  );
+});
+
+test("validateCellValue rejects unknown and read-only property types", () => {
+  assert.throws(
+    () => validateCellValue("made_up", null, "value"),
+    (error) =>
+      error instanceof ServiceMutationError &&
+      error.status === 400 &&
+      error.message === "Unsupported property type",
+  );
+  assert.throws(
+    () => validateCellValue("created_time", null, "2026-01-01"),
+    (error) =>
+      error instanceof ServiceMutationError &&
+      error.status === 400 &&
+      error.message === "This property is read-only",
+  );
+});
+
+test("validateCellValue validates select-like option values", () => {
+  const config = {
+    options: [
+      { id: "todo", name: "Todo" },
+      { id: "done", name: "Done" },
+    ],
+  };
+
+  assert.doesNotThrow(() => validateCellValue("select", config, "Todo"));
+  assert.doesNotThrow(() =>
+    validateCellValue("multi_select", config, ["Todo", "Done"]),
+  );
+  assert.throws(
+    () => validateCellValue("status", config, "Missing"),
+    (error) =>
+      error instanceof ServiceMutationError &&
+      error.status === 400 &&
+      error.message.startsWith("Invalid select/status option name."),
+  );
+  assert.throws(
+    () => validateCellValue("multi_select", config, "Todo"),
+    (error) =>
+      error instanceof ServiceMutationError &&
+      error.status === 400 &&
+      error.message === "multi_select values must be an array of option names.",
+  );
 });

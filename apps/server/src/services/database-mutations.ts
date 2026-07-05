@@ -17,6 +17,11 @@ import type { DatabaseChangedArea } from "./database-delta";
 import { withDatabaseParentItemId } from "../item-relationships";
 import { commitDatabaseMutation } from "./database-commit";
 import {
+  isReadOnlyPropertyType,
+  isSelectLikePropertyType,
+  normalizeDatabasePropertyType,
+} from "./database-property-types";
+import {
   fetchDatabasePropertyDelta,
   fetchDatabaseRowDelta,
   fetchDatabaseViewDelta,
@@ -167,7 +172,11 @@ const normalizeSelectOption = (
 };
 
 export function normalizePropertyConfig(type: string, config: unknown) {
-  const normalizedType = type.trim().toLowerCase();
+  const normalizedType = normalizeDatabasePropertyType(type);
+
+  if (!normalizedType) {
+    throw new ServiceMutationError("Unsupported property type", 400);
+  }
 
   if (normalizedType === "status") {
     const baseConfig =
@@ -421,7 +430,12 @@ export async function createDatabasePropertyService(input: {
 }) {
   const existing = await requireDatabaseEditAccess(input.databaseId, input.userId);
   const name = input.name?.trim() || "Property";
-  const type = input.type?.trim() || "text";
+  const type = normalizeDatabasePropertyType(input.type) ?? "";
+
+  if (!type) {
+    throw new ServiceMutationError("Unsupported property type", 400);
+  }
+
   const config = normalizePropertyConfig(type, input.config ?? null);
 
   const columns = await db
@@ -543,14 +557,20 @@ export async function updateDatabasePropertyService(input: {
   const propertyValues: Partial<typeof pageProperty.$inferInsert> = {
     updatedAt: new Date(),
   };
-  const effectiveType = input.type?.trim() || pagePropertyRecord.type;
+  const effectiveType = normalizeDatabasePropertyType(
+    input.type ?? pagePropertyRecord.type,
+  );
+
+  if (!effectiveType) {
+    throw new ServiceMutationError("Unsupported property type", 400);
+  }
 
   if (input.name !== undefined) {
     propertyValues.name = input.name;
   }
 
   if (input.type !== undefined) {
-    propertyValues.type = input.type;
+    propertyValues.type = effectiveType;
   }
 
   if (input.config !== undefined) {
@@ -558,7 +578,7 @@ export async function updateDatabasePropertyService(input: {
       effectiveType,
       input.config,
     );
-  } else if (input.type?.trim() === "status") {
+  } else if (effectiveType === "status" && input.type !== undefined) {
     propertyValues.config = normalizePropertyConfig(
       "status",
       pagePropertyRecord.config,
@@ -971,26 +991,25 @@ function readSelectOptionNames(config: unknown): Set<string> {
   );
 }
 
-function validateCellValue(
+export function validateCellValue(
   propertyType: string,
   config: unknown,
   value: unknown,
 ) {
-  if (
-    propertyType === "created_time" ||
-    propertyType === "edited_time"
-  ) {
+  const normalizedType = normalizeDatabasePropertyType(propertyType, "");
+
+  if (!normalizedType) {
+    throw new ServiceMutationError("Unsupported property type", 400);
+  }
+
+  if (isReadOnlyPropertyType(normalizedType)) {
     throw new ServiceMutationError("This property is read-only", 400);
   }
 
-  if (
-    propertyType === "select" ||
-    propertyType === "status" ||
-    propertyType === "multi_select"
-  ) {
+  if (isSelectLikePropertyType(normalizedType)) {
     const optionNames = readSelectOptionNames(config);
 
-    if (propertyType === "multi_select") {
+    if (normalizedType === "multi_select") {
       if (!Array.isArray(value)) {
         throw new ServiceMutationError(
           "multi_select values must be an array of option names.",

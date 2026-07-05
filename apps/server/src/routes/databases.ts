@@ -33,7 +33,14 @@ import {
   mutationResponse,
   type SqlExecutor,
 } from "../services/database-commit";
-import { normalizePropertyConfig } from "../services/database-mutations";
+import {
+  normalizePropertyConfig,
+  ServiceMutationError,
+  validateCellValue,
+} from "../services/database-mutations";
+import {
+  normalizeDatabasePropertyType,
+} from "../services/database-property-types";
 import {
   fetchDatabasePropertyDelta,
   fetchDatabaseViewDelta,
@@ -1090,7 +1097,13 @@ databaseRoutes.post("/:id/properties", async (c) => {
     return c.json({ error: "name and type must be strings" }, 400);
   }
 
-  const normalizedConfig = normalizePropertyConfig(type, config);
+  const normalizedType = normalizeDatabasePropertyType(type);
+
+  if (!normalizedType) {
+    return c.json({ error: "Unsupported property type" }, 400);
+  }
+
+  const normalizedConfig = normalizePropertyConfig(normalizedType, config);
 
   if (
     position !== undefined &&
@@ -1134,7 +1147,7 @@ databaseRoutes.post("/:id/properties", async (c) => {
         id: propertyId,
         workspaceId: existing.workspaceId,
         name,
-        type,
+        type: normalizedType,
         config: normalizedConfig,
         createdAt: now,
         updatedAt: now,
@@ -1344,6 +1357,10 @@ databaseRoutes.patch("/:id/properties/:databasePropertyId", async (c) => {
   const propertyValues: Partial<typeof pageProperty.$inferInsert> = {
     updatedAt: new Date(),
   };
+  const normalizedPatchType =
+    patch.type === undefined
+      ? undefined
+      : normalizeDatabasePropertyType(patch.type);
 
   if (patch.name !== undefined) {
     if (typeof patch.name !== "string") {
@@ -1358,19 +1375,24 @@ databaseRoutes.patch("/:id/properties/:databasePropertyId", async (c) => {
       return c.json({ error: "type must be a string" }, 400);
     }
 
-    propertyValues.type = patch.type;
+    if (!normalizedPatchType) {
+      return c.json({ error: "Unsupported property type" }, 400);
+    }
+
+    propertyValues.type = normalizedPatchType;
   }
 
   if (patch.config !== undefined) {
     const effectiveType =
-      typeof patch.type === "string"
-        ? patch.type
-        : pagePropertyRecord.type;
-    propertyValues.config = normalizePropertyConfig(
-      effectiveType,
-      patch.config,
-    );
-  } else if (patch.type === "status") {
+      normalizedPatchType ??
+      normalizeDatabasePropertyType(pagePropertyRecord.type, "");
+
+    if (!effectiveType) {
+      return c.json({ error: "Unsupported property type" }, 400);
+    }
+
+    propertyValues.config = normalizePropertyConfig(effectiveType, patch.config);
+  } else if (normalizedPatchType === "status") {
     propertyValues.config = normalizePropertyConfig(
       "status",
       pagePropertyRecord.config,
@@ -2162,11 +2184,15 @@ databaseRoutes.patch("/:id/rows/:rowId/move", async (c) => {
       );
     }
 
-    let property: { id: string; type: string } | null = null;
+    let property: { config: unknown; id: string; type: string } | null = null;
 
     if (nextGroupPropertyId) {
       const [groupProperty] = await tx
-        .select({ id: pageProperty.id, type: pageProperty.type })
+        .select({
+          config: pageProperty.config,
+          id: pageProperty.id,
+          type: pageProperty.type,
+        })
         .from(databaseProperty)
         .innerJoin(
           pageProperty,
@@ -2186,11 +2212,14 @@ databaseRoutes.patch("/:id/rows/:rowId/move", async (c) => {
         throw new DatabaseMutationError("Property not found", 404);
       }
 
-      if (
-        groupProperty.type === "created_time" ||
-        groupProperty.type === "edited_time"
-      ) {
-        throw new DatabaseMutationError("This property is read-only");
+      try {
+        validateCellValue(groupProperty.type, groupProperty.config, groupValue);
+      } catch (error) {
+        if (error instanceof ServiceMutationError) {
+          throw new DatabaseMutationError(error.message, error.status);
+        }
+
+        throw error;
       }
 
       property = groupProperty;
@@ -2312,7 +2341,11 @@ databaseRoutes.put("/:id/rows/:rowId/properties/:propertyId", async (c) => {
     )
     .limit(1);
   const [property] = await db
-    .select({ id: pageProperty.id, type: pageProperty.type })
+    .select({
+      config: pageProperty.config,
+      id: pageProperty.id,
+      type: pageProperty.type,
+    })
     .from(databaseProperty)
     .innerJoin(
       pageProperty,
@@ -2332,11 +2365,14 @@ databaseRoutes.put("/:id/rows/:rowId/properties/:propertyId", async (c) => {
     return c.json({ error: "Row or property not found" }, 404);
   }
 
-  if (
-    property.type === "created_time" ||
-    property.type === "edited_time"
-  ) {
-    return c.json({ error: "This property is read-only" }, 400);
+  try {
+    validateCellValue(property.type, property.config, value);
+  } catch (error) {
+    if (error instanceof ServiceMutationError) {
+      return c.json({ error: error.message }, error.status === 404 ? 404 : 400);
+    }
+
+    throw error;
   }
 
   const now = new Date();
