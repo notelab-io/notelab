@@ -1,8 +1,15 @@
 import * as React from "react"
+import { UploadIcon } from "lucide-react"
 import { toast } from "sonner"
 
 import { SettingsHeader } from "@/components/settings-header"
 import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import {
   Field,
   FieldDescription,
@@ -14,6 +21,7 @@ import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
 import { getApiErrorMessage } from "@/lib/api"
+import { useNotionImport } from "@/hooks/use-notion-import"
 import { useActiveWorkspaceId } from "@notelab/features/integrations"
 import {
   useWorkspaces,
@@ -35,8 +43,53 @@ export default function WorkspaceSettingsPage() {
 
       <div className="mx-auto grid w-full max-w-4xl gap-6">
         <WorkspaceDetailsSection workspace={workspace} />
+        <WorkspaceImportSection workspaceId={activeWorkspaceId} />
       </div>
     </main>
+  )
+}
+
+function WorkspaceImportSection({
+  workspaceId,
+}: {
+  workspaceId: string | null | undefined
+}) {
+  const {
+    handleImportFile,
+    inputRef,
+    isImporting,
+    openImportPicker,
+  } = useNotionImport({ workspaceId })
+
+  return (
+    <Card>
+      <CardHeader className="items-start gap-4 sm:flex-row sm:justify-between">
+        <div className="space-y-1">
+          <CardTitle>Import</CardTitle>
+          <CardDescription>
+            Bring pages into this workspace from a Notion HTML zip export.
+          </CardDescription>
+        </div>
+        <Button
+          className="shrink-0"
+          disabled={!workspaceId || isImporting}
+          onClick={openImportPicker}
+          type="button"
+        >
+          {isImporting ? <Spinner /> : <UploadIcon />}
+          Import Notion
+        </Button>
+      </CardHeader>
+      <input
+        accept=".zip,application/zip"
+        className="sr-only"
+        onChange={(event) => {
+          void handleImportFile(event)
+        }}
+        ref={inputRef}
+        type="file"
+      />
+    </Card>
   )
 }
 
