@@ -71,6 +71,10 @@ export default defineConfig(async () => ({
       { find: "@/packages/editor", replacement: editorDir },
       { find: "@", replacement: srcDir },
       {
+        find: "@notelab/features/databases/property-types",
+        replacement: `${featuresDir}/databases/property-types.ts`,
+      },
+      {
         find: /^@notelab\/features\/(.+)$/,
         replacement: `${featuresDir}/$1/index.ts`,
       },

@@ -61,7 +61,7 @@ async function loadModule(path) {
       }),
     },
     entryPoints: [sourcePath],
-    external: ["@notelab/features", "@notelab/features/*"],
+    external: ["@notelab/features"],
     format: "esm",
     jsx: "automatic",
     logLevel: "silent",
@@ -85,6 +85,21 @@ function aliasPlugin() {
           join(srcDir, "editor", args.path.replace(/^@\/packages\/editor\/?/, ""))
         ),
       }))
+      build.onResolve(
+        { filter: /^@notelab\/features\/databases\/property-types$/ },
+        () => ({
+          path: join(
+            appDir,
+            "..",
+            "..",
+            "packages",
+            "features",
+            "src",
+            "databases",
+            "property-types.ts"
+          ),
+        })
+      )
       build.onResolve({ filter: /^@\// }, async (args) => ({
         path: await resolveAliasPath(join(srcDir, args.path.slice(2))),
       }))

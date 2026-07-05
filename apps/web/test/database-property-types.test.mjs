@@ -1,3 +1,5 @@
+import { fileURLToPath } from "node:url"
+
 export function register({ assert, loadModule, test }) {
   test("database property type metadata covers defaults and fallbacks", async () => {
     const propertyTypes = await loadModule(
@@ -30,6 +32,25 @@ export function register({ assert, loadModule, test }) {
       options: propertyTypes.defaultStatusOptions,
     })
     assert.equal(propertyTypes.getDefaultDatabasePropertyConfig("text"), undefined)
+  })
+
+  test("database property type UI metadata covers the shared canonical contract", async () => {
+    const propertyTypes = await loadModule(
+      "/src/editor/extensions/database/database-property-types.ts"
+    )
+    const sharedPropertyTypes = await loadModule(
+      fileURLToPath(
+        new URL(
+          "../../../packages/features/src/databases/property-types.ts",
+          import.meta.url
+        )
+      )
+    )
+
+    assert.deepEqual(
+      propertyTypes.databasePropertyTypeItems.map((item) => item.type),
+      [...sharedPropertyTypes.databasePropertyTypes]
+    )
   })
 
   test("database filter operators are selected from property metadata", async () => {

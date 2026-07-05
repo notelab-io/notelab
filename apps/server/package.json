@@ -37,6 +37,7 @@
     "@better-auth/drizzle-adapter": "^1.6.14",
     "@better-auth/expo": "^1.6.14",
     "@notelab/connectors": "file:../../packages/connectors",
+    "@notelab/features": "file:../../packages/features",
     "ai": "^6.0.193",
     "better-auth": "^1.6.14",
     "dotenv": "^17.4.2",

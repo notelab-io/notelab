@@ -32,6 +32,10 @@
       "types": "./src/databases/index.ts",
       "default": "./src/databases/index.ts"
     },
+    "./databases/property-types": {
+      "types": "./src/databases/property-types.ts",
+      "default": "./src/databases/property-types.ts"
+    },
     "./integrations": {
       "types": "./src/integrations/index.ts",
       "default": "./src/integrations/index.ts"

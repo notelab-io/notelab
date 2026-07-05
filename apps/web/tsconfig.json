@@ -18,6 +18,9 @@
       "@/*": ["./src/*"],
       "@/packages/editor": ["./src/editor/index.ts"],
       "@/packages/editor/*": ["./src/editor/*"],
+      "@notelab/features/databases/property-types": [
+        "./../../packages/features/src/databases/property-types.ts"
+      ],
       "@notelab/gmail-connector/ui": [
         "./../../packages/connectors/src/connectors/gmail/src/ui.tsx"
       ],

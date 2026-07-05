@@ -21,6 +21,11 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react"
+import {
+  isReadOnlyPropertyType as isCanonicalReadOnlyPropertyType,
+  isSelectLikePropertyType as isCanonicalSelectLikePropertyType,
+  type DatabasePropertyType as DatabasePropertyTypeId,
+} from "@notelab/features/databases/property-types"
 
 export const defaultStatusOptions = [
   {
@@ -71,7 +76,7 @@ export type DatabasePropertyType = {
   hasEditSettings?: boolean
   icon: LucideIcon
   label: string
-  type: string
+  type: DatabasePropertyTypeId
 }
 
 export const databasePropertyTypes: DatabasePropertyType[][] = [
@@ -260,9 +265,9 @@ export function isDateLikePropertyType(type: string) {
 }
 
 export function isReadOnlyPropertyType(type: string) {
-  return getDatabasePropertyType(type).editable === false
+  return isCanonicalReadOnlyPropertyType(type)
 }
 
 export function isSelectLikePropertyType(type: string) {
-  return type === "select" || type === "multi_select" || type === "status"
+  return isCanonicalSelectLikePropertyType(type)
 }
