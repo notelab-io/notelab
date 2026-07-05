@@ -8,7 +8,7 @@ Notelab is an npm-workspaces monorepo for a notes, pages, databases, comments, A
 - `apps/server`: Hono server. It owns auth, workspace APIs, database persistence, image upload signing, AI chat tools, integration OAuth flows, and the serverful runtime.
 - `apps/mobile`: Expo client that reuses shared feature packages and talks to the Notelab API.
 - `apps/desktop`: Tauri shell for the desktop app.
-- `packages/features`: shared TanStack Query hooks, query keys, mutations, and cache update logic used by clients.
+- `packages/features`: shared TanStack Query hooks, query keys, mutations, cache update logic, and small database contracts used by clients and server.
 - `packages/connectors`: shared connector domain logic and connector-specific UI exports.
 - `packages/page-context`: editor/page context extraction, database markdown construction, and ProseMirror-to-markdown helpers.
 - `packages/markdown-text-splitter`: standalone markdown text splitting utilities.
@@ -16,6 +16,8 @@ Notelab is an npm-workspaces monorepo for a notes, pages, databases, comments, A
 ## Data Flow
 
 The web and mobile clients call the server API through shared feature hooks. The server validates sessions or API keys, reads and writes Postgres through Drizzle, and returns JSON payloads to clients. Client cache behavior should live in `packages/features` when it is shared across clients.
+
+Database property type IDs live in `packages/features` as the shared contract. The web editor extends that contract with UI metadata such as labels, icons, filter kinds, cell kinds, and default configs. The server imports the same contract for mutation validation and keeps trust-boundary checks in `apps/server`.
 
 Uploaded images use the server image API. In the Docker self-hosted stack, image storage uses MinIO through the same S3-compatible path used for hosted object storage.
 
