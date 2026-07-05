@@ -64,7 +64,7 @@ export function AppSearchProvider({ children }: { children: ReactNode }) {
 
     if (result.type === "database") {
       void navigate({
-        to: "/database/$databaseId",
+        to: "/d/$databaseId",
         params: { databaseId: result.id },
         search: { view: undefined },
       })
@@ -72,7 +72,7 @@ export function AppSearchProvider({ children }: { children: ReactNode }) {
     }
 
     void navigate({
-      to: "/page/$pageId",
+      to: "/p/$pageId",
       params: { pageId: result.id },
     })
   }

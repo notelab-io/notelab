@@ -199,7 +199,7 @@ export default function DashboardPage({ mode = "home" }: { mode?: DashboardMode 
 
       await navigate({
         params: { pageId: page.id },
-        to: "/page/$pageId",
+        to: "/p/$pageId",
       })
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not create page.")
@@ -222,7 +222,7 @@ export default function DashboardPage({ mode = "home" }: { mode?: DashboardMode 
       await navigate({
         params: { databaseId: payload.database.id },
         search: { view: undefined },
-        to: "/database/$databaseId",
+        to: "/d/$databaseId",
       })
     } catch (error) {
       toast.error(
@@ -240,14 +240,14 @@ export default function DashboardPage({ mode = "home" }: { mode?: DashboardMode 
       void navigate({
         params: { databaseId: id },
         search: { view: undefined },
-        to: "/database/$databaseId",
+        to: "/d/$databaseId",
       })
       return
     }
 
     void navigate({
       params: { pageId: id },
-      to: "/page/$pageId",
+      to: "/p/$pageId",
     })
   }
 

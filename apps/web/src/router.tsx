@@ -163,7 +163,7 @@ const aiRoute = createRoute({
 
 const pageRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/page/$pageId",
+  path: "/p/$pageId",
   beforeLoad: async ({ params }) => {
     const session = await getFreshSession()
 
@@ -186,7 +186,7 @@ const pageRoute = createRoute({
 
 const databaseRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/database/$databaseId",
+  path: "/d/$databaseId",
   validateSearch: (search: Record<string, unknown>) => ({
     view:
       typeof search.view === "string" && search.view.trim()

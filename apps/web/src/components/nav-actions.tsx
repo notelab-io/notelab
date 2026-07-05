@@ -210,8 +210,8 @@ export function NavActions({
 
     await navigator.clipboard.writeText(
       databaseId
-        ? `${window.location.origin}/database/${databaseId}`
-        : `${window.location.origin}/page/${pageId}`,
+        ? `${window.location.origin}/d/${databaseId}`
+        : `${window.location.origin}/p/${pageId}`,
     )
     setIsOpen(false)
     toast.success(`${databaseId ? "Database" : "Page"} link copied.`)
@@ -235,7 +235,7 @@ export function NavActions({
       setIsOpen(false)
       toast.success("Page duplicated.")
       await navigate({
-        to: "/page/$pageId",
+        to: "/p/$pageId",
         params: { pageId: duplicate.id },
       })
     } catch (error) {
@@ -716,7 +716,7 @@ function PageShareDialogContent({
   const publicUrl =
     typeof window === "undefined"
       ? ""
-      : `${window.location.origin}/page/${pageId}`
+      : `${window.location.origin}/p/${pageId}`
 
   const sharePage = () => {
     if (!targetValue || !page) {

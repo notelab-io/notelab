@@ -161,7 +161,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     const page = await createPage.mutateAsync({ workspaceId })
 
     await navigate({
-      to: "/page/$pageId",
+      to: "/p/$pageId",
       params: { pageId: page.id },
     })
   }
@@ -183,7 +183,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     })
 
     await navigate({
-      to: "/database/$databaseId",
+      to: "/d/$databaseId",
       params: { databaseId: payload.database.id },
       search: { view: undefined },
     })

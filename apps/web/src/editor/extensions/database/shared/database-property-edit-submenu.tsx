@@ -883,7 +883,7 @@ function RelationPropertyOptions({
                   void navigate({
                     params: { databaseId: selectedDatabase.value },
                     search: { view: undefined },
-                    to: "/database/$databaseId",
+                    to: "/d/$databaseId",
                   })
                 }
               >

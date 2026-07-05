@@ -54,7 +54,7 @@ export function NotelabAiItem({
   const openPage = () => {
     void navigate({
       params: { pageId: page.id },
-      to: "/page/$pageId",
+      to: "/p/$pageId",
     })
   }
 

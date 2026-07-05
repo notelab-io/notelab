@@ -186,7 +186,7 @@ export function DatabaseViewToolbar() {
     void navigate({
       params: { databaseId: nextDatabaseId },
       search: { view: undefined },
-      to: "/database/$databaseId",
+      to: "/d/$databaseId",
     })
   }
   const renderDatabaseEmojiPicker = (onSelect?: () => void) => (
@@ -912,7 +912,7 @@ export function DatabaseViewToolbar() {
                 params={{ databaseId }}
                 search={{ view: undefined }}
                 title="Expand database"
-                to="/database/$databaseId"
+                to="/d/$databaseId"
               >
                 <Maximize2 />
               </Link>

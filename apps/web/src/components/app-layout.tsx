@@ -381,7 +381,7 @@ function AppHeader({
             bordered={false}
             className="min-w-0 flex-1"
             onClose={onCloseSidePane}
-            pathname={`/page/${encodeURIComponent(renderedSidePanePageId ?? "")}`}
+            pathname={`/p/${encodeURIComponent(renderedSidePanePageId ?? "")}`}
           />
         </PageSidePaneHeaderCell>
       ) : null}

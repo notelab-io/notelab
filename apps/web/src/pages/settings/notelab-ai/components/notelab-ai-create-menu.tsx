@@ -155,7 +155,7 @@ export function NotelabAiCreateMenu({
     closeMenu()
     void navigate({
       params: { pageId },
-      to: "/page/$pageId",
+      to: "/p/$pageId",
     })
   }
 

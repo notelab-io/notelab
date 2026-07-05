@@ -22,7 +22,7 @@ export function EmbeddedPageDialog({
     dialogPageId,
   } = usePageSidePane()
   const dialogPathname = dialogPageId
-    ? `/page/${encodeURIComponent(dialogPageId)}`
+    ? `/p/${encodeURIComponent(dialogPageId)}`
     : "/dashboard"
 
   return (

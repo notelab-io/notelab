@@ -48,9 +48,9 @@ export default function DatabasePage() {
 }
 
 function AuthenticatedDatabasePage() {
-  const { databaseId } = useParams({ from: "/database/$databaseId" })
+  const { databaseId } = useParams({ from: "/d/$databaseId" })
   const { view: activeDatabaseViewId } = useSearch({
-    from: "/database/$databaseId",
+    from: "/d/$databaseId",
   })
   const { data: payload, isLoading } = useDatabase(databaseId)
   const databasePageId = payload?.database.pageId ?? null
@@ -120,7 +120,7 @@ function AuthenticatedDatabasePage() {
 }
 
 function PublicDatabasePage() {
-  const { databaseId } = useParams({ from: "/database/$databaseId" })
+  const { databaseId } = useParams({ from: "/d/$databaseId" })
 
   return (
     <PageSidePaneProvider resetKey={databaseId}>
@@ -131,7 +131,7 @@ function PublicDatabasePage() {
 
 function PublicDatabaseContent({ databaseId }: { databaseId: string }) {
   const { view: activeDatabaseViewId } = useSearch({
-    from: "/database/$databaseId",
+    from: "/d/$databaseId",
   })
   const { data: payload, isLoading } = useDatabase(databaseId)
   const databasePageId = payload?.database.pageId ?? null
@@ -209,7 +209,7 @@ function PublicDatabaseContent({ databaseId }: { databaseId: string }) {
                 >
                   <Link
                     params={{ pageId: renderedSidePanePageId }}
-                    to="/page/$pageId"
+                    to="/p/$pageId"
                   >
                     <Maximize2 />
                   </Link>
@@ -343,7 +343,7 @@ function DatabaseMainPane({
     void navigate({
       params: { databaseId },
       search: { view: searchViewId ?? undefined },
-      to: "/database/$databaseId",
+      to: "/d/$databaseId",
     })
   }
 

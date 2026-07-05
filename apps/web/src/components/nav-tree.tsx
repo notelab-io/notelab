@@ -160,7 +160,7 @@ function NavTreeItem({
                   } as never
                 }
                 title={displayName}
-                to="/database/$databaseId"
+                to="/d/$databaseId"
                 {...linkProps}
               >
                 <LeadingItemIcon hasPages={hasPages} icon={item.emoji} />
@@ -175,7 +175,7 @@ function NavTreeItem({
               <Link
                 params={{ pageId: item.pageId } as never}
                 title={displayName}
-                to="/page/$pageId"
+                to="/p/$pageId"
                 {...linkProps}
               >
                 <LeadingItemIcon hasPages={hasPages} icon={item.emoji} />
@@ -356,7 +356,7 @@ function collectDefaultDatabaseViewIds(
 }
 
 export function getActivePageId(pathname: string) {
-  const match = pathname.match(/^\/page\/([^/?#]+)/)
+  const match = pathname.match(/^\/p\/([^/?#]+)/)
 
   if (!match) {
     return null
@@ -366,7 +366,7 @@ export function getActivePageId(pathname: string) {
 }
 
 export function getActiveDatabaseId(pathname: string) {
-  const match = pathname.match(/^\/database\/([^/?#]+)/)
+  const match = pathname.match(/^\/d\/([^/?#]+)/)
 
   if (!match) {
     return null

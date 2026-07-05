@@ -481,7 +481,7 @@ export function getDatabaseViewCommands({
       }
 
       void navigator.clipboard
-        .writeText(`${window.location.origin}/database/${databaseId}`)
+        .writeText(`${window.location.origin}/d/${databaseId}`)
         .then(() => {
           toast.success("Copied link to view")
         })

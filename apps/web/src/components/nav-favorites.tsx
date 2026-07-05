@@ -102,8 +102,8 @@ function FavoriteItemMenu({
   const [confirmOpen, setConfirmOpen] = useState(false)
   const linkPath =
     item.isDatabase && item.databaseId
-      ? `/database/${item.databaseId}`
-      : `/page/${item.pageId}`
+      ? `/d/${item.databaseId}`
+      : `/p/${item.pageId}`
   const displayName = item.name.trim() || "Untitled"
   const removeFavorite = () => {
     if (item.isDatabase && item.databaseId) {

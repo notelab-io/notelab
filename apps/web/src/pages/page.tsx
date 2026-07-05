@@ -62,7 +62,7 @@ export default function Page() {
 }
 
 function AuthenticatedPage() {
-  const { pageId } = useParams({ from: "/page/$pageId" })
+  const { pageId } = useParams({ from: "/p/$pageId" })
   const { data: page } = usePage(pageId, { refetchOnMount: false })
   const { data: userSettings } = useUserSettings()
   const {
@@ -113,7 +113,7 @@ function AuthenticatedPage() {
 }
 
 function PublicPage() {
-  const { pageId } = useParams({ from: "/page/$pageId" })
+  const { pageId } = useParams({ from: "/p/$pageId" })
 
   return (
     <PageSidePaneProvider resetKey={pageId}>
@@ -178,7 +178,7 @@ function PublicPageContent({ pageId }: { pageId: string }) {
                 >
                   <Link
                     params={{ pageId: renderedSidePanePageId }}
-                    to="/page/$pageId"
+                    to="/p/$pageId"
                   >
                     <Maximize2 />
                   </Link>
@@ -270,7 +270,7 @@ function PublicPageBreadcrumbAncestors({
         <Link
           className="block max-w-48 truncate text-foreground hover:underline sm:max-w-72"
           params={{ pageId }}
-          to="/page/$pageId"
+          to="/p/$pageId"
         >
           {page ? getPageBreadcrumbLabel(page) : "Page"}
         </Link>

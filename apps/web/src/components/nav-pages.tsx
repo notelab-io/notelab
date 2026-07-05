@@ -288,8 +288,8 @@ function PageItemMenu({ item }: {
   const activeDatabaseId = getActiveDatabaseId(location.pathname)
   const linkPath =
     (item.isDatabase || item.isDatabaseView) && item.databaseId
-      ? `/database/${item.databaseId}`
-      : `/page/${item.pageId}`
+      ? `/d/${item.databaseId}`
+      : `/p/${item.pageId}`
   const displayName = item.name.trim() || "Untitled"
   const isDeleting = deletePage.isPending || deleteDatabase.isPending
 

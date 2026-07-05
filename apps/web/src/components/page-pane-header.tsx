@@ -244,7 +244,7 @@ function BreadcrumbFragment({
           </BreadcrumbPage>
         ) : (
           <BreadcrumbLink asChild className="block max-w-32 truncate sm:max-w-48">
-            <Link to="/page/$pageId" params={{ pageId: item.id }}>
+            <Link to="/p/$pageId" params={{ pageId: item.id }}>
               {label}
             </Link>
           </BreadcrumbLink>
@@ -302,13 +302,13 @@ function getSettingsPageTitle(pathname: string) {
 }
 
 export function getPageId(pathname: string) {
-  const match = pathname.match(/^\/page\/([^/]+)/)
+  const match = pathname.match(/^\/p\/([^/]+)/)
 
   return match?.[1] ? decodeURIComponent(match[1]) : null
 }
 
 export function getDatabaseId(pathname: string) {
-  const match = pathname.match(/^\/database\/([^/]+)/)
+  const match = pathname.match(/^\/d\/([^/]+)/)
 
   return match?.[1] ? decodeURIComponent(match[1]) : null
 }
