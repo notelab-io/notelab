@@ -1,4 +1,7 @@
-import { defaultStatusOptions } from "../constants"
+import {
+  defaultStatusOptions,
+  getDatabasePropertyFilterKind,
+} from "../database-property-types"
 
 import type {
   DateFormatValue,
@@ -228,21 +231,23 @@ export function getDatabaseFilterOperatorLabel(
 }
 
 export function getDatabaseFilterOperatorsForType(type: string) {
-  if (type === "checkbox") {
+  const filterKind = getDatabasePropertyFilterKind(type)
+
+  if (filterKind === "checkbox") {
     return databasePropertyFilterOperators.filter((operator) =>
       ["is", "is_not"].includes(operator.value)
     )
   }
 
-  if (type === "date" || type === "created_time" || type === "edited_time") {
+  if (filterKind === "date") {
     return databaseDateFilterOperators
   }
 
-  if (type === "number") {
+  if (filterKind === "number") {
     return databaseNumberFilterOperators
   }
 
-  if (type === "person") {
+  if (filterKind === "person") {
     return databasePropertyFilterOperators.filter((operator) =>
       ["contains", "does_not_contain", "is_empty", "is_not_empty"].includes(
         operator.value
@@ -250,7 +255,7 @@ export function getDatabaseFilterOperatorsForType(type: string) {
     )
   }
 
-  if (type === "files") {
+  if (filterKind === "files") {
     return databasePropertyFilterOperators.filter((operator) =>
       ["is_empty", "is_not_empty"].includes(operator.value)
     )

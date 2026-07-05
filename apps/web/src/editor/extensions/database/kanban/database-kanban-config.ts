@@ -1,4 +1,8 @@
 import { defaultStatusOptions } from "../constants"
+import {
+  isReadOnlyPropertyType,
+  isSelectLikePropertyType,
+} from "../database-property-types"
 
 export type DatabaseSelectOption = {
   color?: string
@@ -28,20 +32,13 @@ export function isKanbanGroupProperty(property: DatabasePropertyListItem) {
 export function isOptionBackedKanbanGroupProperty(
   property: DatabasePropertyListItem
 ) {
-  return (
-    property.property.type === "status" ||
-    property.property.type === "select" ||
-    property.property.type === "multi_select"
-  )
+  return isSelectLikePropertyType(property.property.type)
 }
 
 export function isReadOnlyKanbanGroupProperty(
   property: DatabasePropertyListItem
 ) {
-  return (
-    property.property.type === "created_time" ||
-    property.property.type === "edited_time"
-  )
+  return isReadOnlyPropertyType(property.property.type)
 }
 
 export function canUpdateKanbanGroupProperty(
@@ -138,8 +135,9 @@ export function getKanbanGroupProperty(
   return (
     configuredGroupProperty ??
     properties.find((property) => property.property.type === "status") ??
-    properties.find((property) => property.property.type === "select") ??
-    properties.find((property) => property.property.type === "multi_select") ??
+    properties.find((property) =>
+      isSelectLikePropertyType(property.property.type)
+    ) ??
     properties[0] ??
     null
   )

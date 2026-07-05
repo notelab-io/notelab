@@ -1,3 +1,5 @@
+import { isReadOnlyPropertyType } from "../database-property-types"
+
 export type ReadOnlyTimePropertySource = {
   createdAt: string
   page: {
@@ -8,7 +10,7 @@ export type ReadOnlyTimePropertySource = {
 }
 
 export const isReadOnlyTimeProperty = (type: string) =>
-  type === "created_time" || type === "edited_time"
+  isReadOnlyPropertyType(type)
 
 export const getReadOnlyTimePropertyRawValue = (
   source: ReadOnlyTimePropertySource,

@@ -71,6 +71,11 @@ import {
 
 import { defaultStatusOptions } from "../constants"
 import {
+  hasDatabasePropertyTypeEditSettings,
+  isDateLikePropertyType,
+  isSelectLikePropertyType,
+} from "../database-property-types"
+import {
   dateFormatOptions,
   getDateFormatConfig,
   getTimeFormatConfig,
@@ -175,20 +180,7 @@ export function DatabasePropertyEditSubmenu({
 }
 
 export function hasDatabasePropertyEditSettings(type: string) {
-  return (
-    type === "number" ||
-    type === "url" ||
-    type === "status" ||
-    type === "select" ||
-    type === "multi_select" ||
-    type === "person" ||
-    type === "files" ||
-    type === "relation" ||
-    type === "rollup" ||
-    type === "date" ||
-    type === "created_time" ||
-    type === "edited_time"
-  )
+  return hasDatabasePropertyTypeEditSettings(type)
 }
 
 function DatabasePropertyEditMenuItems({
@@ -212,15 +204,14 @@ function DatabasePropertyEditMenuItems({
 }) {
   const { updateDatabasePropertyConfig } = useDatabaseViewContext()
   const isStatusProperty = type === "status"
-  const isSelectProperty = type === "select" || type === "multi_select"
+  const isSelectProperty = isSelectLikePropertyType(type) && type !== "status"
   const isPersonProperty = type === "person"
   const isFilesProperty = type === "files"
   const isRelationProperty = type === "relation"
   const isRollupProperty = type === "rollup"
   const isNumberProperty = type === "number"
   const isUrlProperty = type === "url"
-  const isDateProperty =
-    type === "date" || type === "created_time" || type === "edited_time"
+  const isDateProperty = isDateLikePropertyType(type)
   const showFullUrl = getShowFullUrl(config)
   const statusDefaultOptionId = getStatusDefaultOptionId(config)
   const statusOptions = getStatusOptions(config)
@@ -338,15 +329,12 @@ function DatabasePropertyEditMenuItems({
 function getDatabasePropertyEditSubmenuContentClassName(type: string) {
   return type === "number" ||
     type === "status" ||
-    type === "select" ||
-    type === "multi_select" ||
+    (isSelectLikePropertyType(type) && type !== "status") ||
     type === "person" ||
     type === "files" ||
     type === "relation" ||
     type === "rollup" ||
-    type === "date" ||
-    type === "created_time" ||
-    type === "edited_time"
+    isDateLikePropertyType(type)
     ? "w-80"
     : undefined
 }

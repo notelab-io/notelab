@@ -24,6 +24,7 @@ import {
   getDatabaseFilterOperatorsForType,
   type DatabasePropertyFilterOperator,
 } from "./database-view-config"
+import { isDateLikePropertyType } from "../database-property-types"
 import type { DatabaseSearchableMenuOption } from "./database-searchable-menu-items"
 
 export type DatabaseCondition = {
@@ -79,11 +80,7 @@ function conditionOperatorNeedsValue(operator: DatabasePropertyFilterOperator) {
 }
 
 function isDateConditionType(propertyType: string) {
-  return (
-    propertyType === "date" ||
-    propertyType === "created_time" ||
-    propertyType === "edited_time"
-  )
+  return isDateLikePropertyType(propertyType)
 }
 
 function getConditionInputType(propertyType: string) {

@@ -25,6 +25,10 @@ import {
   ganttMoveToDateValue,
   getTimelineDateProperty,
 } from "../timeline/database-timeline-config"
+import {
+  getDefaultDatabasePropertyConfig,
+  isSelectLikePropertyType,
+} from "../database-property-types"
 import { serializePropertyValue, type DatabasePropertyValue } from "../utils"
 import {
   areSerializedPropertyValuesEqual,
@@ -321,9 +325,10 @@ export function getDatabaseViewCommands({
       const currentProperties = payload?.properties ?? []
       const groupProperty =
         currentProperties.find((property) => property.property.type === "status") ??
-        currentProperties.find((property) => property.property.type === "select") ??
         currentProperties.find(
-          (property) => property.property.type === "multi_select"
+          (property) =>
+            property.property.type !== "status" &&
+            isSelectLikePropertyType(property.property.type)
         ) ??
         currentProperties[0] ??
         null
@@ -808,9 +813,10 @@ export function getDatabaseViewCommands({
 function getTimelineGroupPropertyId(currentProperties: DatabaseProperty[]) {
   const groupProperty =
     currentProperties.find((property) => property.property.type === "status") ??
-    currentProperties.find((property) => property.property.type === "select") ??
     currentProperties.find(
-      (property) => property.property.type === "multi_select"
+      (property) =>
+        property.property.type !== "status" &&
+        isSelectLikePropertyType(property.property.type)
     ) ??
     currentProperties[0] ??
     null
@@ -878,21 +884,6 @@ function getDatabaseViewCommandsContext({
       )
     },
   }
-}
-
-function getDefaultDatabasePropertyConfig(type: string) {
-  if (type === "status") {
-    return {
-      defaultOptionId: defaultStatusOptions[0]?.id,
-      options: defaultStatusOptions,
-    }
-  }
-
-  if (type === "formula") {
-    return { formula: "" }
-  }
-
-  return undefined
 }
 
 function createDatabaseFilterId() {

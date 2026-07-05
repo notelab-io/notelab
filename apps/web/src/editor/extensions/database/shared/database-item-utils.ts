@@ -5,6 +5,7 @@ import {
   toTrimmedStringArray,
   type DatabasePropertyValue,
 } from "../utils"
+import { isDateLikePropertyType } from "../database-property-types"
 import { getReadOnlyTimePropertyRawValue } from "./read-only-time-property"
 import type {
   DatabaseFilterItemConfig,
@@ -407,7 +408,7 @@ function itemMatchesPropertyFilter({
     return true
   }
 
-  if (propertyType === "date" || propertyType === "created_time" || propertyType === "edited_time") {
+  if (isDateLikePropertyType(propertyType)) {
     return compareDateFilter(getDateValue(rowValues[0]), filter)
   }
 

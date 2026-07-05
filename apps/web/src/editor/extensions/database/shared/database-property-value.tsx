@@ -27,6 +27,7 @@ import {
   getNumberDisplayValue,
 } from "../database-property-input"
 import { DatabasePropertySelect } from "../database-property-select"
+import { getDatabasePropertyCellKind } from "../database-property-types"
 import { DatabaseFormulaValue } from "../formula"
 import { toStringArray, type DatabasePropertyValue } from "../utils"
 import { formatDatabaseDateValue } from "./database-date-config"
@@ -40,7 +41,6 @@ import {
 } from "./database-relation-sync"
 import {
   getReadOnlyTimePropertyRawValue,
-  isReadOnlyTimeProperty,
 } from "./read-only-time-property"
 import { DatabaseRollupPropertySettings } from "./database-property-edit-submenu"
 import { useDatabaseViewContext } from "./database-view-context"
@@ -150,28 +150,16 @@ export function DatabasePropertyValue({
   const databaseContext = useDatabaseViewContext()
   const pageProperty = property.property
   const key = `${row.pageId}:${pageProperty.id}`
-  const isSelectProperty =
-    pageProperty.type === "select" ||
-    pageProperty.type === "multi_select" ||
-    pageProperty.type === "status"
-  const isCheckboxProperty = pageProperty.type === "checkbox"
-  const isButtonProperty = pageProperty.type === "button"
-  const isDateProperty = pageProperty.type === "date"
-  const isFilesProperty = pageProperty.type === "files"
-  const isFormulaProperty = pageProperty.type === "formula"
-  const isPersonProperty = pageProperty.type === "person"
-  const isRelationProperty = pageProperty.type === "relation"
-  const isRollupProperty = pageProperty.type === "rollup"
-  const isReadOnlyTimeCell = isReadOnlyTimeProperty(pageProperty.type)
+  const cellKind = getDatabasePropertyCellKind(pageProperty.type)
   const isMultiSelectProperty =
     pageProperty.type === "multi_select" ||
-    (isPersonProperty && getPersonLimit(pageProperty.config) !== "one_person")
+    (cellKind === "person" && getPersonLimit(pageProperty.config) !== "one_person")
   const wrapContent = getPropertyWrapContent(pageProperty.config)
   const displayValue =
     pageProperty.type === "status" && !persistedValue
       ? defaultStatusOptions[0]?.name ?? "Not started"
       : value
-  const content = isReadOnlyTimeCell ? (
+  const content = cellKind === "read_only_time" ? (
     <span className="database-input-cell-trigger">
       {formatReadOnlyTimePropertyValue(
         row,
@@ -179,7 +167,7 @@ export function DatabasePropertyValue({
         pageProperty.type
       ) || <span className="text-muted-foreground">Empty</span>}
     </span>
-  ) : isCheckboxProperty ? (
+  ) : cellKind === "checkbox" ? (
     <div className="database-checkbox-cell">
       <Checkbox
         aria-label={`${pageProperty.name} value`}
@@ -196,14 +184,14 @@ export function DatabasePropertyValue({
         }
       />
     </div>
-  ) : isButtonProperty ? (
+  ) : cellKind === "button" ? (
     <DatabasePropertyButton
       className="px-3 py-1"
       editable={editable}
       label={pageProperty.name}
       value={value}
     />
-  ) : isFormulaProperty ? (
+  ) : cellKind === "formula" ? (
     <DatabaseFormulaValue
       currentPropertyId={pageProperty.id}
       properties={properties}
@@ -212,14 +200,14 @@ export function DatabasePropertyValue({
       row={row}
       titlePropertyLabel={titlePropertyLabel}
     />
-  ) : isSelectProperty || isPersonProperty ? (
+  ) : cellKind === "select" || cellKind === "person" ? (
     <DatabasePropertySelect
-      allowCreate={!isPersonProperty}
+      allowCreate={cellKind !== "person"}
       editable={editable && !disabledSelect}
       defaultOptions={
         pageProperty.type === "status"
           ? defaultStatusOptions
-          : isPersonProperty
+          : cellKind === "person"
             ? personOptions
             : undefined
       }
@@ -241,9 +229,9 @@ export function DatabasePropertyValue({
       propertyConfig={pageProperty.config}
       showStatusDot={pageProperty.type === "status"}
       value={displayValue}
-      valueKey={isPersonProperty ? "id" : "name"}
+      valueKey={cellKind === "person" ? "id" : "name"}
     />
-  ) : isDateProperty ? (
+  ) : cellKind === "date" ? (
     <DatabasePropertyDate
       editable={editable}
       label={pageProperty.name}
@@ -263,7 +251,7 @@ export function DatabasePropertyValue({
       propertyConfig={pageProperty.config}
       value={value}
     />
-  ) : isFilesProperty ? (
+  ) : cellKind === "files" ? (
     <DatabasePropertyFiles
       databaseId={databaseContext.databaseId}
       editable={editable}
@@ -287,7 +275,7 @@ export function DatabasePropertyValue({
       value={value}
       pageId={row.pageId}
     />
-  ) : isRelationProperty ? (
+  ) : cellKind === "relation" ? (
     <DatabaseRelationPropertyValue
       editable={editable}
       label={pageProperty.name}
@@ -310,7 +298,7 @@ export function DatabasePropertyValue({
       value={value}
       wrapContent={wrapContent}
     />
-  ) : isRollupProperty ? (
+  ) : cellKind === "rollup" ? (
     <DatabaseRollupPropertyValue
       databaseId={databaseContext.databaseId}
       editable={editable}
