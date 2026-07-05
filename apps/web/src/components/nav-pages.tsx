@@ -10,6 +10,7 @@ import {
   MoreHorizontalIcon,
   PlusIcon,
   Trash2Icon,
+  UploadIcon,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -63,12 +64,14 @@ type DatabaseDropInput = {
 export function NavPages({
   onCreateDatabase,
   onCreatePage,
+  onImportNotion,
   onDropPageOnDatabase,
   privatePages,
   teamspacePages,
 }: {
   onCreateDatabase?: () => void
   onCreatePage: () => void
+  onImportNotion?: () => void
   onDropPageOnDatabase?: (input: DatabaseDropInput) => void
   privatePages: PageNavItem[]
   teamspacePages: PageNavItem[]
@@ -91,6 +94,7 @@ export function NavPages({
         label="Private"
         onCreateDatabase={onCreateDatabase}
         onCreatePage={onCreatePage}
+        onImportNotion={onImportNotion}
         onDatabaseDropTargetChange={setDatabaseDropTargetId}
         onDropPageOnDatabase={onDropPageOnDatabase}
         showCreateAction
@@ -118,6 +122,7 @@ function PageSection({
   label,
   onCreateDatabase,
   onCreatePage,
+  onImportNotion,
   onDatabaseDropTargetChange,
   onDropPageOnDatabase,
   showCreateAction = false,
@@ -130,6 +135,7 @@ function PageSection({
   label: string
   onCreateDatabase?: () => void
   onCreatePage?: () => void
+  onImportNotion?: () => void
   onDatabaseDropTargetChange: (pageId: string | null) => void
   onDropPageOnDatabase?: (input: DatabaseDropInput) => void
   showCreateAction?: boolean
@@ -237,6 +243,16 @@ function PageSection({
               <DatabaseIcon className="text-muted-foreground" />
               <span>Database</span>
             </DropDrawerItem>
+            {onImportNotion ? (
+              <DropDrawerItem
+                onSelect={() => {
+                  onImportNotion()
+                }}
+              >
+                <UploadIcon className="text-muted-foreground" />
+                <span>Import Notion</span>
+              </DropDrawerItem>
+            ) : null}
           </DropDrawerContent>
         </DropDrawer>
       ) : null}
