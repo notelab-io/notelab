@@ -259,6 +259,68 @@ export function register({ assert, loadModule, test }) {
     )
   })
 
+  test("database view model applies table property order", async () => {
+    const { getDatabaseViewModel } = await loadModule(
+      "/src/editor/extensions/database/shared/database-view-model.tsx"
+    )
+    const statusProperty = createProperty(
+      "database-property-status",
+      "property-status",
+      "Status",
+      "status"
+    )
+    const priorityProperty = createProperty(
+      "database-property-priority",
+      "property-priority",
+      "Priority",
+      "number"
+    )
+    const ownerProperty = createProperty(
+      "database-property-owner",
+      "property-owner",
+      "Owner",
+      "person"
+    )
+    const payload = {
+      database: {
+        config: {},
+        id: "database-1",
+        name: "Roadmap",
+      },
+      properties: [statusProperty, priorityProperty, ownerProperty],
+      rows: [],
+      values: [],
+      views: [
+        {
+          config: {
+            propertyOrder: [
+              "database-property-priority",
+              "name",
+              "database-property-status",
+            ],
+          },
+          id: "view-table",
+          name: "Table",
+          type: "table",
+        },
+      ],
+    }
+
+    const model = getDatabaseViewModel({
+      activeViewId: "view-table",
+      payload,
+    })
+
+    assert.deepEqual(
+      model.visibleProperties.map((property) => property.id),
+      [
+        "database-property-priority",
+        "database-property-status",
+        "database-property-owner",
+      ]
+    )
+  })
+
   test("database view model keeps name and date kanban group properties", async () => {
     const { getDatabaseViewModel } = await loadModule(
       "/src/editor/extensions/database/shared/database-view-model.tsx"

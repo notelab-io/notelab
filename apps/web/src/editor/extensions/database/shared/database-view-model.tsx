@@ -21,6 +21,7 @@ import {
   getDatabaseFilterOperatorLabel,
   getDatabaseConditionalColors,
   getDatabaseFilters,
+  getDatabasePropertyOrder,
   getDatabaseSorts,
   getMergedDatabaseConfig,
   getNameColumnLabel,
@@ -97,13 +98,16 @@ export function getDatabaseViewModel({
     properties,
   })
   const groupableProperties = [nameGroupProperty, ...properties]
-  const visibleProperties = properties.filter(
-    (property) =>
-      !getPropertyHiddenForView(
-        property.id,
-        property.property.config,
-        activeVisibilityConfig
-      )
+  const visibleProperties = getOrderedDatabaseProperties(
+    properties.filter(
+      (property) =>
+        !getPropertyHiddenForView(
+          property.id,
+          property.property.config,
+          activeVisibilityConfig
+        )
+    ),
+    activeViewConfig
   )
   const databaseSorts = getDatabaseSorts(activeViewConfig)
   const databaseFilters = getDatabaseFilters(activeViewConfig)
@@ -216,6 +220,26 @@ export function getDatabaseViewModel({
     visibleProperties,
     visiblePropertyCount: visibleProperties.length + 1,
   }
+}
+
+function getOrderedDatabaseProperties(
+  properties: DatabaseProperty[],
+  config: unknown
+) {
+  const order = getDatabasePropertyOrder(config)
+
+  if (order.length === 0) {
+    return properties
+  }
+
+  const orderIndexes = new Map(order.map((id, index) => [id, index]))
+
+  return [...properties].sort((left, right) => {
+    const leftIndex = orderIndexes.get(left.id) ?? Number.MAX_SAFE_INTEGER
+    const rightIndex = orderIndexes.get(right.id) ?? Number.MAX_SAFE_INTEGER
+
+    return leftIndex - rightIndex || left.position - right.position
+  })
 }
 
 function getPersonOptions(

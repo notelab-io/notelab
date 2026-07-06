@@ -591,6 +591,44 @@ export function getDatabaseViewCommands({
     },
     saveDatabaseFilters,
     saveDatabaseConditionalColors,
+    saveDatabasePropertyOrder: (propertyIds: string[]) => {
+      if (!editable || !databaseId || !activeView?.id) {
+        return
+      }
+
+      const validPropertyIds = new Set([
+        "name",
+        ...properties.map((property) => property.id),
+      ])
+      const seenPropertyIds = new Set<string>()
+      const orderedPropertyIds = propertyIds.filter((propertyId) => {
+        if (!validPropertyIds.has(propertyId) || seenPropertyIds.has(propertyId)) {
+          return false
+        }
+
+        seenPropertyIds.add(propertyId)
+        return true
+      })
+      const propertyOrder = [
+        ...orderedPropertyIds,
+        ...properties
+          .map((property) => property.id)
+          .filter((propertyId) => !seenPropertyIds.has(propertyId)),
+      ]
+      const currentConfig =
+        getLatestViewConfig?.(databaseId, activeView.id, activeView.config) ??
+        activeView.config
+      const nextConfig = getMergedDatabaseConfig(currentConfig, {
+        propertyOrder,
+      })
+
+      setLatestViewConfig?.(databaseId, activeView.id, nextConfig)
+      updateDatabaseView.mutate({
+        config: nextConfig,
+        databaseId,
+        databaseViewId: activeView.id,
+      })
+    },
     saveDatabaseSorts,
     saveDatabaseEmoji: (nextEmoji: string) => {
       if (!editable || !databaseId) {

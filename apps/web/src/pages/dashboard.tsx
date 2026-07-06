@@ -314,6 +314,7 @@ export default function DashboardPage({ mode = "home" }: { mode?: DashboardMode 
               saveDatabaseConditionalColors: () => {},
               saveDatabaseEmoji: () => {},
               saveDatabaseFilters: () => {},
+              saveDatabasePropertyOrder: () => {},
               saveDatabaseSorts,
               saveDatabaseTitle: () => {},
               saveDatabaseViewTitle: () => {},

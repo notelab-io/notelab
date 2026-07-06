@@ -114,6 +114,7 @@ type DatabaseConfig = {
   hiddenPropertyIds?: string[]
   linkedDatabaseViews?: DatabaseLinkedViewConfig[]
   nameColumn?: DatabaseNameColumnConfig
+  propertyOrder?: string[]
   setupDismissed?: boolean
   sort?: DatabaseSortConfig
   sorts?: DatabaseSortConfig[]
@@ -485,6 +486,25 @@ export function getViewHiddenPropertyIds(config: unknown) {
 
   return Array.isArray(hiddenPropertyIds)
     ? hiddenPropertyIds.filter(
+        (propertyId): propertyId is string => typeof propertyId === "string"
+      )
+    : []
+}
+
+export function getDatabasePropertyOrder(config: unknown) {
+  if (
+    !config ||
+    typeof config !== "object" ||
+    Array.isArray(config) ||
+    !("propertyOrder" in config)
+  ) {
+    return []
+  }
+
+  const propertyOrder = (config as DatabaseConfig).propertyOrder
+
+  return Array.isArray(propertyOrder)
+    ? propertyOrder.filter(
         (propertyId): propertyId is string => typeof propertyId === "string"
       )
     : []

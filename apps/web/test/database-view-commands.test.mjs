@@ -323,6 +323,86 @@ export function register({ assert, loadModule, test }) {
     })
   })
 
+  test("database view commands save property order config", async () => {
+    const { getDatabaseViewCommands } = await loadModule(
+      "/src/editor/extensions/database/shared/database-view-commands.ts"
+    )
+    const updateDatabaseView = createMutation()
+    const latestConfigs = []
+    const properties = [
+      createProperty("database-property-a", "property-a", "A", "text"),
+      createProperty("database-property-b", "property-b", "B", "text"),
+      createProperty("database-property-c", "property-c", "C", "text"),
+    ]
+    const commands = getDatabaseViewCommands({
+      activeDatabaseFilters: [],
+      activeDatabaseSorts: [],
+      activeView: {
+        config: { emoji: "pin" },
+        id: "view-1",
+        name: "Table",
+        type: "table",
+      },
+      databaseId,
+      editable: true,
+      isKanbanView: false,
+      items: [],
+      kanbanGroupProperty: null,
+      mutations: createMutations({ updateDatabaseView }),
+      payload: createPayload({ properties }),
+      properties,
+      setActiveViewId: () => {},
+      setFilterPickerOpen: () => {},
+      setShowFilterPill: () => {},
+      setShowSortPill: () => {},
+      setSortPickerOpen: () => {},
+      setLatestViewConfig: (nextDatabaseId, viewId, config) => {
+        latestConfigs.push({ config, nextDatabaseId, viewId })
+      },
+    })
+
+    commands.saveDatabasePropertyOrder([
+      "database-property-b",
+      "name",
+      "missing-property",
+      "database-property-a",
+      "database-property-b",
+    ])
+
+    assert.deepEqual(updateDatabaseView.calls, [
+      [
+        {
+          config: {
+            emoji: "pin",
+            propertyOrder: [
+              "database-property-b",
+              "name",
+              "database-property-a",
+              "database-property-c",
+            ],
+          },
+          databaseId,
+          databaseViewId: "view-1",
+        },
+      ],
+    ])
+    assert.deepEqual(latestConfigs, [
+      {
+        config: {
+          emoji: "pin",
+          propertyOrder: [
+            "database-property-b",
+            "name",
+            "database-property-a",
+            "database-property-c",
+          ],
+        },
+        nextDatabaseId: databaseId,
+        viewId: "view-1",
+      },
+    ])
+  })
+
   test("database view commands compose rapid property visibility toggles", async () => {
     const { getDatabaseViewCommands } = await loadModule(
       "/src/editor/extensions/database/shared/database-view-commands.ts"

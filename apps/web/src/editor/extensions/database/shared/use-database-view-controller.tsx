@@ -602,6 +602,7 @@ export function useDatabaseViewController({
     saveDatabaseTitle: commands.saveDatabaseTitle,
     saveDatabaseConditionalColors: commands.saveDatabaseConditionalColors,
     saveDatabaseFilters: commands.saveDatabaseFilters,
+    saveDatabasePropertyOrder: commands.saveDatabasePropertyOrder,
     saveDatabaseSorts: commands.saveDatabaseSorts,
     saveDatabaseViewTitle: commands.saveDatabaseViewTitle,
     setActivePropertyValueKey,
