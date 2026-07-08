@@ -1644,6 +1644,69 @@ export function DatabaseTableView() {
     </tbody>
   )
 
+  const renderRowDragRail = () =>
+    editable ? (
+      <div className="database-row-drag-rail">
+        {visibleRows.map((row: any) => {
+          const rowCenter = rowLayout.centers[row.id]
+
+          if (rowCenter === undefined) {
+            return null
+          }
+
+          const isRowHandleVisible =
+            hoveredRowId === row.id || draggedRowId === row.id
+
+          return (
+            <div
+              className="database-row-controls"
+              data-visible={isRowHandleVisible ? "true" : undefined}
+              key={row.id}
+              onMouseEnter={() => {
+                measureRows()
+                setHoveredRowId(row.id)
+              }}
+              onMouseLeave={() => {
+                if (!draggedRowId) {
+                  setHoveredRowId(null)
+                }
+              }}
+              style={{ top: rowCenter }}
+            >
+              <Checkbox
+                aria-label={`Select ${row.page.name.trim() || "Untitled"}`}
+                checked={selectedRowIds.has(row.id)}
+                className="database-row-checkbox"
+                onCheckedChange={(checked) =>
+                  toggleSelectedRow(row.id, checked === true)
+                }
+              />
+              <button
+                aria-label={`Drag ${row.page.name.trim() || "Untitled"}`}
+                className="database-row-drag-handle"
+                data-database-row-drag-handle
+                data-dragging={draggedRowId === row.id ? "true" : undefined}
+                disabled={!canReorderRows}
+                draggable={canReorderRows}
+                onClick={(event) => event.preventDefault()}
+                onDragEnd={clearRowDrag}
+                onDragStart={(event) => startRowDrag(row, event)}
+                title={rowDragTitle}
+                type="button"
+              >
+                <GripVertical />
+              </button>
+            </div>
+          )
+        })}
+      </div>
+    ) : null
+
+  const renderRowDropLine = () =>
+    rowDropLineTop !== null ? (
+      <div className="database-row-drop-line" style={{ top: rowDropLineTop }} />
+    ) : null
+
   return (
     <>
       <div
@@ -1736,75 +1799,15 @@ export function DatabaseTableView() {
           </span>
         </div>
       ) : null}
+      {!isInlineTableScrollEnabled ? renderRowDragRail() : null}
+      {!isInlineTableScrollEnabled ? renderRowDropLine() : null}
       <div
         className="database-table-scroll database-inline-scroll"
         ref={tableScrollRef}
       >
         <div className="database-table-scroll-content database-inline-scroll-content">
-          {editable ? (
-            <div className="database-row-drag-rail">
-              {visibleRows.map((row: any) => {
-                const rowCenter = rowLayout.centers[row.id]
-
-                if (rowCenter === undefined) {
-                  return null
-                }
-
-                const isRowHandleVisible =
-                  hoveredRowId === row.id || draggedRowId === row.id
-
-                return (
-                  <div
-                    className="database-row-controls"
-                    data-visible={isRowHandleVisible ? "true" : undefined}
-                    key={row.id}
-                    onMouseEnter={() => {
-                      measureRows()
-                      setHoveredRowId(row.id)
-                    }}
-                    onMouseLeave={() => {
-                      if (!draggedRowId) {
-                        setHoveredRowId(null)
-                      }
-                    }}
-                    style={{ top: rowCenter }}
-                  >
-                    <Checkbox
-                      aria-label={`Select ${row.page.name.trim() || "Untitled"}`}
-                      checked={selectedRowIds.has(row.id)}
-                      className="database-row-checkbox"
-                      onCheckedChange={(checked) =>
-                        toggleSelectedRow(row.id, checked === true)
-                      }
-                    />
-                    <button
-                      aria-label={`Drag ${row.page.name.trim() || "Untitled"}`}
-                      className="database-row-drag-handle"
-                      data-database-row-drag-handle
-                      data-dragging={
-                        draggedRowId === row.id ? "true" : undefined
-                      }
-                      disabled={!canReorderRows}
-                      draggable={canReorderRows}
-                      onClick={(event) => event.preventDefault()}
-                      onDragEnd={clearRowDrag}
-                      onDragStart={(event) => startRowDrag(row, event)}
-                      title={rowDragTitle}
-                      type="button"
-                    >
-                      <GripVertical />
-                    </button>
-                  </div>
-                )
-              })}
-            </div>
-          ) : null}
-          {rowDropLineTop !== null ? (
-            <div
-              className="database-row-drop-line"
-              style={{ top: rowDropLineTop }}
-            />
-          ) : null}
+          {isInlineTableScrollEnabled ? renderRowDragRail() : null}
+          {isInlineTableScrollEnabled ? renderRowDropLine() : null}
           {isTableGrouped ? (
             <div className="database-table-groups">
               {groupedSections.map((section) => {
