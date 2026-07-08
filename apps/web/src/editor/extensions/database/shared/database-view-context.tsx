@@ -78,7 +78,7 @@ export type DatabaseViewContextValue = {
   addDraggedPageRow: (
     dragPayload: DatabasePageDragPayload,
     position: number
-  ) => void
+  ) => void | Promise<void>
   addKanbanView: () => void
   addLinkedDatabaseView: (view: DatabaseLinkedViewConfig) => void
   addTableView: () => void
@@ -172,6 +172,7 @@ export type DatabaseViewContextValue = {
   showExpandButton: boolean
   showFilterPill: boolean
   showPageIconInTitle: boolean
+  showPropertyTitles: boolean
   showSortPill: boolean
   showTitle: boolean
   onShowTitleChange?: (showTitle: boolean) => void
@@ -180,6 +181,7 @@ export type DatabaseViewContextValue = {
   sortedItems: SortableDatabaseItem[]
   titlePropertyLabel: string
   toggleFilterPillVisibility: () => void
+  togglePropertyTitles: () => void
   togglePropertyVisibility: (propertyId: string) => void
   toggleSortPillVisibility: () => void
   updateDatabasePropertyConfig: (

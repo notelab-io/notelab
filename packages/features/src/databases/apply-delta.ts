@@ -144,6 +144,7 @@ export function applyDatabaseDelta(
 
   if (delta.rows?.length) {
     const rows = [...next.rows]
+    let addedRowCount = 0
 
     for (const patch of delta.rows) {
       const id = typeof patch.id === "string" ? patch.id : null
@@ -163,11 +164,14 @@ export function applyDatabaseDelta(
         rows[index] = merged
       } else {
         rows.push(merged)
+        addedRowCount += 1
       }
     }
 
     next = {
       ...next,
+      rowCount:
+        next.rowCount === undefined ? undefined : next.rowCount + addedRowCount,
       rows: rows.sort((left, right) => left.position - right.position),
     }
   }

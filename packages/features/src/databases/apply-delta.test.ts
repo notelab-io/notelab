@@ -99,6 +99,57 @@ test("applyDatabaseDelta inserts a new row with nested page data", () => {
   assert.equal(next.rows[2]?.page.name, "Gamma")
 })
 
+test("applyDatabaseDelta adds source database columns with dragged row values", () => {
+  const payload = createTestDatabasePayload({ rowCount: 2 })
+  const next = applyDatabaseDelta(payload, {
+    properties: [
+      {
+        createdAt: "2026-06-24T12:00:00.000Z",
+        databaseId: "database-1",
+        id: "column-url",
+        position: 2,
+        property: {
+          createdAt: "2026-06-01T00:00:00.000Z",
+          id: "property-url",
+          name: "URL",
+          workspaceId: "org-1",
+          type: "url",
+          updatedAt: "2026-06-01T00:00:00.000Z",
+        },
+        propertyId: "property-url",
+        updatedAt: "2026-06-24T12:00:00.000Z",
+        visible: true,
+      },
+    ],
+    rows: [
+      {
+        id: "row-3",
+        page: {
+          id: "page-3",
+          name: "Gamma",
+        },
+        pageId: "page-3",
+        position: 2,
+      },
+    ],
+    values: [
+      {
+        createdAt: "2026-06-01T00:00:00.000Z",
+        id: "value-url",
+        propertyId: "property-url",
+        updatedAt: "2026-06-01T00:00:00.000Z",
+        value: "https://example.com",
+        pageId: "page-3",
+      },
+    ],
+  })
+
+  assert.equal(next.properties.at(-1)?.property.name, "URL")
+  assert.equal(next.rows.at(-1)?.pageId, "page-3")
+  assert.equal(next.rowCount, 3)
+  assert.equal(next.values.at(-1)?.value, "https://example.com")
+})
+
 test("applyDatabaseDelta removes properties by id", () => {
   const payload = createTestDatabasePayload()
   const next = applyDatabaseDelta(payload, {

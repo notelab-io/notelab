@@ -338,6 +338,7 @@ export default function DashboardPage({ mode = "home" }: { mode?: DashboardMode 
               togglePropertyVisibility: (propertyId) => {
                 void updateDatabasePropertyConfig(propertyId, { hidden: true })
               },
+              togglePropertyTitles: () => {},
               toggleSortPillVisibility: () => {},
               updateDatabaseFilter: () => {},
               updateDatabasePropertyConfig,

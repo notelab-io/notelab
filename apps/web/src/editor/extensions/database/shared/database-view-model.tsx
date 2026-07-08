@@ -27,6 +27,7 @@ import {
   getNameColumnLabel,
   getNameColumnShowPageIcon,
   getPropertyHiddenForView,
+  getShowPropertyTitles,
   getValidDatabaseFilterOperator,
   isDatabaseFilterGroup,
   type DatabaseFilterItemConfig,
@@ -109,6 +110,8 @@ export function getDatabaseViewModel({
     ),
     activeViewConfig
   )
+  const titlePropertyVisible = true
+  const showPropertyTitles = getShowPropertyTitles(activeViewConfig)
   const databaseSorts = getDatabaseSorts(activeViewConfig)
   const databaseFilters = getDatabaseFilters(activeViewConfig)
   const databaseConditionalColors = getDatabaseConditionalColors(activeViewConfig)
@@ -214,11 +217,13 @@ export function getDatabaseViewModel({
     propertyValues,
     propertyValuesByKey,
     showPageIconInTitle,
+    showPropertyTitles,
     sortFieldOptions,
     sortedItems,
     titlePropertyLabel,
     visibleProperties,
-    visiblePropertyCount: visibleProperties.length + 1,
+    visiblePropertyCount:
+      visibleProperties.length + (titlePropertyVisible ? 1 : 0),
   }
 }
 

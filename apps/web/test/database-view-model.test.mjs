@@ -98,6 +98,48 @@ export function register({ assert, loadModule, test }) {
       ["database-property-status", "database-property-priority"]
     )
     assert.equal(model.visiblePropertyCount, 1)
+    assert.equal(model.showPropertyTitles, true)
+    assert.equal(
+      getDatabaseViewModel({
+        activeViewId: "view-kanban",
+        payload: {
+          ...payload,
+          views: [
+            {
+              ...payload.views[0],
+              config: {
+                ...payload.views[0].config,
+                hiddenPropertyIds: [
+                  "database-property-status",
+                  "database-property-priority",
+                  "name",
+                ],
+                showPropertyTitles: false,
+              },
+            },
+          ],
+        },
+      }).visiblePropertyCount,
+      1
+    )
+    assert.equal(
+      getDatabaseViewModel({
+        activeViewId: "view-kanban",
+        payload: {
+          ...payload,
+          views: [
+            {
+              ...payload.views[0],
+              config: {
+                ...payload.views[0].config,
+                showPropertyTitles: false,
+              },
+            },
+          ],
+        },
+      }).showPropertyTitles,
+      false
+    )
     assert.deepEqual(
       model.kanbanOptions.map((option) => option.name),
       ["Not started", "In progress", "Done"]
@@ -318,6 +360,57 @@ export function register({ assert, loadModule, test }) {
         "database-property-status",
         "database-property-owner",
       ]
+    )
+  })
+
+  test("database view model uses the latest duplicated cell value", async () => {
+    const { getDatabaseViewModel } = await loadModule(
+      "/src/editor/extensions/database/shared/database-view-model.tsx"
+    )
+    const statusProperty = createProperty(
+      "database-property-status",
+      "property-status",
+      "Status",
+      "status"
+    )
+    const payload = {
+      database: {
+        config: {},
+        id: "database-1",
+        name: "Roadmap",
+      },
+      properties: [statusProperty],
+      rows: [createRow("row-1", "page-1", "Alpha", 0)],
+      values: [
+        {
+          propertyId: "property-status",
+          value: "Not started",
+          pageId: "page-1",
+        },
+        {
+          propertyId: "property-status",
+          value: "In progress",
+          pageId: "page-1",
+        },
+      ],
+      views: [
+        {
+          config: {},
+          id: "view-table",
+          name: "Table",
+          type: "table",
+        },
+      ],
+    }
+
+    const model = getDatabaseViewModel({
+      activeViewId: "view-table",
+      payload,
+    })
+
+    assert.equal(
+      model.propertyValuesByKey["page-1:property-status"],
+      "In progress"
     )
   })
 

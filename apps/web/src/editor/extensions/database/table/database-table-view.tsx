@@ -80,7 +80,9 @@ import {
   getFilteredReorderedRowIds,
   getGroupedReorderedRowIds,
   getReorderedRowIds,
+  finishDatabaseRowDrag,
   hideNativeDatabaseRowDragPreview,
+  startDatabaseRowDrag,
   type DatabaseRowDragOverlay,
 } from "../shared/database-row-drag"
 import {
@@ -368,6 +370,7 @@ export function DatabaseTableView() {
     isFetchingNextPage,
     titlePropertyLabel: nameColumnLabel,
     showPageIconInTitle: nameColumnShowPageIcon,
+    showPropertyTitles,
     addDatabaseRow,
     onOpenPage,
     personOptions,
@@ -932,6 +935,7 @@ export function DatabaseTableView() {
       })
   }
   const clearRowDrag = () => {
+    finishDatabaseRowDrag()
     setDraggedRowId(null)
     setRowDragOverlay(null)
     setRowDropTargetIndex(null)
@@ -1257,6 +1261,7 @@ export function DatabaseTableView() {
       })
     }
 
+    startDatabaseRowDrag()
     hideNativeDatabaseRowDragPreview(event.dataTransfer)
     setDraggedRowId(row.id)
     setRowDropTargetIndex(visibleRows.findIndex((item: any) => item.id === row.id))
@@ -1415,7 +1420,7 @@ export function DatabaseTableView() {
                           <span>{nameColumnLabel}</span>
                         </span>
                       )
-                    ) : property && canUseHeaderMenus ? (
+                    ) : property && showPropertyTitles && canUseHeaderMenus ? (
                       <DatabasePropertyMenu
                         config={property.property.config}
                         databaseConfig={databaseConfig}
@@ -1485,7 +1490,7 @@ export function DatabaseTableView() {
                         type={property.property.type}
                         workspaceId={workspaceId ?? databaseWorkspaceId}
                       />
-                    ) : property ? (
+                    ) : property && showPropertyTitles ? (
                       <span
                         className="database-property-header-label"
                         onPointerDownCapture={startHeaderDrag}

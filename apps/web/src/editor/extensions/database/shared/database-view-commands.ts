@@ -40,6 +40,7 @@ import {
   getMergedDatabaseConfig,
   getMergedPropertyConfig,
   getPropertyHidden,
+  getShowPropertyTitles,
   getViewHiddenPropertyIds,
   getValidDatabaseFilterOperator,
   type DatabaseConditionalColorConfig,
@@ -81,6 +82,7 @@ export function getDatabaseViewCommands({
   setShowSortPill,
   setSortPickerOpen,
   getLatestViewConfig,
+  getSourcePropertyMode,
   setLatestViewConfig,
 }: {
   activeDatabaseFilters: DatabasePropertyFilterConfig[]
@@ -105,6 +107,9 @@ export function getDatabaseViewCommands({
     databaseViewId: string,
     fallbackConfig: unknown,
   ) => unknown
+  getSourcePropertyMode?: (
+    dragPayload: DatabasePageDragPayload
+  ) => Promise<"duplicate" | "match" | null>
   setLatestViewConfig?: (
     databaseId: string,
     databaseViewId: string,
@@ -289,7 +294,7 @@ export function getDatabaseViewCommands({
         }
       )
     },
-    addDraggedPageRow: (
+    addDraggedPageRow: async (
       dragPayload: DatabasePageDragPayload,
       position: number
     ) => {
@@ -307,10 +312,24 @@ export function getDatabaseViewCommands({
         return
       }
 
+      const sourcePropertyMode =
+        dragPayload.databaseId && dragPayload.databaseId !== databaseId
+          ? await getSourcePropertyMode?.(dragPayload)
+          : undefined
+
+      if (sourcePropertyMode === null) {
+        return
+      }
+
       addRow.mutate({
         databaseId,
         pageId: dragPayload.pageId,
         position,
+        sourceDatabaseId:
+          dragPayload.databaseId && dragPayload.databaseId !== databaseId
+            ? dragPayload.databaseId
+            : undefined,
+        sourcePropertyMode: sourcePropertyMode ?? undefined,
         title: dragPayload.title,
       })
     },
@@ -752,6 +771,25 @@ export function getDatabaseViewCommands({
 
       const nextConfig = getMergedDatabaseConfig(currentConfig, {
         hiddenPropertyIds: [...hiddenPropertyIds],
+      })
+
+      setLatestViewConfig?.(databaseId, activeView.id, nextConfig)
+      updateDatabaseView.mutate({
+        config: nextConfig,
+        databaseId,
+        databaseViewId: activeView.id,
+      })
+    },
+    togglePropertyTitles: () => {
+      if (!databaseId || !activeView?.id) {
+        return
+      }
+
+      const currentConfig =
+        getLatestViewConfig?.(databaseId, activeView.id, activeView.config) ??
+        activeView.config
+      const nextConfig = getMergedDatabaseConfig(currentConfig, {
+        showPropertyTitles: !getShowPropertyTitles(currentConfig),
       })
 
       setLatestViewConfig?.(databaseId, activeView.id, nextConfig)

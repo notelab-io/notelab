@@ -59,9 +59,16 @@ export function getPropertyValue(
   propertyId: string,
   propertyType = "text"
 ): DatabasePropertyValue {
-  const value = values.find(
-    (item) => item.pageId === pageId && item.propertyId === propertyId
-  )?.value
+  let value: unknown
+
+  for (let index = values.length - 1; index >= 0; index -= 1) {
+    const item = values[index]
+
+    if (item.pageId === pageId && item.propertyId === propertyId) {
+      value = item.value
+      break
+    }
+  }
 
   return parsePropertyValue(value, propertyType)
 }

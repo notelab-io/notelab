@@ -74,8 +74,10 @@ import { useDatabaseRowsScroll } from "../shared/use-database-rows-scroll"
 import { NameColumnGlyph } from "../shared/name-column-glyph"
 import { getDatabaseGroupMoveValue } from "../shared/database-group-values"
 import {
+  finishDatabaseRowDrag,
   getAnchoredReorderedRowIds,
   getFilteredReorderedRowIds,
+  startDatabaseRowDrag,
 } from "../shared/database-row-drag"
 import { formatDatabaseDateValue } from "../shared/database-date-config"
 
@@ -323,6 +325,7 @@ export function DatabaseKanbanView() {
     isAddingDatabaseRow,
     isFetchingNextPage,
     showPageIconInTitle,
+    showPropertyTitles,
     addDatabaseRow,
     onOpenPage,
     personOptions,
@@ -614,6 +617,7 @@ export function DatabaseKanbanView() {
     [groupProperty, items, propertyValuesByKey]
   )
   const clearKanbanCardDrag = () => {
+    finishDatabaseRowDrag()
     setDraggedKanbanCard(null)
     setDragOverKanbanOptionId(null)
     setKanbanCardDropTarget(null)
@@ -793,6 +797,7 @@ export function DatabaseKanbanView() {
     }
 
     event.stopPropagation()
+    startDatabaseRowDrag()
     event.dataTransfer.effectAllowed = "copyMove"
     event.dataTransfer.setData(
       DATABASE_PAGE_DRAG_MIME,
@@ -878,7 +883,7 @@ export function DatabaseKanbanView() {
     const isGrouped = groupProperty?.property.id === pageProperty.id
     const propertyMenuKey = `${row.pageId}:${property.id}`
     const PropertyIcon = getDatabasePropertyType(pageProperty.type).icon
-    const propertyLabel =
+    const propertyLabel = showPropertyTitles ? (
       canUsePropertyMenus && databaseId ? (
         <DatabasePropertyMenu
           config={pageProperty.config}
@@ -924,13 +929,22 @@ export function DatabaseKanbanView() {
           <span className="truncate">{pageProperty.name}</span>
         </span>
       )
+    ) : null
 
     return (
       <div className="database-kanban-property" key={property.id}>
-        <div className="database-kanban-property-label">
-          {propertyLabel}
-        </div>
-        <div className="database-kanban-property-value">
+        {propertyLabel ? (
+          <div className="database-kanban-property-label">
+            {propertyLabel}
+          </div>
+        ) : null}
+        <div
+          className={
+            showPropertyTitles
+              ? "database-kanban-property-value"
+              : "database-kanban-property-value !pl-0"
+          }
+        >
           <DatabaseTableCellContent wrapContent={wrapContent}>
             <DatabasePropertyValue
               disabledSelect={disabledSelect}

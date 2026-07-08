@@ -115,6 +115,7 @@ type DatabaseConfig = {
   linkedDatabaseViews?: DatabaseLinkedViewConfig[]
   nameColumn?: DatabaseNameColumnConfig
   propertyOrder?: string[]
+  showPropertyTitles?: boolean
   setupDismissed?: boolean
   sort?: DatabaseSortConfig
   sorts?: DatabaseSortConfig[]
@@ -489,6 +490,14 @@ export function getViewHiddenPropertyIds(config: unknown) {
         (propertyId): propertyId is string => typeof propertyId === "string"
       )
     : []
+}
+
+export function getShowPropertyTitles(config: unknown) {
+  if (!config || typeof config !== "object" || Array.isArray(config)) {
+    return true
+  }
+
+  return (config as DatabaseConfig).showPropertyTitles !== false
 }
 
 export function getDatabasePropertyOrder(config: unknown) {

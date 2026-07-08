@@ -39,6 +39,8 @@ import {
   validateCellValue,
 } from "../services/database-mutations";
 import {
+  isReadOnlyPropertyType,
+  isSelectLikePropertyType,
   normalizeDatabasePropertyType,
 } from "../services/database-property-types";
 import {
@@ -263,6 +265,136 @@ const getStatusDefaultValue = (config: unknown) => {
   }
 
   return options[0]?.name ?? null;
+};
+
+const getPropertyNameKey = (name: string) => name.trim().toLowerCase();
+
+const readPropertyOptions = (
+  type: string,
+  config: unknown,
+): Record<string, unknown>[] => {
+  const rawOptions =
+    config && typeof config === "object" && "options" in config
+      ? (config as { options?: unknown }).options
+      : null;
+  const options = Array.isArray(rawOptions)
+    ? rawOptions.filter(
+        (option): option is Record<string, unknown> =>
+          Boolean(option) &&
+          typeof option === "object" &&
+          typeof (option as { id?: unknown }).id === "string" &&
+          typeof (option as { name?: unknown }).name === "string",
+      )
+    : [];
+
+  return type === "status" && options.length === 0
+    ? defaultStatusOptions.map((option) => ({ ...option }))
+    : options.map((option) => ({ ...option }));
+};
+
+const getOptionValueNames = (propertyType: string, value: unknown) => {
+  if (propertyType === "multi_select") {
+    return Array.isArray(value)
+      ? value.filter((item): item is string => typeof item === "string" && item.length > 0)
+      : typeof value === "string" && value.length > 0
+        ? [value]
+        : [];
+  }
+
+  if (propertyType === "select" || propertyType === "status") {
+    const optionName = Array.isArray(value) ? value[0] : value;
+
+    return typeof optionName === "string" && optionName.length > 0
+      ? [optionName]
+      : [];
+  }
+
+  return [];
+};
+
+const getOptionId = (name: string, existingIds: Set<string>) => {
+  const baseId = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "option";
+  let id = baseId;
+  let index = 2;
+
+  while (existingIds.has(id)) {
+    id = `${baseId}-${index}`;
+    index += 1;
+  }
+
+  existingIds.add(id);
+  return id;
+};
+
+const normalizeValueForPropertyType = (propertyType: string, value: unknown) => {
+  if (propertyType === "multi_select" && typeof value === "string") {
+    return [value];
+  }
+
+  if (
+    (propertyType === "select" || propertyType === "status") &&
+    Array.isArray(value)
+  ) {
+    return value[0] ?? null;
+  }
+
+  return value;
+};
+
+const mergeSelectOptionsForValue = (
+  propertyType: string,
+  config: unknown,
+  value: unknown,
+) => {
+  if (!isSelectLikePropertyType(propertyType)) {
+    return { changed: false, config };
+  }
+
+  const optionNames = getOptionValueNames(propertyType, value);
+
+  if (optionNames.length === 0) {
+    return { changed: false, config };
+  }
+
+  const options = readPropertyOptions(propertyType, config);
+  const existingNames = new Set(
+    options.map((option) => String(option.name).trim().toLowerCase()),
+  );
+  const existingIds = new Set(options.map((option) => String(option.id)));
+  let changed = false;
+
+  for (const name of optionNames) {
+    const key = name.trim().toLowerCase();
+
+    if (existingNames.has(key)) {
+      continue;
+    }
+
+    options.push({ id: getOptionId(name, existingIds), name });
+    existingNames.add(key);
+    changed = true;
+  }
+
+  if (!changed) {
+    return { changed: false, config };
+  }
+
+  const baseConfig =
+    config && typeof config === "object" && !Array.isArray(config)
+      ? (config as Record<string, unknown>)
+      : {};
+
+  return {
+    changed: true,
+    config: normalizePropertyConfig(propertyType, {
+      ...baseConfig,
+      options,
+    }),
+  };
 };
 
 const getDuplicatePropertyName = (
@@ -1758,10 +1890,18 @@ databaseRoutes.post("/:id/rows", async (c) => {
 
   const body = await c.req.json().catch(() => ({}));
 
-  const { pageId: existingPageId = null, parentRowId = null, position } = body as {
+  const {
+    pageId: existingPageId = null,
+    parentRowId = null,
+    position,
+    sourceDatabaseId = null,
+    sourcePropertyMode = "duplicate",
+  } = body as {
     pageId?: unknown;
     parentRowId?: unknown;
     position?: unknown;
+    sourceDatabaseId?: unknown;
+    sourcePropertyMode?: unknown;
     title?: unknown;
   };
   let { title } = body as { title?: unknown };
@@ -1770,6 +1910,8 @@ databaseRoutes.post("/:id/rows", async (c) => {
     (title !== undefined && typeof title !== "string") ||
     (existingPageId !== null && typeof existingPageId !== "string") ||
     (parentRowId !== null && typeof parentRowId !== "string") ||
+    (sourceDatabaseId !== null && typeof sourceDatabaseId !== "string") ||
+    (sourcePropertyMode !== "duplicate" && sourcePropertyMode !== "match") ||
     (position !== undefined &&
       (!Number.isInteger(position) || (position as number) < 0))
   ) {
@@ -1778,6 +1920,21 @@ databaseRoutes.post("/:id/rows", async (c) => {
 
   if (existingPageId === existing.pageId) {
     return c.json({ error: "A page cannot be nested inside itself" }, 400);
+  }
+
+  const sourceDatabase =
+    typeof sourceDatabaseId === "string" && sourceDatabaseId !== existing.id
+      ? await getDatabaseRecord(sourceDatabaseId)
+      : null;
+
+  if (sourceDatabaseId && sourceDatabaseId !== existing.id) {
+    if (!sourceDatabase || sourceDatabase.workspaceId !== existing.workspaceId) {
+      return c.json({ error: "Source database not found" }, 404);
+    }
+
+    if (!(await canAccessPage(sourceDatabase.pageId, user.id, "view"))) {
+      return c.json({ error: "Forbidden" }, 403);
+    }
   }
 
   const [rowCountRecord] = await db
@@ -1885,17 +2042,31 @@ databaseRoutes.post("/:id/rows", async (c) => {
 
   const rowId = crypto.randomUUID();
   const now = new Date();
+  const nowIso = now.toISOString();
   const rowTitle = title as string;
+  const changed = new Set<DatabaseChangedArea>(["rows"]);
+
+  if (defaultStatusValues.length > 0) {
+    changed.add("values");
+  }
+
+  if (sourceDatabase) {
+    changed.add("properties");
+    changed.add("values");
+  }
 
   const mutation = await commitDatabaseMutation(
     c,
     {
       actorId: user.id,
-      changed: defaultStatusValues.length > 0 ? ["rows", "values"] : ["rows"],
+      changed: [...changed],
 
       databaseId: existing.id,
     },
     async (tx) => {
+      const inheritedProperties: NonNullable<DatabaseDelta["properties"]> = [];
+      let inheritedValues: NonNullable<DatabaseDelta["values"]> = [];
+
       if (!existingPageId) {
         await tx.insert(page).values({
           id: pageId,
@@ -1909,6 +2080,229 @@ databaseRoutes.post("/:id/rows", async (c) => {
           createdAt: now,
           updatedAt: now,
         });
+      }
+
+      if (sourceDatabase) {
+        const targetColumns = await tx
+          .select({ column: databaseProperty, property: pageProperty })
+          .from(databaseProperty)
+          .innerJoin(
+            pageProperty,
+            eq(databaseProperty.propertyId, pageProperty.id),
+          )
+          .where(
+            and(
+              eq(databaseProperty.databaseId, existing.id),
+              eq(pageProperty.workspaceId, existing.workspaceId),
+              isNull(pageProperty.deletedAt),
+            ),
+          );
+        const sourceColumns = await tx
+          .select({ column: databaseProperty, property: pageProperty })
+          .from(databaseProperty)
+          .innerJoin(
+            pageProperty,
+            eq(databaseProperty.propertyId, pageProperty.id),
+          )
+          .where(
+            and(
+              eq(databaseProperty.databaseId, sourceDatabase.id),
+              eq(pageProperty.workspaceId, existing.workspaceId),
+              isNull(pageProperty.deletedAt),
+            ),
+          )
+          .orderBy(asc(databaseProperty.position));
+        const targetPropertyIds = new Set(
+          targetColumns.map(({ column }) => column.propertyId),
+        );
+        const targetValues =
+          targetPropertyIds.size > 0
+            ? await tx
+                .select()
+                .from(pagePropertyValue)
+                .where(
+                  and(
+                    eq(pagePropertyValue.pageId, pageId),
+                    inArray(pagePropertyValue.propertyId, [...targetPropertyIds]),
+                  ),
+                )
+            : [];
+
+        inheritedValues.push(
+          ...targetValues.map((value) => ({
+            ...value,
+            createdAt: value.createdAt.toISOString(),
+            updatedAt: value.updatedAt.toISOString(),
+          })),
+        );
+
+        const targetColumnsByName = new Map(
+          targetColumns.map((column) => [
+            getPropertyNameKey(column.property.name),
+            column,
+          ]),
+        );
+        const missingColumns = sourceColumns.filter(
+          ({ column }) => !targetPropertyIds.has(column.propertyId),
+        );
+        const sourceValues =
+          missingColumns.length > 0
+            ? await tx
+                .select()
+                .from(pagePropertyValue)
+                .where(
+                  and(
+                    eq(pagePropertyValue.pageId, pageId),
+                    inArray(
+                      pagePropertyValue.propertyId,
+                      missingColumns.map(({ column }) => column.propertyId),
+                    ),
+                  ),
+                )
+            : [];
+        const sourceValueByPropertyId = new Map(
+          sourceValues.map((value) => [value.propertyId, value]),
+        );
+        const columnsToInsert: Array<{
+          column: (typeof missingColumns)[number]["column"];
+          property: (typeof missingColumns)[number]["property"];
+        }> = [];
+
+        for (const sourceColumn of missingColumns) {
+          const targetColumn =
+            sourcePropertyMode === "match"
+              ? targetColumnsByName.get(getPropertyNameKey(sourceColumn.property.name))
+              : null;
+          const sourceValue = sourceValueByPropertyId.get(
+            sourceColumn.column.propertyId,
+          );
+          const targetPropertyType = targetColumn
+            ? normalizeDatabasePropertyType(targetColumn.property.type)
+            : null;
+
+          if (!targetColumn) {
+            columnsToInsert.push(sourceColumn);
+            continue;
+          }
+
+          if (!sourceValue || sourceValue.value === null || !targetPropertyType) {
+            continue;
+          }
+
+          if (isReadOnlyPropertyType(targetPropertyType)) {
+            continue;
+          }
+
+          const nextValue = normalizeValueForPropertyType(
+            targetPropertyType,
+            sourceValue.value,
+          );
+          const mergedConfig = mergeSelectOptionsForValue(
+            targetPropertyType,
+            targetColumn.property.config,
+            nextValue,
+          );
+
+          try {
+            validateCellValue(
+              targetPropertyType,
+              mergedConfig.config,
+              nextValue,
+            );
+          } catch (error) {
+            if (error instanceof ServiceMutationError) {
+              throw new DatabaseMutationError(error.message, error.status);
+            }
+
+            throw error;
+          }
+
+          if (mergedConfig.changed) {
+            await tx
+              .update(pageProperty)
+              .set({ config: mergedConfig.config, updatedAt: now })
+              .where(eq(pageProperty.id, targetColumn.property.id));
+            await tx
+              .update(databaseProperty)
+              .set({ updatedAt: now })
+              .where(eq(databaseProperty.id, targetColumn.column.id));
+
+            inheritedProperties.push({
+              ...targetColumn.column,
+              createdAt: targetColumn.column.createdAt.toISOString(),
+              updatedAt: nowIso,
+              property: {
+                ...targetColumn.property,
+                config: mergedConfig.config,
+                createdAt: targetColumn.property.createdAt.toISOString(),
+                updatedAt: nowIso,
+              },
+            });
+          }
+
+          await tx
+            .insert(pagePropertyValue)
+            .values({
+              id: crypto.randomUUID(),
+              pageId,
+              propertyId: targetColumn.property.id,
+              value: nextValue,
+              createdAt: now,
+              updatedAt: now,
+            })
+            .onConflictDoUpdate({
+              target: [
+                pagePropertyValue.pageId,
+                pagePropertyValue.propertyId,
+              ],
+              set: { value: nextValue, updatedAt: now },
+            });
+
+          inheritedValues.push({
+            propertyId: targetColumn.property.id,
+            updatedAt: nowIso,
+            value: nextValue,
+            pageId,
+          });
+        }
+
+        if (columnsToInsert.length > 0) {
+          const insertedColumns = columnsToInsert.map(({ column }, index) => ({
+            id: crypto.randomUUID(),
+            databaseId: existing.id,
+            propertyId: column.propertyId,
+            position: targetColumns.length + index,
+            width: column.width,
+            visible: column.visible,
+            createdAt: now,
+            updatedAt: now,
+          }));
+
+          await tx.insert(databaseProperty).values(insertedColumns);
+
+          inheritedProperties.push(
+            ...insertedColumns.map((column, index) => ({
+              ...column,
+              createdAt: nowIso,
+              updatedAt: nowIso,
+              property: columnsToInsert[index].property,
+            })),
+          );
+
+          inheritedValues.push(
+            ...sourceValues
+              .filter((value) =>
+                insertedColumns.some(
+                  (column) => column.propertyId === value.propertyId,
+                ),
+              )
+              .map((value) => ({
+                ...value,
+                createdAt: value.createdAt.toISOString(),
+                updatedAt: value.updatedAt.toISOString(),
+              })),
+          );
+        }
       }
 
       await tx
@@ -1952,14 +2346,21 @@ databaseRoutes.post("/:id/rows", async (c) => {
         position: targetPosition,
       });
 
-      const insertedValues = defaultStatusValues.map((property) => ({
-        createdAt: now.toISOString(),
-        id: crypto.randomUUID(),
-        propertyId: property.propertyId,
-        updatedAt: now.toISOString(),
-        value: property.value,
-        pageId: pageId,
-      }));
+      const inheritedValuePropertyIds = new Set(
+        inheritedValues
+          .filter((value) => value.pageId === pageId)
+          .map((value) => value.propertyId),
+      );
+      const insertedValues = defaultStatusValues
+        .filter((property) => !inheritedValuePropertyIds.has(property.propertyId))
+        .map((property) => ({
+          createdAt: nowIso,
+          id: crypto.randomUUID(),
+          propertyId: property.propertyId,
+          updatedAt: nowIso,
+          value: property.value,
+          pageId: pageId,
+        }));
 
       if (insertedValues.length > 0) {
         await tx
@@ -1997,7 +2398,32 @@ databaseRoutes.post("/:id/rows", async (c) => {
 
       return {
         delta: {
-          ...(insertedValues.length > 0 ? { values: insertedValues } : {}),
+          ...(sourceDatabase
+            ? {
+                properties: inheritedProperties,
+                rows: [
+                  {
+                    createdAt: nowIso,
+                    createdById: user.id,
+                    databaseId: existing.id,
+                    id: rowId,
+                    lastEditedById: user.id,
+                    page: {
+                      id: pageId,
+                      metadata: pageMetadata,
+                      name: rowTitle,
+                    },
+                    pageId,
+                    parentRowId,
+                    position: targetPosition,
+                    updatedAt: nowIso,
+                  },
+                ],
+              }
+            : {}),
+          ...(insertedValues.length > 0 || inheritedValues.length > 0
+            ? { values: [...insertedValues, ...inheritedValues] }
+            : {}),
         },
       };
     },
@@ -2007,9 +2433,13 @@ databaseRoutes.post("/:id/rows", async (c) => {
     return databaseMutationErrorResponse(c, mutation.error);
   }
 
+  if (sourceDatabase) {
+    return c.json(mutationResponse(mutation), 201);
+  }
+
   return c.json(
     {
-      createdAt: now.toISOString(),
+      createdAt: nowIso,
       databaseId: existing.id,
       isFavorite: shouldInheritFavorite,
       pageId,
@@ -2017,7 +2447,7 @@ databaseRoutes.post("/:id/rows", async (c) => {
       position: targetPosition,
       rowId,
       title: rowTitle,
-      updatedAt: now.toISOString(),
+      updatedAt: nowIso,
       values: mutation.delta.values ?? [],
     },
     201,

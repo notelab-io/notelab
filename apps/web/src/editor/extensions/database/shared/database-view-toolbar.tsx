@@ -151,11 +151,13 @@ export function DatabaseViewToolbar() {
     setSortPickerOpen,
     showExpandButton,
     showFilterPill,
+    showPropertyTitles,
     showSortPill,
     showTitle,
     sortFieldOptions,
     sortPickerOpen,
     togglePropertyVisibility,
+    togglePropertyTitles,
     toggleFilterPillVisibility,
     toggleSortPillVisibility,
     updateDatabaseFilter,
@@ -869,6 +871,7 @@ export function DatabaseViewToolbar() {
                 onSetViewDateProperty={setViewDateProperty}
                 onSetViewGroupProperty={setViewGroupProperty}
                 onSetViewType={setViewType}
+                onTogglePropertyTitles={togglePropertyTitles}
                 onTogglePropertyVisibility={togglePropertyVisibility}
                 onUpdateDatabaseFilter={updateDatabaseFilter}
                 onUpdateDatabaseSort={updateDatabaseSort}
@@ -881,6 +884,7 @@ export function DatabaseViewToolbar() {
                 canAddDatabaseSort={canAddDatabaseSort}
                 viewConfig={activeVisibilityConfig}
                 visiblePropertyCount={visiblePropertyCount}
+                showPropertyTitles={showPropertyTitles}
               />
               {canRenderAddRow ? (
               <Button

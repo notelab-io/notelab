@@ -23,6 +23,7 @@ export function DatabaseView(props: DatabaseViewProps) {
     onSetupComplete,
     workspaceId,
     payload,
+    sourcePropertyDialog,
     setupMode,
     viewType,
     pageId,
@@ -62,6 +63,7 @@ export function DatabaseView(props: DatabaseViewProps) {
             />
           ) : null}
         </div>
+        {sourcePropertyDialog}
       </div>
     </DatabaseViewProvider>
   )

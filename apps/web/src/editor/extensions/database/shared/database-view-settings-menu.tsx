@@ -40,6 +40,7 @@ import {
   DropDrawerTrigger,
 } from "@/components/ui/dropdrawer"
 import { Input } from "@/components/ui/input"
+import { Switch } from "@/components/ui/switch"
 import {
   Select,
   SelectContent,
@@ -642,6 +643,7 @@ export function DatabaseViewSettingsMenu({
   onSetViewDateProperty,
   onSetViewGroupProperty,
   onSetViewType,
+  onTogglePropertyTitles,
   onTogglePropertyVisibility,
   onUpdateDatabaseFilter,
   onUpdateDatabaseSort,
@@ -650,6 +652,7 @@ export function DatabaseViewSettingsMenu({
   sourceDatabaseId,
   viewConfig,
   visiblePropertyCount,
+  showPropertyTitles,
 }: {
   activeConditionalColors: DatabaseActiveConditionalColor[]
   activeDatabaseFilters: DatabaseActiveFilter[]
@@ -691,6 +694,7 @@ export function DatabaseViewSettingsMenu({
   onSetViewDateProperty: (datePropertyId: string | null) => void
   onSetViewGroupProperty: (groupPropertyId: string | null) => void
   onSetViewType: (type: "table" | "kanban" | "timeline") => void
+  onTogglePropertyTitles: () => void
   onTogglePropertyVisibility: (propertyId: string) => void
   onUpdateDatabaseFilter: (index: number, patch: DatabaseFilterUpdatePatch) => void
   onUpdateDatabaseSort: (index: number, patch: DatabaseSortUpdatePatch) => void
@@ -699,6 +703,7 @@ export function DatabaseViewSettingsMenu({
   sourceDatabaseId?: string
   viewConfig?: unknown
   visiblePropertyCount: number
+  showPropertyTitles: boolean
 }) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
   const open = controlledOpen ?? uncontrolledOpen
@@ -740,7 +745,6 @@ export function DatabaseViewSettingsMenu({
   const activeGroupProperty = groupProperties.find(
     (property) => property.property.id === groupPropertyId
   )
-
   const linkableDatabaseOptions = pages.flatMap((page) =>
     (page.databases ?? [])
       .filter((database) => database.id !== sourceDatabaseId)
@@ -913,6 +917,22 @@ export function DatabaseViewSettingsMenu({
             </DropDrawerSubContent>
           </DropDrawerSub>
         ) : null}
+        <DropDrawerItem
+          aria-pressed={!showPropertyTitles}
+          onSelect={(event) => {
+            event.preventDefault()
+            onTogglePropertyTitles()
+          }}
+        >
+          <EyeOff />
+          <span>Hide property titles</span>
+          <Switch
+            checked={!showPropertyTitles}
+            className="ml-auto pointer-events-none"
+            size="sm"
+            tabIndex={-1}
+          />
+        </DropDrawerItem>
         <DropDrawerSub>
           <DropDrawerSubTrigger>
             <ViewSettingsRow

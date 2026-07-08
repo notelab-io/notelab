@@ -97,6 +97,8 @@ type AddRowInput = {
   pageId?: string
   parentRowId?: string | null
   position?: number
+  sourceDatabaseId?: string
+  sourcePropertyMode?: "duplicate" | "match"
   title?: string
 }
 

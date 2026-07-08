@@ -184,3 +184,12 @@ export function hideNativeDatabaseRowDragPreview(dataTransfer: DataTransfer) {
   dataTransfer.setDragImage(dragImage, 0, 0)
   window.requestAnimationFrame(() => dragImage.remove())
 }
+
+export function startDatabaseRowDrag() {
+  document.getSelection()?.removeAllRanges()
+  document.body.classList.add("database-row-dragging")
+}
+
+export function finishDatabaseRowDrag() {
+  document.body.classList.remove("database-row-dragging")
+}

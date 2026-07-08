@@ -13,17 +13,33 @@ import {
   useAddDatabaseProperty,
   useAddDatabaseRow,
   useDatabase,
+  databaseQueryOptions,
+  type DatabasePayload,
   useDeleteDatabaseView,
   useUpdateDatabase,
   useUpdateDatabaseView,
   useUpdateDatabaseProperty,
   useUpdateDatabasePropertyValue,
 } from "@notelab/features/databases"
+import { useNotelabFeatures } from "@notelab/features"
 import { usePagePersonAccessTargets } from "@notelab/features/pages"
+import { ArrowRight, Columns3, Link2 } from "lucide-react"
+import { toast } from "sonner"
 
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { cn } from "@/lib/utils"
 import {
   getDatabasePageDragPayload,
   hasDatabasePageDragPayload,
+  type DatabasePageDragPayload,
 } from "./database-page-drop"
 import type { DatabaseViewContextValue } from "./database-view-context"
 import { type DatabasePropertyValue } from "../utils"
@@ -54,6 +70,55 @@ export type DatabaseViewProps = {
   pageId?: string | null
 }
 
+type SourcePropertyMode = "duplicate" | "match"
+
+type SourcePropertyConflict = {
+  name: string
+  sourceType: string
+  targetType: string
+}
+
+type PendingSourcePropertyMode = {
+  conflicts: SourcePropertyConflict[]
+  sourceDatabaseName: string
+  targetDatabaseName: string
+}
+
+const getPropertyNameKey = (name: string) => name.trim().toLowerCase()
+
+function getSourcePropertyConflicts(
+  sourcePayload: DatabasePayload,
+  targetPayload: DatabasePayload,
+) {
+  const targetPropertiesByName = new Map(
+    targetPayload.properties.map((property) => [
+      getPropertyNameKey(property.property.name),
+      property,
+    ]),
+  )
+
+  return sourcePayload.properties.flatMap((sourceProperty) => {
+    const targetProperty = targetPropertiesByName.get(
+      getPropertyNameKey(sourceProperty.property.name),
+    )
+
+    if (
+      !targetProperty ||
+      targetProperty.property.id === sourceProperty.property.id
+    ) {
+      return []
+    }
+
+    return [
+      {
+        name: sourceProperty.property.name,
+        sourceType: sourceProperty.property.type,
+        targetType: targetProperty.property.type,
+      },
+    ]
+  })
+}
+
 export function useDatabaseViewController({
   activeViewId: requestedActiveViewId,
   databaseId,
@@ -70,9 +135,15 @@ export function useDatabaseViewController({
   showTitle = true,
   pageId = null,
 }: DatabaseViewProps) {
+  const { apiFetch, queryClient } = useNotelabFeatures()
   const [draftPropertyValues, setDraftPropertyValues] = useState<
     Record<string, DatabasePropertyValue>
   >({})
+  const [pendingSourcePropertyMode, setPendingSourcePropertyMode] =
+    useState<PendingSourcePropertyMode | null>(null)
+  const sourcePropertyModeResolverRef = useRef<
+    ((mode: SourcePropertyMode | null) => void) | null
+  >(null)
   const updateDatabase = useUpdateDatabase()
   const updateDatabaseView = useUpdateDatabaseView()
   const addDatabaseView = useAddDatabaseView()
@@ -229,6 +300,7 @@ export function useDatabaseViewController({
     properties,
     propertyValuesByKey,
     showPageIconInTitle,
+    showPropertyTitles,
     sortFieldOptions,
     sortedItems,
     titlePropertyLabel,
@@ -323,6 +395,65 @@ export function useDatabaseViewController({
         `${nextDatabaseId}:${databaseViewId}`,
         config,
       )
+    },
+    [],
+  )
+
+  const resolvePendingSourcePropertyMode = useCallback(
+    (mode: SourcePropertyMode | null) => {
+      sourcePropertyModeResolverRef.current?.(mode)
+      sourcePropertyModeResolverRef.current = null
+      setPendingSourcePropertyMode(null)
+    },
+    [],
+  )
+
+  const getSourcePropertyMode = useCallback(
+    async (dragPayload: DatabasePageDragPayload) => {
+      if (!dragPayload.databaseId || !activePayload) {
+        return "duplicate" as const
+      }
+
+      let sourcePayload: DatabasePayload | null = null
+
+      try {
+        sourcePayload = await queryClient.ensureQueryData(
+          databaseQueryOptions(apiFetch, dragPayload.databaseId, {
+            schemaOnly: true,
+          }),
+        )
+      } catch {
+        toast.error("Couldn't inspect source database properties.")
+        return null
+      }
+
+      if (!sourcePayload) {
+        return null
+      }
+
+      const conflicts = getSourcePropertyConflicts(sourcePayload, activePayload)
+
+      if (conflicts.length === 0) {
+        return "duplicate" as const
+      }
+
+      sourcePropertyModeResolverRef.current?.(null)
+
+      return new Promise<SourcePropertyMode | null>((resolve) => {
+        sourcePropertyModeResolverRef.current = resolve
+        setPendingSourcePropertyMode({
+          conflicts,
+          sourceDatabaseName: sourcePayload.database.name,
+          targetDatabaseName: activePayload.database.name,
+        })
+      })
+    },
+    [activePayload, apiFetch, queryClient],
+  )
+
+  useEffect(
+    () => () => {
+      sourcePropertyModeResolverRef.current?.(null)
     },
     [],
   )
@@ -498,6 +629,7 @@ export function useDatabaseViewController({
     setShowSortPill,
     setSortPickerOpen,
     getLatestViewConfig,
+    getSourcePropertyMode,
     setLatestViewConfig,
   })
 
@@ -620,6 +752,7 @@ export function useDatabaseViewController({
     showExpandButton,
     showFilterPill,
     showSortPill,
+    showPropertyTitles,
     showTitle,
     onShowTitleChange,
     sortFieldOptions,
@@ -627,6 +760,7 @@ export function useDatabaseViewController({
     sortedItems,
     togglePropertyVisibility: commands.togglePropertyVisibility,
     toggleFilterPillVisibility: commands.toggleFilterPillVisibility,
+    togglePropertyTitles: commands.togglePropertyTitles,
     toggleSortPillVisibility: commands.toggleSortPillVisibility,
     updateDatabasePropertyConfig: commands.updateDatabasePropertyConfig,
     updateDatabaseFilter: commands.updateDatabaseFilter,
@@ -650,8 +784,125 @@ export function useDatabaseViewController({
     onSetupComplete,
     workspaceId,
     payload: activePayload,
+    sourcePropertyDialog: pendingSourcePropertyMode ? (
+      <SourcePropertyModeDialog
+        conflicts={pendingSourcePropertyMode.conflicts}
+        onChoose={resolvePendingSourcePropertyMode}
+        sourceDatabaseName={pendingSourcePropertyMode.sourceDatabaseName}
+        targetDatabaseName={pendingSourcePropertyMode.targetDatabaseName}
+      />
+    ) : null,
     setupMode: effectiveSetupMode,
     viewType: activeView?.type,
     pageId,
   }
+}
+
+function SourcePropertyModeDialog({
+  conflicts,
+  onChoose,
+  sourceDatabaseName,
+  targetDatabaseName,
+}: PendingSourcePropertyMode & {
+  onChoose: (mode: SourcePropertyMode | null) => void
+}) {
+  return (
+    <Dialog open onOpenChange={(open) => !open && onChoose(null)}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Match properties?</DialogTitle>
+          <DialogDescription>
+            Some properties from {sourceDatabaseName} already exist in{" "}
+            {targetDatabaseName}.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid gap-3">
+          <div className="rounded-lg border bg-muted/30 p-3">
+            <div className="mb-2 text-xs font-medium text-muted-foreground">
+              Same-name properties
+            </div>
+            <div className="grid gap-2">
+              {conflicts.slice(0, 4).map((conflict) => (
+                <div
+                  className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-xs"
+                  key={`${conflict.name}:${conflict.sourceType}:${conflict.targetType}`}
+                >
+                  <PropertyPill label={conflict.name} type={conflict.sourceType} />
+                  <ArrowRight className="size-3 text-muted-foreground" />
+                  <PropertyPill label={conflict.name} type={conflict.targetType} />
+                </div>
+              ))}
+              {conflicts.length > 4 ? (
+                <div className="text-xs text-muted-foreground">
+                  +{conflicts.length - 4} more
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-2">
+            <ModeButton
+              description="Use the existing target columns and copy this page's values into them."
+              icon={Link2}
+              label="Match existing"
+              onClick={() => onChoose("match")}
+            />
+            <ModeButton
+              description="Add the source columns too, keeping both sets of properties."
+              icon={Columns3}
+              label="Add as separate"
+              onClick={() => onChoose("duplicate")}
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onChoose(null)}>
+            Cancel
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function PropertyPill({ label, type }: { label: string; type: string }) {
+  return (
+    <div className="min-w-0 rounded-md border bg-background px-2 py-1.5">
+      <div className="truncate font-medium">{label}</div>
+      <div className="truncate text-muted-foreground">{type}</div>
+    </div>
+  )
+}
+
+function ModeButton({
+  description,
+  icon: Icon,
+  label,
+  onClick,
+}: {
+  description: string
+  icon: typeof Link2
+  label: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      className={cn(
+        "grid gap-2 rounded-lg border bg-background p-3 text-left transition-colors",
+        "hover:border-foreground/30 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      )}
+      onClick={onClick}
+      type="button"
+    >
+      <span className="flex items-center gap-2 text-sm font-medium">
+        <Icon className="size-4" />
+        {label}
+      </span>
+      <span className="text-xs leading-5 text-muted-foreground">
+        {description}
+      </span>
+    </button>
+  )
 }
