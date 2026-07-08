@@ -163,6 +163,30 @@
     color: inherit !important;
   }
 
+  .tiptap-editor.dragging {
+    --editor-selection-background: transparent;
+    --editor-selection-foreground: inherit;
+    user-select: none;
+  }
+
+  .tiptap-editor.dragging *,
+  .tiptap-editor.dragging .ProseMirror-selectednode {
+    outline: none !important;
+    user-select: none !important;
+  }
+
+  .tiptap-editor.dragging ::selection,
+  .tiptap-editor.dragging *::selection {
+    background: transparent !important;
+    color: inherit !important;
+  }
+
+  .tiptap-editor.dragging ::-moz-selection,
+  .tiptap-editor.dragging *::-moz-selection {
+    background: transparent !important;
+    color: inherit !important;
+  }
+
   /* Select-all block selection: full-width blocks, gaps between blocks. */
   .tiptap-editor :is(
       p,
@@ -1828,6 +1852,11 @@
   .database-resize-cursor * {
     cursor: col-resize !important;
     user-select: none;
+  }
+
+  .database-row-dragging,
+  .database-row-dragging * {
+    user-select: none !important;
   }
 
   .image-block-resize-handle {

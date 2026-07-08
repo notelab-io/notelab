@@ -81,6 +81,10 @@ function clearSession(view?: EditorView) {
   activeDrag = null
 }
 
+function clearDragState(view: EditorView | null) {
+  if (view) clearSession(view)
+}
+
 function dialogOffset(el: HTMLElement) {
   const dialog = el.closest('[data-slot="dialog-content"]')
   if (!(dialog instanceof HTMLElement)) return { left: 0, top: 0 }
@@ -333,13 +337,19 @@ export function startBlockDrag({
   target: DragHandleTarget
   view: EditorView
 }) {
+  view.dom.classList.add("dragging")
+  document.getSelection()?.removeAllRanges()
   view.focus()
   try {
     view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, target.pos)))
   } catch {
+    clearSession(view)
     return false
   }
-  if (!event.dataTransfer) return false
+  if (!event.dataTransfer) {
+    clearSession(view)
+    return false
+  }
 
   const payload = activeDrag ?? toPayload(editorId, target)
   activeDrag = payload
@@ -354,7 +364,6 @@ export function startBlockDrag({
   if (image instanceof Element) event.dataTransfer.setDragImage(image, 0, 0)
 
   view.dragging = { slice, move: !event.ctrlKey }
-  view.dom.classList.add("dragging")
   return true
 }
 
@@ -566,11 +575,14 @@ export function createEditorDragDrop(
     handleDrop: onDrop,
     domEvents: {
       dragover: onDragOver,
-      dragend: () => (setDropLine(null), false),
+      dragend: (view: EditorView) => (setDropLine(null), clearDragState(view), false),
       dragleave: (view: EditorView, event: DragEvent) => (onLeave(view.dom, event), false),
     },
     surfaceProps: {
-      onDragEnd: () => setDropLine(null),
+      onDragEnd: () => {
+        setDropLine(null)
+        clearDragState(bridge.getView())
+      },
       onDragLeave: (event: ReactDragEvent<HTMLElement>) => onLeave(bridge.surfaceRef?.current ?? null, event.nativeEvent),
       onDragOver: (event: ReactDragEvent<HTMLElement>) => {
         const view = bridge.getView()
