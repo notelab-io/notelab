@@ -1673,14 +1673,6 @@ export function DatabaseTableView() {
               }}
               style={{ top: rowCenter }}
             >
-              <Checkbox
-                aria-label={`Select ${row.page.name.trim() || "Untitled"}`}
-                checked={selectedRowIds.has(row.id)}
-                className="database-row-checkbox"
-                onCheckedChange={(checked) =>
-                  toggleSelectedRow(row.id, checked === true)
-                }
-              />
               <button
                 aria-label={`Drag ${row.page.name.trim() || "Untitled"}`}
                 className="database-row-drag-handle"
@@ -1696,6 +1688,14 @@ export function DatabaseTableView() {
               >
                 <GripVertical />
               </button>
+              <Checkbox
+                aria-label={`Select ${row.page.name.trim() || "Untitled"}`}
+                checked={selectedRowIds.has(row.id)}
+                className="database-row-checkbox"
+                onCheckedChange={(checked) =>
+                  toggleSelectedRow(row.id, checked === true)
+                }
+              />
             </div>
           )
         })}
