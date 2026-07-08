@@ -24,7 +24,6 @@ import {
 import { EmbeddedPageDialog } from "@/components/embedded-page-dialog"
 import { useOpenEmbeddedPage } from "@/hooks/use-open-embedded-page"
 import { useSession } from "@notelab/features/auth"
-import { useUserSettings } from "@notelab/features/user-settings"
 import { PageMetadata as PageMetadataView } from "@/packages/editor/components/editor/page-metadata"
 import { DatabaseView } from "@/packages/editor/extensions/database"
 import {
@@ -57,17 +56,15 @@ function AuthenticatedDatabasePage() {
   const { data: page } = usePage(databasePageId, {
     refetchOnMount: false,
   })
-  const { data: userSettings } = useUserSettings()
   const {
     renderedSidePanePageId,
     sidePaneAnimatedOpen,
     sidePaneContentReady,
     sidePaneDatabaseId,
   } = usePageSidePane()
-  const { embeddedItemsOpenAs, openPage } = useOpenEmbeddedPage({
+  const { openPage } = useOpenEmbeddedPage({
     contextPageId: databasePageId,
     databaseId,
-    userSettings,
     page,
   })
 
@@ -98,9 +95,7 @@ function AuthenticatedDatabasePage() {
         />
       }
       sidePane={
-        embeddedItemsOpenAs === "sidepanel" &&
-        sidePaneContentReady &&
-        renderedSidePanePageId ? (
+        sidePaneContentReady && renderedSidePanePageId ? (
           <PageEditorPane
             databaseId={sidePaneDatabaseId ?? databaseId}
             enableComments={false}
@@ -111,10 +106,7 @@ function AuthenticatedDatabasePage() {
         ) : null
       }
       sidePaneOpen={sidePaneAnimatedOpen}
-      sidePaneVisible={
-        embeddedItemsOpenAs === "sidepanel" &&
-        renderedSidePanePageId !== null
-      }
+      sidePaneVisible={renderedSidePanePageId !== null}
     />
   )
 }
@@ -138,7 +130,6 @@ function PublicDatabaseContent({ databaseId }: { databaseId: string }) {
   const { data: page } = usePage(databasePageId, {
     refetchOnMount: false,
   })
-  const { data: userSettings } = useUserSettings()
   const {
     closeSidePane,
     renderedSidePanePageId,
@@ -146,10 +137,9 @@ function PublicDatabaseContent({ databaseId }: { databaseId: string }) {
     sidePaneContentReady,
     sidePaneDatabaseId,
   } = usePageSidePane()
-  const { embeddedItemsOpenAs, openPage } = useOpenEmbeddedPage({
+  const { openPage } = useOpenEmbeddedPage({
     contextPageId: databasePageId,
     databaseId,
-    userSettings,
     page,
   })
 
@@ -188,7 +178,7 @@ function PublicDatabaseContent({ databaseId }: { databaseId: string }) {
         </div>
       }
       sidePane={
-        embeddedItemsOpenAs === "sidepanel" && renderedSidePanePageId ? (
+        renderedSidePanePageId ? (
           <div className="flex h-full min-h-0 flex-col">
             <div className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
               <div className="flex shrink-0 items-center gap-1">
@@ -234,10 +224,7 @@ function PublicDatabaseContent({ databaseId }: { databaseId: string }) {
         ) : null
       }
       sidePaneOpen={sidePaneAnimatedOpen}
-      sidePaneVisible={
-        embeddedItemsOpenAs === "sidepanel" &&
-        renderedSidePanePageId !== null
-      }
+      sidePaneVisible={renderedSidePanePageId !== null}
     />
     <EmbeddedPageDialog onOpenPage={openPage} />
     </>

@@ -64,16 +64,14 @@ export default function Page() {
 function AuthenticatedPage() {
   const { pageId } = useParams({ from: "/p/$pageId" })
   const { data: page } = usePage(pageId, { refetchOnMount: false })
-  const { data: userSettings } = useUserSettings()
   const {
     renderedSidePanePageId,
     sidePaneAnimatedOpen,
     sidePaneContentReady,
     sidePaneDatabaseId,
   } = usePageSidePane()
-  const { embeddedItemsOpenAs, openPage } = useOpenEmbeddedPage({
+  const { openPage } = useOpenEmbeddedPage({
     contextPageId: pageId,
-    userSettings,
     page,
   })
 
@@ -89,9 +87,7 @@ function AuthenticatedPage() {
         </PageWorkspaceGate>
       }
       sidePane={
-        embeddedItemsOpenAs === "sidepanel" &&
-        sidePaneContentReady &&
-        renderedSidePanePageId ? (
+        sidePaneContentReady && renderedSidePanePageId ? (
           <PageWorkspaceGate pageId={renderedSidePanePageId}>
             <PageEditorPane
               databaseId={sidePaneDatabaseId}
@@ -104,10 +100,7 @@ function AuthenticatedPage() {
         ) : null
       }
       sidePaneOpen={sidePaneAnimatedOpen}
-      sidePaneVisible={
-        embeddedItemsOpenAs === "sidepanel" &&
-        renderedSidePanePageId !== null
-      }
+      sidePaneVisible={renderedSidePanePageId !== null}
     />
   )
 }
@@ -124,7 +117,6 @@ function PublicPage() {
 
 function PublicPageContent({ pageId }: { pageId: string }) {
   const { data: page } = usePage(pageId, { refetchOnMount: false })
-  const { data: userSettings } = useUserSettings()
   const {
     closeSidePane,
     renderedSidePanePageId,
@@ -132,9 +124,8 @@ function PublicPageContent({ pageId }: { pageId: string }) {
     sidePaneContentReady,
     sidePaneDatabaseId,
   } = usePageSidePane()
-  const { embeddedItemsOpenAs, openPage } = useOpenEmbeddedPage({
+  const { openPage } = useOpenEmbeddedPage({
     contextPageId: pageId,
-    userSettings,
     page,
   })
 
@@ -157,7 +148,7 @@ function PublicPageContent({ pageId }: { pageId: string }) {
         </div>
       }
       sidePane={
-        embeddedItemsOpenAs === "sidepanel" && renderedSidePanePageId ? (
+        renderedSidePanePageId ? (
           <div className="flex h-full min-h-0 flex-col">
             <div className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
               <div className="flex shrink-0 items-center gap-1">
@@ -203,10 +194,7 @@ function PublicPageContent({ pageId }: { pageId: string }) {
         ) : null
       }
       sidePaneOpen={sidePaneAnimatedOpen}
-      sidePaneVisible={
-        embeddedItemsOpenAs === "sidepanel" &&
-        renderedSidePanePageId !== null
-      }
+      sidePaneVisible={renderedSidePanePageId !== null}
     />
     <EmbeddedPageDialog onOpenPage={openPage} />
     </>

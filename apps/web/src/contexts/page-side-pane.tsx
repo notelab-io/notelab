@@ -9,6 +9,7 @@ import {
   type CSSProperties,
   type ReactNode,
 } from "react"
+import { useLocation, useRouter } from "@tanstack/react-router"
 
 import { cn } from "@/lib/utils"
 
@@ -42,6 +43,8 @@ export const PageSidePaneContext =
 export const WORKSPACE_SIDE_PANE_TRANSITION_MS = 320
 
 const WORKSPACE_SIDE_PANE_EASING = "cubic-bezier(0.16, 1, 0.3, 1)"
+const SIDE_PANE_PAGE_PARAM = "p"
+const SIDE_PANE_DATABASE_PARAM = "d"
 
 export const pageSidePaneGridShellClass =
   "grid min-h-0 flex-1 overflow-hidden [grid-template-rows:3rem_minmax(0,1fr)]"
@@ -249,13 +252,23 @@ export function PageSidePaneLayout({
 }
 
 export function usePageSidePaneState(
-  resetKey?: string | null,
+  _resetKey?: string | null,
 ): PageSidePaneContextValue {
-  const [sidePanePageId, setSidePanePageId] = useState<string | null>(
-    null,
+  const router = useRouter()
+  const location = useLocation({
+    select: ({ hash, pathname, searchStr }) => ({
+      hash,
+      pathname,
+      searchStr,
+    }),
+  })
+  const sidePanePageId = getSearchParam(
+    location.searchStr,
+    SIDE_PANE_PAGE_PARAM,
   )
-  const [sidePaneDatabaseId, setSidePaneDatabaseId] = useState<string | null>(
-    null,
+  const sidePaneDatabaseId = getSearchParam(
+    location.searchStr,
+    SIDE_PANE_DATABASE_PARAM,
   )
   const [dialogPageId, setDialogPageId] = useState<string | null>(
     null,
@@ -266,10 +279,42 @@ export function usePageSidePaneState(
   const [sidePaneAnimatedOpen, setSidePaneAnimatedOpen] = useState(false)
   const [sidePaneContentReady, setSidePaneContentReady] = useState(false)
   const sidePaneWasOpenRef = useRef(false)
+  const writeSidePaneParams = useCallback(
+    (pageId: string | null, databaseId?: string | null, replace = false) => {
+      const params = new URLSearchParams(location.searchStr)
+
+      if (pageId) {
+        params.set(SIDE_PANE_PAGE_PARAM, pageId)
+      } else {
+        params.delete(SIDE_PANE_PAGE_PARAM)
+      }
+
+      if (pageId && databaseId) {
+        params.set(SIDE_PANE_DATABASE_PARAM, databaseId)
+      } else {
+        params.delete(SIDE_PANE_DATABASE_PARAM)
+      }
+
+      const search = params.toString()
+      const hash = location.hash ? `#${location.hash}` : ""
+      const path = `${location.pathname}${search ? `?${search}` : ""}${hash}`
+
+      if (path === `${location.pathname}${location.searchStr}${hash}`) {
+        return
+      }
+
+      if (replace) {
+        router.history.replace(path)
+        return
+      }
+
+      router.history.push(path)
+    },
+    [location.hash, location.pathname, location.searchStr, router.history],
+  )
   const closeSidePane = useCallback(() => {
-    setSidePanePageId(null)
-    setSidePaneDatabaseId(null)
-  }, [])
+    writeSidePaneParams(null, null, true)
+  }, [writeSidePaneParams])
   const closeEmbeddedPageDialog = useCallback(() => {
     setDialogPageId(null)
     setDialogDatabaseId(null)
@@ -277,10 +322,9 @@ export function usePageSidePaneState(
   const openSidePane = useCallback(
     (nextPageId: string, options?: OpenPageSidePaneOptions) => {
       closeEmbeddedPageDialog()
-      setSidePanePageId(nextPageId)
-      setSidePaneDatabaseId(options?.databaseId ?? null)
+      writeSidePaneParams(nextPageId, options?.databaseId)
     },
-    [closeEmbeddedPageDialog],
+    [closeEmbeddedPageDialog, writeSidePaneParams],
   )
   const openEmbeddedPageDialog = useCallback(
     (nextPageId: string, options?: OpenPageSidePaneOptions) => {
@@ -346,11 +390,6 @@ export function usePageSidePaneState(
     }
   }, [sidePanePageId])
 
-  useEffect(() => {
-    closeSidePane()
-    closeEmbeddedPageDialog()
-  }, [closeEmbeddedPageDialog, closeSidePane, resetKey])
-
   return useMemo<PageSidePaneContextValue>(
     () => ({
       closeEmbeddedPageDialog,
@@ -379,6 +418,10 @@ export function usePageSidePaneState(
       sidePanePageId,
     ],
   )
+}
+
+function getSearchParam(search: string, key: string) {
+  return new URLSearchParams(search).get(key)?.trim() || null
 }
 
 export function PageSidePaneProvider({

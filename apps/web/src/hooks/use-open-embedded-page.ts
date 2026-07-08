@@ -1,6 +1,7 @@
 import { useCallback } from "react"
 
 import { usePageSidePane } from "@/contexts/page-side-pane"
+import type { OpenPageSidePaneOptions } from "@/contexts/page-side-pane"
 import { useNotelabFeatures } from "@notelab/features"
 import {
   defaultUserSettings,
@@ -11,7 +12,6 @@ import {
   getPageFromDetail,
   resolveEmbeddedItemsOpenAs,
   pageQueryKey,
-  type EmbeddedItemsOpenAs,
   type Page,
 } from "@notelab/features/pages"
 
@@ -37,12 +37,10 @@ function resolveOpenPagesAsFromCache(
 export function useOpenEmbeddedPage({
   contextPageId,
   databaseId,
-  userSettings,
   page,
 }: {
   contextPageId: string | null
   databaseId?: string | null
-  userSettings: UserSettings | null | undefined
   page: Page | null | undefined
 }) {
   const { queryClient } = useNotelabFeatures()
@@ -55,13 +53,8 @@ export function useOpenEmbeddedPage({
     sidePanePageId,
   } = usePageSidePane()
 
-  const embeddedItemsOpenAs: EmbeddedItemsOpenAs = resolveEmbeddedItemsOpenAs(
-    page,
-    userSettings?.embeddedItemsOpenAs,
-  )
-
   const openPage = useCallback(
-    (pageId: string) => {
+    (pageId: string, options?: OpenPageSidePaneOptions) => {
       const mode = resolveOpenPagesAsFromCache(
         queryClient,
         contextPageId,
@@ -81,11 +74,15 @@ export function useOpenEmbeddedPage({
       }
 
       if (usesDialog) {
-        openEmbeddedPageDialog(pageId, { databaseId })
+        openEmbeddedPageDialog(pageId, {
+          databaseId: options?.databaseId ?? databaseId,
+        })
         return
       }
 
-      openSidePane(pageId, { databaseId })
+      openSidePane(pageId, {
+        databaseId: options?.databaseId ?? databaseId,
+      })
     },
     [
       closeEmbeddedPageDialog,
@@ -101,15 +98,5 @@ export function useOpenEmbeddedPage({
     ],
   )
 
-  return { embeddedItemsOpenAs, openPage }
-}
-
-export function useResolvedOpenPagesAs(
-  page: Page | null | undefined,
-  userSettings: UserSettings | null | undefined,
-) {
-  return resolveEmbeddedItemsOpenAs(
-    page,
-    userSettings?.embeddedItemsOpenAs,
-  )
+  return { openPage }
 }

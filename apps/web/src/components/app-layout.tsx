@@ -51,12 +51,8 @@ import {
   useRecordItemVisit,
   usePage,
 } from "@notelab/features/pages"
-import { useUserSettings } from "@notelab/features/user-settings"
 import { EmbeddedPageDialog } from "@/components/embedded-page-dialog"
-import {
-  useOpenEmbeddedPage,
-  useResolvedOpenPagesAs,
-} from "@/hooks/use-open-embedded-page"
+import { useOpenEmbeddedPage } from "@/hooks/use-open-embedded-page"
 
 export function AppLayout({ children }: { children?: ReactNode }) {
   return (
@@ -95,8 +91,6 @@ function AppLayoutContent({ children }: { children?: ReactNode }) {
   })
   const recordItemVisit = useRecordItemVisit()
   const recordedVisitKeyRef = useRef<string | null>(null)
-  const { data: userSettings } = useUserSettings()
-  const openPagesAs = useResolvedOpenPagesAs(hostPage, userSettings)
   const discussionsEnabled = Boolean(pageId && !databaseId)
   const sidePaneState = usePageSidePaneState(pageId)
   const {
@@ -190,14 +184,7 @@ function AppLayoutContent({ children }: { children?: ReactNode }) {
     }
   }, [appSidebarOpen, discussionsSidebarOpen, sidePanePageId])
 
-  useEffect(() => {
-    if (openPagesAs === "dialog" && sidePanePageId) {
-      closeSidePane()
-    }
-  }, [closeSidePane, openPagesAs, sidePanePageId])
-
-  const showSidePaneLayout =
-    openPagesAs === "sidepanel" && renderedSidePanePageId !== null
+  const showSidePaneLayout = renderedSidePanePageId !== null
 
   return (
     <PageSidePaneContext.Provider value={sidePaneContext}>
@@ -205,7 +192,6 @@ function AppLayoutContent({ children }: { children?: ReactNode }) {
         contextPageId={hostPageId}
         databaseId={databaseId}
         hostPage={hostPage}
-        userSettings={userSettings}
       />
       {isSettingsPage ? (
         <SettingsSidebar />
@@ -311,17 +297,14 @@ function EmbeddedPageDialogHost({
   contextPageId,
   databaseId,
   hostPage,
-  userSettings,
 }: {
   contextPageId: string | null
   databaseId: string | null
   hostPage: ReturnType<typeof usePage>["data"]
-  userSettings: ReturnType<typeof useUserSettings>["data"]
 }) {
   const { openPage } = useOpenEmbeddedPage({
     contextPageId,
     databaseId,
-    userSettings,
     page: hostPage,
   })
 
