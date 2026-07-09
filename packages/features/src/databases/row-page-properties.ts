@@ -132,6 +132,7 @@ function patchDatabasePayloadPage(
       ...row,
       page: {
         ...row.page,
+        deletedAt: page.deletedAt,
         id: page.id,
         metadata: page.metadata,
         name: page.name,

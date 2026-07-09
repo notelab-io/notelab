@@ -86,6 +86,7 @@ export type DatabaseRow = {
   position: number
   page: {
     createdAt?: string
+    deletedAt?: string | null
     id: string
     name: string
     metadata?: unknown

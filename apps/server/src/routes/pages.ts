@@ -11,6 +11,7 @@ import {
   isPagePublished,
   normalizeAccessLevel,
   rejectActiveWorkspaceMismatch,
+  type AccessLevel,
 } from "../access";
 import { rejectMismatchedApiKeyWorkspace } from "../api-keys";
 import { db } from "../db";
@@ -123,6 +124,16 @@ const toNotelabAiPageSummary = (record: PageListRecord) => {
 };
 
 const getPage = getPageRecord;
+
+const getPageIncludingDeleted = async (id: string) => {
+  const [record] = await db
+    .select()
+    .from(page)
+    .where(eq(page.id, id))
+    .limit(1);
+
+  return record ?? null;
+};
 
 const requireUser = (c: Context<AppBindings>) => {
   const user = c.get("user");
@@ -328,6 +339,62 @@ pageRoutes.get("/", async (c) => {
     accessibleRecordIds.has(record.pageId),
   );
   const activeDatabaseIds = new Set(activeDatabases.map((record) => record.id));
+  const databaseRowPages =
+    activeDatabaseIds.size > 0
+      ? await db
+          .select({
+            databaseId: databaseRow.databaseId,
+            id: databaseRow.id,
+            pageId: databaseRow.pageId,
+            position: databaseRow.position,
+          })
+          .from(databaseRow)
+          .where(
+            and(
+              inArray(databaseRow.databaseId, [...activeDatabaseIds]),
+              isNull(databaseRow.deletedAt),
+            ),
+          )
+      : [];
+  const missingDatabaseRowPageIds = [
+    ...new Set(
+      databaseRowPages
+        .map((row) => row.pageId)
+        .filter((pageId) => !accessibleRecordIds.has(pageId)),
+    ),
+  ];
+
+  if (deletedFilter === "active" && missingDatabaseRowPageIds.length > 0) {
+    const deletedDatabaseRowPages = await db
+      .select({
+        id: page.id,
+        workspaceId: page.workspaceId,
+        createdById: page.createdById,
+        type: page.type,
+        name: page.name,
+        url: page.url,
+        metadata: page.metadata,
+        deletedById: page.deletedById,
+        deletedAt: page.deletedAt,
+        createdAt: page.createdAt,
+        updatedAt: page.updatedAt,
+      })
+      .from(page)
+      .where(
+        and(
+          eq(page.workspaceId, workspaceId),
+          inArray(page.id, missingDatabaseRowPageIds),
+          isNotNull(page.deletedAt),
+        ),
+      );
+
+    accessibleRecords = [...accessibleRecords, ...deletedDatabaseRowPages];
+
+    for (const record of deletedDatabaseRowPages) {
+      accessibleRecordIds.add(record.id);
+    }
+  }
+
   const creatorIds = [
     ...new Set(
       [
@@ -359,23 +426,6 @@ pageRoutes.get("/", async (c) => {
       record.createdById ? creatorsById.get(record.createdById) ?? null : null,
     ]),
   );
-  const databaseRowPages =
-    activeDatabaseIds.size > 0
-      ? await db
-          .select({
-            databaseId: databaseRow.databaseId,
-            id: databaseRow.id,
-            pageId: databaseRow.pageId,
-            position: databaseRow.position,
-          })
-          .from(databaseRow)
-          .where(
-            and(
-              inArray(databaseRow.databaseId, [...activeDatabaseIds]),
-              isNull(databaseRow.deletedAt),
-            ),
-          )
-      : [];
 
   const databaseViews =
     activeDatabaseIds.size > 0
@@ -1078,15 +1128,22 @@ pageRoutes.delete("/:id/embed-item", async (c) => {
 pageRoutes.get("/:id", async (c) => {
   const user = requireUser(c);
 
-  const record = await getPage(c.req.param("id"));
+  const record = await getPageIncludingDeleted(c.req.param("id"));
 
   if (!record) {
     return c.json({ error: "Page not found" }, 404);
   }
 
-  const accessLevel = user
-    ? await getEffectivePageAccess(record.id, user.id)
-    : "none";
+  let accessLevel: AccessLevel = "none";
+
+  if (record.deletedAt && user) {
+    accessLevel = (await getMembership(record.workspaceId, user.id))
+      ? "full"
+      : "none";
+  } else if (user) {
+    accessLevel = await getEffectivePageAccess(record.id, user.id);
+  }
+
   const published = await isPagePublished(record.id);
 
   if (!hasAccess(accessLevel, "view") && !published) {
@@ -1802,6 +1859,46 @@ pageRoutes.patch("/:id", async (c) => {
   const [record] = await db
     .update(page)
     .set(values)
+    .where(eq(page.id, existing.id))
+    .returning();
+
+  return c.json({ page: record });
+});
+
+pageRoutes.post("/:id/restore", async (c) => {
+  const user = requireUser(c);
+
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const existing = await getPageIncludingDeleted(c.req.param("id"));
+
+  if (!existing) {
+    return c.json({ error: "Page not found" }, 404);
+  }
+
+  if (!(await getMembership(existing.workspaceId, user.id))) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  const restoreOrgMismatch = await enforceActiveWorkspace(
+    c,
+    existing.workspaceId,
+    user.id,
+  );
+
+  if (restoreOrgMismatch) {
+    return restoreOrgMismatch;
+  }
+
+  const [record] = await db
+    .update(page)
+    .set({
+      deletedAt: null,
+      deletedById: null,
+      updatedAt: new Date(),
+    })
     .where(eq(page.id, existing.id))
     .returning();
 

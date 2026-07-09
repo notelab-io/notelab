@@ -11,8 +11,19 @@ import {
 } from "@/contexts/page-side-pane"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { isEmbeddedMobileViewer } from "@/lib/embedded-view"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 import { formatPageBreadcrumbLabel } from "@/lib/page-icon"
 import {
   getPageCover,
@@ -23,6 +34,7 @@ import {
 } from "@notelab/features/pages"
 import {
   useUpdatePage,
+  useRestorePage,
   useCreatePage,
   useEmbedPageItem,
   useRemovePageEmbed,
@@ -298,6 +310,7 @@ export function PageEditorPane({
   const embedPageItem = useEmbedPageItem()
   const removePageEmbed = useRemovePageEmbed()
   const updatePage = useUpdatePage()
+  const restorePage = useRestorePage()
   const contentSaveTimeoutRef = useRef<number | null>(null)
   const lastSavedContentRef = useRef<string | null>(null)
   const lastPageBlockIdsRef = useRef<Set<string>>(new Set())
@@ -310,6 +323,7 @@ export function PageEditorPane({
   const [name, setName] = useState("")
   const [cover, setCover] = useState("")
   const [emoji, setEmoji] = useState("")
+  const [restoreConfirmOpen, setRestoreConfirmOpen] = useState(false)
   const fullWidth = resolvePageFullWidth(
     page,
     userSettings?.pageFullWidth,
@@ -360,12 +374,33 @@ export function PageEditorPane({
   }, [flushContentSaveTimeout, pageId])
 
   const pageEditable =
-    !readOnly && (accessLevel === "edit" || accessLevel === "full")
+    !readOnly &&
+    !page?.deletedAt &&
+    (accessLevel === "edit" || accessLevel === "full")
+
+  const restoreTrashedPage = () => {
+    if (!page || restorePage.isPending) {
+      return
+    }
+
+    restorePage.mutate(page.id, {
+      onSuccess: () => {
+        setRestoreConfirmOpen(false)
+        toast.success("Page restored.")
+      },
+      onError: (error) => {
+        toast.error(
+          error instanceof Error ? error.message : "Could not restore page.",
+        )
+      },
+    })
+  }
 
   useEffect(() => {
     if (
       readOnly ||
       !page ||
+      page.deletedAt ||
       (accessLevel !== "edit" && accessLevel !== "full") ||
       name.trim() === page.name
     ) {
@@ -385,6 +420,7 @@ export function PageEditorPane({
     if (
       readOnly ||
       !page ||
+      page.deletedAt ||
       (accessLevel !== "edit" && accessLevel !== "full")
     ) {
       return
@@ -405,6 +441,7 @@ export function PageEditorPane({
     if (
       readOnly ||
       !page ||
+      page.deletedAt ||
       (accessLevel !== "edit" && accessLevel !== "full")
     ) {
       return
@@ -426,6 +463,7 @@ export function PageEditorPane({
       }
       if (
         readOnly ||
+        page.deletedAt ||
         (accessLevel !== "edit" && accessLevel !== "full")
       ) {
         return
@@ -518,6 +556,7 @@ export function PageEditorPane({
     if (
       readOnly ||
       !page ||
+      page.deletedAt ||
       (accessLevel !== "edit" && accessLevel !== "full")
     ) {
       throw new Error("Page is required")
@@ -554,6 +593,22 @@ export function PageEditorPane({
 
   return (
     <section className={cn(className, "animate-in fade-in-0 duration-300")}>
+      {page.deletedAt ? (
+        <div className="sticky top-0 z-20 flex min-h-12 items-center justify-between gap-3 border-b bg-background/95 px-4 py-2 text-sm shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/80">
+          <span className="font-medium">This page is in trash.</span>
+          {!readOnly ? (
+            <Button
+              disabled={restorePage.isPending}
+              onClick={() => setRestoreConfirmOpen(true)}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              Restore
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
       <Editor
         key={page.id}
         content={page.content ?? ""}
@@ -585,6 +640,31 @@ export function PageEditorPane({
         pageEditPreviewRef={pageEditPreviewRef}
         pageId={page.id}
       />
+      <AlertDialog
+        open={restoreConfirmOpen}
+        onOpenChange={setRestoreConfirmOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Restore page?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This page will be moved out of trash and appear in your active
+              pages again.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={restorePage.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={restorePage.isPending}
+              onClick={restoreTrashedPage}
+            >
+              Restore
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   )
 }

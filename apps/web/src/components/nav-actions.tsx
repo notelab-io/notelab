@@ -18,6 +18,16 @@ import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import {
   Command,
   CommandEmpty,
   CommandGroup,
@@ -59,6 +69,7 @@ import { useSession } from "@notelab/features/auth"
 import { useActiveWorkspaceId } from "@notelab/features/integrations"
 import {
   useCreatePage,
+  useDeletePage,
   useDeletePageAccess,
   useSetPageFavorite,
   useSetPagePublished,
@@ -72,6 +83,7 @@ import {
 } from "@notelab/features/pages"
 import {
   useDatabase,
+  useDeleteDatabase,
   useSetDatabaseFavorite,
 } from "@notelab/features/databases"
 import {
@@ -128,6 +140,7 @@ export function NavActions({
 }) {
   const navigate = useNavigate()
   const [isOpen, setIsOpen] = React.useState(false)
+  const [trashConfirmOpen, setTrashConfirmOpen] = React.useState(false)
   const { data: databasePayload } = useDatabase(databaseId)
   const workspaceId = useActiveWorkspaceId()
   const actionPageId = pageId ?? databasePayload?.database.pageId
@@ -136,6 +149,8 @@ export function NavActions({
   })
   const { data: pages = [] } = usePages(workspaceId)
   const createPage = useCreatePage()
+  const deletePage = useDeletePage()
+  const deleteDatabase = useDeleteDatabase()
   const updatePage = useUpdatePage()
   const setFavorite = useSetPageFavorite()
   const setDatabaseFavorite = useSetDatabaseFavorite()
@@ -165,6 +180,10 @@ export function NavActions({
   const isFavorite = isDatabasePage
     ? Boolean(databasePayload?.database.isFavorite)
     : Boolean(page?.isFavorite ?? listPage?.isFavorite)
+  const displayName =
+    (isDatabasePage ? databasePayload?.database.name : page?.name)?.trim() ||
+    "Untitled"
+  const isDeleting = deletePage.isPending || deleteDatabase.isPending
   const toggleFavorite = () => {
     if (databaseId) {
       if (setDatabaseFavorite.isPending) {
@@ -246,6 +265,48 @@ export function NavActions({
       )
     }
   }
+  const moveToTrash = () => {
+    if (isDatabasePage) {
+      if (!databaseId || deleteDatabase.isPending) {
+        return
+      }
+
+      deleteDatabase.mutate(databaseId, {
+        onSuccess: () => {
+          setTrashConfirmOpen(false)
+          setIsOpen(false)
+          toast.success("Moved to trash.")
+          void navigate({ to: "/" })
+        },
+        onError: (error) => {
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "Could not delete database.",
+          )
+        },
+      })
+      return
+    }
+
+    if (!actionPageId || deletePage.isPending) {
+      return
+    }
+
+    deletePage.mutate(actionPageId, {
+      onSuccess: () => {
+        setTrashConfirmOpen(false)
+        setIsOpen(false)
+        toast.success("Moved to trash.")
+        void navigate({ to: "/" })
+      },
+      onError: (error) => {
+        toast.error(
+          error instanceof Error ? error.message : "Could not delete page.",
+        )
+      },
+    })
+  }
   const runMoreAction = (label: string) => {
     if (label === "Copy Link") {
       void copyLink()
@@ -255,6 +316,10 @@ export function NavActions({
     if (label === "Duplicate") {
       void duplicatePage()
       return
+    }
+
+    if (label === "Move to Trash") {
+      setTrashConfirmOpen(true)
     }
   }
   const togglePageFullWidth = () => {
@@ -543,11 +608,18 @@ export function NavActions({
               ) : null}
               {moreActions.map((label) => (
                 <DropDrawerItem
+                  className={
+                    label === "Move to Trash"
+                      ? "text-destructive focus:text-destructive"
+                      : undefined
+                  }
                   key={label}
                   disabled={
                     (label === "Copy Link" && !pageId && !databaseId) ||
                     (label === "Duplicate" &&
-                      (isDatabasePage || !page || createPage.isPending))
+                      (isDatabasePage || !page || createPage.isPending)) ||
+                    (label === "Move to Trash" &&
+                      ((!actionPageId && !databaseId) || isDeleting))
                   }
                   onSelect={() => runMoreAction(label)}
                 >
@@ -556,6 +628,33 @@ export function NavActions({
               ))}
             </DropDrawerContent>
           </DropDrawer>
+          <AlertDialog
+            open={trashConfirmOpen}
+            onOpenChange={setTrashConfirmOpen}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Move to trash?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {isDatabasePage
+                    ? `${displayName} and its row pages will be moved to trash.`
+                    : `${displayName} and its subpages will be moved to trash. Linked pages elsewhere will not be deleted.`}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={isDeleting}>
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  disabled={isDeleting}
+                  onClick={moveToTrash}
+                  variant="destructive"
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </>
       ) : null}
     </div>

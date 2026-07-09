@@ -475,6 +475,7 @@ const getDatabasePayload = async (
         row: databaseRow,
         page: {
           createdAt: page.createdAt,
+          deletedAt: page.deletedAt,
           id: page.id,
           name: page.name,
           metadata: page.metadata,
@@ -487,7 +488,6 @@ const getDatabasePayload = async (
         and(
           eq(databaseRow.databaseId, id),
           isNull(databaseRow.deletedAt),
-          isNull(page.deletedAt),
         ),
       )
       .orderBy(asc(databaseRow.position)),

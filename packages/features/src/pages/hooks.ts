@@ -768,6 +768,10 @@ type DeletePageResult = {
   page: Page | null
 }
 
+type RestorePageResult = {
+  page: Page
+}
+
 export function useDeletePage() {
   const { apiFetch, queryClient } = useNotelabFeatures()
 
@@ -783,6 +787,28 @@ export function useDeletePage() {
         queryClient,
         result,
       }),
+  })
+}
+
+export function useRestorePage() {
+  const { apiFetch, queryClient } = useNotelabFeatures()
+
+  return useMutation({
+    mutationFn: async (pageId: string) =>
+      apiFetch<RestorePageResult>(`/pages/${pageId}/restore`, {
+        method: "POST",
+      }),
+    onSuccess: async ({ page }) => {
+      setPageDetailCache(queryClient, page)
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: pagesNavRootQueryKey(page.workspaceId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: notelabAiPagesQueryKey(page.workspaceId),
+        }),
+      ])
+    },
   })
 }
 
