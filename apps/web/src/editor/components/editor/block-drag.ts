@@ -98,10 +98,13 @@ function lineAt(
   anchor?: { left: number; right: number },
 ): BlockDropLine {
   const editor = view.dom.getBoundingClientRect()
+  const style = anchor ? null : window.getComputedStyle(view.dom)
+  const paddingLeft = style ? Number.parseFloat(style.paddingLeft) || 0 : 0
+  const paddingRight = style ? Number.parseFloat(style.paddingRight) || 0 : 0
   const offset = dialogOffset(view.dom)
   return {
-    left: (anchor?.left ?? editor.left) - offset.left,
-    right: (anchor?.right ?? editor.right) - offset.left,
+    left: (anchor?.left ?? editor.left + paddingLeft) - offset.left,
+    right: (anchor?.right ?? editor.right - paddingRight) - offset.left,
     top: view.coordsAtPos(pos).top - offset.top,
   }
 }
