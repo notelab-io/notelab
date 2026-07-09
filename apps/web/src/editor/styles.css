@@ -196,7 +196,6 @@
       h4,
       h5,
       h6,
-      li,
       blockquote,
       pre,
       .code-block-shiki,
@@ -229,11 +228,84 @@
       h4,
       h5,
       h6,
-      li,
       blockquote,
       .editor-details
     ).editor-block-selection {
     @apply px-3;
+  }
+
+  .tiptap-editor
+    :is(ul, ol):not([data-type="taskList"])
+    > li.editor-block-selection {
+    box-sizing: border-box;
+    color: var(--editor-selection-foreground);
+    isolation: isolate;
+    position: relative;
+  }
+
+  .tiptap-editor
+    :is(ul, ol):not([data-type="taskList"])
+    > li.editor-block-selection::before {
+    background-color: var(--editor-selection-background);
+    border-radius: 4px;
+    content: "";
+    inset: 0 0 0 -1.5rem;
+    pointer-events: none;
+    position: absolute;
+    z-index: -1;
+  }
+
+  .tiptap-editor
+    :is(ul, ol):not([data-type="taskList"])
+    > li.editor-block-selection::marker {
+    color: var(--editor-selection-foreground);
+  }
+
+  .tiptap-editor
+    > * + :is(ul, ol):not([data-type="taskList"])
+    > li.editor-block-selection:first-child::before {
+    top: -0.5rem;
+  }
+
+  .tiptap-editor
+    > :is(ul, ol):not([data-type="taskList"])
+    > li.editor-block-selection:last-child::before {
+    bottom: -0.125rem;
+  }
+
+  .tiptap-editor ul[data-type="taskList"] > li.editor-block-selection,
+  .tiptap-editor .node-taskItem.editor-block-selection,
+  .tiptap-editor [data-type="taskItem"].editor-block-selection,
+  .tiptap-editor .task-item.editor-block-selection {
+    box-sizing: border-box;
+    color: var(--editor-selection-foreground);
+    isolation: isolate;
+    position: relative;
+  }
+
+  .tiptap-editor ul[data-type="taskList"] > li.editor-block-selection::before,
+  .tiptap-editor .node-taskItem.editor-block-selection::before,
+  .tiptap-editor [data-type="taskItem"].editor-block-selection::before,
+  .tiptap-editor .task-item.editor-block-selection::before {
+    background-color: var(--editor-selection-background);
+    border-radius: 4px;
+    content: "";
+    inset: 0;
+    pointer-events: none;
+    position: absolute;
+    z-index: -1;
+  }
+
+  .tiptap-editor
+    > * + ul[data-type="taskList"]
+    > li.editor-block-selection:first-child::before {
+    top: -0.5rem;
+  }
+
+  .tiptap-editor
+    > ul[data-type="taskList"]
+    > li.editor-block-selection:last-child::before {
+    bottom: -0.125rem;
   }
 
   /* Database blocks split into toolbar + scroll sections for separate highlights. */
@@ -369,6 +441,12 @@
   }
 
   .tiptap-editor li + li {
+    @apply mt-1 pt-1;
+  }
+
+  .tiptap-editor ul[data-type="taskList"] > .node-taskItem + .node-taskItem,
+  .tiptap-editor ul[data-type="taskList"] > .node-taskItem + li,
+  .tiptap-editor ul[data-type="taskList"] > li + .node-taskItem {
     @apply mt-1 pt-1;
   }
 

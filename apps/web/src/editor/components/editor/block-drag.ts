@@ -89,6 +89,8 @@ const DATABASE_BLOCK_SELECTOR = ".database-block, .node-databaseBlock"
 const DATABASE_INLINE_SCROLL_SELECTOR = ".database-inline-scroll"
 const DIALOG_CONTENT_SELECTOR = '[data-slot="dialog-content"]'
 const DRAG_HANDLE_SELECTOR = ".drag-handle"
+const DRAG_HANDLE_WIDTH = 64
+const LIST_DRAG_HANDLE_MARKER_GAP = 16
 const EDITOR_DRAGGING_CLASS = "dragging"
 const MIN_COORD_INSET = 4
 
@@ -436,7 +438,21 @@ export function getBlockDragHandleRect(view: EditorView, target: DragHandleTarge
 
   const editorRect = view.dom.getBoundingClientRect()
   let anchor = nodeDom
+  let handleOffset = DRAG_HANDLE_WIDTH
+  let topInsetElement = nodeDom
   let top = nodeDom.getBoundingClientRect().top
+
+  if (
+    target.node.type.name === "listItem" &&
+    nodeDom instanceof HTMLLIElement &&
+    nodeDom.parentElement instanceof HTMLElement &&
+    nodeDom.parentElement.matches("ul, ol") &&
+    nodeDom.parentElement.dataset.type !== "taskList"
+  ) {
+    anchor = nodeDom.parentElement
+    handleOffset = DRAG_HANDLE_WIDTH + LIST_DRAG_HANDLE_MARKER_GAP
+    topInsetElement = nodeDom
+  }
 
   if (target.node.type.name === "databaseBlock") {
     const block = nodeDom.closest<HTMLElement>(DATABASE_BLOCK_SELECTOR) ?? nodeDom
@@ -449,6 +465,7 @@ export function getBlockDragHandleRect(view: EditorView, target: DragHandleTarge
     }
 
     anchor = section ?? block
+    topInsetElement = anchor
   }
 
   const anchorRect = anchor.getBoundingClientRect()
@@ -456,8 +473,8 @@ export function getBlockDragHandleRect(view: EditorView, target: DragHandleTarge
   const left = anchorRect.left + numberStyle(anchor, "paddingLeft")
 
   return {
-    left: Math.max(editorRect.left + MIN_COORD_INSET, left - 64) - offset.left,
-    top: top + numberStyle(anchor, "paddingTop") - offset.top,
+    left: Math.max(editorRect.left + MIN_COORD_INSET, left - handleOffset) - offset.left,
+    top: top + numberStyle(topInsetElement, "paddingTop") - offset.top,
   }
 }
 

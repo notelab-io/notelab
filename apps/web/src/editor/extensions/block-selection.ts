@@ -88,7 +88,12 @@ const createBlockSelectionDecorations = (
       return
     }
 
-    if (node.type.name === "listItem" || node.type.name === "taskItem") {
+    if (node.type.name === "listItem") {
+      addBlockRange(ranges, pos, pos + node.nodeSize, selectionFrom, selectionTo)
+      return false
+    }
+
+    if (node.type.name === "taskItem") {
       addBlockRange(ranges, pos, pos + node.nodeSize, selectionFrom, selectionTo)
       return false
     }
@@ -126,7 +131,7 @@ export const BlockSelection = Extension.create({
         if (!contentRange) {
           const tr = state.tr.setSelection(new AllSelection(doc))
           tr.setMeta(blockSelectionPluginKey, { type: "select-all" } satisfies BlockSelectionMeta)
-          editor.view.dispatch(tr.scrollIntoView())
+          editor.view.dispatch(tr)
           return true
         }
 
@@ -136,14 +141,14 @@ export const BlockSelection = Extension.create({
         if (blockFullySelected) {
           const tr = state.tr.setSelection(new AllSelection(doc))
           tr.setMeta(blockSelectionPluginKey, { type: "select-all" } satisfies BlockSelectionMeta)
-          editor.view.dispatch(tr.scrollIntoView())
+          editor.view.dispatch(tr)
           return true
         }
 
         const tr = state.tr.setSelection(
           TextSelection.create(doc, contentRange.from, contentRange.to),
         )
-        editor.view.dispatch(tr.scrollIntoView())
+        editor.view.dispatch(tr)
         return true
       },
     }
