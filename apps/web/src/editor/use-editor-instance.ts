@@ -19,7 +19,11 @@ import {
   isDraggingPageToEditor,
   shouldSkipEditorDropLine,
 } from "./database-page-drag"
-import { handleProviderLinkPaste, normalizePastedEditorHTML } from "./paste"
+import {
+  handleProviderLinkPaste,
+  handleTypedLinkChoice,
+  normalizePastedEditorHTML,
+} from "./paste"
 import { updateExtensionOptions } from "./update-extension-options"
 import type { BlockDropLine, PasteChoiceState } from "./types"
 import { useLatestRef } from "./use-latest-ref"
@@ -75,6 +79,10 @@ export const useEditorInstance = ({
     (view: Parameters<typeof handleProviderLinkPaste>[0], event: ClipboardEvent) =>
       handleProviderLinkPaste(view, event, editable, setPasteChoice)
   )
+  const handleTypedLinkChoiceRef = useLatestRef(
+    (view: Parameters<typeof handleTypedLinkChoice>[0], event: KeyboardEvent) =>
+      handleTypedLinkChoice(view, event, editable, setPasteChoice)
+  )
 
   const dragDrop = useMemo(
     () =>
@@ -111,7 +119,17 @@ export const useEditorInstance = ({
       editorProps: {
         attributes: { class: "tiptap-editor", "aria-label": "Document editor" },
         handleDrop: dragDrop.handleDrop,
-        handleDOMEvents: dragDrop.domEvents,
+        handleDOMEvents: {
+          ...dragDrop.domEvents,
+          keydown: (view, event) =>
+            event.key === "Enter"
+              ? handleTypedLinkChoiceRef.current(view, event)
+              : false,
+          keyup: (view, event) =>
+            event.key === " "
+              ? handleTypedLinkChoiceRef.current(view, event)
+              : false,
+        },
         handlePaste: (view, event) =>
           handleProviderLinkPasteRef.current(view, event),
         transformPastedHTML: normalizePastedEditorHTML,

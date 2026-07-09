@@ -9,9 +9,9 @@ import type { CreatedPage } from "@/packages/editor/extensions/page-block"
 
 export type PasteChoiceState = {
   anchor: { getBoundingClientRect: () => DOMRect }
-  embedAttrs: Record<string, unknown>
+  embedAttrs?: Record<string, unknown>
   from: number
-  provider: EmbedProvider
+  provider?: EmbedProvider | null
   to: number
   url: string
 }

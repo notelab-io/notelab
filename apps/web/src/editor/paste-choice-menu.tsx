@@ -97,13 +97,15 @@ export function PasteChoiceMenu({
         <DropdownMenuItem onClick={() => pasteAsBookmarkOrMention("bookmarkBlock")}>
           Bookmark
         </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() =>
-            replacePastedUrl({ attrs: pasteChoice.embedAttrs, type: "embedBlock" })
-          }
-        >
-          Embed
-        </DropdownMenuItem>
+        {pasteChoice.embedAttrs ? (
+          <DropdownMenuItem
+            onClick={() =>
+              replacePastedUrl({ attrs: pasteChoice.embedAttrs, type: "embedBlock" })
+            }
+          >
+            Embed
+          </DropdownMenuItem>
+        ) : null}
         <DropdownMenuItem onClick={pasteAsUrl}>URL</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

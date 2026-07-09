@@ -492,7 +492,7 @@ function EmbedBlockView({ editor, node, updateAttributes }: ReactNodeViewProps) 
     event: PointerEvent<HTMLSpanElement>,
     side: "left" | "right"
   ) => {
-    const preview = event.currentTarget.closest(".embed-block-preview")
+    const preview = event.currentTarget.closest("[data-embed-block-preview]")
 
     if (!(preview instanceof HTMLElement)) {
       return
@@ -544,7 +544,7 @@ function EmbedBlockView({ editor, node, updateAttributes }: ReactNodeViewProps) 
         {!src ? (
           <PopoverTrigger asChild>
             <button
-              className="media-block-placeholder"
+              className="flex h-10 w-full items-center gap-2 rounded-md bg-muted/50 px-3 text-left text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none [&_svg]:size-4 [&_svg]:shrink-0"
               contentEditable={false}
               type="button"
             >
@@ -632,13 +632,14 @@ function EmbedBlockView({ editor, node, updateAttributes }: ReactNodeViewProps) 
         </PopoverContent>
         {src ? (
           <div
-            className="embed-block-preview"
+            className="group/embed-preview relative mx-auto max-w-full overflow-hidden rounded-md border bg-muted [&_iframe]:block [&_iframe]:aspect-video [&_iframe]:w-full [&_iframe]:bg-background"
             contentEditable={false}
+            data-embed-block-preview
             style={width ? { width: `${width}px` } : undefined}
           >
             <span
               aria-hidden="true"
-              className="image-block-resize-handle image-block-resize-handle-left"
+              className="absolute left-1 top-1/2 z-10 hidden h-14 w-4 -translate-y-1/2 cursor-ew-resize items-center justify-center touch-none before:block before:h-10 before:w-0.5 before:rounded-full before:bg-primary/80 before:content-[''] group-focus-within/embed-preview:flex group-hover/embed-preview:flex"
               onPointerDown={(event) => startResize(event, "left")}
               onPointerMove={updateResize}
               onPointerUp={stopResize}
@@ -658,12 +659,12 @@ function EmbedBlockView({ editor, node, updateAttributes }: ReactNodeViewProps) 
                 title={title}
               />
             ) : (
-              <div className="embed-block-failed">
+              <div className="flex aspect-video w-full flex-col items-center justify-center gap-2 bg-muted/60 px-6 text-center text-muted-foreground [&_a]:text-xs [&_a]:font-medium [&_a]:text-primary [&_a]:underline-offset-4 hover:[&_a]:underline [&_svg]:size-8 [&_svg]:opacity-70">
                 <FileWarning />
-                <span className="embed-block-failed-title">
+                <span className="text-sm font-medium text-foreground">
                   Failed to load embed
                 </span>
-                <span className="embed-block-failed-description">
+                <span className="max-w-md text-xs">
                   Some websites prohibit their content from being embedded
                   elsewhere.
                 </span>
@@ -674,14 +675,14 @@ function EmbedBlockView({ editor, node, updateAttributes }: ReactNodeViewProps) 
             )}
             <span
               aria-hidden="true"
-              className="image-block-resize-handle image-block-resize-handle-right"
+              className="absolute right-1 top-1/2 z-10 hidden h-14 w-4 -translate-y-1/2 cursor-ew-resize items-center justify-center touch-none before:block before:h-10 before:w-0.5 before:rounded-full before:bg-primary/80 before:content-[''] group-focus-within/embed-preview:flex group-hover/embed-preview:flex"
               onPointerDown={(event) => startResize(event, "right")}
               onPointerMove={updateResize}
               onPointerUp={stopResize}
             />
             <PopoverTrigger asChild>
               <Button
-                className="embed-block-edit"
+                className="absolute right-2 top-2 opacity-0 transition-opacity group-focus-within/embed-preview:opacity-100 group-hover/embed-preview:opacity-100 [&_svg]:size-4"
                 size="icon"
                 type="button"
                 variant="secondary"

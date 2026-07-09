@@ -77,7 +77,7 @@ function BookmarkBlockView({ node, updateAttributes }: ReactNodeViewProps) {
       <Popover onOpenChange={setOpen} open={open}>
         <PopoverTrigger asChild>
           <button
-            className="media-block-placeholder"
+            className="flex h-10 w-full items-center gap-2 rounded-md bg-muted/50 px-3 text-left text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none disabled:hidden [&_svg]:size-4 [&_svg]:shrink-0"
             contentEditable={false}
             disabled={Boolean(href)}
             type="button"
@@ -116,7 +116,7 @@ function BookmarkBlockView({ node, updateAttributes }: ReactNodeViewProps) {
             {url ? (
               <button
                 aria-label="Clear URL"
-                className="bookmark-block-clear"
+                className="absolute right-2 top-1/2 flex size-4 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none [&_svg]:size-4"
                 onClick={() => setUrl("")}
                 type="button"
               >
@@ -141,28 +141,32 @@ function BookmarkBlockView({ node, updateAttributes }: ReactNodeViewProps) {
       </Popover>
       {href ? (
         <a
-          className="bookmark-block-preview"
+          className="grid overflow-hidden rounded-md bg-muted/50 text-card-foreground no-underline transition-colors hover:bg-muted/70 focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none data-[image=true]:grid-cols-[minmax(0,1fr)_minmax(12rem,35%)] data-[image=true]:grid-rows-[10rem]"
           contentEditable={false}
           data-image={image ? "true" : "false"}
           href={href}
           rel="noreferrer"
           target="_blank"
         >
-          <span className="bookmark-block-content">
-            <span className="bookmark-block-title">{title}</span>
+          <span className="flex min-w-0 flex-col justify-center gap-3 p-5">
+            <span className="min-w-0 truncate text-base font-semibold leading-snug">
+              {title}
+            </span>
             {description ? (
-              <span className="bookmark-block-description">{description}</span>
+              <span className="line-clamp-2 text-sm leading-snug text-muted-foreground">
+                {description}
+              </span>
             ) : null}
-            <span className="bookmark-block-url">
+            <span className="flex min-w-0 items-center gap-2 text-sm font-medium text-foreground [&>span:last-child]:truncate">
               {favicon && !faviconFailed ? (
                 <img
                   alt=""
-                  className="bookmark-block-favicon"
+                  className="size-5 shrink-0 rounded-full"
                   onError={() => setFaviconFailed(true)}
                   src={favicon}
                 />
               ) : (
-                <span className="bookmark-block-favicon-fallback">
+                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground [&_svg]:size-3.5">
                   <Globe2 />
                 </span>
               )}
@@ -170,8 +174,8 @@ function BookmarkBlockView({ node, updateAttributes }: ReactNodeViewProps) {
             </span>
           </span>
           {image ? (
-            <span className="bookmark-block-thumbnail">
-              <img alt="" src={image} />
+            <span className="flex h-full items-center justify-center overflow-hidden bg-muted">
+              <img alt="" className="size-full object-cover" src={image} />
             </span>
           ) : null}
         </a>

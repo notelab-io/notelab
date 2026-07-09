@@ -26,12 +26,12 @@ function LinkMentionView({ node }: ReactNodeViewProps) {
     favicon && !faviconFailed ? (
       <img
         alt=""
-        className="link-mention-favicon"
+        className="size-4 shrink-0 rounded-full"
         onError={() => setFaviconFailed(true)}
         src={favicon}
       />
     ) : (
-      <span className="link-mention-favicon-fallback">
+      <span className="inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-background text-muted-foreground [&_svg]:size-3">
         <Globe2 />
       </span>
     )
@@ -39,40 +39,42 @@ function LinkMentionView({ node }: ReactNodeViewProps) {
   return (
     <NodeViewWrapper
       as="span"
-      className="link-mention"
+      className="link-mention inline-flex max-w-full align-baseline"
       contentEditable={false}
     >
       <HoverCard closeDelay={100} openDelay={250}>
         <HoverCardTrigger asChild>
           <a
-            className="link-mention-trigger"
+            className="inline-flex max-w-full items-center gap-1.5 rounded-sm bg-muted px-1.5 py-0.5 text-sm font-medium text-foreground no-underline transition-colors hover:bg-muted/80"
             href={href}
             rel="noreferrer"
             target="_blank"
           >
             {renderFavicon()}
-            <span className="link-mention-text">{title}</span>
+            <span className="min-w-0 truncate">{title}</span>
           </a>
         </HoverCardTrigger>
         <HoverCardContent
           align="start"
-          className="link-mention-card"
+          className="w-80 overflow-hidden p-0"
           side="bottom"
           sideOffset={6}
         >
           {image ? (
-            <span className="link-mention-card-image">
-              <img alt="" src={image} />
+            <span className="block h-36 overflow-hidden bg-muted">
+              <img alt="" className="size-full object-cover" src={image} />
             </span>
           ) : null}
-          <span className="link-mention-card-body">
-            <span className="link-mention-card-title">{title}</span>
+          <span className="flex flex-col gap-2.5 p-4">
+            <span className="line-clamp-2 text-base font-semibold leading-snug text-foreground">
+              {title}
+            </span>
             {description ? (
-              <span className="link-mention-card-description">
+              <span className="line-clamp-3 text-sm leading-snug text-muted-foreground">
                 {description}
               </span>
             ) : null}
-            <span className="link-mention-card-url">
+            <span className="mt-1 flex min-w-0 items-center gap-2 text-sm font-medium text-muted-foreground [&>span:last-child]:truncate">
               {renderFavicon()}
               <span>{host}</span>
             </span>

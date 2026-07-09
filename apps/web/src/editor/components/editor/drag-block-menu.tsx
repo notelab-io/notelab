@@ -639,7 +639,7 @@ export function DragBlockMenu({
       </DropDrawer>
       {isOpen && target ? (
         <div
-          className="plus-block-menu slash-menu-shell"
+          className="plus-block-menu w-72 overflow-hidden rounded-xl border bg-popover text-popover-foreground shadow-md"
           onMouseDown={(event) => {
             event.preventDefault()
             event.stopPropagation()

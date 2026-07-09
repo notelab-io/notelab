@@ -247,7 +247,7 @@ function AskAiPopover({
         sideOffset={8}
       >
         <PromptInput
-          className="ask-ai-popover-form"
+          className="w-full"
           inputGroupClassName="h-auto items-stretch overflow-visible border-0 focus-within:border-input focus-within:ring-0 has-[[data-slot=input-group-control]:focus-visible]:border-input has-[[data-slot=input-group-control]:focus-visible]:ring-0"
           onSubmit={submitPrompt}
         >
@@ -264,9 +264,13 @@ function AskAiPopover({
           <PromptInputFooter>
             <PromptInputTools>
               {isStreaming ? (
-                <span className="ask-ai-popover-status">Writing...</span>
+                <span className="px-1 text-xs text-muted-foreground">
+                  Writing...
+                </span>
               ) : error ? (
-                <span className="ask-ai-popover-error">{error}</span>
+                <span className="px-1 text-xs text-destructive">
+                  {error}
+                </span>
               ) : null}
             </PromptInputTools>
             <PromptInputSubmit
@@ -512,12 +516,15 @@ function AskAiBlockView({ editor, getPos, node }: ReactNodeViewProps) {
   }
 
   return (
-    <NodeViewWrapper className="ask-ai-block" contentEditable={false}>
-      <div className="ask-ai-input-shell">
-        <Sparkles aria-hidden="true" className="ask-ai-input-icon" />
+    <NodeViewWrapper className="ask-ai-block w-full" contentEditable={false}>
+      <div className="flex min-h-12 w-full items-end gap-2 rounded-md border bg-background px-3 py-2 shadow-sm transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/20">
+        <Sparkles
+          aria-hidden="true"
+          className="mt-2 size-4 shrink-0 text-muted-foreground"
+        />
         <Textarea
           autoFocus
-          className="ask-ai-textarea"
+          className="max-h-48 min-h-8 flex-1 resize-none border-0 bg-transparent px-0 py-1 text-base leading-6 shadow-none focus-visible:ring-0"
           disabled={isStreaming}
           onChange={(event) => setPrompt(event.target.value)}
           onKeyDown={(event) => {
@@ -538,7 +545,7 @@ function AskAiBlockView({ editor, getPos, node }: ReactNodeViewProps) {
         {isStreaming ? (
           <Button
             aria-label="Stop generation"
-            className="ask-ai-send-button"
+            className="size-8 shrink-0 rounded-sm [&_svg]:size-4"
             onClick={stopStreaming}
             size="icon"
             type="button"
@@ -549,7 +556,7 @@ function AskAiBlockView({ editor, getPos, node }: ReactNodeViewProps) {
         ) : (
           <Button
             aria-label="Send prompt"
-            className="ask-ai-send-button"
+            className="size-8 shrink-0 rounded-sm [&_svg]:size-4"
             disabled={!prompt.trim()}
             onClick={() => void submitPrompt()}
             size="icon"
@@ -561,12 +568,14 @@ function AskAiBlockView({ editor, getPos, node }: ReactNodeViewProps) {
         )}
       </div>
       {isStreaming ? (
-        <div className="ask-ai-status">
+        <div className="mt-2 flex items-center gap-2 px-1 text-xs text-muted-foreground [&_svg]:size-3.5">
           <Loader2 className="animate-spin" />
           <span>Writing...</span>
         </div>
       ) : error ? (
-        <div className="ask-ai-error">{error}</div>
+        <div className="mt-2 flex items-center gap-2 px-1 text-xs text-destructive">
+          {error}
+        </div>
       ) : null}
     </NodeViewWrapper>
   )

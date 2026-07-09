@@ -562,7 +562,7 @@ function SlashCommandPopover({
 
   return (
     <div
-      className="slash-menu-shell w-72 gap-0 p-0"
+      className="fixed z-50 w-72 overflow-hidden rounded-xl border bg-popover text-popover-foreground shadow-md"
       onMouseDown={(event) => event.preventDefault()}
       style={position}
     >
@@ -696,7 +696,6 @@ export const SlashCommand = Extension.create<SlashCommandOptions>({
               props = nextProps
               selectedIndex = 0
               element = document.createElement("div")
-              element.className = "slash-menu-root"
               document.body.appendChild(element)
               root = createRoot(element)
               keydownHandler = (event) => {

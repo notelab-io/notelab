@@ -156,7 +156,7 @@ function CodeBlockShikiView({ node, updateAttributes }: ReactNodeViewProps) {
   return (
     <NodeViewWrapper as="pre" className="code-block-shiki">
       <div
-        className="code-block-controls"
+        className="code-block-controls absolute right-2 top-2 z-10 flex items-center gap-1 opacity-0 transition-opacity"
         contentEditable={false}
         onMouseDown={(event) => {
           event.stopPropagation()
@@ -167,7 +167,7 @@ function CodeBlockShikiView({ node, updateAttributes }: ReactNodeViewProps) {
       >
         <Button
           aria-label={copied ? "Copied code" : "Copy code"}
-          className="code-block-copy-button"
+          className="bg-background/95 shadow-sm"
           onClick={() => {
             void copyCode()
           }}

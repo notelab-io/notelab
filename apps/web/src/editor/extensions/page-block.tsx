@@ -251,7 +251,7 @@ function PageBlockView({
     >
       {pageId ? (
         <button
-          className="page-block-preview"
+          className="flex h-10 w-full items-center gap-2 rounded-md bg-muted/50 px-3 text-left text-sm text-foreground transition-colors hover:bg-muted/70 focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none [&_svg]:size-4"
           contentEditable={false}
           draggable
           onClick={openPage}
@@ -259,14 +259,18 @@ function PageBlockView({
           style={cardStyle}
           type="button"
         >
-          <span className="page-block-icon">{emoji || <FileText />}</span>
-          <span className="page-block-title">{title}</span>
+          <span className="flex size-5 shrink-0 items-center justify-center text-muted-foreground">
+            {emoji || <FileText />}
+          </span>
+          <span className="min-w-0 truncate font-medium">
+            {title}
+          </span>
         </button>
       ) : (
         <Popover open={isOpen} onOpenChange={setIsOpen}>
           <PopoverTrigger asChild>
             <Button
-              className="page-block-placeholder"
+              className="flex h-10 w-full justify-start gap-2 rounded-md bg-muted/50 px-3 text-left text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none [&_svg]:size-4"
               contentEditable={false}
               style={cardStyle}
               type="button"
@@ -306,7 +310,7 @@ function PageBlockView({
                       }}
                       type="button"
                     >
-                      <span className="page-block-icon">
+                      <span className="flex size-5 shrink-0 items-center justify-center text-muted-foreground [&_svg]:size-4">
                         {pageEmoji || <FileText />}
                       </span>
                       <span className="min-w-0 truncate">{pageTitle}</span>
@@ -323,7 +327,7 @@ function PageBlockView({
               <>
                 <div className="my-1 h-px bg-border" />
                 <Button
-                  className="page-block-create-option"
+                  className="mt-1 flex h-8 w-full justify-start gap-2 px-2 text-xs data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground [&_svg]:size-4"
                   data-selected={
                     selectedIndex === linkablePages.length ? true : undefined
                   }

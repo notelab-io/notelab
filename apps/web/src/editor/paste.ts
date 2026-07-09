@@ -6,13 +6,17 @@ import {
 import { pastedBlockElementSelector } from "./constants"
 import type { EditorTableType, PasteChoiceState } from "./types"
 
-const getEmbedProvider = (embedAttrs: Record<string, unknown>): EmbedProvider | null =>
-  "provider" in embedAttrs ? (embedAttrs.provider as EmbedProvider) : null
+const getEmbedProvider = (
+  embedAttrs: Record<string, unknown> | undefined
+): EmbedProvider | null =>
+  embedAttrs && "provider" in embedAttrs
+    ? (embedAttrs.provider as EmbedProvider)
+    : null
 
 const looksLikeUrl = (value: string) =>
   /^(https?:\/\/|www\.|[^\s]+\.[^\s]{2,})/i.test(value.trim())
 
-const normalizePastedUrl = (value: string) => {
+export const normalizePastedUrl = (value: string) => {
   const trimmed = value.trim()
   try {
     return new URL(
@@ -123,14 +127,15 @@ export const normalizePastedEditorHTML = (html: string) => {
   return changed ? document.body.innerHTML : html
 }
 
-const createProviderLinkPasteChoice = (
+const createLinkChoice = (
   view: EditorView,
-  pastedText: string,
-  embedAttrs: Record<string, unknown>
+  text: string,
+  from: number,
+  to: number
 ): PasteChoiceState => {
-  const { from } = view.state.selection
-  const insertedTo = from + pastedText.length
-  const coords = view.coordsAtPos(insertedTo)
+  const url = normalizePastedUrl(text) ?? text
+  const embedAttrs = normalizeEmbedUrl(url) ?? undefined
+  const coords = view.coordsAtPos(to)
   return {
     anchor: {
       getBoundingClientRect: () =>
@@ -139,9 +144,40 @@ const createProviderLinkPasteChoice = (
     embedAttrs,
     from,
     provider: getEmbedProvider(embedAttrs),
-    to: insertedTo,
-    url: normalizePastedUrl(pastedText) ?? pastedText,
+    to,
+    url,
   }
+}
+
+const getTypedUrlRangeBeforeCursor = (view: EditorView) => {
+  const { selection } = view.state
+
+  if (!selection.empty) {
+    return null
+  }
+
+  const { $from } = selection
+  const textBeforeCursor = $from.parent.textBetween(0, $from.parentOffset, "\n", "\n")
+  const trimmedEnd = textBeforeCursor.replace(/\s+$/, "")
+  const tokenMatch = trimmedEnd.match(/(?:^|\s)(\S+)$/)
+  const token = tokenMatch?.[1]
+
+  if (!token || !looksLikeUrl(token)) {
+    return null
+  }
+
+  const normalized = normalizePastedUrl(token)
+
+  if (!normalized) {
+    return null
+  }
+
+  const tokenEndOffset = trimmedEnd.length
+  const tokenStartOffset = tokenEndOffset - token.length
+  const from = $from.start() + tokenStartOffset
+  const to = $from.start() + tokenEndOffset
+
+  return { from, text: token, to }
 }
 
 export const handleProviderLinkPaste = (
@@ -157,12 +193,32 @@ export const handleProviderLinkPaste = (
     return false
   }
 
-  const embedAttrs = normalizeEmbedUrl(pastedText)
-  if (!embedAttrs) return false
+  const normalizedUrl = normalizePastedUrl(pastedText)
+  if (!normalizedUrl) return false
 
   event.preventDefault()
   const { from, to } = view.state.selection
   view.dispatch(view.state.tr.insertText(pastedText, from, to))
-  onPasteChoice(createProviderLinkPasteChoice(view, pastedText, embedAttrs))
+  onPasteChoice(createLinkChoice(view, pastedText, from, from + pastedText.length))
   return true
+}
+
+export const handleTypedLinkChoice = (
+  view: EditorView,
+  event: KeyboardEvent,
+  editable: boolean,
+  onPasteChoice: (choice: PasteChoiceState) => void
+) => {
+  if (!editable || (event.key !== " " && event.key !== "Enter")) {
+    return false
+  }
+
+  const typedUrl = getTypedUrlRangeBeforeCursor(view)
+
+  if (!typedUrl) {
+    return false
+  }
+
+  onPasteChoice(createLinkChoice(view, typedUrl.text, typedUrl.from, typedUrl.to))
+  return false
 }
