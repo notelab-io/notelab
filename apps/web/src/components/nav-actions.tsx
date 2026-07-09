@@ -131,11 +131,9 @@ type ShareTargetValue = `${AccessTargetType}:${string}`
 
 export function NavActions({
   databaseId,
-  pathname,
   pageId,
 }: {
   databaseId?: string | null
-  pathname?: string
   pageId?: string | null
 }) {
   const navigate = useNavigate()
@@ -500,15 +498,6 @@ export function NavActions({
       <div className="hidden font-medium text-muted-foreground md:inline-block">
         Edited recently
       </div>
-      <Button
-        className="h-8 gap-2"
-        onClick={() => void navigate({ to: "/canvas" })}
-        size="sm"
-        type="button"
-        variant={pathname === "/canvas" ? "default" : "outline"}
-      >
-        Canvas
-      </Button>
       {hasPageActions ? (
         <>
           {actionPageId ? (

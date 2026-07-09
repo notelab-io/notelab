@@ -74,7 +74,6 @@ export function PagePaneHeader({
         <div className="ml-auto px-3">
           <NavActions
             databaseId={databaseId}
-            pathname={pathname}
             pageId={pageId}
           />
         </div>
