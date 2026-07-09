@@ -20,4 +20,58 @@ export function register({ assert, loadModule, test }) {
       paddingLeft: 44,
     })
   })
+
+  test("database block drag image tracks the pointer inside the block", async () => {
+    const { getDatabaseBlockDragImagePlacement } = await loadModule(
+      "/src/editor/components/editor/block-drag.ts"
+    )
+
+    assert.deepEqual(getDatabaseBlockDragImagePlacement(760, 148, 744, 100), {
+      offsetX: 16,
+      offsetY: 48,
+      paddingLeft: 0,
+    })
+  })
+
+  test("block drag payload parser rejects malformed payloads", async () => {
+    const {
+      EDITOR_BLOCK_DRAG_MIME,
+      getDraggedEditorBlockPayload,
+    } = await loadModule("/src/editor/components/editor/block-drag.ts")
+
+    const dataTransfer = {
+      getData: (type) =>
+        type === EDITOR_BLOCK_DRAG_MIME
+          ? JSON.stringify({
+              editorId: "editor-1",
+              node: { type: "paragraph" },
+              pos: "not-a-number",
+              textContent: "",
+              typeName: "paragraph",
+            })
+          : "",
+    }
+
+    assert.equal(getDraggedEditorBlockPayload(dataTransfer), null)
+  })
+
+  test("block drag payload parser accepts valid payloads", async () => {
+    const {
+      EDITOR_BLOCK_DRAG_MIME,
+      getDraggedEditorBlockPayload,
+    } = await loadModule("/src/editor/components/editor/block-drag.ts")
+    const payload = {
+      editorId: "editor-1",
+      node: { type: "paragraph" },
+      pos: 4,
+      textContent: "Hello",
+      typeName: "paragraph",
+    }
+    const dataTransfer = {
+      getData: (type) =>
+        type === EDITOR_BLOCK_DRAG_MIME ? JSON.stringify(payload) : "",
+    }
+
+    assert.deepEqual(getDraggedEditorBlockPayload(dataTransfer), payload)
+  })
 }
