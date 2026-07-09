@@ -930,14 +930,25 @@ export function DatabaseKanbanView() {
         </span>
       )
     ) : null
+    const propertyIcon = showPropertyTitles ? null : (
+      <span className="database-kanban-property-icon" title={pageProperty.name}>
+        <PropertyIcon aria-hidden="true" />
+        <span className="sr-only">{pageProperty.name}</span>
+      </span>
+    )
 
     return (
-      <div className="database-kanban-property" key={property.id}>
+      <div
+        className="database-kanban-property"
+        data-title-hidden={showPropertyTitles ? undefined : "true"}
+        key={property.id}
+      >
         {propertyLabel ? (
           <div className="database-kanban-property-label">
             {propertyLabel}
           </div>
         ) : null}
+        {propertyIcon}
         <div
           className={
             showPropertyTitles

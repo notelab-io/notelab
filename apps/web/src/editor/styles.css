@@ -4,11 +4,13 @@
   .tiptap-editor {
     @apply min-h-[520px] px-5 py-5 text-base leading-7 text-foreground outline-none sm:px-8 md:px-20 md:py-6 lg:px-24;
     --editor-selection-background: color-mix(in srgb, #0078d7 35%, transparent);
+    --editor-selection-solid-background: color-mix(in srgb, #0078d7 35%, var(--background));
     --editor-selection-foreground: inherit;
   }
 
   .dark .tiptap-editor {
     --editor-selection-background: color-mix(in srgb, #4b9fff 42%, transparent);
+    --editor-selection-solid-background: color-mix(in srgb, #4b9fff 42%, var(--background));
     --editor-selection-foreground: #ffffff;
   }
 
@@ -293,7 +295,7 @@
     inset: 0;
     pointer-events: none;
     position: absolute;
-    z-index: -1;
+    z-index: 0;
   }
 
   .tiptap-editor
@@ -319,7 +321,7 @@
   }
 
   .tiptap-editor .node-databaseBlock .database-scroll-section {
-    @apply relative mt-1 min-w-0 overflow-visible pb-0.5;
+    @apply relative mt-1 min-w-0 overflow-visible pb-0;
   }
 
   .tiptap-editor .node-databaseBlock :is(.database-table-wrap, .database-kanban-wrap) {
@@ -351,7 +353,10 @@
   .tiptap-editor
     .node-databaseBlock.editor-block-selection
     .database-inline-scroll-wrap[data-inline-scroll="true"]
-    :is(.database-table, .database-page-create-row, .database-kanban-board) {
+    :is(.database-table, .database-page-create-row, .database-kanban-board),
+  .tiptap-editor
+    .node-databaseBlock.editor-block-selection
+    .database-timeline-view {
     isolation: isolate;
     position: relative;
   }
@@ -359,7 +364,10 @@
   .tiptap-editor
     .node-databaseBlock.editor-block-selection
     .database-inline-scroll-wrap[data-inline-scroll="true"]
-    :is(.database-table, .database-page-create-row, .database-kanban-board)::before {
+    :is(.database-table, .database-page-create-row, .database-kanban-board)::before,
+  .tiptap-editor
+    .node-databaseBlock.editor-block-selection
+    .database-timeline-view::before {
     background-color: var(--editor-selection-background);
     border-radius: 4px;
     content: "";
@@ -372,7 +380,10 @@
   .tiptap-editor
     .node-databaseBlock.editor-block-selection
     .database-inline-scroll-wrap[data-inline-scroll="true"]
-    :is(.database-table, .database-page-create-row, .database-kanban-board) {
+    :is(.database-table, .database-page-create-row, .database-kanban-board),
+  .tiptap-editor
+    .node-databaseBlock.editor-block-selection
+    .database-timeline-view {
     color: var(--editor-selection-foreground);
   }
 
@@ -387,18 +398,35 @@
     color: inherit !important;
   }
 
-  /* Opaque kanban surfaces sit above the board ::before layer. */
+  /* Keep kanban surfaces from stacking darker fills over the shared selection layer. */
   .tiptap-editor
     .node-databaseBlock.editor-block-selection
     :is(
       .database-kanban-column:not(.database-kanban-new-column),
       .database-kanban-card,
+      .database-kanban-new-card
+    ) {
+    background-color: transparent !important;
+    border-color: color-mix(
+      in srgb,
+      var(--editor-selection-foreground) 18%,
+      transparent
+    ) !important;
+    color: var(--editor-selection-foreground) !important;
+  }
+
+  .tiptap-editor
+    .node-databaseBlock.editor-block-selection
+    :is(
       .database-kanban-count,
-      .database-kanban-new-card,
       .database-select-badge,
       .database-table-group-count
     ) {
-    background-color: var(--editor-selection-background) !important;
+    background-color: color-mix(
+      in srgb,
+      var(--editor-selection-background) 70%,
+      transparent
+    ) !important;
     border-color: color-mix(
       in srgb,
       var(--editor-selection-foreground) 18%,
@@ -579,7 +607,33 @@
   }
 
   .tiptap-editor > .node-databaseBlock {
-    @apply pb-0.5;
+    @apply pb-0;
+  }
+
+  .tiptap-editor > .node-databaseBlock + p,
+  .tiptap-editor > .node-databaseBlock + h1,
+  .tiptap-editor > .node-databaseBlock + h2,
+  .tiptap-editor > .node-databaseBlock + h3,
+  .tiptap-editor > .node-databaseBlock + h4,
+  .tiptap-editor > .node-databaseBlock + h5,
+  .tiptap-editor > .node-databaseBlock + h6,
+  .tiptap-editor > .node-databaseBlock + ul,
+  .tiptap-editor > .node-databaseBlock + ol,
+  .tiptap-editor > .node-databaseBlock + pre,
+  .tiptap-editor > .node-databaseBlock + .code-block-shiki,
+  .tiptap-editor > .node-databaseBlock + .editor-details,
+  .tiptap-editor > .node-databaseBlock + .tableWrapper,
+  .tiptap-editor > .node-databaseBlock + .column-block,
+  .tiptap-editor > .node-databaseBlock + blockquote,
+  .tiptap-editor > .node-databaseBlock + hr,
+  .tiptap-editor > .node-databaseBlock + .image-block,
+  .tiptap-editor > .node-databaseBlock + .video-block,
+  .tiptap-editor > .node-databaseBlock + .embed-block,
+  .tiptap-editor > .node-databaseBlock + .file-block,
+  .tiptap-editor > .node-databaseBlock + .bookmark-block,
+  .tiptap-editor > .node-databaseBlock + .ask-ai-block,
+  .tiptap-editor > .node-databaseBlock + .page-block {
+    @apply pt-2;
   }
 
   .database-block-shell {
@@ -697,7 +751,9 @@
   }
 
   .database-timeline-view {
-    @apply min-h-[28rem] overflow-auto;
+    @apply min-h-[28rem] overflow-auto pb-0;
+    --database-table-min-width: 220px;
+    --gantt-sidebar-width: var(--database-table-min-width);
   }
 
   .database-timeline-view .database-timeline-gantt.gantt {
@@ -726,7 +782,7 @@
   }
 
   .database-timeline-view .database-timeline-gantt-scroll {
-    @apply min-h-full items-stretch rounded-none border-0 bg-transparent shadow-none;
+    @apply min-h-full items-stretch rounded-none border-0 bg-transparent pb-0 shadow-none;
     grid-auto-flow: row;
     background-color: transparent !important;
   }
@@ -866,6 +922,66 @@
     background-color: var(--background) !important;
   }
 
+  .tiptap-editor
+    .node-databaseBlock.editor-block-selection
+    .database-timeline-view
+    :is(
+      .database-timeline-toolbar-chrome,
+      .database-timeline-toolbar-sidebar-spacer,
+      .database-timeline-toolbar,
+      .database-timeline-gantt-scroll,
+      .database-timeline-gantt .gantt-content-header,
+      .database-timeline-sidebar-thead,
+      .database-timeline-sidebar-thead th,
+      .database-timeline-sidebar-name-header
+    ) {
+    background-color: transparent !important;
+    color: var(--editor-selection-foreground);
+  }
+
+  .tiptap-editor
+    .node-databaseBlock.editor-block-selection
+    .database-timeline-view
+    .database-timeline-gantt-scroll {
+    isolation: auto;
+  }
+
+  .tiptap-editor
+    .node-databaseBlock.editor-block-selection
+    .database-timeline-view
+    .database-timeline-sidebar-cell {
+    background-color: var(--editor-selection-solid-background) !important;
+    color: var(--editor-selection-foreground);
+    position: sticky;
+    z-index: 60 !important;
+  }
+
+  .tiptap-editor
+    .node-databaseBlock.editor-block-selection
+    .database-timeline-view
+    .database-timeline-bar
+    [data-slot="card"] {
+    background-color: transparent !important;
+    border-color: color-mix(
+      in srgb,
+      var(--editor-selection-foreground) 18%,
+      transparent
+    ) !important;
+    color: var(--editor-selection-foreground) !important;
+  }
+
+  .tiptap-editor
+    .node-databaseBlock.editor-block-selection
+    .database-timeline-view
+    :is(.database-select-badge, .database-table-group-count) {
+    background-color: color-mix(
+      in srgb,
+      var(--editor-selection-background) 70%,
+      transparent
+    ) !important;
+    color: var(--editor-selection-foreground) !important;
+  }
+
   .database-timeline-view .database-timeline-sidebar-cell .database-page-create-row {
     @apply mt-0 h-8;
     width: var(--database-table-min-width, 220px);
@@ -905,7 +1021,7 @@
   }
 
   .database-kanban-scroll {
-    @apply pb-2;
+    @apply pb-0;
   }
 
   .database-inline-scroll-content {
@@ -1066,6 +1182,18 @@
 
   .database-kanban-property {
     @apply flex min-w-0 flex-col gap-1.5;
+  }
+
+  .database-kanban-property[data-title-hidden="true"] {
+    @apply grid grid-cols-[1rem_minmax(0,1fr)] items-start gap-x-2 gap-y-0;
+  }
+
+  .database-kanban-property-icon {
+    @apply flex h-7 w-4 items-center justify-center text-muted-foreground;
+  }
+
+  .database-kanban-property-icon svg {
+    @apply size-4 shrink-0;
   }
 
   .database-kanban-property-label {
