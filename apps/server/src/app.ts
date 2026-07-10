@@ -51,6 +51,17 @@ export function createApp() {
   );
 
   app.use("*", async (c, next) => {
+    c.set("serverTimings", []);
+    c.header("x-notelab-app-path", c.req.path);
+    await next();
+
+    const timings = c.get("serverTimings");
+    if (timings.length > 0) {
+      c.res.headers.append("Server-Timing", timings.join(", "));
+    }
+  });
+
+  app.use("*", async (c, next) => {
     if (c.req.path === "/" || c.req.path.startsWith("/api/auth/")) {
       await next();
       return;

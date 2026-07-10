@@ -69,19 +69,37 @@ export async function getEffectivePageAccess(
   pageId: string,
   userId: string,
 ): Promise<AccessLevel> {
-  const record = await getPageRecord(pageId);
+  const [context] = await db
+    .select({
+      workspaceId: page.workspaceId,
+    })
+    .from(page)
+    .where(and(eq(page.id, pageId), isNull(page.deletedAt)))
+    .limit(1);
 
-  if (!record) {
+  if (!context) {
     return "none";
   }
 
-  const membership = await getMembership(record.workspaceId, userId);
+  return getEffectivePageAccessInWorkspace(pageId, context.workspaceId, userId);
+}
 
-  if (!membership) {
-    return "none";
-  }
-
-  const [pages, teamRows] = await Promise.all([
+export async function getEffectivePageAccessInWorkspace(
+  pageId: string,
+  workspaceId: string,
+  userId: string,
+): Promise<AccessLevel> {
+  const [membershipRows, pages, teamRows] = await Promise.all([
+    db
+      .select({ id: member.id })
+      .from(member)
+      .where(
+        and(
+          eq(member.organizationId, workspaceId),
+          eq(member.userId, userId),
+        ),
+      )
+      .limit(1),
     db
       .select({
         createdById: page.createdById,
@@ -91,7 +109,7 @@ export async function getEffectivePageAccess(
       .from(page)
       .where(
         and(
-          eq(page.workspaceId, record.workspaceId),
+          eq(page.workspaceId, workspaceId),
           isNull(page.deletedAt),
         ),
       ),
@@ -100,8 +118,17 @@ export async function getEffectivePageAccess(
       .from(teamMember)
       .where(eq(teamMember.userId, userId)),
   ]);
+
+  if (membershipRows.length === 0) {
+    return "none";
+  }
+
   const graph = new PageGraph({ pages });
   const ancestorIds = graph.getAncestorIds(pageId);
+
+  if (ancestorIds.length === 0) {
+    return "none";
+  }
 
   if (graph.hasOwnedRootAccess(ancestorIds, userId)) {
     return "full";
@@ -115,11 +142,11 @@ export async function getEffectivePageAccess(
   }
 
   const rules = await db
-    .select()
+    .select({ accessLevel: pageAccess.accessLevel })
     .from(pageAccess)
     .where(
       and(
-        eq(pageAccess.workspaceId, record.workspaceId),
+        eq(pageAccess.workspaceId, workspaceId),
         inArray(pageAccess.pageId, ancestorIds),
         inArray(pageAccess.targetType, targetTypes),
         inArray(pageAccess.targetId, targetIds),
@@ -140,6 +167,13 @@ export async function isPagePublished(pageId: string) {
     return false;
   }
 
+  return isPagePublishedInWorkspace(pageId, record.workspaceId);
+}
+
+export async function isPagePublishedInWorkspace(
+  pageId: string,
+  workspaceId: string,
+) {
   const pages = await db
     .select({
       id: page.id,
@@ -148,7 +182,7 @@ export async function isPagePublished(pageId: string) {
     .from(page)
     .where(
       and(
-        eq(page.workspaceId, record.workspaceId),
+        eq(page.workspaceId, workspaceId),
         isNull(page.deletedAt),
       ),
     );
@@ -164,7 +198,7 @@ export async function isPagePublished(pageId: string) {
     .from(pageAccess)
     .where(
       and(
-        eq(pageAccess.workspaceId, record.workspaceId),
+        eq(pageAccess.workspaceId, workspaceId),
         inArray(pageAccess.pageId, ancestorIds),
         eq(pageAccess.targetType, "public"),
         eq(pageAccess.targetId, "*"),
@@ -181,6 +215,18 @@ export async function canAccessPage(
   required: Exclude<AccessLevel, "none">,
 ) {
   return hasAccess(await getEffectivePageAccess(pageId, userId), required);
+}
+
+export async function canAccessPageInWorkspace(
+  pageId: string,
+  workspaceId: string,
+  userId: string,
+  required: Exclude<AccessLevel, "none">,
+) {
+  return hasAccess(
+    await getEffectivePageAccessInWorkspace(pageId, workspaceId, userId),
+    required,
+  );
 }
 
 export const ACTIVE_ORGANIZATION_MISMATCH_CODE = "ACTIVE_ORGANIZATION_MISMATCH";
@@ -220,28 +266,32 @@ export async function rejectActiveWorkspaceMismatch(
 export async function getAccessiblePageIds(
   workspaceId: string,
   userId: string,
+  options: { membershipVerified?: boolean } = {},
 ) {
-  const membership = await getMembership(workspaceId, userId);
+  if (!options.membershipVerified) {
+    const membership = await getMembership(workspaceId, userId);
 
-  if (!membership) {
-    return new Set<string>();
+    if (!membership) {
+      return new Set<string>();
+    }
   }
 
-  const pages = await db
-    .select({
-      createdById: page.createdById,
-      id: page.id,
-      metadata: page.metadata,
-    })
-    .from(page)
-    .where(
-      and(eq(page.workspaceId, workspaceId), isNull(page.deletedAt)),
-    );
-
-  const teamRows = await db
-    .select({ teamId: teamMember.teamId })
-    .from(teamMember)
-    .where(eq(teamMember.userId, userId));
+  const [pages, teamRows] = await Promise.all([
+    db
+      .select({
+        createdById: page.createdById,
+        id: page.id,
+        metadata: page.metadata,
+      })
+      .from(page)
+      .where(
+        and(eq(page.workspaceId, workspaceId), isNull(page.deletedAt)),
+      ),
+    db
+      .select({ teamId: teamMember.teamId })
+      .from(teamMember)
+      .where(eq(teamMember.userId, userId)),
+  ]);
   const targetTypes = ["user"];
   const targetIds = [userId, ...teamRows.map((row) => row.teamId)];
 
@@ -278,4 +328,102 @@ export async function getAccessiblePageIds(
   }
 
   return accessible;
+}
+
+export async function getEffectivePageAccessForUsers(
+  pageId: string,
+  workspaceId: string,
+  userIds: string[],
+) {
+  const uniqueUserIds = [...new Set(userIds)];
+  const accessByUserId = new Map<string, AccessLevel>();
+
+  if (uniqueUserIds.length === 0) {
+    return accessByUserId;
+  }
+
+  const [pages, teamRows] = await Promise.all([
+    db
+      .select({
+        createdById: page.createdById,
+        id: page.id,
+        metadata: page.metadata,
+      })
+      .from(page)
+      .where(
+        and(eq(page.workspaceId, workspaceId), isNull(page.deletedAt)),
+      ),
+    db
+      .select({
+        teamId: teamMember.teamId,
+        userId: teamMember.userId,
+      })
+      .from(teamMember)
+      .where(inArray(teamMember.userId, uniqueUserIds)),
+  ]);
+  const graph = new PageGraph({ pages });
+  const ancestorIds = graph.getAncestorIds(pageId);
+
+  if (ancestorIds.length === 0) {
+    return accessByUserId;
+  }
+
+  const teamIdsByUserId = new Map<string, string[]>();
+
+  for (const row of teamRows) {
+    teamIdsByUserId.set(row.userId, [
+      ...(teamIdsByUserId.get(row.userId) ?? []),
+      row.teamId,
+    ]);
+  }
+
+  const teamIds = [...new Set(teamRows.map((row) => row.teamId))];
+  const targetIds = [...uniqueUserIds, ...teamIds];
+  const rules = await db
+    .select({
+      accessLevel: pageAccess.accessLevel,
+      targetId: pageAccess.targetId,
+      targetType: pageAccess.targetType,
+    })
+    .from(pageAccess)
+    .where(
+      and(
+        eq(pageAccess.workspaceId, workspaceId),
+        inArray(pageAccess.pageId, ancestorIds),
+        inArray(pageAccess.targetType, ["user", "team"]),
+        inArray(pageAccess.targetId, targetIds),
+      ),
+    );
+  const accessByTarget = new Map<string, AccessLevel>();
+
+  for (const rule of rules) {
+    const key = `${rule.targetType}:${rule.targetId}`;
+    const current = accessByTarget.get(key) ?? "none";
+    const next = normalizeAccessLevel(rule.accessLevel) ?? "none";
+
+    if (accessRank[next] > accessRank[current]) {
+      accessByTarget.set(key, next);
+    }
+  }
+
+  for (const userId of uniqueUserIds) {
+    if (graph.hasOwnedRootAccess(ancestorIds, userId)) {
+      accessByUserId.set(userId, "full");
+      continue;
+    }
+
+    const targetKeys = [
+      `user:${userId}`,
+      ...(teamIdsByUserId.get(userId) ?? []).map((teamId) => `team:${teamId}`),
+    ];
+    const access = targetKeys.reduce<AccessLevel>((best, key) => {
+      const next = accessByTarget.get(key) ?? "none";
+
+      return accessRank[next] > accessRank[best] ? next : best;
+    }, "none");
+
+    accessByUserId.set(userId, access);
+  }
+
+  return accessByUserId;
 }

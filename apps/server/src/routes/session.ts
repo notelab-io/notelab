@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import type { Context } from "hono";
 import { and, asc, eq, isNotNull } from "drizzle-orm";
 import { db } from "../db";
 import { account, member, session as authSession, workspace } from "../db/schema";
@@ -7,7 +8,7 @@ import type { AppBindings } from "../types";
 
 export const sessionRoutes = new Hono<AppBindings>();
 
-sessionRoutes.get("/", async (c) => {
+sessionRoutes.get("/", (c) => timed(c, "route_session_total", async () => {
   const user = c.get("user");
   const session = c.get("session");
 
@@ -15,10 +16,19 @@ sessionRoutes.get("/", async (c) => {
     return c.json({ user: null, session: null }, 401);
   }
 
-  const selfHostedWorkspaceId = await ensurePinnedWorkspaceMembership(
-    user.id,
-    session?.id,
-  );
+  const [selfHostedWorkspaceId, hasPassword] = await Promise.all([
+    timed(c, "route_session_pin", () =>
+      ensurePinnedWorkspaceMembership(
+        user.id,
+        session?.id,
+      ),
+    ),
+    timed(
+      c,
+      "route_session_has_password",
+      () => getUserHasPassword(user.id),
+    ),
+  ]);
   const responseSession =
     session &&
     selfHostedWorkspaceId &&
@@ -31,10 +41,10 @@ sessionRoutes.get("/", async (c) => {
     workspacePinned: isSelfHostedRuntime(),
     user: {
       ...user,
-      hasPassword: await getUserHasPassword(user.id),
+      hasPassword,
     },
   });
-});
+}));
 
 async function ensurePinnedWorkspaceMembership(
   userId: string,
@@ -102,4 +112,20 @@ async function getUserHasPassword(userId: string) {
     .limit(1);
 
   return Boolean(credentialAccount);
+}
+
+async function timed<T>(
+  c: Context<AppBindings>,
+  name: string,
+  run: () => Promise<T>,
+) {
+  const startedAt = performance.now();
+
+  try {
+    return await run();
+  } finally {
+    c.get("serverTimings").push(
+      `notelab_${name};dur=${Math.round(performance.now() - startedAt)}`,
+    );
+  }
 }

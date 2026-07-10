@@ -47,49 +47,52 @@ searchRoutes.get("/", async (c) => {
   }
 
   const query = normalizeSearchQuery(c.req.query("q") ?? "");
-  const accessibleIds = await getAccessiblePageIds(workspaceId, user.id);
+  const accessibleIds = await getAccessiblePageIds(workspaceId, user.id, {
+    membershipVerified: true,
+  });
 
   if (accessibleIds.size === 0) {
     return c.json({ results: [] });
   }
 
-  const pageRecords = await db
-    .select({
-      content: page.content,
-      id: page.id,
-      metadata: page.metadata,
-      name: page.name,
-    })
-    .from(page)
-    .where(
-      and(
-        eq(page.workspaceId, workspaceId),
-        inArray(page.id, [...accessibleIds]),
-        isNull(page.deletedAt),
-      ),
-    )
-    .orderBy(asc(page.name));
+  const [pageRecords, databaseRecords] = await Promise.all([
+    db
+      .select({
+        content: page.content,
+        id: page.id,
+        metadata: page.metadata,
+        name: page.name,
+      })
+      .from(page)
+      .where(
+        and(
+          eq(page.workspaceId, workspaceId),
+          inArray(page.id, [...accessibleIds]),
+          isNull(page.deletedAt),
+        ),
+      )
+      .orderBy(asc(page.name)),
+    db
+      .select({
+        config: database.config,
+        id: database.id,
+        name: database.name,
+        pageId: database.pageId,
+      })
+      .from(database)
+      .where(
+        and(
+          eq(database.workspaceId, workspaceId),
+          inArray(database.pageId, [...accessibleIds]),
+          isNull(database.deletedAt),
+        ),
+      )
+      .orderBy(asc(database.name)),
+  ]);
   const pageById = new Map(
     pageRecords.map((record) => [record.id, record]),
   );
   const pageGraph = new PageGraph({ pages: pageRecords });
-  const databaseRecords = await db
-    .select({
-      config: database.config,
-      id: database.id,
-      name: database.name,
-      pageId: database.pageId,
-    })
-    .from(database)
-    .where(
-      and(
-        eq(database.workspaceId, workspaceId),
-        inArray(database.pageId, [...accessibleIds]),
-        isNull(database.deletedAt),
-      ),
-    )
-    .orderBy(asc(database.name));
-
   const results: SearchResult[] = [];
 
   for (const record of pageRecords) {

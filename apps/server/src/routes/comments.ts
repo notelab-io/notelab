@@ -2,7 +2,7 @@ import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Context } from "hono";
 import {
-  getEffectivePageAccess,
+  getEffectivePageAccessInWorkspace,
   getPageRecord,
   hasAccess,
 } from "../access";
@@ -95,18 +95,20 @@ const getActiveThread = async (pageId: string) => {
   return thread ?? null;
 };
 
-const getThreadCommentsPayload = async (
-  thread: any,
+type CommentThreadRecord = typeof commentThread.$inferSelect;
+
+const getThreadsCommentsPayload = async (
+  threads: CommentThreadRecord[],
   currentUserId?: string,
 ) => {
-  if (!thread) {
-    return { comments: [], thread: null };
+  if (threads.length === 0) {
+    return [];
   }
 
   const comments = await db
     .select()
     .from(commentMessage)
-    .where(eq(commentMessage.threadId, thread.id))
+    .where(inArray(commentMessage.threadId, threads.map((thread) => thread.id)))
     .orderBy(asc(commentMessage.createdAt));
   const authorIds = [
     ...new Set(
@@ -115,30 +117,32 @@ const getThreadCommentsPayload = async (
         .filter((id): id is string => Boolean(id)),
     ),
   ];
-  const authors = authorIds.length
-    ? await db
-        .select({
-          email: user.email,
-          id: user.id,
-          image: user.image,
-          name: user.name,
-        })
-        .from(user)
-        .where(inArray(user.id, authorIds))
-    : [];
-  const authorById = new Map(authors.map((author) => [author.id, author]));
   const messageIds = comments.map((comment) => comment.id);
-  const reactionRows = messageIds.length
-    ? await db
-        .select({
-          createdAt: commentReaction.createdAt,
-          emoji: commentReaction.emoji,
-          messageId: commentReaction.messageId,
-          userId: commentReaction.userId,
-        })
-        .from(commentReaction)
-        .where(inArray(commentReaction.messageId, messageIds))
-    : [];
+  const [authors, reactionRows] = await Promise.all([
+    authorIds.length
+      ? db
+          .select({
+            email: user.email,
+            id: user.id,
+            image: user.image,
+            name: user.name,
+          })
+          .from(user)
+          .where(inArray(user.id, authorIds))
+      : Promise.resolve([]),
+    messageIds.length
+      ? db
+          .select({
+            createdAt: commentReaction.createdAt,
+            emoji: commentReaction.emoji,
+            messageId: commentReaction.messageId,
+            userId: commentReaction.userId,
+          })
+          .from(commentReaction)
+          .where(inArray(commentReaction.messageId, messageIds))
+      : Promise.resolve([]),
+  ]);
+  const authorById = new Map(authors.map((author) => [author.id, author]));
   const reactionsByMessageId = new Map<
     string,
     Map<
@@ -172,9 +176,18 @@ const getThreadCommentsPayload = async (
     reactionsByMessageId.set(reaction.messageId, reactionsByEmoji);
   }
 
-  return {
+  const commentsByThreadId = new Map<string, typeof comments>();
+
+  for (const comment of comments) {
+    commentsByThreadId.set(comment.threadId, [
+      ...(commentsByThreadId.get(comment.threadId) ?? []),
+      comment,
+    ]);
+  }
+
+  return threads.map((thread) => ({
     thread,
-    comments: comments.map((comment) => ({
+    comments: (commentsByThreadId.get(thread.id) ?? []).map((comment) => ({
       ...comment,
       author: comment.authorId ? authorById.get(comment.authorId) ?? null : null,
       reactions: Array.from(
@@ -192,7 +205,20 @@ const getThreadCommentsPayload = async (
         )
         .map(({ firstCreatedAt: _firstCreatedAt, ...reaction }) => reaction),
     })),
-  };
+  }));
+};
+
+const getThreadCommentsPayload = async (
+  thread: CommentThreadRecord | null | undefined,
+  currentUserId?: string,
+) => {
+  if (!thread) {
+    return { comments: [], thread: null };
+  }
+
+  const [payload] = await getThreadsCommentsPayload([thread], currentUserId);
+
+  return payload ?? { comments: [], thread: null };
 };
 
 const getPageCommentsPayload = async (
@@ -253,7 +279,11 @@ const getPageForCommentRoute = async (
     return { error: mismatch };
   }
 
-  const accessLevel = await getEffectivePageAccess(record.id, requestUser.id);
+  const accessLevel = await getEffectivePageAccessInWorkspace(
+    record.id,
+    record.workspaceId,
+    requestUser.id,
+  );
 
   if (!hasAccess(accessLevel, minimumAccess)) {
     return { error: c.json({ error: "Forbidden" }, 403) };
@@ -314,12 +344,10 @@ commentRoutes.get("/pages/:id/threads", async (c) => {
     )
     .orderBy(desc(commentThread.lastActivityAt));
 
-  const results = [];
-  for (const th of threads) {
-    results.push(
-      await getThreadCommentsPayload(th, context.requestUser.id),
-    );
-  }
+  const results = await getThreadsCommentsPayload(
+    threads,
+    context.requestUser.id,
+  );
 
   return c.json({ threads: results });
 });

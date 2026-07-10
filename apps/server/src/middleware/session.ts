@@ -51,7 +51,7 @@ export const sessionMiddleware: MiddlewareHandler<AppBindings> = async (
 ) => {
   const dbClient = createDbClient(c.env);
 
-  return await runWithDbClient(dbClient, async () => {
+  return await timed(c, "session_db", () => runWithDbClient(dbClient, async () => {
     c.set("apiKey", null);
     c.set("authMethod", null);
 
@@ -60,15 +60,18 @@ export const sessionMiddleware: MiddlewareHandler<AppBindings> = async (
     const auth = createAuth(c.env, c.req.raw);
 
     if (rawApiKey) {
-      const verification = await auth.api.verifyApiKey({
-        body: { key: rawApiKey },
-      });
+      const verification = await timed(c, "session_api_key_verify", () =>
+        auth.api.verifyApiKey({
+          body: { key: rawApiKey },
+        }),
+      );
 
       if (!verification.valid || !verification.key) {
         return c.json({ error: "Unauthorized" }, 401);
       }
 
-      const workspaceId = readApiKeyWorkspaceId(verification.key.metadata);
+      const verifiedKey = verification.key;
+      const workspaceId = readApiKeyWorkspaceId(verifiedKey.metadata);
 
       if (!workspaceId) {
         return c.json({ error: "API key is missing workspace metadata" }, 401);
@@ -92,17 +95,21 @@ export const sessionMiddleware: MiddlewareHandler<AppBindings> = async (
         );
       }
 
-      const [apiKeyUser] = await db
-        .select()
-        .from(userTable)
-        .where(eq(userTable.id, verification.key.referenceId))
-        .limit(1);
+      const [apiKeyUser] = await timed(c, "session_api_key_user", () =>
+        db
+          .select()
+          .from(userTable)
+          .where(eq(userTable.id, verifiedKey.referenceId))
+          .limit(1),
+      );
 
       if (!apiKeyUser) {
         return c.json({ error: "Unauthorized" }, 401);
       }
 
-      if (!(await getMembership(workspaceId, apiKeyUser.id))) {
+      if (!(await timed(c, "session_api_key_membership", () =>
+        getMembership(workspaceId, apiKeyUser.id)
+      ))) {
         return c.json({ error: "Forbidden" }, 403);
       }
 
@@ -110,34 +117,56 @@ export const sessionMiddleware: MiddlewareHandler<AppBindings> = async (
       c.set("session", {
         activeWorkspaceId: workspaceId,
         activeTeamId: null,
-        createdAt: verification.key.createdAt,
+        createdAt: verifiedKey.createdAt,
         expiresAt:
-          verification.key.expiresAt ??
+          verifiedKey.expiresAt ??
           new Date(Date.now() + 1000 * 60 * 60 * 24 * 365 * 100),
-        id: `api-key:${verification.key.id}`,
+        id: `api-key:${verifiedKey.id}`,
         ipAddress: null,
         token: "",
-        updatedAt: verification.key.updatedAt,
+        updatedAt: verifiedKey.updatedAt,
         userId: apiKeyUser.id,
         userAgent: null,
       });
       c.set("apiKey", {
-        id: verification.key.id,
+        id: verifiedKey.id,
         workspaceId,
-        referenceId: verification.key.referenceId,
+        referenceId: verifiedKey.referenceId,
       });
       c.set("authMethod", "apiKey");
 
-      await next();
+      await timed(c, "session_next", next);
       return;
     }
 
-    const session = await auth.api.getSession({ headers: authHeaders });
+    const session = await timed(c, "session_auth", () =>
+      auth.api.getSession({ headers: authHeaders }),
+    );
 
     c.set("user", session?.user ?? null);
     c.set("session", normalizeAuthSession(session?.session));
     c.set("authMethod", session?.user ? "session" : null);
 
-    await next();
-  });
+    await timed(c, "session_next", next);
+  }, {
+    onTiming(name, durationMs) {
+      c.get("serverTimings").push(`notelab_${name};dur=${durationMs}`);
+    },
+  }));
 };
+
+async function timed<T>(
+  c: Parameters<MiddlewareHandler<AppBindings>>[0],
+  name: string,
+  run: () => Promise<T>,
+) {
+  const startedAt = performance.now();
+
+  try {
+    return await run();
+  } finally {
+    c.get("serverTimings").push(
+      `notelab_${name};dur=${Math.round(performance.now() - startedAt)}`,
+    );
+  }
+}

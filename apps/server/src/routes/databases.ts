@@ -3,9 +3,9 @@ import type { SQL } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Context } from "hono";
 import {
-  canAccessPage,
+  canAccessPageInWorkspace,
   getAccessiblePageIds,
-  isPagePublished,
+  isPagePublishedInWorkspace,
 } from "../access";
 import { rejectMismatchedApiKeyWorkspace } from "../api-keys";
 import { db } from "../db";
@@ -447,7 +447,7 @@ const getDatabasePayload = async (
     return null;
   }
 
-  const [properties, views, rows] = await Promise.all([
+  const [properties, views, rows, favoriteRecords] = await Promise.all([
     db
       .select({
         column: databaseProperty,
@@ -491,6 +491,13 @@ const getDatabasePayload = async (
         ),
       )
       .orderBy(asc(databaseRow.position)),
+    userId
+      ? db
+          .select({ id: favorite.id })
+          .from(favorite)
+          .where(and(eq(favorite.userId, userId), eq(favorite.databaseId, id)))
+          .limit(1)
+      : Promise.resolve([]),
   ]);
 
   const pageIds = rows.map(({ row }) => row.pageId);
@@ -507,13 +514,7 @@ const getDatabasePayload = async (
             ),
           )
       : [];
-  const [favoriteRecord] = userId
-    ? await db
-        .select({ id: favorite.id })
-        .from(favorite)
-        .where(and(eq(favorite.userId, userId), eq(favorite.databaseId, id)))
-        .limit(1)
-    : [];
+  const [favoriteRecord] = favoriteRecords;
 
   return {
     database: { ...record, isFavorite: Boolean(favoriteRecord) },
@@ -541,7 +542,7 @@ const getDatabaseSchemaPayload = async (
     return null;
   }
 
-  const [properties, views] = await Promise.all([
+  const [properties, views, favoriteRecords] = await Promise.all([
     db
       .select({
         column: databaseProperty,
@@ -564,14 +565,15 @@ const getDatabaseSchemaPayload = async (
       .from(databaseView)
       .where(eq(databaseView.databaseId, id))
       .orderBy(asc(databaseView.position)),
+    userId
+      ? db
+          .select({ id: favorite.id })
+          .from(favorite)
+          .where(and(eq(favorite.userId, userId), eq(favorite.databaseId, id)))
+          .limit(1)
+      : Promise.resolve([]),
   ]);
-  const [favoriteRecord] = userId
-    ? await db
-        .select({ id: favorite.id })
-        .from(favorite)
-        .where(and(eq(favorite.userId, userId), eq(favorite.databaseId, id)))
-        .limit(1)
-    : [];
+  const [favoriteRecord] = favoriteRecords;
 
   return {
     database: { ...record, isFavorite: Boolean(favoriteRecord) },
@@ -644,7 +646,7 @@ databaseRoutes.post("/", async (c) => {
     return c.json({ error: "Page not found" }, 404);
   }
 
-  if (!(await canAccessPage(pageRecord.id, user.id, "edit"))) {
+  if (!(await canAccessPageInWorkspace(pageRecord.id, workspaceId, user.id, "edit"))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -734,16 +736,27 @@ databaseRoutes.get("/:id", async (c) => {
   }
 
   const canView = user
-    ? await canAccessPage(record.pageId, user.id, "view")
+    ? await canAccessPageInWorkspace(
+        record.pageId,
+        record.workspaceId,
+        user.id,
+        "view",
+      )
     : false;
-  const published = await isPagePublished(record.pageId);
 
-  if (!canView && !published) {
-    if (!user) {
-      return c.json({ error: "Unauthorized" }, 401);
+  if (!canView) {
+    const published = await isPagePublishedInWorkspace(
+      record.pageId,
+      record.workspaceId,
+    );
+
+    if (!published) {
+      if (!user) {
+        return c.json({ error: "Unauthorized" }, 401);
+      }
+
+      return c.json({ error: "Forbidden" }, 403);
     }
-
-    return c.json({ error: "Forbidden" }, 403);
   }
 
   const schemaOnly = c.req.query("schemaOnly") === "1";
@@ -761,7 +774,12 @@ databaseRoutes.get("/:id/published", async (c) => {
     return c.json({ published: false }, 404);
   }
 
-  return c.json({ published: await isPagePublished(record.pageId) });
+  return c.json({
+    published: await isPagePublishedInWorkspace(
+      record.pageId,
+      record.workspaceId,
+    ),
+  });
 });
 
 databaseRoutes.put("/:id/favorite", async (c) => {
@@ -777,7 +795,7 @@ databaseRoutes.put("/:id/favorite", async (c) => {
     return c.json({ error: "Database not found" }, 404);
   }
 
-  if (!(await canAccessPage(existing.pageId, user.id, "view"))) {
+  if (!(await canAccessPageInWorkspace(existing.pageId, existing.workspaceId, user.id, "view"))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -810,7 +828,7 @@ databaseRoutes.delete("/:id", async (c) => {
     return c.json({ error: "Database not found" }, 404);
   }
 
-  if (!(await canAccessPage(existing.pageId, user.id, "full"))) {
+  if (!(await canAccessPageInWorkspace(existing.pageId, existing.workspaceId, user.id, "full"))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -847,7 +865,7 @@ databaseRoutes.delete("/:id/favorite", async (c) => {
     return c.json({ error: "Database not found" }, 404);
   }
 
-  if (!(await canAccessPage(existing.pageId, user.id, "view"))) {
+  if (!(await canAccessPageInWorkspace(existing.pageId, existing.workspaceId, user.id, "view"))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -873,7 +891,7 @@ databaseRoutes.patch("/:id", async (c) => {
     return c.json({ error: "Database not found" }, 404);
   }
 
-  if (!(await canAccessPage(existing.pageId, user.id, "edit"))) {
+  if (!(await canAccessPageInWorkspace(existing.pageId, existing.workspaceId, user.id, "edit"))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -943,7 +961,7 @@ databaseRoutes.patch("/:id/views/:viewId", async (c) => {
     return c.json({ error: "Database not found" }, 404);
   }
 
-  if (!(await canAccessPage(existing.pageId, user.id, "edit"))) {
+  if (!(await canAccessPageInWorkspace(existing.pageId, existing.workspaceId, user.id, "edit"))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -1044,7 +1062,7 @@ databaseRoutes.post("/:id/views", async (c) => {
     return c.json({ error: "Database not found" }, 404);
   }
 
-  if (!(await canAccessPage(existing.pageId, user.id, "edit"))) {
+  if (!(await canAccessPageInWorkspace(existing.pageId, existing.workspaceId, user.id, "edit"))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -1142,7 +1160,7 @@ databaseRoutes.delete("/:id/views/:viewId", async (c) => {
     return c.json({ error: "Database not found" }, 404);
   }
 
-  if (!(await canAccessPage(existing.pageId, user.id, "edit"))) {
+  if (!(await canAccessPageInWorkspace(existing.pageId, existing.workspaceId, user.id, "edit"))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -1212,7 +1230,7 @@ databaseRoutes.post("/:id/properties", async (c) => {
     return c.json({ error: "Database not found" }, 404);
   }
 
-  if (!(await canAccessPage(existing.pageId, user.id, "edit"))) {
+  if (!(await canAccessPageInWorkspace(existing.pageId, existing.workspaceId, user.id, "edit"))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -1342,7 +1360,7 @@ databaseRoutes.patch("/:id/properties/reorder", async (c) => {
     return c.json({ error: "Database not found" }, 404);
   }
 
-  if (!(await canAccessPage(existing.pageId, user.id, "edit"))) {
+  if (!(await canAccessPageInWorkspace(existing.pageId, existing.workspaceId, user.id, "edit"))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -1436,7 +1454,7 @@ databaseRoutes.patch("/:id/properties/:databasePropertyId", async (c) => {
     return c.json({ error: "Database not found" }, 404);
   }
 
-  if (!(await canAccessPage(existing.pageId, user.id, "edit"))) {
+  if (!(await canAccessPageInWorkspace(existing.pageId, existing.workspaceId, user.id, "edit"))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -1608,7 +1626,7 @@ databaseRoutes.post("/:id/properties/:databasePropertyId/duplicate", async (c) =
     return c.json({ error: "Database not found" }, 404);
   }
 
-  if (!(await canAccessPage(existing.pageId, user.id, "edit"))) {
+  if (!(await canAccessPageInWorkspace(existing.pageId, existing.workspaceId, user.id, "edit"))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -1802,7 +1820,7 @@ databaseRoutes.delete("/:id/properties/:databasePropertyId", async (c) => {
     return c.json({ error: "Database not found" }, 404);
   }
 
-  if (!(await canAccessPage(existing.pageId, user.id, "edit"))) {
+  if (!(await canAccessPageInWorkspace(existing.pageId, existing.workspaceId, user.id, "edit"))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -1884,7 +1902,12 @@ databaseRoutes.post("/:id/rows", async (c) => {
     return c.json({ error: "Database not found" }, 404);
   }
 
-  if (!(await canAccessPage(existing.pageId, user.id, "edit"))) {
+  if (!(await canAccessPageInWorkspace(
+    existing.pageId,
+    existing.workspaceId,
+    user.id,
+    "edit",
+  ))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -1932,7 +1955,12 @@ databaseRoutes.post("/:id/rows", async (c) => {
       return c.json({ error: "Source database not found" }, 404);
     }
 
-    if (!(await canAccessPage(sourceDatabase.pageId, user.id, "view"))) {
+    if (!(await canAccessPageInWorkspace(
+      sourceDatabase.pageId,
+      sourceDatabase.workspaceId,
+      user.id,
+      "view",
+    ))) {
       return c.json({ error: "Forbidden" }, 403);
     }
   }
@@ -1969,7 +1997,12 @@ databaseRoutes.post("/:id/rows", async (c) => {
       return c.json({ error: "Page not found" }, 404);
     }
 
-    if (!(await canAccessPage(pageRecord.id, user.id, "edit"))) {
+    if (!(await canAccessPageInWorkspace(
+      pageRecord.id,
+      pageRecord.workspaceId,
+      user.id,
+      "edit",
+    ))) {
       return c.json({ error: "Forbidden" }, 403);
     }
 
@@ -2467,7 +2500,7 @@ databaseRoutes.patch("/:id/rows/reorder", async (c) => {
     return c.json({ error: "Database not found" }, 404);
   }
 
-  if (!(await canAccessPage(existing.pageId, user.id, "edit"))) {
+  if (!(await canAccessPageInWorkspace(existing.pageId, existing.workspaceId, user.id, "edit"))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -2550,7 +2583,7 @@ databaseRoutes.patch("/:id/rows/:rowId/move", async (c) => {
     return c.json({ error: "Database not found" }, 404);
   }
 
-  if (!(await canAccessPage(existing.pageId, user.id, "edit"))) {
+  if (!(await canAccessPageInWorkspace(existing.pageId, existing.workspaceId, user.id, "edit"))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -2744,7 +2777,7 @@ databaseRoutes.put("/:id/rows/:rowId/properties/:propertyId", async (c) => {
     return c.json({ error: "Database not found" }, 404);
   }
 
-  if (!(await canAccessPage(existing.pageId, user.id, "edit"))) {
+  if (!(await canAccessPageInWorkspace(existing.pageId, existing.workspaceId, user.id, "edit"))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 

@@ -169,6 +169,13 @@
       "when": 1782303600000,
       "tag": "0023_page_settings_rename",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1783680000000,
+      "tag": "0024_route_query_indexes",
+      "breakpoints": true
     }
   ]
 }

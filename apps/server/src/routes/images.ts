@@ -2,8 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Context } from "hono";
 import {
-  canAccessPage,
-  getMembership,
+  canAccessPageInWorkspace,
   getPageRecord,
 } from "../access";
 import { rejectMismatchedApiKeyWorkspace } from "../api-keys";
@@ -87,11 +86,7 @@ imageRoutes.post("/uploads", async (c) => {
     return c.json({ error: "Page not found" }, 404);
   }
 
-  if (!(await getMembership(workspaceId, user.id))) {
-    return c.json({ error: "Forbidden" }, 403);
-  }
-
-  if (!(await canAccessPage(pageId, user.id, "edit"))) {
+  if (!(await canAccessPageInWorkspace(pageId, workspaceId, user.id, "edit"))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -523,7 +518,12 @@ async function requirePageAccess(
     return c.json({ error: "Page not found" }, 404);
   }
 
-  if (!(await canAccessPage(asset.pageId, user.id, required))) {
+  if (!(await canAccessPageInWorkspace(
+    asset.pageId,
+    asset.workspaceId,
+    user.id,
+    required,
+  ))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 

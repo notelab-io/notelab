@@ -2,13 +2,14 @@ import { and, asc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Context } from "hono";
 import {
-  canAccessPage,
+  canAccessPageInWorkspace,
   getAccessiblePageIds,
-  getEffectivePageAccess,
+  getEffectivePageAccessInWorkspace,
+  getEffectivePageAccessForUsers,
   getMembership,
   getPageRecord,
   hasAccess,
-  isPagePublished,
+  isPagePublishedInWorkspace,
   normalizeAccessLevel,
   rejectActiveWorkspaceMismatch,
   type AccessLevel,
@@ -155,37 +156,38 @@ const getPagePropertyPayload = async (
   pageId: string,
   workspaceId: string,
 ) => {
-  const databaseProperties = await db
-    .select({ property: pageProperty })
-    .from(databaseRow)
-    .innerJoin(
-      databaseProperty,
-      eq(databaseRow.databaseId, databaseProperty.databaseId),
-    )
-    .innerJoin(
-      pageProperty,
-      eq(databaseProperty.propertyId, pageProperty.id),
-    )
-    .where(
-      and(
-        eq(databaseRow.pageId, pageId),
-        eq(pageProperty.workspaceId, workspaceId),
-        isNull(databaseRow.deletedAt),
-        isNull(pageProperty.deletedAt),
-      ),
-    )
-    .orderBy(asc(pageProperty.createdAt));
+  const [databaseProperties, values] = await Promise.all([
+    db
+      .select({ property: pageProperty })
+      .from(databaseRow)
+      .innerJoin(
+        databaseProperty,
+        eq(databaseRow.databaseId, databaseProperty.databaseId),
+      )
+      .innerJoin(
+        pageProperty,
+        eq(databaseProperty.propertyId, pageProperty.id),
+      )
+      .where(
+        and(
+          eq(databaseRow.pageId, pageId),
+          eq(pageProperty.workspaceId, workspaceId),
+          isNull(databaseRow.deletedAt),
+          isNull(pageProperty.deletedAt),
+        ),
+      )
+      .orderBy(asc(pageProperty.createdAt)),
+    db
+      .select()
+      .from(pagePropertyValue)
+      .where(eq(pagePropertyValue.pageId, pageId)),
+  ]);
 
   const properties = Array.from(
     new Map(
       databaseProperties.map(({ property }) => [property.id, property]),
     ).values(),
   );
-  const values = await db
-    .select()
-    .from(pagePropertyValue)
-    .where(eq(pagePropertyValue.pageId, pageId));
-
   return { properties, values };
 };
 
@@ -229,72 +231,32 @@ pageRoutes.get("/", async (c) => {
   const notelabAiModes = parseNotelabAiModes(c.req.query("notelabai"));
   const isSummary = c.req.query("fields") === "summary";
   const deletedFilter = c.req.query("deleted") === "only" ? "only" : "active";
-  const accessibleIds = await getAccessiblePageIds(workspaceId, user.id);
-
-  const records = await db
-    .select({
-      id: page.id,
-      workspaceId: page.workspaceId,
-      createdById: page.createdById,
-      type: page.type,
-      name: page.name,
-      url: page.url,
-      metadata: page.metadata,
-      deletedById: page.deletedById,
-      deletedAt: page.deletedAt,
-      createdAt: page.createdAt,
-      updatedAt: page.updatedAt,
-    })
-    .from(page)
-    .where(
-      and(
-        eq(page.workspaceId, workspaceId),
-        deletedFilter === "only" ? undefined : isNull(page.deletedAt),
+  const [accessibleIds, records] = await Promise.all([
+    getAccessiblePageIds(workspaceId, user.id, {
+      membershipVerified: true,
+    }),
+    db
+      .select({
+        id: page.id,
+        workspaceId: page.workspaceId,
+        createdById: page.createdById,
+        type: page.type,
+        name: page.name,
+        url: page.url,
+        metadata: page.metadata,
+        deletedById: page.deletedById,
+        deletedAt: page.deletedAt,
+        createdAt: page.createdAt,
+        updatedAt: page.updatedAt,
+      })
+      .from(page)
+      .where(
+        and(
+          eq(page.workspaceId, workspaceId),
+          deletedFilter === "only" ? undefined : isNull(page.deletedAt),
+        ),
       ),
-    );
-  const sharedPageRows = await db
-    .select({ pageId: pageAccess.pageId })
-    .from(pageAccess)
-    .where(eq(pageAccess.workspaceId, workspaceId));
-  const favoriteRows = await db
-    .select({
-      databaseId: favorite.databaseId,
-      pageId: favorite.pageId,
-    })
-    .from(favorite)
-    .where(eq(favorite.userId, user.id));
-  const teamspaceIds = new Set(
-    sharedPageRows.map((row) => row.pageId),
-  );
-  const favoritePageIds = new Set(
-    favoriteRows
-      .map((row) => row.pageId)
-      .filter((pageId): pageId is string => Boolean(pageId)),
-  );
-  const favoriteDatabaseIds = new Set(
-    favoriteRows
-      .map((row) => row.databaseId)
-      .filter((databaseId): databaseId is string => Boolean(databaseId)),
-  );
-  const visitRows = await db
-    .select({
-      itemId: itemVisit.itemId,
-      itemKind: itemVisit.itemKind,
-      lastVisitedAt: itemVisit.lastVisitedAt,
-    })
-    .from(itemVisit)
-    .where(
-      and(
-        eq(itemVisit.workspaceId, workspaceId),
-        eq(itemVisit.userId, user.id),
-      ),
-    );
-  const visitsByKey = new Map(
-    visitRows.map((visit) => [
-      `${visit.itemKind}:${visit.itemId}`,
-      visit.lastVisitedAt,
-    ]),
-  );
+  ]);
   let accessibleRecords =
     deletedFilter === "only"
       ? records
@@ -321,20 +283,76 @@ pageRoutes.get("/", async (c) => {
     });
   }
 
+  const [sharedPageRows, favoriteRows, visitRows, databaseRecords, placementRecords] =
+    await Promise.all([
+      db
+        .select({ pageId: pageAccess.pageId })
+        .from(pageAccess)
+        .where(eq(pageAccess.workspaceId, workspaceId)),
+      db
+        .select({
+          databaseId: favorite.databaseId,
+          pageId: favorite.pageId,
+        })
+        .from(favorite)
+        .where(eq(favorite.userId, user.id)),
+      db
+        .select({
+          itemId: itemVisit.itemId,
+          itemKind: itemVisit.itemKind,
+          lastVisitedAt: itemVisit.lastVisitedAt,
+        })
+        .from(itemVisit)
+        .where(
+          and(
+            eq(itemVisit.workspaceId, workspaceId),
+            eq(itemVisit.userId, user.id),
+          ),
+        ),
+      db
+        .select()
+        .from(database)
+        .where(
+          and(
+            eq(database.workspaceId, workspaceId),
+            deletedFilter === "only"
+              ? isNotNull(database.deletedAt)
+              : isNull(database.deletedAt),
+          ),
+        ),
+      db
+        .select()
+        .from(pageItemPlacement)
+        .where(
+          and(
+            eq(pageItemPlacement.workspaceId, workspaceId),
+            isNull(pageItemPlacement.deletedAt),
+          ),
+        ),
+    ]);
+  const teamspaceIds = new Set(
+    sharedPageRows.map((row) => row.pageId),
+  );
+  const favoritePageIds = new Set(
+    favoriteRows
+      .map((row) => row.pageId)
+      .filter((pageId): pageId is string => Boolean(pageId)),
+  );
+  const favoriteDatabaseIds = new Set(
+    favoriteRows
+      .map((row) => row.databaseId)
+      .filter((databaseId): databaseId is string => Boolean(databaseId)),
+  );
+  const visitsByKey = new Map(
+    visitRows.map((visit) => [
+      `${visit.itemKind}:${visit.itemId}`,
+      visit.lastVisitedAt,
+    ]),
+  );
+
   const accessibleRecordIds = new Set(
     accessibleRecords.map((record) => record.id),
   );
-  const databaseRecords = await db
-    .select()
-    .from(database)
-    .where(
-      and(
-        eq(database.workspaceId, workspaceId),
-        deletedFilter === "only"
-          ? isNotNull(database.deletedAt)
-          : isNull(database.deletedAt),
-      ),
-    );
   const activeDatabases = databaseRecords.filter((record) =>
     accessibleRecordIds.has(record.pageId),
   );
@@ -407,9 +425,9 @@ pageRoutes.get("/", async (c) => {
         .filter((createdById): createdById is string => Boolean(createdById)),
     ),
   ];
-  const creatorRows =
+  const [creatorRows, databaseViews] = await Promise.all([
     creatorIds.length > 0
-      ? await db
+      ? db
           .select({
             email: userTable.email,
             id: userTable.id,
@@ -418,18 +436,9 @@ pageRoutes.get("/", async (c) => {
           })
           .from(userTable)
           .where(inArray(userTable.id, creatorIds))
-      : [];
-  const creatorsById = new Map(creatorRows.map((creator) => [creator.id, creator]));
-  const createdByByPageId = new Map(
-    accessibleRecords.map((record) => [
-      record.id,
-      record.createdById ? creatorsById.get(record.createdById) ?? null : null,
-    ]),
-  );
-
-  const databaseViews =
+      : Promise.resolve([]),
     activeDatabaseIds.size > 0
-      ? await db
+      ? db
           .select({
             config: databaseView.config,
             createdAt: databaseView.createdAt,
@@ -442,7 +451,16 @@ pageRoutes.get("/", async (c) => {
           })
           .from(databaseView)
           .where(inArray(databaseView.databaseId, [...activeDatabaseIds]))
-      : [];
+      : Promise.resolve([]),
+  ]);
+  const creatorsById = new Map(creatorRows.map((creator) => [creator.id, creator]));
+  const createdByByPageId = new Map(
+    accessibleRecords.map((record) => [
+      record.id,
+      record.createdById ? creatorsById.get(record.createdById) ?? null : null,
+    ]),
+  );
+
   const viewsByDatabaseId = new Map<string, typeof databaseViews>();
 
   for (const view of databaseViews) {
@@ -479,15 +497,6 @@ pageRoutes.get("/", async (c) => {
       },
     ]);
   }
-  const placementRecords = await db
-    .select()
-    .from(pageItemPlacement)
-    .where(
-      and(
-        eq(pageItemPlacement.workspaceId, workspaceId),
-        isNull(pageItemPlacement.deletedAt),
-      ),
-    );
   const placements = buildNavigationPlacements({
     databaseRecords: activeDatabases,
     databaseRows: databaseRowPages.filter(
@@ -579,7 +588,12 @@ pageRoutes.post("/item-visits", async (c) => {
     return c.json({ error: "Item not found" }, 404);
   }
 
-  if (!(await canAccessPage(targetPageId, user.id, "view"))) {
+  if (!(await canAccessPageInWorkspace(
+    targetPageId,
+    workspaceId,
+    user.id,
+    "view",
+  ))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -678,8 +692,9 @@ pageRoutes.post("/", async (c) => {
     metadata &&
     !Array.isArray(metadata) &&
     typeof (metadata as { parentItemId?: unknown }).parentItemId === "string" &&
-    !(await canAccessPage(
+    !(await canAccessPageInWorkspace(
       (metadata as { parentItemId: string }).parentItemId,
+      workspaceId,
       user.id,
       "edit",
     ))
@@ -812,7 +827,7 @@ pageRoutes.post("/:id/embed-item", async (c) => {
     return c.json({ error: "Page not found" }, 404);
   }
 
-  if (!(await canAccessPage(host.id, user.id, "edit"))) {
+  if (!(await canAccessPageInWorkspace(host.id, host.workspaceId, user.id, "edit"))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -847,7 +862,7 @@ pageRoutes.post("/:id/embed-item", async (c) => {
       return c.json({ error: "Page not found" }, 404);
     }
 
-    if (!(await canAccessPage(child.id, user.id, "view"))) {
+    if (!(await canAccessPageInWorkspace(child.id, child.workspaceId, user.id, "view"))) {
       return c.json({ error: "Forbidden" }, 403);
     }
 
@@ -971,7 +986,12 @@ pageRoutes.post("/:id/embed-item", async (c) => {
     return c.json({ error: "Database not found" }, 404);
   }
 
-  if (!(await canAccessPage(databaseRecord.pageId, user.id, "view"))) {
+  if (!(await canAccessPageInWorkspace(
+    databaseRecord.pageId,
+    databaseRecord.workspaceId,
+    user.id,
+    "view",
+  ))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -1052,7 +1072,7 @@ pageRoutes.delete("/:id/embed-item", async (c) => {
     return c.json({ error: "Page not found" }, 404);
   }
 
-  if (!(await canAccessPage(host.id, user.id, "edit"))) {
+  if (!(await canAccessPageInWorkspace(host.id, host.workspaceId, user.id, "edit"))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -1141,17 +1161,26 @@ pageRoutes.get("/:id", async (c) => {
       ? "full"
       : "none";
   } else if (user) {
-    accessLevel = await getEffectivePageAccess(record.id, user.id);
+    accessLevel = await getEffectivePageAccessInWorkspace(
+      record.id,
+      record.workspaceId,
+      user.id,
+    );
   }
 
-  const published = await isPagePublished(record.id);
+  if (!hasAccess(accessLevel, "view")) {
+    const published = await isPagePublishedInWorkspace(
+      record.id,
+      record.workspaceId,
+    );
 
-  if (!hasAccess(accessLevel, "view") && !published) {
-    if (!user) {
-      return c.json({ error: "Unauthorized" }, 401);
+    if (!published) {
+      if (!user) {
+        return c.json({ error: "Unauthorized" }, 401);
+      }
+
+      return c.json({ error: "Forbidden" }, 403);
     }
-
-    return c.json({ error: "Forbidden" }, 403);
   }
 
   if (user && hasAccess(accessLevel, "view")) {
@@ -1192,7 +1221,9 @@ pageRoutes.get("/:id/published", async (c) => {
     return c.json({ published: false }, 404);
   }
 
-  return c.json({ published: await isPagePublished(record.id) });
+  return c.json({
+    published: await isPagePublishedInWorkspace(record.id, record.workspaceId),
+  });
 });
 
 pageRoutes.put("/:id/favorite", async (c) => {
@@ -1208,7 +1239,7 @@ pageRoutes.put("/:id/favorite", async (c) => {
     return c.json({ error: "Page not found" }, 404);
   }
 
-  if (!(await canAccessPage(record.id, user.id, "view"))) {
+  if (!(await canAccessPageInWorkspace(record.id, record.workspaceId, user.id, "view"))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -1249,7 +1280,7 @@ pageRoutes.delete("/:id/favorite", async (c) => {
     return c.json({ error: "Page not found" }, 404);
   }
 
-  if (!(await canAccessPage(record.id, user.id, "view"))) {
+  if (!(await canAccessPageInWorkspace(record.id, record.workspaceId, user.id, "view"))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -1283,7 +1314,11 @@ pageRoutes.get("/:id/access", async (c) => {
     return c.json({ error: "Page not found" }, 404);
   }
 
-  const accessLevel = await getEffectivePageAccess(record.id, requestUser.id);
+  const accessLevel = await getEffectivePageAccessInWorkspace(
+    record.id,
+    record.workspaceId,
+    requestUser.id,
+  );
 
   if (!hasAccess(accessLevel, "full")) {
     return c.json({ error: "Forbidden" }, 403);
@@ -1321,8 +1356,9 @@ pageRoutes.get("/:id/access-targets", async (c) => {
     return c.json({ error: "Page not found" }, 404);
   }
 
-  const requestUserAccess = await getEffectivePageAccess(
+  const requestUserAccess = await getEffectivePageAccessInWorkspace(
     record.id,
+    record.workspaceId,
     requestUser.id,
   );
 
@@ -1353,18 +1389,14 @@ pageRoutes.get("/:id/access-targets", async (c) => {
     .where(eq(member.organizationId, record.workspaceId))
     .orderBy(asc(userTable.name), asc(userTable.email));
 
-  const accessibleMembers = [];
-
-  for (const targetMember of members) {
-    const accessLevel = await getEffectivePageAccess(
-      record.id,
-      targetMember.id,
-    );
-
-    if (hasAccess(accessLevel, "view")) {
-      accessibleMembers.push(targetMember);
-    }
-  }
+  const accessByUserId = await getEffectivePageAccessForUsers(
+    record.id,
+    record.workspaceId,
+    members.map((targetMember) => targetMember.id),
+  );
+  const accessibleMembers = members.filter((targetMember) =>
+    hasAccess(accessByUserId.get(targetMember.id) ?? "none", "view"),
+  );
 
   return c.json({ members: accessibleMembers });
 });
@@ -1382,7 +1414,11 @@ pageRoutes.put("/:id/access", async (c) => {
     return c.json({ error: "Page not found" }, 404);
   }
 
-  const currentAccess = await getEffectivePageAccess(record.id, requestUser.id);
+  const currentAccess = await getEffectivePageAccessInWorkspace(
+    record.id,
+    record.workspaceId,
+    requestUser.id,
+  );
 
   if (!hasAccess(currentAccess, "full")) {
     return c.json({ error: "Forbidden" }, 403);
@@ -1501,7 +1537,11 @@ pageRoutes.delete("/:id/access/public", async (c) => {
     return c.json({ error: "Page not found" }, 404);
   }
 
-  const accessLevel = await getEffectivePageAccess(record.id, requestUser.id);
+  const accessLevel = await getEffectivePageAccessInWorkspace(
+    record.id,
+    record.workspaceId,
+    requestUser.id,
+  );
 
   if (!hasAccess(accessLevel, "full")) {
     return c.json({ error: "Forbidden" }, 403);
@@ -1544,7 +1584,11 @@ pageRoutes.delete("/:id/access/:ruleId", async (c) => {
     return c.json({ error: "Page not found" }, 404);
   }
 
-  const accessLevel = await getEffectivePageAccess(record.id, requestUser.id);
+  const accessLevel = await getEffectivePageAccessInWorkspace(
+    record.id,
+    record.workspaceId,
+    requestUser.id,
+  );
 
   if (!hasAccess(accessLevel, "full")) {
     return c.json({ error: "Forbidden" }, 403);
@@ -1590,7 +1634,7 @@ pageRoutes.get("/:id/properties", async (c) => {
     return c.json({ error: "Page not found" }, 404);
   }
 
-  if (!(await canAccessPage(record.id, user.id, "view"))) {
+  if (!(await canAccessPageInWorkspace(record.id, record.workspaceId, user.id, "view"))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -1622,7 +1666,7 @@ pageRoutes.put("/:id/properties/:propertyId/value", async (c) => {
     return c.json({ error: "Page not found" }, 404);
   }
 
-  if (!(await canAccessPage(record.id, user.id, "edit"))) {
+  if (!(await canAccessPageInWorkspace(record.id, record.workspaceId, user.id, "edit"))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -1693,7 +1737,7 @@ pageRoutes.patch("/:id/content", async (c) => {
     return c.json({ error: "Page not found" }, 404);
   }
 
-  if (!(await canAccessPage(existing.id, user.id, "edit"))) {
+  if (!(await canAccessPageInWorkspace(existing.id, existing.workspaceId, user.id, "edit"))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -1772,7 +1816,7 @@ pageRoutes.patch("/:id", async (c) => {
     return c.json({ error: "Page not found" }, 404);
   }
 
-  if (!(await canAccessPage(existing.id, user.id, "edit"))) {
+  if (!(await canAccessPageInWorkspace(existing.id, existing.workspaceId, user.id, "edit"))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -1847,7 +1891,12 @@ pageRoutes.patch("/:id", async (c) => {
       if (
         typeof parentItemId === "string" &&
         parentItemId.length > 0 &&
-        !(await canAccessPage(parentItemId, user.id, "edit"))
+        !(await canAccessPageInWorkspace(
+          parentItemId,
+          existing.workspaceId,
+          user.id,
+          "edit",
+        ))
       ) {
         return c.json({ error: "Forbidden" }, 403);
       }
@@ -1918,7 +1967,7 @@ pageRoutes.delete("/:id", async (c) => {
     return c.json({ error: "Page not found" }, 404);
   }
 
-  if (!(await canAccessPage(existing.id, user.id, "full"))) {
+  if (!(await canAccessPageInWorkspace(existing.id, existing.workspaceId, user.id, "full"))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
