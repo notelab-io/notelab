@@ -8,6 +8,7 @@ import type { UseEditorExtensionsOptions } from "./types"
 export type { UseEditorExtensionsOptions }
 
 export const useEditorExtensions = ({
+  collaboration,
   content,
   createEditorDatabase,
   databaseEditorRuntime,
@@ -23,6 +24,7 @@ export const useEditorExtensions = ({
   const editorExtensions = useMemo<Extensions>(
     () =>
       createBaseExtensions({
+        collaboration,
         createEditorDatabase,
         databaseEditorRuntime,
         editable,
@@ -35,6 +37,7 @@ export const useEditorExtensions = ({
       }),
     [
       createEditorDatabase,
+      collaboration,
       databaseEditorRuntime,
       editable,
       onCreatePage,
@@ -46,7 +49,9 @@ export const useEditorExtensions = ({
   )
 
   const editorLifecycleKey = pageId ?? "draft"
-  const initialContent = normalizeEditorContent(content) as Content
+  const initialContent = collaboration
+    ? undefined
+    : (normalizeEditorContent(content) as Content)
 
   return {
     editorExtensions,

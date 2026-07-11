@@ -14,6 +14,18 @@
     --editor-selection-foreground: #ffffff;
   }
 
+  .collaboration-carets__caret {
+    @apply pointer-events-none relative -mx-px border-l-2;
+  }
+
+  .collaboration-carets__label {
+    @apply absolute -left-0.5 -top-6 rounded px-1.5 py-0.5 text-xs font-medium text-white shadow-sm whitespace-nowrap;
+  }
+
+  .collaboration-carets__selection {
+    @apply pointer-events-none;
+  }
+
   .tiptap-editor ::selection,
   .tiptap-editor *::selection {
     background-color: var(--editor-selection-background);
@@ -1931,12 +1943,12 @@
   }
 
   .block-drag-drop-line {
-    @apply pointer-events-none fixed z-40 h-0.5 bg-primary;
+    @apply pointer-events-none fixed z-10 h-0.5 bg-primary;
     transform: translateY(-1px);
   }
 
   .drag-handle {
-    @apply fixed z-40 hidden h-7 w-16 cursor-grab items-center justify-between bg-transparent pr-2 text-muted-foreground opacity-100 active:cursor-grabbing md:flex;
+    @apply fixed z-10 hidden h-7 w-16 cursor-grab items-center justify-between bg-transparent pr-2 text-muted-foreground opacity-100 active:cursor-grabbing md:flex;
     transform: translate3d(0, 0, 0);
   }
 

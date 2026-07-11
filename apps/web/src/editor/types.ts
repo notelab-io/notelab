@@ -6,6 +6,15 @@ import type {
   DragHandleTarget,
 } from "@/packages/editor/components/editor/types"
 import type { CreatedPage } from "@/packages/editor/extensions/page-block"
+import type { HocuspocusProvider } from "@hocuspocus/provider"
+import type { CollaborationUser } from "./use-page-collaboration"
+
+export type EditorCollaboration = {
+  provider: HocuspocusProvider
+  status: "connected" | "connecting" | "disconnected"
+  user: { avatar?: string | null; color: string; id: string; name: string }
+  users: CollaborationUser[]
+}
 
 export type PasteChoiceState = {
   anchor: { getBoundingClientRect: () => DOMRect }
@@ -50,6 +59,7 @@ export type PageEditPreviewControls = {
 
 export type EditorProps = {
   content?: unknown
+  collaboration?: EditorCollaboration
   cover?: string
   databaseId?: string | null
   editorContentRef?: MutableRefObject<(() => unknown) | null>
@@ -73,6 +83,7 @@ export type EditorProps = {
 
 export type UseEditorExtensionsOptions = {
   content: unknown
+  collaboration?: EditorCollaboration
   createEditorDatabase: () => Promise<string | null>
   databaseEditorRuntime: import("@/packages/editor/extensions/database").DatabaseBlockEditorRuntime
   editable: boolean

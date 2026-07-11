@@ -21,6 +21,8 @@ import { BackgroundColor, Color, TextStyle } from "@tiptap/extension-text-style"
 import Typography from "@tiptap/extension-typography"
 import type { Extensions } from "@tiptap/core"
 import StarterKit from "@tiptap/starter-kit"
+import Collaboration from "@tiptap/extension-collaboration"
+import CollaborationCaret from "@tiptap/extension-collaboration-caret"
 import { AskAiBlock } from "@/packages/editor/extensions/ask-ai-block"
 import { BookmarkBlock } from "@/packages/editor/extensions/bookmark-block"
 import { CodeBlockShiki } from "@/packages/editor/extensions/code-block-shiki"
@@ -45,6 +47,7 @@ import { SlashCommand } from "@/packages/editor/extensions/slash-command"
 import { VideoBlock } from "@/packages/editor/extensions/video-block"
 
 export type BaseExtensionsOptions = {
+  collaboration?: import("./types").EditorCollaboration
   createEditorDatabase: () => Promise<string | null>
   databaseEditorRuntime: DatabaseBlockEditorRuntime
   editable: boolean
@@ -75,6 +78,7 @@ export function normalizeEditorContent(content: unknown) {
 }
 
 export const createBaseExtensions = ({
+  collaboration,
   createEditorDatabase,
   databaseEditorRuntime,
   editable,
@@ -89,7 +93,21 @@ export const createBaseExtensions = ({
     codeBlock: false,
     dropcursor: false,
     link: false,
+    undoRedo: collaboration ? false : undefined,
   }),
+  ...(collaboration
+    ? [
+        Collaboration.configure({
+          document: collaboration.provider.document,
+          field: "default",
+          provider: collaboration.provider,
+        }),
+        CollaborationCaret.configure({
+          provider: collaboration.provider,
+          user: collaboration.user,
+        }),
+      ]
+    : []),
   Placeholder.configure({
     placeholder: ({ node }) =>
       node.type.name === "heading"

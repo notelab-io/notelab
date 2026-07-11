@@ -48,6 +48,7 @@ import { useUserSettings } from "@notelab/features/user-settings"
 import { usePageEditorRegistry } from "@/contexts/page-editor-registry"
 import { createPageEditorHandle } from "@/hooks/use-page-edit-applier"
 import { Editor, type PageEditPreviewControls } from "@/packages/editor"
+import { usePageCollaboration } from "@/packages/editor/use-page-collaboration"
 
 
 type PageEditorPaneProps = {
@@ -302,6 +303,7 @@ export function PageEditorPane({
   pageId,
 }: PageEditorPaneProps) {
   const { data: page, isLoading } = usePage(pageId)
+  const { data: session } = useSession()
   const { data: accessLevel } = usePageAccessLevel(pageId, {
     refetchOnMount: false,
   })
@@ -377,6 +379,11 @@ export function PageEditorPane({
     !readOnly &&
     !page?.deletedAt &&
     (accessLevel === "edit" || accessLevel === "full")
+  const collaboration = usePageCollaboration({
+    enabled: pageEditable,
+    pageId,
+    user: session?.user,
+  })
 
   const restoreTrashedPage = () => {
     if (!page || restorePage.isPending) {
@@ -496,6 +503,10 @@ export function PageEditorPane({
         })
       }
 
+      if (collaboration.provider) {
+        return
+      }
+
       clearContentSaveTimeout()
       pendingContentRef.current = content
 
@@ -508,6 +519,7 @@ export function PageEditorPane({
     [
       accessLevel,
       clearContentSaveTimeout,
+      collaboration.provider,
       readOnly,
       removePageEmbed,
       updatePage,
@@ -591,6 +603,27 @@ export function PageEditorPane({
     )
   }
 
+  if (pageEditable && collaboration.error && !collaboration.synced) {
+    return (
+      <section
+        className={cn(
+          className,
+          "flex min-h-[50vh] items-center justify-center px-6 text-sm text-destructive",
+        )}
+      >
+        {collaboration.error}
+      </section>
+    )
+  }
+
+  if (pageEditable && !collaboration.synced) {
+    return (
+      <section className={cn(className, "animate-in fade-in duration-200")}>
+        <PageEditorSkeleton fullWidth={fullWidth} />
+      </section>
+    )
+  }
+
   return (
     <section className={cn(className, "animate-in fade-in-0 duration-300")}>
       {page.deletedAt ? (
@@ -611,6 +644,16 @@ export function PageEditorPane({
       ) : null}
       <Editor
         key={page.id}
+        collaboration={
+          collaboration.provider && collaboration.user
+            ? {
+                provider: collaboration.provider,
+                status: collaboration.status,
+                user: collaboration.user,
+                users: collaboration.users,
+              }
+            : undefined
+        }
         content={page.content ?? ""}
         cover={cover}
         databaseId={databaseId}

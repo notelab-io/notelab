@@ -24,8 +24,10 @@ import { useEditorInstance } from "./use-editor-instance"
 import { useEditorMenuEffects } from "./use-editor-menu-effects"
 import { useEditorRuntime } from "./use-editor-runtime"
 import { useMobileNodeActions } from "./use-mobile-node-actions"
+import { CollaborationPresence } from "./collaboration-presence"
 
 export function Editor({
+  collaboration,
   content = starterContent,
   cover,
   databaseId,
@@ -65,6 +67,7 @@ export function Editor({
 
   const { editorExtensions, editorLifecycleKey, initialContent, tocItems } =
     useEditorExtensions({
+      collaboration,
       content,
       createEditorDatabase,
       databaseEditorRuntime,
@@ -323,6 +326,12 @@ export function Editor({
         onClickCapture={handleMobileNodeClick}
         onPointerMoveCapture={updateDragTargetFromPointer}
       >
+        {collaboration ? (
+          <CollaborationPresence
+            status={collaboration.status}
+            users={collaboration.users}
+          />
+        ) : null}
         <EditorChrome
           blockDropLine={blockDropLine}
           createEditorDatabase={createEditorDatabase}
