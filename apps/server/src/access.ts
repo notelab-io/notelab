@@ -8,7 +8,7 @@ import {
   page,
   pageAccess,
 } from "./db/schema";
-import { PageGraph } from "./page-graph";
+import { loadWorkspacePageGraph } from "./page-graph";
 
 export type AccessLevel = "none" | "view" | "edit" | "full";
 
@@ -89,7 +89,7 @@ export async function getEffectivePageAccessInWorkspace(
   workspaceId: string,
   userId: string,
 ): Promise<AccessLevel> {
-  const [membershipRows, pages, teamRows] = await Promise.all([
+  const [membershipRows, graph, teamRows] = await Promise.all([
     db
       .select({ id: member.id })
       .from(member)
@@ -100,19 +100,7 @@ export async function getEffectivePageAccessInWorkspace(
         ),
       )
       .limit(1),
-    db
-      .select({
-        createdById: page.createdById,
-        id: page.id,
-        metadata: page.metadata,
-      })
-      .from(page)
-      .where(
-        and(
-          eq(page.workspaceId, workspaceId),
-          isNull(page.deletedAt),
-        ),
-      ),
+    loadWorkspacePageGraph(workspaceId),
     db
       .select({ teamId: teamMember.teamId })
       .from(teamMember)
@@ -123,7 +111,6 @@ export async function getEffectivePageAccessInWorkspace(
     return "none";
   }
 
-  const graph = new PageGraph({ pages });
   const ancestorIds = graph.getAncestorIds(pageId);
 
   if (ancestorIds.length === 0) {
@@ -174,19 +161,7 @@ export async function isPagePublishedInWorkspace(
   pageId: string,
   workspaceId: string,
 ) {
-  const pages = await db
-    .select({
-      id: page.id,
-      metadata: page.metadata,
-    })
-    .from(page)
-    .where(
-      and(
-        eq(page.workspaceId, workspaceId),
-        isNull(page.deletedAt),
-      ),
-    );
-  const graph = new PageGraph({ pages });
+  const graph = await loadWorkspacePageGraph(workspaceId);
   const ancestorIds = graph.getAncestorIds(pageId);
 
   if (ancestorIds.length === 0) {
@@ -276,12 +251,12 @@ export async function getAccessiblePageIds(
     }
   }
 
-  const [pages, teamRows] = await Promise.all([
+  const [graph, pages, teamRows] = await Promise.all([
+    loadWorkspacePageGraph(workspaceId),
     db
       .select({
         createdById: page.createdById,
         id: page.id,
-        metadata: page.metadata,
       })
       .from(page)
       .where(
@@ -314,7 +289,6 @@ export async function getAccessiblePageIds(
       : [];
   const accessible = new Set<string>();
   const sharedRoots = new Set(rules.map((rule) => rule.pageId));
-  const graph = new PageGraph({ pages });
 
   for (const item of pages) {
     const ancestors = graph.getAncestorIds(item.id);
@@ -342,17 +316,8 @@ export async function getEffectivePageAccessForUsers(
     return accessByUserId;
   }
 
-  const [pages, teamRows] = await Promise.all([
-    db
-      .select({
-        createdById: page.createdById,
-        id: page.id,
-        metadata: page.metadata,
-      })
-      .from(page)
-      .where(
-        and(eq(page.workspaceId, workspaceId), isNull(page.deletedAt)),
-      ),
+  const [graph, teamRows] = await Promise.all([
+    loadWorkspacePageGraph(workspaceId),
     db
       .select({
         teamId: teamMember.teamId,
@@ -361,7 +326,6 @@ export async function getEffectivePageAccessForUsers(
       .from(teamMember)
       .where(inArray(teamMember.userId, uniqueUserIds)),
   ]);
-  const graph = new PageGraph({ pages });
   const ancestorIds = graph.getAncestorIds(pageId);
 
   if (ancestorIds.length === 0) {

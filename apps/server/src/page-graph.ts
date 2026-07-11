@@ -22,6 +22,7 @@ type PageGraphDatabaseRow = {
 
 export class PageGraph {
   private readonly childIdsByParentId = new Map<string, Set<string>>();
+  private readonly accessParentIdsByChildId = new Map<string, Set<string>>();
   private readonly primaryChildIdsByParentId = new Map<string, Set<string>>();
   private readonly databasePageIdByDatabaseId: Map<string, string>;
   private readonly pageById: Map<string, PageGraphPage>;
@@ -48,32 +49,42 @@ export class PageGraph {
   getAncestorIds(pageId: string) {
     const ids: string[] = [];
     const visited = new Set<string>();
-    let current = this.pageById.get(pageId);
+    const pendingIds = [pageId];
 
-    while (current && !visited.has(current.id)) {
+    while (pendingIds.length > 0) {
+      const currentId = pendingIds.shift();
+
+      if (!currentId || visited.has(currentId)) {
+        continue;
+      }
+
+      const current = this.pageById.get(currentId);
+
+      if (!current) {
+        continue;
+      }
+
       ids.push(current.id);
       visited.add(current.id);
 
-      const parentItemId = readParentItemId(current.metadata);
-      current = parentItemId
-        ? this.pageById.get(parentItemId)
-        : undefined;
+      for (const parentId of this.accessParentIdsByChildId.get(current.id) ?? []) {
+        pendingIds.push(parentId);
+      }
     }
 
     return ids;
   }
 
   hasOwnedRootAccess(ancestorIds: string[], userId: string) {
-    for (let index = 0; index < ancestorIds.length; index += 1) {
-      const ancestor = this.pageById.get(ancestorIds[index]);
-      const parentIds = ancestorIds.slice(index + 1);
+    const ancestorIdSet = new Set(ancestorIds);
 
-      if (
-        ancestor?.createdById === userId &&
-        parentIds.every(
-          (parentId) => this.pageById.get(parentId)?.createdById === userId,
-        )
-      ) {
+    for (const ancestorId of ancestorIds) {
+      const ancestor = this.pageById.get(ancestorId);
+      const hasAncestorParent = [
+        ...(this.accessParentIdsByChildId.get(ancestorId) ?? []),
+      ].some((parentId) => ancestorIdSet.has(parentId));
+
+      if (ancestor?.createdById === userId && !hasAncestorParent) {
         return true;
       }
     }
@@ -225,10 +236,16 @@ export class PageGraph {
   }
 
   private indexLinkedItems() {
+    const databasePageIds = new Set(this.databasePageIdByDatabaseId.values());
+
     for (const record of this.options.pages) {
       for (const linkedItem of readLinkedItems(record.metadata)) {
         if (linkedItem.kind === "page") {
-          this.addChild(record.id, linkedItem.id);
+          this.addChild(
+            record.id,
+            linkedItem.id,
+            databasePageIds.has(linkedItem.id),
+          );
         }
       }
     }
@@ -240,14 +257,28 @@ export class PageGraph {
 
     primaryChildIds.add(childPageId);
     this.primaryChildIdsByParentId.set(parentItemId, primaryChildIds);
-    this.addChild(parentItemId, childPageId);
+    this.addChild(parentItemId, childPageId, true);
   }
 
-  private addChild(parentItemId: string, childPageId: string) {
+  private addChild(
+    parentItemId: string,
+    childPageId: string,
+    inheritsAccess = false,
+  ) {
     const childIds = this.childIdsByParentId.get(parentItemId) ?? new Set();
 
     childIds.add(childPageId);
     this.childIdsByParentId.set(parentItemId, childIds);
+
+    if (!inheritsAccess) {
+      return;
+    }
+
+    const parentIds =
+      this.accessParentIdsByChildId.get(childPageId) ?? new Set();
+
+    parentIds.add(parentItemId);
+    this.accessParentIdsByChildId.set(childPageId, parentIds);
   }
 }
 
