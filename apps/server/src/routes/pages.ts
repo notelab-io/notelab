@@ -50,6 +50,12 @@ import {
 } from "../page-item-placements";
 import { softDeletePageTree } from "../soft-delete-nav-items";
 import { loadWorkspacePageGraph } from "../page-graph";
+import {
+  createCollaborationTicket,
+  documentNameForPage,
+  replacePageContent,
+} from "../collaboration/service";
+import { getCollaborationWebSocketUrl } from "../runtime-adapter";
 export const pageRoutes = new Hono<AppBindings>();
 
 const NOTELAB_AI_MODES = new Set(["instruction", "skill"] as const);
@@ -1724,6 +1730,54 @@ pageRoutes.put("/:id/properties/:propertyId/value", async (c) => {
   );
 });
 
+pageRoutes.post("/:id/collaboration-ticket", async (c) => {
+  const user = requireUser(c);
+
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const existing = await getPage(c.req.param("id"));
+
+  if (!existing) {
+    return c.json({ error: "Page not found" }, 404);
+  }
+
+  if (!(await canAccessPageInWorkspace(existing.id, existing.workspaceId, user.id, "edit"))) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  const workspaceMismatch = await enforceActiveWorkspace(
+    c,
+    existing.workspaceId,
+    user.id,
+  );
+
+  if (workspaceMismatch) {
+    return workspaceMismatch;
+  }
+
+  const ticket = await createCollaborationTicket(
+    {
+      pageId: existing.id,
+      userId: user.id,
+      workspaceId: existing.workspaceId,
+    },
+    c.env,
+  );
+  const documentName = documentNameForPage(existing.id);
+  const websocketUrl = new URL(
+    getCollaborationWebSocketUrl(c.req.raw, c.env),
+  );
+  websocketUrl.searchParams.set("document", documentName);
+
+  return c.json({
+    documentName,
+    websocketUrl: websocketUrl.toString(),
+    ...ticket,
+  });
+});
+
 pageRoutes.patch("/:id/content", async (c) => {
   const user = requireUser(c);
 
@@ -1791,14 +1845,17 @@ pageRoutes.patch("/:id/content", async (c) => {
     }
   }
 
-  const [record] = await db
-    .update(page)
-    .set({ content, updatedAt: new Date() })
-    .where(eq(page.id, existing.id))
-    .returning({
-      id: page.id,
-      updatedAt: page.updatedAt,
-    });
+  await replacePageContent({
+    content,
+    env: c.env,
+    pageId: existing.id,
+    userId: user.id,
+  });
+
+  const record = {
+    id: existing.id,
+    updatedAt: new Date(),
+  };
 
   return c.json({ page: record });
 });
@@ -1871,10 +1928,6 @@ pageRoutes.patch("/:id", async (c) => {
     values.url = patch.url;
   }
 
-  if (patch.content !== undefined) {
-    values.content = patch.content;
-  }
-
   if (patch.metadata !== undefined) {
     if (
       patch.metadata &&
@@ -1910,6 +1963,16 @@ pageRoutes.patch("/:id", async (c) => {
     .set(values)
     .where(eq(page.id, existing.id))
     .returning();
+
+  if (patch.content !== undefined) {
+    await replacePageContent({
+      content: patch.content,
+      env: c.env,
+      pageId: existing.id,
+      userId: user.id,
+    });
+    record.content = patch.content;
+  }
 
   return c.json({ page: record });
 });

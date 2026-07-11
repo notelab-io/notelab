@@ -5,6 +5,7 @@ import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import path from "node:path";
 import { createApp } from "./app";
+import { attachNodeCollaborationRuntime } from "./collaboration/node-runtime";
 
 loadEnv({
   path: process.env.NOTELAB_ENV_FILE ?? path.resolve("apps/server/.env"),
@@ -36,7 +37,7 @@ const apiPathPrefixes = [
   "/health",
 ];
 
-createServer(async (incoming, outgoing) => {
+const server = createServer(async (incoming, outgoing) => {
   try {
     const request = toRequest(incoming);
     const url = new URL(request.url);
@@ -65,7 +66,20 @@ createServer(async (incoming, outgoing) => {
 
     outgoing.end(JSON.stringify({ error: "Internal server error" }));
   }
-}).listen(port, hostname, () => {
+});
+const collaboration = attachNodeCollaborationRuntime(
+  server,
+  process.env as Record<string, unknown>,
+);
+
+for (const signal of ["SIGINT", "SIGTERM"] as const) {
+  process.once(signal, async () => {
+    await collaboration.destroy();
+    server.close(() => process.exit(0));
+  });
+}
+
+server.listen(port, hostname, () => {
   console.log(`Notelab server listening on http://${hostname}:${port}`);
   console.log(`Serving Notelab web assets from ${webDistDir}`);
 });

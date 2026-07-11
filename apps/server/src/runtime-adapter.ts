@@ -2,11 +2,42 @@ import { getRequiredStringEnv, getStringEnv, type RuntimeEnv } from "./config";
 import type { ImageStorage } from "./image-storage";
 
 export type ServerRuntimeAdapter = {
+  applyPageContentUpdate?(input: {
+    content: unknown;
+    env: RuntimeEnv;
+    pageId: string;
+    userId: string;
+  }): Promise<void>;
   createImageStorage?(env: RuntimeEnv): ImageStorage | null;
+  getCollaborationWebSocketUrl?(request: Request, env: RuntimeEnv): string;
   getDatabaseUrl?(env: RuntimeEnv): string | null | undefined;
   getImageStorageMode?(env: RuntimeEnv): "s3" | "binding" | null | undefined;
   selfHosted?: false;
 };
+
+export function getCollaborationWebSocketUrl(
+  request: Request,
+  env: RuntimeEnv,
+) {
+  const explicitUrl = getStringEnv(env, "COLLABORATION_WEBSOCKET_URL");
+
+  if (explicitUrl) {
+    return explicitUrl;
+  }
+
+  const configured = runtimeAdapter.getCollaborationWebSocketUrl?.(request, env);
+
+  if (configured) {
+    return configured;
+  }
+
+  const url = new URL(request.url);
+  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+  url.pathname = "/collaboration";
+  url.search = "";
+  url.hash = "";
+  return url.toString();
+}
 
 let runtimeAdapter: ServerRuntimeAdapter = {};
 

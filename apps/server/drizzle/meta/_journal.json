@@ -176,6 +176,13 @@
       "when": 1783680000000,
       "tag": "0024_route_query_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1783771200000,
+      "tag": "0025_page_collaboration",
+      "breakpoints": true
     }
   ]
 }

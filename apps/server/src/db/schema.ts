@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  customType,
   index,
   integer,
   jsonb,
@@ -9,6 +10,12 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType() {
+    return "bytea";
+  },
+});
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -374,6 +381,23 @@ export const page = pgTable(
     index("page_type_idx").on(table.type),
     index("page_deleted_at_idx").on(table.deletedAt),
   ],
+);
+
+export const pageCollaborationDocument = pgTable(
+  "page_collaboration_document",
+  {
+    pageId: text("page_id")
+      .primaryKey()
+      .references(() => page.id, { onDelete: "cascade" }),
+    state: bytea("state").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [index("page_collaboration_document_updated_idx").on(table.updatedAt)],
 );
 
 export const pageAccess = pgTable(

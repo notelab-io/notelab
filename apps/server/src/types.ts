@@ -16,6 +16,8 @@ export type AppBindings = {
     BETTER_AUTH_SECRET: string;
     BETTER_AUTH_URL: string;
     CLIENT_URL: string;
+    COLLABORATION_SECRET?: string;
+    COLLABORATION_WEBSOCKET_URL?: string;
     DATABASE_URL?: string;
     EMAIL_FROM?: string;
     OPENAI_API_KEY?: string;

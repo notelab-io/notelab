@@ -30,10 +30,24 @@ export {
   type StoredImageMetadata,
 } from "./image-storage";
 export {
+  getCollaborationWebSocketUrl,
   getConfiguredImageStorageMode,
   getDatabaseUrl,
   getRuntimeAdapter,
   setRuntimeAdapter,
   type ServerRuntimeAdapter,
 } from "./runtime-adapter";
+export {
+  createCollaborationHocuspocus,
+  createCollaborationTicket,
+  documentNameForPage,
+  encodePageContentAsYjs,
+  materializePageContentFromYjs,
+  pageIdFromDocumentName,
+  replacePageContent,
+  replacePageContentInHocuspocus,
+  verifyCollaborationTicket,
+  type CollaborationContext,
+  type CollaborationTicketClaims,
+} from "./collaboration/service";
 export type { AppBindings } from "./types";
