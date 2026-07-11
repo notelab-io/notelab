@@ -4,6 +4,26 @@ All notable Notelab product releases are documented here.
 
 Notelab uses one product version across the web, server, desktop, and mobile apps. Versions stay on `0.x.y` until the self-hosted install, upgrade, auth, data storage, and core note workflows are stable enough for `1.0.0`.
 
+## 0.0.4
+
+### Added
+
+- Added page collaboration runtime support and connected editor collaboration.
+- Added gradient avatar fallbacks in the web client.
+
+### Changed
+
+- Bound the hosted web worker to the server service for same-origin API routing.
+- Reorganized server runtime and database editor modules.
+- Refined database timeline and block drag editor styling.
+
+### Fixed
+
+- Modeled inherited page access in graph permissions.
+- Preferred live same-origin API routing in the web client.
+- Scoped pooling to the serverful runtime.
+- Fixed selection behavior for leading atom blocks.
+
 ## 0.0.3
 
 ### Changed
