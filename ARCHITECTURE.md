@@ -17,6 +17,11 @@ Notelab is an npm-workspaces monorepo for a notes, pages, databases, comments, A
 
 The web and mobile clients call the server API through shared feature hooks. The server validates sessions or API keys, reads and writes Postgres through Drizzle, and returns JSON payloads to clients. Client cache behavior should live in `packages/features` when it is shared across clients.
 
+Editable web page bodies additionally connect to Hocuspocus over WebSockets.
+Yjs binary state is authoritative for those bodies; the server materializes the
+same document into `page.content` for API reads, search, AI context, and public
+pages. Presence and cursor awareness are ephemeral and are not stored.
+
 Database property type IDs live in `packages/features` as the shared contract. The web editor extends that contract with UI metadata such as labels, icons, filter kinds, cell kinds, and default configs. The server imports the same contract for mutation validation and keeps trust-boundary checks in `apps/server`.
 
 Uploaded images use the server image API. In the Docker self-hosted stack, image storage uses MinIO through the same S3-compatible path used for hosted object storage.
@@ -39,6 +44,10 @@ Self-hosting uses:
 - `minio`: image/object storage
 - `caddy`: public HTTP/HTTPS entrypoint
 - `notelab`: combined web/API container
+
+The serverful runtime hosts Hocuspocus on the same HTTP server. Hosted adapters
+can run the shared Hocuspocus core inside page-scoped Cloudflare Durable Objects
+while keeping the Yjs binary in Postgres.
 
 ## Deployment Model
 

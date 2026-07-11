@@ -13,6 +13,7 @@ RUN npx esbuild apps/server/src/serverful.ts apps/server/src/scripts/migrate.ts 
   --platform=node \
   --target=node22 \
   --format=cjs \
+  --define:import.meta.url='"file:///app/dist/server/serverful.js"' \
   --outdir=dist/server
 
 FROM node:22-bookworm-slim AS runtime
