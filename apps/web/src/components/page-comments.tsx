@@ -79,15 +79,17 @@ import type {
 } from "@notelab/features/pages"
 
 type CommentAvatarAuthor =
-  | Pick<CommentAuthor, "email" | "image" | "name">
-  | { email?: string | null; image?: string | null; name?: string | null }
+  | Pick<CommentAuthor, "email" | "id" | "image" | "name">
+  | { email?: string | null; id?: string | null; image?: string | null; name?: string | null }
   | null
 
 export function CommentAvatar({
   author,
+  authorId,
   small = false,
 }: {
   author: CommentAvatarAuthor
+  authorId?: string | null
   small?: boolean
 }) {
   const label = getCommentAuthorName(author)
@@ -95,7 +97,7 @@ export function CommentAvatar({
   return (
     <Avatar aria-hidden size={small ? "sm" : "default"}>
       {author?.image ? <AvatarImage alt={label} src={author.image} /> : null}
-      <AvatarFallback className="font-medium">
+      <AvatarFallback gradientSeed={getCommentAvatarSeed(author, authorId, label)}>
         {getCommentInitials(label)}
       </AvatarFallback>
     </Avatar>
@@ -151,7 +153,11 @@ export function CommentItem({
   return (
     <article className={`group/comment relative flex min-h-16 gap-2 pb-3 ${className || ""}`}>
       <ThreadAvatar>
-        <CommentAvatar author={comment.author ?? null} small />
+        <CommentAvatar
+          author={comment.author ?? null}
+          authorId={comment.authorId}
+          small
+        />
       </ThreadAvatar>
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-1.5 pr-28 text-sm leading-5">
@@ -518,6 +524,14 @@ export function formatCommentButtonLabel(commentCount: number) {
 
 export function getCommentAuthorName(author: CommentAvatarAuthor) {
   return author?.name?.trim() || author?.email?.trim() || "Unknown"
+}
+
+function getCommentAvatarSeed(
+  author: CommentAvatarAuthor,
+  authorId: string | null | undefined,
+  label: string,
+) {
+  return author?.id?.trim() || authorId?.trim() || label
 }
 
 export function getCommentInitials(label: string) {
