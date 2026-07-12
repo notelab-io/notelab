@@ -30,12 +30,14 @@ export class PageGraph {
   private readonly childIdsByParentId = new Map<string, Set<string>>();
   private readonly accessParentIdsByChildId = new Map<string, Set<string>>();
   private readonly primaryChildIdsByParentId = new Map<string, Set<string>>();
-  private readonly databasePageIdByDatabaseId: Map<string, string>;
+  private readonly databaseIdsByPageId = new Map<string, string[]>();
+  private readonly databasePageIdByDatabaseId = new Map<string, string>();
+  private readonly databaseRowPageIdsByDatabaseId = new Map<string, string[]>();
   private readonly pageById: Map<string, PageGraphPage>;
   private readonly primaryParentIdByPageId = new Map<string, string>();
 
   constructor(
-    private readonly options: {
+    options: {
       databaseRecords?: PageGraphDatabase[];
       databaseRows?: PageGraphDatabaseRow[];
       pages: PageGraphPage[];
@@ -43,14 +45,10 @@ export class PageGraph {
     },
   ) {
     this.pageById = new Map(options.pages.map((item) => [item.id, item]));
-    this.databasePageIdByDatabaseId = new Map(
-      (options.databaseRecords ?? []).map((record) => [
-        record.id,
-        record.pageId,
-      ]),
-    );
+    this.indexDatabases(options.databaseRecords ?? []);
+    this.indexDatabaseRows(options.databaseRows ?? []);
 
-    this.indexNavigationPlacements();
+    this.indexNavigationPlacements(options.placements ?? []);
     this.indexDatabaseRowChildren();
   }
 
@@ -58,9 +56,10 @@ export class PageGraph {
     const ids: string[] = [];
     const visited = new Set<string>();
     const pendingIds = [pageId];
+    let pendingIndex = 0;
 
-    while (pendingIds.length > 0) {
-      const currentId = pendingIds.shift();
+    while (pendingIndex < pendingIds.length) {
+      const currentId = pendingIds[pendingIndex++];
 
       if (!currentId || visited.has(currentId)) {
         continue;
@@ -121,9 +120,8 @@ export class PageGraph {
     rootDatabaseId: string,
     accessibleIds?: Set<string>,
   ) {
-    const rootPageIds = (this.options.databaseRows ?? [])
-      .filter((row) => row.databaseId === rootDatabaseId)
-      .map((row) => row.pageId);
+    const rootPageIds =
+      this.databaseRowPageIdsByDatabaseId.get(rootDatabaseId) ?? [];
 
     return this.collectNestedPageIds(
       rootPageIds,
@@ -136,9 +134,8 @@ export class PageGraph {
     rootDatabaseId: string,
     accessibleIds?: Set<string>,
   ) {
-    const rootPageIds = (this.options.databaseRows ?? [])
-      .filter((row) => row.databaseId === rootDatabaseId)
-      .map((row) => row.pageId);
+    const rootPageIds =
+      this.databaseRowPageIdsByDatabaseId.get(rootDatabaseId) ?? [];
 
     return this.collectNestedPageIds(
       rootPageIds,
@@ -151,15 +148,22 @@ export class PageGraph {
     pageIds: Iterable<string>,
     accessibleIds?: Set<string>,
   ) {
-    const pageIdSet = new Set(pageIds);
+    const databaseIds: string[] = [];
+    const seenPageIds = new Set<string>();
 
-    return (this.options.databaseRecords ?? [])
-      .filter(
-        (record) =>
-          pageIdSet.has(record.pageId) &&
-          (!accessibleIds || accessibleIds.has(record.pageId)),
-      )
-      .map((record) => record.id);
+    for (const pageId of pageIds) {
+      if (
+        seenPageIds.has(pageId) ||
+        (accessibleIds && !accessibleIds.has(pageId))
+      ) {
+        continue;
+      }
+
+      seenPageIds.add(pageId);
+      databaseIds.push(...(this.databaseIdsByPageId.get(pageId) ?? []));
+    }
+
+    return databaseIds;
   }
 
   getPagePath(
@@ -192,9 +196,10 @@ export class PageGraph {
   ) {
     const nestedIds = new Set<string>();
     const pendingIds = [...rootPageIds];
+    let pendingIndex = 0;
 
-    while (pendingIds.length > 0) {
-      const pageId = pendingIds.shift();
+    while (pendingIndex < pendingIds.length) {
+      const pageId = pendingIds[pendingIndex++];
 
       if (
         !pageId ||
@@ -214,10 +219,35 @@ export class PageGraph {
     return [...nestedIds];
   }
 
-  private indexNavigationPlacements() {
+  private indexDatabases(records: PageGraphDatabase[]) {
+    for (const record of records) {
+      this.databasePageIdByDatabaseId.set(record.id, record.pageId);
+      const databaseIds = this.databaseIdsByPageId.get(record.pageId);
+
+      if (databaseIds) {
+        databaseIds.push(record.id);
+      } else {
+        this.databaseIdsByPageId.set(record.pageId, [record.id]);
+      }
+    }
+  }
+
+  private indexDatabaseRows(rows: PageGraphDatabaseRow[]) {
+    for (const row of rows) {
+      const pageIds = this.databaseRowPageIdsByDatabaseId.get(row.databaseId);
+
+      if (pageIds) {
+        pageIds.push(row.pageId);
+      } else {
+        this.databaseRowPageIdsByDatabaseId.set(row.databaseId, [row.pageId]);
+      }
+    }
+  }
+
+  private indexNavigationPlacements(placements: PageGraphPlacement[]) {
     const databasePageIds = new Set(this.databasePageIdByDatabaseId.values());
 
-    for (const placement of this.options.placements ?? []) {
+    for (const placement of placements) {
       if (placement.parentKind !== "page") continue;
 
       if (placement.placementKind === "linked") {
@@ -242,14 +272,17 @@ export class PageGraph {
   }
 
   private indexDatabaseRowChildren() {
-    for (const row of this.options.databaseRows ?? []) {
-      const parentItemId = this.databasePageIdByDatabaseId.get(row.databaseId);
+    for (const [databaseId, rowPageIds] of this
+      .databaseRowPageIdsByDatabaseId) {
+      const parentItemId = this.databasePageIdByDatabaseId.get(databaseId);
 
       if (!parentItemId) {
         continue;
       }
 
-      this.addPrimaryChild(parentItemId, row.pageId);
+      for (const rowPageId of rowPageIds) {
+        this.addPrimaryChild(parentItemId, rowPageId);
+      }
     }
   }
 

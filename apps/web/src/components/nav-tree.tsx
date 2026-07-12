@@ -80,6 +80,23 @@ export function NavTree({
     () => getDefaultDatabaseViewIds(items),
     [items],
   )
+  const openNavNodeIds = useMemo(
+    () =>
+      getOpenNavNodeIds({
+        activeDatabaseId,
+        activeDatabaseViewId: activeDatabaseViewId ?? null,
+        activePageId,
+        defaultDatabaseViewIds,
+        items,
+      }),
+    [
+      activeDatabaseId,
+      activeDatabaseViewId,
+      activePageId,
+      defaultDatabaseViewIds,
+      items,
+    ],
+  )
 
   return items.map((item) => (
     <NavTreeItem
@@ -91,6 +108,7 @@ export function NavTree({
       isRoot
       item={item}
       key={item.navNodeId ?? item.id}
+      openNavNodeIds={openNavNodeIds}
       renderItemMenu={renderItemMenu}
     />
   ))
@@ -104,6 +122,7 @@ function NavTreeItem({
   getLinkProps,
   isRoot = false,
   item,
+  openNavNodeIds,
   renderItemMenu,
 }: {
   activeDatabaseId: string | null
@@ -113,6 +132,7 @@ function NavTreeItem({
   getLinkProps?: NavTreeLinkPropsGetter
   isRoot?: boolean
   item: PageNavItem
+  openNavNodeIds: Set<string>
   renderItemMenu: NavTreeItemMenuRender
 }) {
   const isDatabaseRouteItem = Boolean(
@@ -126,15 +146,7 @@ function NavTreeItem({
     item,
   })
   const hasPages = item.pages.length > 0
-  const isOpen =
-    isActive ||
-    hasActiveDescendant(
-      item,
-      activeDatabaseId,
-      activeDatabaseViewId,
-      activePageId,
-      defaultDatabaseViewIds,
-    )
+  const isOpen = openNavNodeIds.has(getNavNodeId(item))
   const displayName = item.name.trim() || "Untitled"
   const sidebarDatabaseViewId = getSidebarDatabaseViewSearchId({
     databaseId: item.databaseId,
@@ -231,6 +243,7 @@ function NavTreeItem({
                   getLinkProps={getLinkProps}
                   item={page}
                   key={page.navNodeId ?? page.id}
+                  openNavNodeIds={openNavNodeIds}
                   renderItemMenu={renderItemMenu}
                 />
               ))}
@@ -240,6 +253,52 @@ function NavTreeItem({
       </Container>
     </Collapsible>
   )
+}
+
+function getOpenNavNodeIds({
+  activeDatabaseId,
+  activeDatabaseViewId,
+  activePageId,
+  defaultDatabaseViewIds,
+  items,
+}: {
+  activeDatabaseId: string | null
+  activeDatabaseViewId: string | null
+  activePageId: string | null
+  defaultDatabaseViewIds: Map<string, string>
+  items: PageNavItem[]
+}) {
+  const openIds = new Set<string>()
+
+  const visit = (item: PageNavItem): boolean => {
+    let containsActiveItem = getIsActiveNavItem({
+      activeDatabaseId,
+      activeDatabaseViewId,
+      activePageId,
+      defaultDatabaseViewIds,
+      item,
+    })
+
+    for (const child of item.pages) {
+      containsActiveItem = visit(child) || containsActiveItem
+    }
+
+    if (containsActiveItem) {
+      openIds.add(getNavNodeId(item))
+    }
+
+    return containsActiveItem
+  }
+
+  for (const item of items) {
+    visit(item)
+  }
+
+  return openIds
+}
+
+function getNavNodeId(item: PageNavItem) {
+  return item.navNodeId ?? item.id
 }
 
 function LeadingItemIcon({
@@ -289,32 +348,6 @@ function TrailingIndicators({
         />
       ) : null}
     </span>
-  )
-}
-
-export function hasActiveDescendant(
-  item: PageNavItem,
-  activeDatabaseId: string | null,
-  activeDatabaseViewId: string | null,
-  activePageId: string | null,
-  defaultDatabaseViewIds: Map<string, string>,
-): boolean {
-  return item.pages.some(
-    (page) =>
-      getIsActiveNavItem({
-        activeDatabaseId,
-        activeDatabaseViewId,
-        activePageId,
-        defaultDatabaseViewIds,
-        item: page,
-      }) ||
-      hasActiveDescendant(
-        page,
-        activeDatabaseId,
-        activeDatabaseViewId,
-        activePageId,
-        defaultDatabaseViewIds,
-      ),
   )
 }
 

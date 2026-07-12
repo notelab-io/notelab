@@ -2,7 +2,11 @@
 
 import * as React from "react"
 
-import { Sidebar } from "@/components/ui/sidebar"
+import {
+  Sidebar,
+  SidebarHeader,
+  SidebarTrigger,
+} from "@/components/ui/sidebar"
 
 export function AppSidebarShell({
   children,
@@ -12,5 +16,16 @@ export function AppSidebarShell({
     <Sidebar collapsible="offcanvas" className="overflow-hidden" {...props}>
       {children}
     </Sidebar>
+  )
+}
+
+export function AppSidebarHeader({ children }: { children: React.ReactNode }) {
+  return (
+    <SidebarHeader>
+      <div className="flex items-center gap-1">
+        <div className="min-w-0 flex-1">{children}</div>
+        <SidebarTrigger className="shrink-0" />
+      </div>
+    </SidebarHeader>
   )
 }

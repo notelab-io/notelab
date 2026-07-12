@@ -114,3 +114,32 @@ test("hasOwnedRootAccess supports multiple embedded database parents", () => {
   assert.equal(graph.hasOwnedRootAccess(ancestorIds, "second-owner"), true);
   assert.equal(graph.hasOwnedRootAccess(ancestorIds, "database-owner"), false);
 });
+
+test("database indexes preserve rows and de-duplicate requested page ids", () => {
+  const graph = new PageGraph({
+    databaseRecords: [
+      { id: "first-database", pageId: "shared-page" },
+      { id: "second-database", pageId: "shared-page" },
+    ],
+    databaseRows: [
+      { databaseId: "first-database", pageId: "first-row" },
+      { databaseId: "second-database", pageId: "second-row" },
+    ],
+    pages: [
+      { id: "shared-page" },
+      { id: "first-row" },
+      { id: "second-row" },
+    ],
+  });
+
+  assert.deepEqual(
+    graph.getDatabaseIdsForPageIds(["shared-page", "shared-page"]),
+    ["first-database", "second-database"],
+  );
+  assert.deepEqual(graph.getNestedDatabasePageIds("first-database"), [
+    "first-row",
+  ]);
+  assert.deepEqual(graph.getNestedDatabasePageIds("second-database"), [
+    "second-row",
+  ]);
+});

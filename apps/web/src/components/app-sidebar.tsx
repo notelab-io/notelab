@@ -5,11 +5,15 @@ import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { toast } from "sonner";
 
 import { AiChatHistoryList } from "@/components/ai-elements/ai-chat-history-list";
-import { AppSidebarShell } from "@/components/app-sidebar-shell";
+import {
+  AppSidebarHeader,
+  AppSidebarShell,
+} from "@/components/app-sidebar-shell";
 import { useAppSearch } from "@/components/app-search";
 import { NavFavorites } from "@/components/nav-favorites";
 import { NavSecondary } from "@/components/nav-secondary";
-import { NavPages, type PageNavItem } from "@/components/nav-pages";
+import { NavPages } from "@/components/nav-pages";
+import { buildSidebarNavigation } from "@/components/sidebar-navigation-model";
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 import { ThemeDropdown } from "@/components/theme-dropdown";
 import {
@@ -19,11 +23,9 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
-  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { useSession } from "@notelab/features/auth";
 import { useWorkspaces } from "@notelab/features/workspaces";
@@ -32,18 +34,13 @@ import {
   useCreateDatabase,
   useSetDatabaseFavorite,
 } from "@notelab/features/databases";
-import type {
-  Page,
-  PageDatabase,
-  PageItemPlacement,
-} from "@notelab/features/pages";
-import { getDatabaseIconNode, getPageIconNode } from "@/lib/page-icon";
 import {
   useCreatePage,
   usePageNavigation,
   useSetPageFavorite,
 } from "@notelab/features/pages";
 import { useAppStore } from "@/stores/app-store";
+import { getDatabaseIconNode, getPageIconNode } from "@/lib/page-icon";
 import { useAiChatThreadActions } from "@/hooks/use-ai-chat-thread-actions";
 import { useAiChatThreadState } from "@/hooks/use-ai-chat-thread-state";
 import {
@@ -60,6 +57,18 @@ import {
   Table2,
   Trash2Icon,
 } from "lucide-react";
+
+const sidebarNavigationIcons = {
+  getDatabaseIcon: (database: Parameters<typeof getDatabaseIconNode>[0]) =>
+    getDatabaseIconNode(database) ?? <DatabaseIcon className="size-4" />,
+  getDatabaseViewIcon: (view: { type?: string | null }) =>
+    view.type === "kanban" ? (
+      <Kanban className="size-4" />
+    ) : (
+      <Table2 className="size-4" />
+    ),
+  getPageIcon: getPageIconNode,
+};
 
 const data = {
   navMain: [
@@ -107,7 +116,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const activeWorkspaceId = useAppStore((state) => state.activeWorkspaceId);
   const { data: session } = useSession();
   const { data: rawWorkspaces = [] } = useWorkspaces();
-  const workspaces = rawWorkspaces.filter(Boolean);
+  const workspaces = React.useMemo(
+    () => rawWorkspaces.filter(Boolean),
+    [rawWorkspaces],
+  );
   const sessionWorkspaceId = session?.session?.activeWorkspaceId ?? null;
   const storedWorkspace =
     workspaces.find((workspace) => workspace.id === activeWorkspaceId) ?? null;
@@ -116,47 +128,48 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const workspaceId =
     storedWorkspace?.id ?? sessionWorkspace?.id ?? workspaces[0]?.id ?? null;
   const { data: navigation } = usePageNavigation(workspaceId);
-  const createPage = useCreatePage();
-  const createDatabase = useCreateDatabase();
-  const setFavorite = useSetPageFavorite();
-  const addDatabaseRow = useAddDatabaseRow();
-  const setDatabaseFavorite = useSetDatabaseFavorite();
-  const activePageRecords = (navigation?.pages ?? []).filter(
-    (page) => !page.deletedAt,
+  const { isPending: isCreatingPage, mutateAsync: createPage } = useCreatePage();
+  const { isPending: isCreatingDatabase, mutateAsync: createDatabase } =
+    useCreateDatabase();
+  const { isPending: isSettingPageFavorite, mutate: setPageFavorite } =
+    useSetPageFavorite();
+  const { isPending: isAddingDatabaseRow, mutate: addDatabaseRow } =
+    useAddDatabaseRow();
+  const {
+    isPending: isSettingDatabaseFavorite,
+    mutate: setDatabaseFavorite,
+  } = useSetDatabaseFavorite();
+  const { favorites, sections: pageSections } = React.useMemo(
+    () =>
+      buildSidebarNavigation(
+        navigation?.pages ?? [],
+        navigation?.databases ?? [],
+        navigation?.placements ?? [],
+        sidebarNavigationIcons,
+      ),
+    [navigation],
   );
-  const activeDatabaseRecords = (navigation?.databases ?? []).filter(
-    (database) => !database.deletedAt,
-  );
-  const pageSections = buildPageTreeSections(
-    activePageRecords,
-    activeDatabaseRecords,
-    navigation?.placements ?? [],
-  );
-  const favorites = buildFavoriteTreeItems([
-    ...pageSections.privatePages,
-    ...pageSections.teamspacePages,
-  ]);
   const isAiPage = pathname === "/ai";
 
-  const handleCreatePage = async () => {
-    if (!workspaceId || createPage.isPending) {
+  const handleCreatePage = React.useCallback(async () => {
+    if (!workspaceId || isCreatingPage) {
       return;
     }
 
-    const page = await createPage.mutateAsync({ workspaceId });
+    const page = await createPage({ workspaceId });
 
     await navigate({
       to: "/p/$pageId",
       params: { pageId: page.id },
     });
-  };
+  }, [createPage, isCreatingPage, navigate, workspaceId]);
 
-  const handleCreateDatabase = async () => {
-    if (!workspaceId || createDatabase.isPending) {
+  const handleCreateDatabase = React.useCallback(async () => {
+    if (!workspaceId || isCreatingDatabase) {
       return;
     }
 
-    const payload = await createDatabase.mutateAsync({
+    const payload = await createDatabase({
       workspaceId,
       standalone: true,
     });
@@ -166,92 +179,92 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       params: { databaseId: payload.database.id },
       search: { view: undefined },
     });
-  };
+  }, [createDatabase, isCreatingDatabase, navigate, workspaceId]);
 
-  const handleDropPageOnDatabase = ({
-    databaseId,
-    pageId,
-    targetPageId,
-    title,
-  }: {
-    databaseId: string;
-    pageId: string;
-    targetPageId: string | null;
-    title?: string;
-  }) => {
-    if (targetPageId && pageId === targetPageId) {
-      toast.error("You can't nest a page inside itself.");
-      return;
-    }
+  const handleDropPageOnDatabase = React.useCallback(
+    ({
+      databaseId,
+      pageId,
+      targetPageId,
+      title,
+    }: {
+      databaseId: string;
+      pageId: string;
+      targetPageId: string | null;
+      title?: string;
+    }) => {
+      if (targetPageId && pageId === targetPageId) {
+        toast.error("You can't nest a page inside itself.");
+        return;
+      }
 
-    if (addDatabaseRow.isPending) {
-      return;
-    }
+      if (isAddingDatabaseRow) {
+        return;
+      }
 
-    addDatabaseRow.mutate(
-      {
-        databaseId,
-        pageId,
-        title,
-      },
-      {
-        onError: (error) => {
-          toast.error(
-            error instanceof Error ? error.message : "Could not move page.",
-          );
+      addDatabaseRow(
+        { databaseId, pageId, title },
+        {
+          onError: (error) => {
+            toast.error(
+              error instanceof Error ? error.message : "Could not move page.",
+            );
+          },
         },
-      },
-    );
-  };
+      );
+    },
+    [addDatabaseRow, isAddingDatabaseRow],
+  );
 
-  const handleRemoveFavorite = (pageId: string) => {
-    if (setFavorite.isPending) {
-      return;
-    }
+  const handleRemoveFavorite = React.useCallback(
+    (pageId: string) => {
+      if (isSettingPageFavorite) {
+        return;
+      }
 
-    setFavorite.mutate(
-      { isFavorite: false, pageId },
-      {
-        onError: (error) => {
-          toast.error(
-            error instanceof Error
-              ? error.message
-              : "Could not update favorite.",
-          );
+      setPageFavorite(
+        { isFavorite: false, pageId },
+        {
+          onError: (error) => {
+            toast.error(
+              error instanceof Error
+                ? error.message
+                : "Could not update favorite.",
+            );
+          },
         },
-      },
-    );
-  };
+      );
+    },
+    [isSettingPageFavorite, setPageFavorite],
+  );
 
-  const handleRemoveDatabaseFavorite = (databaseId: string) => {
-    if (setDatabaseFavorite.isPending) {
-      return;
-    }
+  const handleRemoveDatabaseFavorite = React.useCallback(
+    (databaseId: string) => {
+      if (isSettingDatabaseFavorite) {
+        return;
+      }
 
-    setDatabaseFavorite.mutate(
-      { databaseId, isFavorite: false },
-      {
-        onError: (error) => {
-          toast.error(
-            error instanceof Error
-              ? error.message
-              : "Could not update favorite.",
-          );
+      setDatabaseFavorite(
+        { databaseId, isFavorite: false },
+        {
+          onError: (error) => {
+            toast.error(
+              error instanceof Error
+                ? error.message
+                : "Could not update favorite.",
+            );
+          },
         },
-      },
-    );
-  };
+      );
+    },
+    [isSettingDatabaseFavorite, setDatabaseFavorite],
+  );
 
   return (
     <AppSidebarShell {...props}>
-      <SidebarHeader>
-        <div className="flex items-center gap-1">
-          <div className="min-w-0 flex-1">
-            <WorkspaceSwitcher />
-          </div>
-          <SidebarTrigger className="shrink-0" />
-        </div>
-      </SidebarHeader>
+      <AppSidebarHeader>
+        <WorkspaceSwitcher />
+      </AppSidebarHeader>
       <SidebarContent>
         <NavMain
           items={data.navMain}
@@ -382,289 +395,4 @@ function AiSidebarHistory() {
 
 function isNavigationItemActive(url: string, pathname: string) {
   return url !== "#" && (pathname === url || pathname.startsWith(`${url}/`));
-}
-
-function buildPageTreeSections(
-  pages: Page[],
-  databases: PageDatabase[],
-  placements: PageItemPlacement[],
-) {
-  const orderedPages = [...pages].sort(
-    (first, second) => getPageCreatedTime(first) - getPageCreatedTime(second),
-  );
-  const baseNodesById = new Map(
-    orderedPages.map((page) => [
-      page.id,
-      {
-        id: page.id,
-        isTeamspace: Boolean(page.isTeamspace),
-        name: page.name,
-        emoji: getPageIconNode(page),
-        isFavorite: Boolean(page.isFavorite),
-        notelabai: page.metadata?.notelabai ?? null,
-        pageId: page.id,
-        pages: [] as PageNavItem[],
-      },
-    ]),
-  );
-  const placementsByPageParent = groupPlacements(
-    placements.filter((placement) => placement.parentKind === "page"),
-  );
-  const databaseNodesById = new Map<string, PageNavItem>();
-  const standaloneDatabaseNodes: PageNavItem[] = [];
-  const databasePlacementIds = new Set(
-    placements
-      .filter(
-        (placement) =>
-          placement.itemKind === "database" && placement.parentKind === "page",
-      )
-      .map((placement) => placement.itemId),
-  );
-  const databaseRowPageIds = new Set(
-    placements
-      .filter(
-        (placement) =>
-          placement.itemKind === "page" &&
-          placement.placementKind === "database_row",
-      )
-      .map((placement) => placement.itemId),
-  );
-
-  const pagesById = new Map(orderedPages.map((page) => [page.id, page]));
-
-  for (const database of databases) {
-    databaseNodesById.set(
-      database.id,
-      createDatabaseNode(
-        database,
-        database.pageId ? pagesById.get(database.pageId) : undefined,
-      ),
-    );
-  }
-
-  const buildDatabaseNode = (
-    databaseId: string,
-    navNodeId: string,
-    isLinked = false,
-  ): PageNavItem | null => {
-    const baseNode = databaseNodesById.get(databaseId);
-
-    if (!baseNode) {
-      return null;
-    }
-
-    return {
-      ...baseNode,
-      isLinked,
-      navNodeId,
-      pages: baseNode.pages,
-    };
-  };
-
-  const buildPageNode = (
-    pageId: string,
-    navNodeId: string,
-    visitedIds: Set<string>,
-    isLinked = false,
-  ): PageNavItem | null => {
-    const baseNode = baseNodesById.get(pageId);
-
-    if (!baseNode) {
-      return null;
-    }
-
-    if (visitedIds.has(pageId)) {
-      return { ...baseNode, isLinked: true, navNodeId, pages: [] };
-    }
-
-    const nextVisitedIds = new Set(visitedIds);
-    nextVisitedIds.add(pageId);
-    const childPlacements = placementsByPageParent.get(pageId) ?? [];
-
-    return {
-      ...baseNode,
-      isLinked,
-      navNodeId,
-      pages: childPlacements.flatMap((placement) => {
-        if (placement.itemKind === "page") {
-          if (placement.itemId === pageId) {
-            return [];
-          }
-
-          const child = buildPageNode(
-            placement.itemId,
-            placement.id,
-            nextVisitedIds,
-            placement.placementKind !== "primary" ||
-              databaseRowPageIds.has(placement.itemId),
-          );
-
-          return child ? [child] : [];
-        }
-
-        const child = buildDatabaseNode(
-          placement.itemId,
-          placement.id,
-          placement.placementKind !== "primary",
-        );
-
-        return child ? [child] : [];
-      }),
-    };
-  };
-
-  for (const database of databases) {
-    if (databasePlacementIds.has(database.id)) {
-      continue;
-    }
-
-    const databaseNode = buildDatabaseNode(
-      database.id,
-      `standalone-database:${database.id}`,
-    );
-
-    if (databaseNode) {
-      standaloneDatabaseNodes.push(databaseNode);
-    }
-  }
-
-  const placedPageIds = new Set(
-    placements
-      .filter((placement) => placement.itemKind === "page")
-      .map((placement) => placement.itemId),
-  );
-  const roots = orderedPages.flatMap((page) => {
-    if (placedPageIds.has(page.id)) {
-      return [];
-    }
-
-    const node = buildPageNode(page.id, page.id, new Set());
-
-    return node ? [node] : [];
-  });
-
-  roots.push(...standaloneDatabaseNodes);
-
-  return {
-    privatePages: roots.filter((page) => !page.isTeamspace),
-    teamspacePages: roots.filter((page) => page.isTeamspace),
-  };
-}
-
-function createDatabaseNode(database: PageDatabase, page?: Page): PageNavItem {
-  return {
-    databaseId: database.id,
-    id: `database:${database.id}`,
-    isDatabase: true,
-    isFavorite: Boolean(database.isFavorite),
-    isTeamspace: Boolean(page?.isTeamspace),
-    name: database.name,
-    emoji: getDatabaseIconNode(database) ?? <DatabaseIcon className="size-4" />,
-    pageId: database.pageId,
-    pages: [...(database.views ?? [])]
-      .sort((first, second) => first.position - second.position)
-      .map((view) => ({
-        databaseId: database.id,
-        databaseViewId: view.id,
-        id: `database-view:${view.id}`,
-        isDatabaseView: true,
-        isTeamspace: Boolean(page?.isTeamspace),
-        name: view.name,
-        emoji: getDatabaseViewIcon(view),
-        pageId: database.pageId,
-        navNodeId: `database-view:${database.id}:${view.id}`,
-        pages: [],
-      })),
-  };
-}
-
-function groupPlacements(placements: PageItemPlacement[]) {
-  const grouped = new Map<string, typeof placements>();
-
-  for (const placement of placements) {
-    grouped.set(placement.parentId, [
-      ...(grouped.get(placement.parentId) ?? []),
-      placement,
-    ]);
-  }
-
-  for (const [parentId, parentPlacements] of grouped) {
-    grouped.set(
-      parentId,
-      [...parentPlacements].sort((first, second) => {
-        if (first.position !== second.position) {
-          return first.position - second.position;
-        }
-
-        return first.id.localeCompare(second.id);
-      }),
-    );
-  }
-
-  return grouped;
-}
-
-function buildFavoriteTreeItems(items: PageNavItem[]) {
-  const favoriteItems = items.flatMap((item) =>
-    cloneFavoriteTreeItems(item, false),
-  );
-  const nestedFavoriteIds = new Set<string>();
-
-  for (const item of favoriteItems) {
-    collectFavoriteDescendantIds(item, nestedFavoriteIds);
-  }
-
-  return favoriteItems.filter((item) => !nestedFavoriteIds.has(item.id));
-}
-
-function cloneFavoriteTreeItems(
-  item: PageNavItem,
-  hasFavoriteAncestor: boolean,
-): PageNavItem[] {
-  if (item.isDatabaseView) {
-    return [];
-  }
-
-  if (hasFavoriteAncestor || item.isFavorite) {
-    return [
-      {
-        ...item,
-        isFavorite: true,
-        pages: item.pages.flatMap((page) => cloneFavoriteTreeItems(page, true)),
-      },
-    ];
-  }
-
-  const favoritePages = getFavoriteDescendantPages(item);
-
-  if (item.isDatabase && favoritePages.length > 0) {
-    return [{ ...item, pages: favoritePages }];
-  }
-
-  return favoritePages;
-}
-
-function getFavoriteDescendantPages(item: PageNavItem): PageNavItem[] {
-  return item.pages.flatMap((page) => cloneFavoriteTreeItems(page, false));
-}
-
-function collectFavoriteDescendantIds(item: PageNavItem, ids: Set<string>) {
-  for (const page of item.pages) {
-    ids.add(page.id);
-    collectFavoriteDescendantIds(page, ids);
-  }
-}
-
-function getPageCreatedTime(page: Page) {
-  const time = new Date(page.createdAt).getTime();
-
-  return Number.isFinite(time) ? time : 0;
-}
-
-function getDatabaseViewIcon(view: { type?: string | null }) {
-  return view.type === "kanban" ? (
-    <Kanban className="size-4" />
-  ) : (
-    <Table2 className="size-4" />
-  );
 }

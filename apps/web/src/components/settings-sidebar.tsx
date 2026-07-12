@@ -10,7 +10,10 @@ import {
   UsersIcon,
 } from "lucide-react"
 
-import { AppSidebarShell } from "@/components/app-sidebar-shell"
+import {
+  AppSidebarHeader,
+  AppSidebarShell,
+} from "@/components/app-sidebar-shell"
 import { ThemeDropdown } from "@/components/theme-dropdown"
 import {
   Sidebar,
@@ -19,11 +22,9 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
-  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarTrigger,
 } from "@/components/ui/sidebar"
 
 const settingsItems = [
@@ -68,23 +69,18 @@ export function SettingsSidebar({
 
   return (
     <AppSidebarShell {...props}>
-      <SidebarHeader>
-        <div className="flex items-center gap-1">
-          <div className="min-w-0 flex-1">
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Home">
-                  <Link to="/dashboard">
-                    <ArrowLeftIcon />
-                    <span>Home</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </div>
-          <SidebarTrigger className="shrink-0" />
-        </div>
-      </SidebarHeader>
+      <AppSidebarHeader>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild tooltip="Home">
+              <Link to="/dashboard">
+                <ArrowLeftIcon />
+                <span>Home</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </AppSidebarHeader>
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Settings</SidebarGroupLabel>
