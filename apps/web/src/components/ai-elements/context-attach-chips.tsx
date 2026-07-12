@@ -1,4 +1,5 @@
-import { DatabaseIcon, XIcon } from "lucide-react"
+import { XIcon } from "lucide-react"
+import { Database } from "reicon-react"
 
 import { PageIconDisplay, PageIcon } from "@/lib/page-icon"
 import type { ContextAttachment } from "@notelab/page-context"
@@ -9,7 +10,7 @@ function AttachmentIcon({ attachment }: { attachment: ContextAttachment }) {
   }
 
   if (attachment.type === "database") {
-    return <DatabaseIcon className="size-3.5 shrink-0" />
+    return <Database className="size-3.5 shrink-0" weight="Filled" />
   }
 
   return (

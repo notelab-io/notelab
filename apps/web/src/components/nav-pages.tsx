@@ -4,14 +4,13 @@ import { useDeleteDatabase } from "@notelab/features/databases"
 import { useDeletePage } from "@notelab/features/pages"
 import {
   ArrowUpRightIcon,
-  DatabaseIcon,
-  FileIcon,
   LinkIcon,
   MoreHorizontalIcon,
   PlusIcon,
   Trash2Icon,
   UploadIcon,
 } from "lucide-react"
+import { Database, File } from "reicon-react"
 import { toast } from "sonner"
 
 import {
@@ -232,7 +231,7 @@ function PageSection({
                 onCreatePage?.()
               }}
             >
-              <FileIcon className="text-muted-foreground" />
+              <File className="text-muted-foreground" weight="Filled" />
               <span>Page</span>
             </DropDrawerItem>
             <DropDrawerItem
@@ -240,7 +239,7 @@ function PageSection({
                 onCreateDatabase?.()
               }}
             >
-              <DatabaseIcon className="text-muted-foreground" />
+              <Database className="text-muted-foreground" weight="Filled" />
               <span>Database</span>
             </DropDrawerItem>
             {onImportNotion ? (

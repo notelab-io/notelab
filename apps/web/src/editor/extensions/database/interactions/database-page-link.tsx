@@ -3,7 +3,8 @@ import {
   useRef,
   useState,
 } from "react"
-import { DatabaseIcon, ExternalLink, FileText, X } from "lucide-react"
+import { ExternalLink, X } from "lucide-react"
+import { Database, FileText } from "reicon-react"
 import { toast } from "sonner"
 
 import { useOptionalPageSidePane } from "@/contexts/page-side-pane"
@@ -58,9 +59,9 @@ export function DatabasePageLink({
     emoji ? (
       <PageIconDisplay size="sm" value={emoji} />
     ) : pageSummary?.iconKind === "database" ? (
-      <DatabaseIcon />
+      <Database weight="Filled" />
     ) : (
-      <FileText />
+      <FileText weight="Filled" />
     )
   const actionLabel = isOpen ? "Close" : "Open"
   const canEditTitle = editable && Boolean(pageSummary)

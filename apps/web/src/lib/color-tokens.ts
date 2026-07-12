@@ -160,6 +160,10 @@ export function getIconSolidClassName(colorValue?: string | null) {
   return getColorToken(colorValue === "default" ? null : colorValue).solidClass
 }
 
+export function getIconTextClassName(colorValue?: string | null) {
+  return getColorToken(colorValue === "default" ? null : colorValue).textClass
+}
+
 export function isPaletteColorActive(
   stored: string | null | undefined,
   tokenValue: string | null,

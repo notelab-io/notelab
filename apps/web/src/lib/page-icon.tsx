@@ -1,12 +1,13 @@
-import { FileIcon, FileTextIcon } from "lucide-react"
+import { Database, File, FileText } from "reicon-react"
 
 import { getPageEmoji, type Page } from "@notelab/features/pages"
 import { getDatabaseEmoji } from "@notelab/features/databases"
-import { getIconSolidClassName } from "@/lib/color-tokens"
+import { getIconTextClassName } from "@/lib/color-tokens"
 import { cn } from "@/lib/utils"
 import {
   getStoredIconColor,
   isSvgIcon,
+  normalizeStoredIconPresentation,
   sanitizeStoredSvg,
 } from "@/lib/page-icon-utils"
 
@@ -56,10 +57,10 @@ const iconSizeClasses = {
 } as const
 
 const svgIconSizeClasses = {
-  sm: "size-4 rounded-sm [&_svg]:size-2.5",
-  md: "size-5 rounded-md [&_svg]:size-3",
-  lg: "size-7 rounded-md [&_svg]:size-4",
-  xl: "size-8 rounded-md [&_svg]:size-5",
+  sm: "size-4 [&_svg]:size-4",
+  md: "size-5 [&_svg]:size-5",
+  lg: "size-7 [&_svg]:size-7",
+  xl: "size-9 [&_svg]:size-9",
 } as const
 
 export function PageIconDisplay({
@@ -76,7 +77,7 @@ export function PageIconDisplay({
   }
 
   if (isSvgIcon(value)) {
-    const sanitized = sanitizeStoredSvg(value)
+    const sanitized = normalizeStoredIconPresentation(sanitizeStoredSvg(value))
 
     if (!sanitized) {
       return null
@@ -85,9 +86,9 @@ export function PageIconDisplay({
     return (
       <span
         className={cn(
-          "inline-flex shrink-0 items-center justify-center leading-none shadow-sm/5",
+          "inline-flex shrink-0 items-center justify-center leading-none",
           svgIconSizeClasses[size],
-          getIconSolidClassName(getStoredIconColor(sanitized)),
+          getIconTextClassName(getStoredIconColor(sanitized)),
           className,
         )}
         dangerouslySetInnerHTML={{ __html: sanitized }}
@@ -132,9 +133,9 @@ export function getPageIconNode(
   }
 
   return hasPageContent(page.content) ? (
-    <FileTextIcon className="size-4 text-muted-foreground" />
+    <FileText className="size-4 text-muted-foreground" weight="Filled" />
   ) : (
-    <FileIcon className="size-4 text-muted-foreground" />
+    <File className="size-4 text-muted-foreground" weight="Filled" />
   )
 }
 
@@ -145,7 +146,7 @@ export function getDatabaseIconNode(database: { config?: unknown }) {
     return <PageIconDisplay size="sm" value={icon} />
   }
 
-  return null
+  return <Database className="size-4 text-muted-foreground" weight="Filled" />
 }
 
 export function getPageIcon(

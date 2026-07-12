@@ -1,5 +1,6 @@
 import * as React from "react"
-import { icons, Search, type LucideIcon } from "lucide-react"
+import { Search } from "lucide-react"
+import type { IconComponent } from "reicon-react"
 
 import { IconColorGrid } from "@/components/ui/icon-color-grid"
 import {
@@ -10,17 +11,22 @@ import {
 import { cn } from "@/lib/utils"
 import { buildStoredSvgFromRenderedSvg } from "@/lib/page-icon-utils"
 
-type LucideCatalogEntry = {
-  Icon: LucideIcon
+type ReiconCatalogEntry = {
+  Icon: React.LazyExoticComponent<IconComponent>
   label: string
   name: string
   searchText: string
 }
 
-const lucideCatalog = Object.entries(icons)
-  .filter(([name]) => !name.startsWith("Lucide") && !name.endsWith("Icon"))
-  .map(([name, Icon]) => {
-    const label = formatLucideLabel(name)
+const iconModules = import.meta.glob<{ default: IconComponent }>(
+  "../../../../../node_modules/reicon-react/icons/*.js",
+)
+
+const reiconCatalog = Object.entries(iconModules)
+  .map(([path, loadIcon]) => {
+    const name = path.slice(path.lastIndexOf("/") + 1, -3)
+    const label = formatReiconLabel(name)
+    const Icon = React.lazy(loadIcon)
 
     return {
       Icon,
@@ -31,28 +37,37 @@ const lucideCatalog = Object.entries(icons)
   })
   .sort((first, second) => first.label.localeCompare(second.label))
 
-type LucideIconPickerProps = {
+type ReiconIconPickerProps = {
   className?: string
   onIconSelect: (svg: string) => void
 }
 
-export function LucideIconPicker({
+const ICON_BATCH_SIZE = 72
+
+export function ReiconIconPicker({
   className,
   onIconSelect,
-}: LucideIconPickerProps) {
+}: ReiconIconPickerProps) {
   const [query, setQuery] = React.useState("")
+  const [visibleCount, setVisibleCount] = React.useState(ICON_BATCH_SIZE)
 
   const filteredIcons = React.useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
 
     if (!normalizedQuery) {
-      return lucideCatalog
+      return reiconCatalog
     }
 
-    return lucideCatalog.filter((icon) =>
+    return reiconCatalog.filter((icon) =>
       icon.searchText.includes(normalizedQuery),
     )
   }, [query])
+
+  React.useEffect(() => {
+    setVisibleCount(ICON_BATCH_SIZE)
+  }, [query])
+
+  const visibleIcons = filteredIcons.slice(0, visibleCount)
 
   return (
     <div
@@ -72,15 +87,29 @@ export function LucideIconPicker({
           value={query}
         />
       </div>
-      <div className="relative flex-1 overflow-y-auto pb-2 outline-none">
+      <div
+        className="relative flex-1 overflow-y-auto pb-2 outline-none"
+        onScroll={(event) => {
+          const element = event.currentTarget
+
+          if (
+            element.scrollHeight - element.scrollTop - element.clientHeight < 96 &&
+            visibleCount < filteredIcons.length
+          ) {
+            setVisibleCount((count) =>
+              Math.min(count + ICON_BATCH_SIZE, filteredIcons.length),
+            )
+          }
+        }}
+      >
         {filteredIcons.length === 0 ? (
           <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
             No icons found.
           </div>
         ) : (
           <div className="grid grid-cols-9 px-2 pt-2">
-            {filteredIcons.map((icon) => (
-              <LucideIconOption
+            {visibleIcons.map((icon) => (
+              <ReiconIconOption
                 icon={icon}
                 key={icon.name}
                 onIconSelect={onIconSelect}
@@ -90,17 +119,17 @@ export function LucideIconPicker({
         )}
       </div>
       <div className="flex h-10 items-center border-t px-3 text-xs text-muted-foreground">
-        Select a Lucide icon
+        Select a Reicon icon
       </div>
     </div>
   )
 }
 
-function LucideIconOption({
+function ReiconIconOption({
   icon,
   onIconSelect,
 }: {
-  icon: LucideCatalogEntry
+  icon: ReiconCatalogEntry
   onIconSelect: (svg: string) => void
 }) {
   const { Icon } = icon
@@ -110,17 +139,13 @@ function LucideIconOption({
       <DropdownMenuTrigger asChild>
         <button
           aria-label={icon.label}
-          className="flex aspect-square size-8 items-center justify-center rounded-md transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:outline-none data-[state=open]:bg-muted"
+          className="flex aspect-square size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:outline-none data-[state=open]:bg-muted"
           title={icon.label}
           type="button"
         >
-          <span
-            className={cn(
-              "flex size-6 items-center justify-center rounded-md bg-muted text-muted-foreground shadow-sm/5",
-            )}
-          >
-            <Icon aria-hidden className="size-3.5" />
-          </span>
+          <React.Suspense fallback={<span className="size-5" />}>
+            <Icon aria-hidden className="size-5" weight="Filled" />
+          </React.Suspense>
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
@@ -145,16 +170,21 @@ function LucideIconOption({
               onIconSelect(storedSvg)
             }
           }}
-          preview={<Icon aria-hidden className="size-6" />}
+          preview={
+            <React.Suspense fallback={<span className="size-5" />}>
+              <Icon aria-hidden weight="Filled" />
+            </React.Suspense>
+          }
         />
       </DropdownMenuContent>
     </DropdownMenu>
   )
 }
 
-function formatLucideLabel(name: string) {
+function formatReiconLabel(name: string) {
   return name
     .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
     .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2")
+    .replace(/(\D)(\d+)/g, "$1 $2")
     .trim()
 }

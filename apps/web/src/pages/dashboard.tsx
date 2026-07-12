@@ -17,6 +17,7 @@ import {
 import { DatabaseTableView } from "@/packages/editor/extensions/database/views/table/database-table-view";
 import { DatabaseViewProvider } from "@/packages/editor/extensions/database/views/database-view-context";
 import { DatabaseViewToolbar } from "@/packages/editor/extensions/database/views/database-view-toolbar";
+import { DatabaseViewSkeleton } from "@/packages/editor/extensions/database/views/database-view-skeleton";
 import { getDatabaseViewModel } from "@/packages/editor/extensions/database/views/database-view-model";
 import {
   getMergedDatabaseConfig,
@@ -147,7 +148,6 @@ export default function DashboardPage({
     [navigation, mode],
   );
   const pageTitle = mode === "trash" ? "Trash" : "Home";
-  const emptyLabel = mode === "trash" ? "Loading trash..." : "Loading pages...";
   const payload = useMemo(
     () =>
       buildHomepagePayload({
@@ -434,10 +434,7 @@ export default function DashboardPage({
                   </div>
                   <div className="database-scroll-section">
                     {isLoading ? (
-                      <div className="database-empty-state">
-                        <Loader2 className="animate-spin" />
-                        <span>{emptyLabel}</span>
-                      </div>
+                      <DatabaseViewSkeleton viewType="table" />
                     ) : (
                       <DatabaseTableView />
                     )}

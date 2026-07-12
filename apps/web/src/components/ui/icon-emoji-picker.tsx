@@ -10,9 +10,9 @@ import { IconUploadPicker } from "@/components/ui/icon-upload-picker"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
 
-const LucideIconPicker = React.lazy(() =>
-  import("@/components/ui/lucide-icon-picker").then((module) => ({
-    default: module.LucideIconPicker,
+const ReiconIconPicker = React.lazy(() =>
+  import("@/components/ui/reicon-icon-picker").then((module) => ({
+    default: module.ReiconIconPicker,
   })),
 )
 
@@ -60,7 +60,7 @@ export function IconEmojiPicker({
                 </div>
               }
             >
-              <LucideIconPicker onIconSelect={onIconSelect} />
+              <ReiconIconPicker onIconSelect={onIconSelect} />
             </React.Suspense>
           ) : null}
         </TabsContent>

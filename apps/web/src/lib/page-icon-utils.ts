@@ -64,7 +64,23 @@ export function buildStoredSvgFromRenderedSvg({
 
   const colorValue = color || "default"
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-icon-color="${colorValue}">${content}</svg>`
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="1em" height="1em" fill="currentColor" data-icon-color="${colorValue}">${content}</svg>`
+}
+
+export function normalizeStoredIconPresentation(svg: string) {
+  if (!/<[^>]+\sfill=["']currentColor["']/i.test(svg)) {
+    return svg
+  }
+
+  return svg.replace(/<svg\b([^>]*)>/i, (_match, attributes: string) => {
+    const normalizedAttributes = attributes
+      .replace(/\sstroke=["'][^"']*["']/gi, "")
+      .replace(/\sstroke-width=["'][^"']*["']/gi, "")
+      .replace(/\sstroke-linecap=["'][^"']*["']/gi, "")
+      .replace(/\sstroke-linejoin=["'][^"']*["']/gi, "")
+
+    return `<svg${normalizedAttributes}>`
+  })
 }
 
 export function parseUploadedSvg(raw: string) {

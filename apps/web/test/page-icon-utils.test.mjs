@@ -44,6 +44,26 @@ export function register({ assert, loadModule, test }) {
     assert.equal(getStoredIconColor('<svg><path d="M0 0"/></svg>'), "default")
   })
 
+  test("filled rendered icons do not inherit outline strokes", async () => {
+    const { buildStoredSvgFromRenderedSvg, normalizeStoredIconPresentation } =
+      await loadModule("/src/lib/page-icon-utils.ts")
+    const rendered =
+      '<svg viewBox="0 0 24 24"><path d="M2 2" fill="currentColor"/></svg>'
+    const stored = buildStoredSvgFromRenderedSvg({ color: "purple", svg: rendered })
+
+    assert.doesNotMatch(stored, /stroke=/)
+    assert.match(stored, /fill="currentColor"/)
+
+    const legacyStored = stored.replace(
+      '<svg xmlns="http://www.w3.org/2000/svg"',
+      '<svg xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2"',
+    )
+    const normalized = normalizeStoredIconPresentation(legacyStored)
+
+    assert.doesNotMatch(normalized, /stroke=/)
+    assert.doesNotMatch(normalized, /stroke-width=/)
+  })
+
   test("parseUploadedSvg extracts viewBox and strips fills", async () => {
     const { parseUploadedSvg } = await loadModule("/src/lib/page-icon-utils.ts")
 

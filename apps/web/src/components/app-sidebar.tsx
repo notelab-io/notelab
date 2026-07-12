@@ -49,7 +49,6 @@ import { useAiChatThreadState } from "@/hooks/use-ai-chat-thread-state";
 import {
   BlocksIcon,
   CalendarIcon,
-  DatabaseIcon,
   HomeIcon,
   Kanban,
   MessageCircleQuestionIcon,
@@ -559,7 +558,7 @@ function createDatabaseNode(database: PageDatabase, page?: Page): PageNavItem {
     isFavorite: Boolean(database.isFavorite),
     isTeamspace: Boolean(page?.isTeamspace),
     name: database.name,
-    emoji: getDatabaseIconNode(database) ?? <DatabaseIcon className="size-4" />,
+    emoji: getDatabaseIconNode(database),
     pageId: database.pageId,
     pages: [...(database.views ?? [])]
       .sort((first, second) => first.position - second.position)

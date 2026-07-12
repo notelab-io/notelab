@@ -78,6 +78,7 @@
     "react-dom": "19.2.7",
     "react-resizable-panels": "^4.11.2",
     "recharts": "^3.8.0",
+    "reicon-react": "^1.1.2",
     "roughjs": "^4.6.6",
     "shadcn": "^4.8.0",
     "shiki": "^4.1.0",

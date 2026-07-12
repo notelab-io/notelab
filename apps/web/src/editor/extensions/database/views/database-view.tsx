@@ -1,7 +1,6 @@
-import { Loader2 } from "lucide-react"
-
 import { DatabaseSetupCard } from "../setup/database-setup-card"
 import { DatabaseViewProvider } from "./database-view-context"
+import { DatabaseViewSkeleton } from "./database-view-skeleton"
 import { DatabaseViewToolbar } from "./database-view-toolbar"
 import { DatabaseKanbanView } from "./kanban/database-kanban-view"
 import { DatabaseTableView } from "./table/database-table-view"
@@ -56,10 +55,7 @@ export function DatabaseView(props: DatabaseViewProps) {
               <span>Database reference missing.</span>
             </div>
           ) : isLoading ? (
-            <div className="database-empty-state">
-              <Loader2 className="animate-spin" />
-              <span>Loading database...</span>
-            </div>
+            <DatabaseViewSkeleton viewType={viewType} />
           ) : isError ? (
             <div className="database-empty-state">
               <span>
