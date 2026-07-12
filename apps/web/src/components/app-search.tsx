@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from "react"
 import { useNavigate } from "@tanstack/react-router"
-import { Database, File, FileText } from "reicon-react"
+import { DatabaseIcon, FileIcon, FileTextIcon } from "lucide-react"
 
 import {
   Command,
@@ -185,10 +185,10 @@ function ResultIcon({ result }: { result: AppSearchResult }) {
   }
 
   return result.type === "database" ? (
-    <Database className="size-4 text-muted-foreground" weight="Filled" />
+    <DatabaseIcon className="size-4 text-muted-foreground" />
   ) : result.path === result.title ? (
-    <File className="size-4 text-muted-foreground" weight="Filled" />
+    <FileIcon className="size-4 text-muted-foreground" />
   ) : (
-    <FileText className="size-4 text-muted-foreground" weight="Filled" />
+    <FileTextIcon className="size-4 text-muted-foreground" />
   )
 }

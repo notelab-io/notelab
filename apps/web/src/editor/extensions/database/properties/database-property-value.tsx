@@ -1,6 +1,5 @@
 import { useState, type FormEvent } from "react"
-import { Check } from "lucide-react"
-import { FileText } from "reicon-react"
+import { Check, FileText } from "lucide-react"
 
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -745,11 +744,7 @@ function RelationPageOptionIcon({
     metadata: page.metadata as PageMetadata | null | undefined,
   })
 
-  return emoji ? (
-    <PageIconDisplay size="sm" value={emoji} />
-  ) : (
-    <FileText weight="Filled" />
-  )
+  return emoji ? <PageIconDisplay size="sm" value={emoji} /> : <FileText />
 }
 
 function getRelationPageSummary(

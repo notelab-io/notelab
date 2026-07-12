@@ -9,7 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { Database, FileText } from "reicon-react";
+import { DatabaseIcon, FileTextIcon } from "lucide-react";
 
 import {
   PromptInputCommand,
@@ -392,11 +392,11 @@ function AttachMenuItemIcon({ item }: { item: AttachMenuItem }) {
       return <PageIconDisplay size="sm" value={item.result.emoji} />;
     }
 
-    return <Database className="size-4 shrink-0 text-muted-foreground" weight="Filled" />;
+    return <DatabaseIcon className="size-4 shrink-0 text-muted-foreground" />;
   }
 
   if (item.category === "skills") {
-    return <FileText className="size-4 shrink-0 text-muted-foreground" weight="Filled" />;
+    return <FileTextIcon className="size-4 shrink-0 text-muted-foreground" />;
   }
 
   const page = {

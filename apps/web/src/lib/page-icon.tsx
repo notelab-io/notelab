@@ -1,4 +1,4 @@
-import { Database, File, FileText } from "reicon-react"
+import { FileIcon, FileTextIcon } from "lucide-react"
 
 import { getPageEmoji, type Page } from "@notelab/features/pages"
 import { getDatabaseEmoji } from "@notelab/features/databases"
@@ -133,9 +133,9 @@ export function getPageIconNode(
   }
 
   return hasPageContent(page.content) ? (
-    <FileText className="size-4 text-muted-foreground" weight="Filled" />
+    <FileTextIcon className="size-4 text-muted-foreground" />
   ) : (
-    <File className="size-4 text-muted-foreground" weight="Filled" />
+    <FileIcon className="size-4 text-muted-foreground" />
   )
 }
 
@@ -146,7 +146,7 @@ export function getDatabaseIconNode(database: { config?: unknown }) {
     return <PageIconDisplay size="sm" value={icon} />
   }
 
-  return <Database className="size-4 text-muted-foreground" weight="Filled" />
+  return null
 }
 
 export function getPageIcon(
