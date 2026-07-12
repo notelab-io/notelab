@@ -1668,8 +1668,8 @@
   }
 
   .database-row-controls::after {
-    @apply absolute inset-y-0 left-0 content-[''];
-    right: -0.75rem;
+    @apply absolute content-[''];
+    inset: -0.5rem -2rem -0.5rem -1rem;
   }
 
   .database-row-controls[data-visible="true"],
@@ -1960,6 +1960,12 @@
   .drag-handle {
     @apply fixed z-10 hidden h-7 w-16 cursor-grab items-center justify-between bg-transparent pr-2 text-muted-foreground opacity-100 active:cursor-grabbing md:flex;
     transform: translate3d(0, 0, 0);
+  }
+
+  .drag-handle::before {
+    content: "";
+    inset: -0.5rem -0.75rem -0.5rem -1.25rem;
+    position: absolute;
   }
 
   .drag-handle-plus,
