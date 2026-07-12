@@ -1550,10 +1550,14 @@ export function DatabaseTableView() {
             className={getConditionalColorClassName(conditionalColors.rowColor)}
             data-database-row-id={row.id}
             key={row.id}
-            onMouseEnter={() => {
-              measureRows()
-              setHoveredRowId(row.id)
-            }}
+            onMouseEnter={
+              editable
+                ? () => {
+                    measureRows()
+                    setHoveredRowId(row.id)
+                  }
+                : undefined
+            }
           >
             {renderedColumnIds.map((columnId) => {
               const leftInsertKey = getInsertPropertyColumnKey(columnId, "left")

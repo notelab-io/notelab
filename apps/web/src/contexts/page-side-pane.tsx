@@ -388,26 +388,20 @@ export function usePageSidePaneState(
     let cancelled = false
     let openFrame = 0
     let settleFrame = 0
-    let contentTimer = 0
 
     openFrame = requestAnimationFrame(() => {
       settleFrame = requestAnimationFrame(() => {
         if (!cancelled) {
           setSidePaneAnimatedOpen(true)
+          setSidePaneContentReady(true)
         }
       })
     })
-    contentTimer = window.setTimeout(() => {
-      if (!cancelled) {
-        setSidePaneContentReady(true)
-      }
-    }, WORKSPACE_SIDE_PANE_TRANSITION_MS)
 
     return () => {
       cancelled = true
       cancelAnimationFrame(openFrame)
       cancelAnimationFrame(settleFrame)
-      window.clearTimeout(contentTimer)
     }
   }, [sidePaneDatabaseId, sidePanePageId])
 
