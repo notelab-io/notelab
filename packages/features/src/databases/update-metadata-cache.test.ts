@@ -42,3 +42,34 @@ test("updateDatabasePropertyInPayload optimistically updates property metadata",
   })
   assert.notEqual(property?.updatedAt, payload.properties[0]?.updatedAt)
 })
+
+test("updateDatabasePropertyInPayload clears date values for select-like types", () => {
+  const payload = createTestDatabasePayload()
+  payload.properties[0]!.property.type = "date"
+  payload.values[0]!.value = { start: "2026-07-14" }
+
+  const next = updateDatabasePropertyInPayload(payload, {
+    databaseId: "database-1",
+    databasePropertyId: "column-status",
+    type: "multi_select",
+  })
+
+  assert.equal(next?.values[0]?.value, null)
+})
+
+test("updateDatabasePropertyInPayload preserves date ranges as text", () => {
+  const payload = createTestDatabasePayload()
+  payload.properties[0]!.property.type = "date"
+  payload.values[0]!.value = {
+    end: "2026-07-16",
+    start: "2026-07-14",
+  }
+
+  const next = updateDatabasePropertyInPayload(payload, {
+    databaseId: "database-1",
+    databasePropertyId: "column-status",
+    type: "text",
+  })
+
+  assert.equal(next?.values[0]?.value, "2026-07-14 - 2026-07-16")
+})

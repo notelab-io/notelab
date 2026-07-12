@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  formatDatePropertyValueAsText,
   normalizePropertyConfig,
   ServiceMutationError,
   validateCellValue,
@@ -10,6 +11,22 @@ import {
   databasePropertyTypes,
   normalizeDatabasePropertyType,
 } from "./database-property-types";
+
+test("formatDatePropertyValueAsText preserves date ranges", () => {
+  assert.equal(
+    formatDatePropertyValueAsText({
+      end: "2026-07-12",
+      start: "2026-07-10",
+    }),
+    "2026-07-10 - 2026-07-12",
+  );
+  assert.equal(
+    formatDatePropertyValueAsText(["2026-07-10", "2026-07-12"]),
+    "2026-07-10 - 2026-07-12",
+  );
+  assert.equal(formatDatePropertyValueAsText("2026-07-10"), "2026-07-10");
+  assert.equal(formatDatePropertyValueAsText(null), null);
+});
 
 test("normalizeDatabasePropertyType accepts known types and defaults blanks to text", () => {
   for (const type of databasePropertyTypes) {
@@ -25,13 +42,23 @@ test("normalizeDatabasePropertyType accepts known types and defaults blanks to t
 test("normalizePropertyConfig seeds default status options with colors and groups", () => {
   const config = normalizePropertyConfig("status", null) as {
     defaultOptionId?: string;
-    options?: Array<{ color?: string; group?: string; id: string; name: string }>;
+    options?: Array<{
+      color?: string;
+      group?: string;
+      id: string;
+      name: string;
+    }>;
   };
 
   assert.equal(config.defaultOptionId, "not-started");
   assert.deepEqual(config.options, [
     { color: "gray", group: "To-do", id: "not-started", name: "Not started" },
-    { color: "blue", group: "In progress", id: "in-progress", name: "In progress" },
+    {
+      color: "blue",
+      group: "In progress",
+      id: "in-progress",
+      name: "In progress",
+    },
     { color: "green", group: "Complete", id: "done", name: "Done" },
   ]);
 });
@@ -44,12 +71,22 @@ test("normalizePropertyConfig maps status aliases and fills missing colors", () 
       { id: "complete", name: "Complete" },
     ],
   }) as {
-    options?: Array<{ color?: string; group?: string; id: string; name: string }>;
+    options?: Array<{
+      color?: string;
+      group?: string;
+      id: string;
+      name: string;
+    }>;
   };
 
   assert.deepEqual(config.options, [
     { color: "gray", group: "To-do", id: "not-started", name: "Not started" },
-    { color: "blue", group: "In progress", id: "in-progress", name: "In progress" },
+    {
+      color: "blue",
+      group: "In progress",
+      id: "in-progress",
+      name: "In progress",
+    },
     { color: "green", group: "Complete", id: "done", name: "Done" },
   ]);
 });

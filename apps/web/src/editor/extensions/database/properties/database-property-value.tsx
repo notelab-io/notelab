@@ -1,4 +1,4 @@
-import { useCallback, useState, type FormEvent } from "react"
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 import { Check, FileText } from "lucide-react"
 
 import { Checkbox } from "@/components/ui/checkbox"
@@ -149,6 +149,17 @@ export function DatabasePropertyValue({
   const draftValue = useDatabaseCellDraft(key)
   const setActiveCell = useSetActiveDatabaseCell()
   const updateDraft = useUpdateDatabaseCellDraft()
+  const previousPropertyTypeRef = useRef(pageProperty.type)
+
+  useEffect(() => {
+    if (previousPropertyTypeRef.current === pageProperty.type) {
+      return
+    }
+
+    previousPropertyTypeRef.current = pageProperty.type
+    updateDraft(key, () => undefined)
+  }, [key, pageProperty.type, updateDraft])
+
   const draftValues =
     draftValue === undefined ? {} : { [key]: draftValue }
   const value = draftValue ?? persistedValue

@@ -63,7 +63,10 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 
-import { getDatabasePropertyType } from "../core/database-property-types";
+import {
+  databasePropertyTypes,
+  getDatabasePropertyType,
+} from "../core/database-property-types";
 import {
   getDatabaseSorts,
   getMergedDatabaseConfig,
@@ -74,6 +77,7 @@ import {
   type DatabaseSortDirection,
 } from "../views/database-view-config";
 import { DatabasePropertyEditSubmenu } from "./database-property-edit-submenu";
+import { useClearDatabasePropertyDrafts } from "../views/database-cell-state";
 
 export { DatabaseNamePropertyMenu } from "./database-name-property-menu";
 export { DatabasePropertyEditSubmenu } from "./database-property-edit-submenu";
@@ -137,6 +141,7 @@ export function DatabasePropertyMenu({
   const updateProperty = useUpdateDatabaseProperty();
   const deleteProperty = useDeleteDatabaseProperty();
   const duplicateProperty = useDuplicateDatabaseProperty();
+  const clearPropertyDrafts = useClearDatabasePropertyDrafts();
   const propertyType = getDatabasePropertyType(type);
   const PropertyIcon = propertyType.icon;
   const currentSorts = getDatabaseSorts(databaseConfig);
@@ -212,6 +217,21 @@ export function DatabasePropertyMenu({
     }
 
     deleteDatabaseProperty();
+  };
+  const changePropertyType = (nextType: string) => {
+    if (nextType === type) {
+      return;
+    }
+
+    if (sourcePropertyId) {
+      clearPropertyDrafts(sourcePropertyId);
+    }
+
+    updateProperty.mutate({
+      databaseId,
+      databasePropertyId,
+      type: nextType,
+    });
   };
 
   return (
@@ -298,11 +318,29 @@ export function DatabasePropertyMenu({
                 <ChevronsUpDown />
                 <span>Change type</span>
               </DropDrawerSubTrigger>
-              <DropDrawerSubContent>
-                <DropDrawerItem disabled>
-                  <PropertyIcon />
-                  <span>{propertyType.label}</span>
-                </DropDrawerItem>
+              <DropDrawerSubContent className="w-64">
+                {databasePropertyTypes.map((group, groupIndex) => (
+                  <div key={groupIndex}>
+                    {groupIndex > 0 ? <DropDrawerSeparator /> : null}
+                    {group.map((nextPropertyType) => {
+                      const TypeIcon = nextPropertyType.icon;
+                      const isActive = nextPropertyType.type === type;
+
+                      return (
+                        <DropDrawerItem
+                          key={nextPropertyType.type}
+                          onSelect={() =>
+                            changePropertyType(nextPropertyType.type)
+                          }
+                        >
+                          <TypeIcon />
+                          <span>{nextPropertyType.label}</span>
+                          {isActive ? <Check className="ml-auto" /> : null}
+                        </DropDrawerItem>
+                      );
+                    })}
+                  </div>
+                ))}
               </DropDrawerSubContent>
             </DropDrawerSub>
           ) : null}

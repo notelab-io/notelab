@@ -28,6 +28,7 @@ import {
   type AddRowResponse,
 } from "./add-row-cache";
 import { applyCreatedDatabaseToPageNav } from "./create-database-cache";
+import { shouldClearValuesForPropertyTypeChange } from "./property-types";
 import {
   applyDatabaseFavoriteToNav,
   applyNavDelta,
@@ -264,6 +265,11 @@ export function updateDatabasePropertyInPayload(
   }
 
   const now = new Date().toISOString();
+  const previousProperty = payload.properties.find(
+    (databaseProperty) => databaseProperty.id === input.databasePropertyId,
+  );
+  const previousType = previousProperty?.property.type;
+  const pagePropertyId = previousProperty?.property.id;
   const properties = payload.properties.map((databaseProperty) =>
     databaseProperty.id === input.databasePropertyId
       ? {
@@ -281,8 +287,57 @@ export function updateDatabasePropertyInPayload(
         }
       : databaseProperty,
   );
+  const shouldUpdateValues = Boolean(
+    input.type &&
+      previousType &&
+      input.type !== previousType &&
+      (shouldClearValuesForPropertyTypeChange(previousType, input.type) ||
+        (previousType === "date" && input.type === "text")),
+  );
+  const values = shouldUpdateValues
+    ? payload.values.map((propertyValue) =>
+        propertyValue.propertyId === pagePropertyId
+          ? {
+              ...propertyValue,
+              updatedAt: now,
+              value: shouldClearValuesForPropertyTypeChange(
+                previousType!,
+                input.type!,
+              )
+                ? null
+                : formatDatePropertyValueAsText(propertyValue.value),
+            }
+          : propertyValue,
+      )
+    : payload.values;
 
-  return { ...payload, properties };
+  return { ...payload, properties, values };
+}
+
+function formatDatePropertyValueAsText(value: unknown) {
+  let start: unknown;
+  let end: unknown;
+
+  if (Array.isArray(value)) {
+    [start, end] = value;
+  } else if (value && typeof value === "object") {
+    const dateValue = value as {
+      date?: unknown;
+      end?: unknown;
+      start?: unknown;
+    };
+    start = dateValue.start ?? dateValue.date;
+    end = dateValue.end;
+  } else {
+    start = value;
+  }
+
+  const startText = typeof start === "string" ? start.trim() : "";
+  const endText = typeof end === "string" ? end.trim() : "";
+
+  return startText && endText
+    ? `${startText} - ${endText}`
+    : startText || null;
 }
 
 export function useDatabase(

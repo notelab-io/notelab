@@ -22,6 +22,7 @@ import {
   isReadOnlyPropertyType,
   isSelectLikePropertyType,
   normalizeDatabasePropertyType,
+  shouldClearValuesForPropertyTypeChange,
 } from "./database-property-types";
 import {
   fetchDatabasePropertyDelta,
@@ -247,6 +248,34 @@ export function normalizePropertyConfig(type: string, config: unknown) {
   }
 
   return config;
+}
+
+export function formatDatePropertyValueAsText(value: unknown) {
+  let start: unknown;
+  let end: unknown;
+
+  if (Array.isArray(value)) {
+    [start, end] = value;
+  } else if (value && typeof value === "object") {
+    const dateValue = value as {
+      date?: unknown;
+      end?: unknown;
+      start?: unknown;
+    };
+    start = dateValue.start ?? dateValue.date;
+    end = dateValue.end;
+  } else {
+    start = value;
+  }
+
+  const startText = typeof start === "string" ? start.trim() : "";
+  const endText = typeof end === "string" ? end.trim() : "";
+
+  if (startText && endText) {
+    return `${startText} - ${endText}`;
+  }
+
+  return startText || null;
 }
 
 const getPositionValuesSql = (ids: string[]) =>
@@ -605,6 +634,10 @@ export async function updateDatabasePropertyService(input: {
   const effectiveType = normalizeDatabasePropertyType(
     input.type ?? pagePropertyRecord.type,
   );
+  const previousType = normalizeDatabasePropertyType(
+    pagePropertyRecord.type,
+    "",
+  );
 
   if (!effectiveType) {
     throw new ServiceMutationError("Unsupported property type", 400);
@@ -637,10 +670,70 @@ export async function updateDatabasePropertyService(input: {
   await commitDatabaseMutation(
     {
       actorId: input.userId,
-      changed: ["properties"],
+      changed:
+        input.type !== undefined &&
+        previousType &&
+        effectiveType !== previousType &&
+        (shouldClearValuesForPropertyTypeChange(previousType, effectiveType) ||
+          (previousType === "date" && effectiveType === "text"))
+          ? ["properties", "values"]
+          : ["properties"],
       databaseId: existing.id,
     },
     async (tx) => {
+      const shouldClearValues = Boolean(
+        input.type !== undefined &&
+        previousType &&
+        effectiveType !== previousType &&
+        shouldClearValuesForPropertyTypeChange(previousType, effectiveType),
+      );
+      const shouldConvertDateToText =
+        previousType === "date" && effectiveType === "text";
+      const changedValues = shouldClearValues
+        ? await tx
+            .update(pagePropertyValue)
+            .set({ value: null, updatedAt: new Date() })
+            .where(eq(pagePropertyValue.propertyId, column.propertyId))
+            .returning({
+              createdAt: pagePropertyValue.createdAt,
+              id: pagePropertyValue.id,
+              pageId: pagePropertyValue.pageId,
+              propertyId: pagePropertyValue.propertyId,
+              updatedAt: pagePropertyValue.updatedAt,
+              value: pagePropertyValue.value,
+            })
+        : shouldConvertDateToText
+          ? await Promise.all(
+              (
+                await tx
+                  .select({
+                    id: pagePropertyValue.id,
+                    value: pagePropertyValue.value,
+                  })
+                  .from(pagePropertyValue)
+                  .where(eq(pagePropertyValue.propertyId, column.propertyId))
+              ).map(async (propertyValue) => {
+                const [updatedValue] = await tx
+                  .update(pagePropertyValue)
+                  .set({
+                    value: formatDatePropertyValueAsText(propertyValue.value),
+                    updatedAt: new Date(),
+                  })
+                  .where(eq(pagePropertyValue.id, propertyValue.id))
+                  .returning({
+                    createdAt: pagePropertyValue.createdAt,
+                    id: pagePropertyValue.id,
+                    pageId: pagePropertyValue.pageId,
+                    propertyId: pagePropertyValue.propertyId,
+                    updatedAt: pagePropertyValue.updatedAt,
+                    value: pagePropertyValue.value,
+                  });
+
+                return updatedValue;
+              }),
+            )
+          : [];
+
       await tx
         .update(databaseProperty)
         .set(columnValues)
@@ -665,7 +758,18 @@ export async function updateDatabasePropertyService(input: {
       const delta = await fetchDatabasePropertyDelta(existing.id, column.id);
 
       return {
-        delta: delta ?? { properties: [] },
+        delta: {
+          ...(delta ?? { properties: [] }),
+          ...(changedValues.length > 0
+            ? {
+                values: changedValues.map((value) => ({
+                  ...value,
+                  createdAt: value.createdAt.toISOString(),
+                  updatedAt: value.updatedAt.toISOString(),
+                })),
+              }
+            : {}),
+        },
       };
     },
   );

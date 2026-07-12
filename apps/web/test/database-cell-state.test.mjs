@@ -34,4 +34,22 @@ export function register({ assert, loadModule, test }) {
       { "page-2:title": "Second" }
     )
   })
+
+  test("database property draft cleanup clears every row for the property", async () => {
+    const { getDatabaseCellDraftsWithoutProperty } = await loadModule(
+      "/src/editor/extensions/database/views/database-cell-state.tsx"
+    )
+
+    assert.deepEqual(
+      getDatabaseCellDraftsWithoutProperty(
+        {
+          "page-1:property-date": "2026-07-07",
+          "page-2:property-date": "2026-07-08",
+          "page-2:property-name": "Second",
+        },
+        "property-date"
+      ),
+      { "page-2:property-name": "Second" }
+    )
+  })
 }

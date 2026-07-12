@@ -42,6 +42,7 @@ import {
   type SqlExecutor,
 } from "../../services/database-commit";
 import {
+  formatDatePropertyValueAsText,
   isDatabaseHostPageId,
   normalizePropertyConfig,
   ServiceMutationError,
@@ -51,6 +52,7 @@ import {
   isReadOnlyPropertyType,
   isSelectLikePropertyType,
   normalizeDatabasePropertyType,
+  shouldClearValuesForPropertyTypeChange,
 } from "../../services/database-property-types";
 import {
   fetchDatabasePropertyDelta,
@@ -1843,6 +1845,10 @@ databaseRoutes.patch("/:id/properties/:databasePropertyId", async (c) => {
     patch.type === undefined
       ? undefined
       : normalizeDatabasePropertyType(patch.type);
+  const previousType = normalizeDatabasePropertyType(
+    pagePropertyRecord.type,
+    "",
+  );
 
   if (patch.name !== undefined) {
     if (typeof patch.name !== "string") {
@@ -1896,11 +1902,77 @@ databaseRoutes.patch("/:id/properties/:databasePropertyId", async (c) => {
     c,
     {
       actorId: user.id,
-      changed: ["properties"],
+      changed:
+        normalizedPatchType &&
+        previousType &&
+        normalizedPatchType !== previousType &&
+        (shouldClearValuesForPropertyTypeChange(
+          previousType,
+          normalizedPatchType,
+        ) ||
+          (previousType === "date" && normalizedPatchType === "text"))
+          ? ["properties", "values"]
+          : ["properties"],
 
       databaseId: existing.id,
     },
     async (tx) => {
+      const shouldClearValues = Boolean(
+        normalizedPatchType &&
+        previousType &&
+        normalizedPatchType !== previousType &&
+        shouldClearValuesForPropertyTypeChange(
+          previousType,
+          normalizedPatchType,
+        ),
+      );
+      const shouldConvertDateToText =
+        previousType === "date" && normalizedPatchType === "text";
+      const changedValues = shouldClearValues
+        ? await tx
+            .update(pagePropertyValue)
+            .set({ value: null, updatedAt: new Date() })
+            .where(eq(pagePropertyValue.propertyId, column.propertyId))
+            .returning({
+              createdAt: pagePropertyValue.createdAt,
+              id: pagePropertyValue.id,
+              pageId: pagePropertyValue.pageId,
+              propertyId: pagePropertyValue.propertyId,
+              updatedAt: pagePropertyValue.updatedAt,
+              value: pagePropertyValue.value,
+            })
+        : shouldConvertDateToText
+          ? await Promise.all(
+              (
+                await tx
+                  .select({
+                    id: pagePropertyValue.id,
+                    value: pagePropertyValue.value,
+                  })
+                  .from(pagePropertyValue)
+                  .where(eq(pagePropertyValue.propertyId, column.propertyId))
+              ).map(async (propertyValue) => {
+                const [updatedValue] = await tx
+                  .update(pagePropertyValue)
+                  .set({
+                    value: formatDatePropertyValueAsText(propertyValue.value),
+                    updatedAt: new Date(),
+                  })
+                  .where(eq(pagePropertyValue.id, propertyValue.id))
+                  .returning({
+                    createdAt: pagePropertyValue.createdAt,
+                    id: pagePropertyValue.id,
+                    pageId: pagePropertyValue.pageId,
+                    propertyId: pagePropertyValue.propertyId,
+                    updatedAt: pagePropertyValue.updatedAt,
+                    value: pagePropertyValue.value,
+                  });
+
+                return updatedValue;
+              }),
+            )
+          : [];
+
       await tx
         .update(databaseProperty)
         .set(columnValues)
@@ -1925,17 +1997,28 @@ databaseRoutes.patch("/:id/properties/:databasePropertyId", async (c) => {
       const delta = await fetchDatabasePropertyDelta(existing.id, column.id);
 
       return {
-        delta: delta ?? {
-          properties: [
-            {
-              ...column,
-              ...columnValues,
-              property: {
-                id: column.propertyId,
-                ...propertyValues,
+        delta: {
+          ...(delta ?? {
+            properties: [
+              {
+                ...column,
+                ...columnValues,
+                property: {
+                  id: column.propertyId,
+                  ...propertyValues,
+                },
               },
-            },
-          ],
+            ],
+          }),
+          ...(changedValues.length > 0
+            ? {
+                values: changedValues.map((value) => ({
+                  ...value,
+                  createdAt: value.createdAt.toISOString(),
+                  updatedAt: value.updatedAt.toISOString(),
+                })),
+              }
+            : {}),
         },
       };
     },

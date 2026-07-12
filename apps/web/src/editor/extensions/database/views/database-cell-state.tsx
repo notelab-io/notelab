@@ -11,6 +11,7 @@ import type { DatabasePropertyValue } from "../core/utils"
 
 type DatabaseCellState = {
   activeKey: string | null
+  clearPropertyDrafts: (propertyId: string) => void
   drafts: Record<string, DatabasePropertyValue>
   setActiveKey: (key: string | null) => void
   updateDraft: (
@@ -19,6 +20,17 @@ type DatabaseCellState = {
       | DatabasePropertyValue
       | undefined
   ) => void
+}
+
+export function getDatabaseCellDraftsWithoutProperty(
+  drafts: Record<string, DatabasePropertyValue>,
+  propertyId: string
+) {
+  const propertyKeySuffix = `:${propertyId}`
+
+  return Object.fromEntries(
+    Object.entries(drafts).filter(([key]) => !key.endsWith(propertyKeySuffix))
+  )
 }
 
 export function getUpdatedDatabaseCellDrafts(
@@ -50,6 +62,16 @@ export function DatabaseCellStateProvider({ children }: { children: ReactNode })
   if (!storeRef.current) {
     storeRef.current = createStore<DatabaseCellState>((set) => ({
       activeKey: null,
+      clearPropertyDrafts: (propertyId) =>
+        set((state) => ({
+          activeKey: state.activeKey?.endsWith(`:${propertyId}`)
+            ? null
+            : state.activeKey,
+          drafts: getDatabaseCellDraftsWithoutProperty(
+            state.drafts,
+            propertyId
+          ),
+        })),
       drafts: {},
       setActiveKey: (activeKey) => set({ activeKey }),
       updateDraft: (key, updater) =>
@@ -96,4 +118,8 @@ export function useSetActiveDatabaseCell() {
 
 export function useUpdateDatabaseCellDraft() {
   return useDatabaseCellStore((state) => state.updateDraft)
+}
+
+export function useClearDatabasePropertyDrafts() {
+  return useDatabaseCellStore((state) => state.clearPropertyDrafts)
 }

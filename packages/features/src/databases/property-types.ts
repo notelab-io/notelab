@@ -52,3 +52,22 @@ export function isReadOnlyPropertyType(type: string) {
 export function isSelectLikePropertyType(type: string) {
   return type === "select" || type === "multi_select" || type === "status"
 }
+
+export function shouldClearValuesForPropertyTypeChange(
+  previousType: string,
+  nextType: string
+) {
+  if (previousType === "date" && isSelectLikePropertyType(nextType)) {
+    return true
+  }
+
+  if (nextType === "files") {
+    return previousType !== "files"
+  }
+
+  if (nextType === "person") {
+    return previousType !== "person"
+  }
+
+  return isReadOnlyPropertyType(nextType)
+}
