@@ -286,6 +286,10 @@ export function usePageSidePaneState(
   const writeSidePaneParams = useCallback(
     (pageId: string | null, databaseId?: string | null, replace = false) => {
       const params = new URLSearchParams(location.searchStr)
+      const databaseParam = getSidePaneDatabaseParam(
+        location.pathname,
+        databaseId,
+      )
 
       if (pageId) {
         params.set(SIDE_PANE_PAGE_PARAM, pageId)
@@ -293,8 +297,8 @@ export function usePageSidePaneState(
         params.delete(SIDE_PANE_PAGE_PARAM)
       }
 
-      if (databaseId) {
-        params.set(SIDE_PANE_DATABASE_PARAM, databaseId)
+      if (databaseParam) {
+        params.set(SIDE_PANE_DATABASE_PARAM, databaseParam)
       } else {
         params.delete(SIDE_PANE_DATABASE_PARAM)
       }
@@ -441,6 +445,22 @@ export function usePageSidePaneState(
 
 function getSearchParam(search: string, key: string) {
   return new URLSearchParams(search).get(key)?.trim() || null
+}
+
+export function getSidePaneDatabaseParam(
+  pathname: string,
+  databaseId?: string | null,
+) {
+  if (!databaseId) {
+    return null
+  }
+
+  const routeDatabaseId = pathname.match(/^\/d\/([^/]+)/)?.[1]
+  if (!routeDatabaseId) {
+    return databaseId
+  }
+
+  return decodeURIComponent(routeDatabaseId) === databaseId ? null : databaseId
 }
 
 export function PageSidePaneProvider({

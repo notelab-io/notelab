@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Link, useNavigate, useParams, useSearch } from "@tanstack/react-router"
+import { Link, useParams, useSearch } from "@tanstack/react-router"
 import { ArrowRight, Maximize2 } from "lucide-react"
 
 import { AppLayout } from "@/components/app-layout"
@@ -34,6 +34,7 @@ import {
   PublicPageBreadcrumb,
   PageEditorPane,
 } from "@/pages/page"
+import { useDatabaseViewNavigation } from "@/pages/use-database-view-navigation"
 
 export default function DatabasePage() {
   const { data: session } = useSession()
@@ -249,7 +250,13 @@ export function DatabaseMainPane({
   onOpenPage: (pageId: string) => void
   readOnly?: boolean
 }) {
-  const navigate = useNavigate()
+  const {
+    activeViewId: localActiveViewId,
+    selectView: selectLocalView,
+  } = useDatabaseViewNavigation({
+    databaseId,
+    requestedViewId: activeDatabaseViewId,
+  })
   const { data: payload } = useDatabase(databaseId, {
     includeDeleted: true,
   })
@@ -344,14 +351,7 @@ export function DatabaseMainPane({
       return
     }
 
-    const defaultViewId = payload?.views[0]?.id ?? null
-    const searchViewId = viewId && viewId !== defaultViewId ? viewId : null
-
-    void navigate({
-      params: { databaseId },
-      search: { view: searchViewId ?? undefined },
-      to: "/d/$databaseId",
-    })
+    selectLocalView(viewId)
   }
 
   const restoreTrashedDatabase = () => {
@@ -398,7 +398,7 @@ export function DatabaseMainPane({
       />
       <div className="tiptap-editor px-5 pb-10 sm:px-8 md:px-20 lg:px-24">
         <DatabaseView
-          activeViewId={embedded ? embeddedViewId : activeDatabaseViewId}
+          activeViewId={embedded ? embeddedViewId : localActiveViewId}
           databaseId={databaseId}
           editable={editable}
           fullPage

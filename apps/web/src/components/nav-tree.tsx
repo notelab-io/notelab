@@ -18,6 +18,7 @@ import {
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar"
 import { type NotelabAiMode } from "@notelab/features/pages"
+import { getSidebarDatabaseViewSearchId } from "@/components/database-view-navigation"
 
 export type PageNavItem = {
   databaseId?: string | null
@@ -135,6 +136,17 @@ function NavTreeItem({
       defaultDatabaseViewIds,
     )
   const displayName = item.name.trim() || "Untitled"
+  const sidebarDatabaseViewId = getSidebarDatabaseViewSearchId({
+    databaseId: item.databaseId,
+    databaseViewId: item.databaseViewId,
+    defaultDatabaseViewId: item.databaseId
+      ? defaultDatabaseViewIds.get(item.databaseId)
+      : undefined,
+    isDatabaseView: item.isDatabaseView,
+  })
+  const sidebarSelectedViewId = item.databaseId
+    ? sidebarDatabaseViewId ?? defaultDatabaseViewIds.get(item.databaseId) ?? null
+    : null
   const nested = !isRoot
   const linkProps = getLinkProps?.({ displayName, item })
   const Button = isRoot ? SidebarMenuButton : SidebarMenuSubButton
@@ -153,11 +165,18 @@ function NavTreeItem({
                 params={{ databaseId: item.databaseId } as never}
                 search={
                   {
-                    view:
-                      item.isDatabaseView && item.databaseViewId
-                        ? item.databaseViewId
-                        : undefined,
+                    view: sidebarDatabaseViewId,
                   } as never
+                }
+                state={
+                  ((previous: Record<string, unknown>) => ({
+                    ...previous,
+                    notelabDatabaseViewSelection: {
+                      databaseId: item.databaseId,
+                      token: crypto.randomUUID(),
+                      viewId: sidebarSelectedViewId,
+                    },
+                  })) as never
                 }
                 title={displayName}
                 to="/d/$databaseId"
