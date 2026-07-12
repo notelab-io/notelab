@@ -11,7 +11,6 @@ import {
   FileText,
   Filter,
   GripVertical,
-  Pin,
   PlayCircle,
   Plus,
   Settings2,
@@ -367,12 +366,6 @@ export function DatabasePropertyMenu({
               </DropDrawerItem>
             </DropDrawerSubContent>
           </DropDrawerSub>
-          {schemaActionsEnabled ? (
-            <DropDrawerItem disabled>
-              <Pin />
-              <span>Freeze</span>
-            </DropDrawerItem>
-          ) : null}
           <DropDrawerItem
             onSelect={() => updatePropertyConfig({ hidden: true })}
           >

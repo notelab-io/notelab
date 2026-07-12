@@ -7,7 +7,6 @@ import {
   FileText,
   Filter,
   GripVertical,
-  Pin,
   Sparkles,
   TextWrap,
 } from "lucide-react";
@@ -215,10 +214,6 @@ export function DatabaseNamePropertyMenu({
             </DropDrawerItem>
           </DropDrawerSubContent>
         </DropDrawerSub>
-        <DropDrawerItem disabled>
-          <Pin />
-          <span>Freeze</span>
-        </DropDrawerItem>
         <DropDrawerItem
           aria-pressed={wrapContent}
           onSelect={(event) => {
