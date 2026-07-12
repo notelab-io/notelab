@@ -1669,7 +1669,7 @@
 
   .database-row-controls::after {
     @apply absolute content-[''];
-    inset: -0.5rem -2rem -0.5rem -1rem;
+    inset: -0.5rem -2rem -0.5rem -3rem;
   }
 
   .database-row-controls[data-visible="true"],
@@ -1964,7 +1964,7 @@
 
   .drag-handle::before {
     content: "";
-    inset: -0.5rem -0.75rem -0.5rem -1.25rem;
+    inset: -0.5rem -0.75rem -0.5rem -3rem;
     position: absolute;
   }
 
