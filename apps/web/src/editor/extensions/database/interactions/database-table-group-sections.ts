@@ -69,12 +69,13 @@ export function getDatabaseTableGroupSections<T extends {
   }
 
   const propertyType = groupProperty.property.type
+  const propertyOptions = getConfiguredPropertyOptions(
+    groupProperty.property.config
+  )
   const configuredOptions =
-    propertyType === "status"
-      ? getConfiguredPropertyOptions(groupProperty.property.config).length > 0
-        ? getConfiguredPropertyOptions(groupProperty.property.config)
-        : defaultStatusOptions
-      : getConfiguredPropertyOptions(groupProperty.property.config)
+    propertyType === "status" && propertyOptions.length === 0
+      ? defaultStatusOptions
+      : propertyOptions
   const configuredOptionsByName = new Map(
     configuredOptions.map((option) => [option.name, option])
   )

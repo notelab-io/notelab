@@ -1,6 +1,6 @@
 import {
   useEffect,
-  useRef,
+  type RefObject,
   type ReactNode,
 } from "react"
 
@@ -80,6 +80,38 @@ function handleDatabaseCellWheel(
   event.stopPropagation()
 }
 
+export function useDatabaseTableCellWheel(
+  tableScrollRef: RefObject<HTMLDivElement | null>
+) {
+  useEffect(() => {
+    const tableScrollElement = tableScrollRef.current
+
+    if (!tableScrollElement) {
+      return
+    }
+
+    const handleWheel = (event: WheelEvent) => {
+      const target = event.target
+
+      if (!(target instanceof Element)) {
+        return
+      }
+
+      const scrollElement = target.closest<HTMLDivElement>(
+        "[data-database-cell-scroll]"
+      )
+
+      if (scrollElement && tableScrollElement.contains(scrollElement)) {
+        handleDatabaseCellWheel(event, scrollElement)
+      }
+    }
+
+    tableScrollElement.addEventListener("wheel", handleWheel, { passive: false })
+
+    return () => tableScrollElement.removeEventListener("wheel", handleWheel)
+  }, [tableScrollRef])
+}
+
 export function DatabaseTableCellContent({
   children,
   wrapContent = false,
@@ -87,32 +119,11 @@ export function DatabaseTableCellContent({
   children: ReactNode
   wrapContent?: boolean
 }) {
-  const scrollRef = useRef<HTMLDivElement | null>(null)
-
-  useEffect(() => {
-    const scrollElement = scrollRef.current
-
-    if (!scrollElement) {
-      return
-    }
-
-    const handleWheel = (event: WheelEvent) => {
-      handleDatabaseCellWheel(event, scrollElement)
-    }
-
-    scrollElement.addEventListener("wheel", handleWheel, { passive: false })
-
-    return () => {
-      scrollElement.removeEventListener("wheel", handleWheel)
-    }
-  }, [])
-
   return (
     <div
       className="database-cell-scroll"
       data-database-cell-scroll
       data-wrap-content={wrapContent ? "true" : "false"}
-      ref={scrollRef}
     >
       {children}
     </div>

@@ -44,7 +44,10 @@ import {
 } from "@/lib/color-tokens"
 
 import { AddDatabasePropertyMenu } from "../../properties/add-database-property-menu"
-import { DatabaseTableCellContent } from "./database-table-cell-content"
+import {
+  DatabaseTableCellContent,
+  useDatabaseTableCellWheel,
+} from "./database-table-cell-content"
 import {
   databaseAddPropertyColumnDefaultWidth,
   databaseColumnMinWidth,
@@ -76,6 +79,7 @@ import {
   getDatabaseTableGroupSections,
   type DatabaseTableGroupSection,
 } from "../../interactions/database-table-group-sections"
+import { getDatabaseRowDropTargetIndex as getDropTargetIndex } from "../../interactions/database-table-layout"
 import {
   getAnchoredReorderedRowIds,
   getFilteredReorderedRowIds,
@@ -525,15 +529,13 @@ export function DatabaseTableView() {
     centers: {},
     dropTops: [],
   })
+  useDatabaseTableCellWheel(tableScrollRef)
   const activeEditingPropertyKey =
     getPropertyKeyFromHeaderEditingKey(editingPropertyKey)
   const isTableSorted = activeDatabaseSorts.length > 0
   const isTableFiltered = activeDatabaseFilters.length > 0
   const isTableGrouped = Boolean(groupProperty)
-  const renderedProperties = useMemo(
-    () => visibleProperties,
-    [visibleProperties]
-  )
+  const renderedProperties = visibleProperties
   const propertiesById = useMemo(
     () =>
       new Map(renderedProperties.map((property) => [property.id, property])),
@@ -669,11 +671,46 @@ export function DatabaseTableView() {
     propertyValuesByKey,
     sortedRows,
   ])
-  const visibleRows = isTableGrouped
-    ? groupedSections.flatMap((section) =>
-        collapsedGroups[section.id] === true ? [] : section.rows
-      )
-    : sortedRows
+  const visibleRows = useMemo(
+    () =>
+      isTableGrouped
+        ? groupedSections.flatMap((section) =>
+            collapsedGroups[section.id] === true ? [] : section.rows
+          )
+        : sortedRows,
+    [collapsedGroups, groupedSections, isTableGrouped, sortedRows]
+  )
+  const rowsById = useMemo(
+    () => new Map(rows.map((row) => [row.id, row])),
+    [rows]
+  )
+  const visibleRowIndexById = useMemo(
+    () => new Map(visibleRows.map((row, index) => [row.id, index])),
+    [visibleRows]
+  )
+  const groupSectionByRowId = useMemo(() => {
+    const sectionsByRowId = new Map<string, GroupSection>()
+
+    groupedSections.forEach((section) => {
+      section.rows.forEach((row) => sectionsByRowId.set(row.id, section))
+    })
+
+    return sectionsByRowId
+  }, [groupedSections])
+  const groupRangeById = useMemo(() => {
+    const ranges = new Map<string, { end: number; start: number }>()
+
+    groupedSections.forEach((section) => {
+      const firstRow = section.rows[0]
+      const start = firstRow ? visibleRowIndexById.get(firstRow.id) : undefined
+
+      if (start !== undefined) {
+        ranges.set(section.id, { end: start + section.rows.length, start })
+      }
+    })
+
+    return ranges
+  }, [groupedSections, visibleRowIndexById])
   const getRowElements = useCallback(() => {
     return Array.from(
       tableWrapRef.current?.querySelectorAll<HTMLTableRowElement>(
@@ -719,36 +756,25 @@ export function DatabaseTableView() {
     return nextLayout
   }, [getRowElements])
   const getRowDropTargetIndex = (clientY: number) => {
-    const rowElements = getRowElements()
+    const wrapperElement = tableWrapRef.current
 
-    if (rowElements.length === 0) {
+    if (!wrapperElement || rowLayout.dropTops.length < 2) {
       return 0
     }
 
-    const targetIndex = rowElements.findIndex((rowElement) => {
-      const rect = rowElement.getBoundingClientRect()
+    const relativeY = clientY - wrapperElement.getBoundingClientRect().top
 
-      return clientY < rect.top + rect.height / 2
-    })
-
-    return targetIndex === -1 ? rowElements.length : targetIndex
+    return getDropTargetIndex(rowLayout.dropTops, relativeY)
   }
   const getGroupSectionForRowId = (rowId: string) => {
     if (!isTableGrouped) {
       return null
     }
 
-    return (
-      groupedSections.find((section) =>
-        section.rows.some((row) => row.id === rowId)
-      ) ?? null
-    )
+    return groupSectionByRowId.get(rowId) ?? null
   }
   const getGroupSectionRange = (section: GroupSection) => {
-    const groupRowIds = new Set(section.rows.map((row) => row.id))
-    const start = visibleRows.findIndex((row) => groupRowIds.has(row.id))
-
-    return start === -1 ? null : { end: start + section.rows.length, start }
+    return groupRangeById.get(section.id) ?? null
   }
   const getDraggedRowGroupDropTarget = () => {
     if (!draggedRowId || rowDropTargetIndex === null || !isTableGrouped) {
@@ -830,7 +856,7 @@ export function DatabaseTableView() {
         return null
       }
 
-      const draggedRow = rows.find((row) => row.id === draggedRowId)
+      const draggedRow = rowsById.get(draggedRowId)
 
       if (!draggedRow) {
         return null
@@ -927,8 +953,13 @@ export function DatabaseTableView() {
     rowDropTargetIndex === null || (draggedRowId && !getDraggedRowMove())
       ? null
       : (rowLayout.dropTops[rowDropTargetIndex] ?? null)
-  const getRowConditionalColors = useCallback(
-    (row: TableRow) => {
+  const conditionalColorsByRowId = useMemo(() => {
+    const colorsByRowId = new Map<
+      string,
+      { propertyColors: Record<string, string>; rowColor?: string }
+    >()
+
+    for (const row of sortedRows) {
       const propertyColors: Record<string, string> = {}
       let rowColor: string | undefined
 
@@ -952,15 +983,17 @@ export function DatabaseTableView() {
         }
       }
 
-      return { propertyColors, rowColor }
-    },
-    [
-      activeConditionalColors,
-      personOptionsById,
-      properties,
-      propertyValuesByKey,
-    ]
-  )
+      colorsByRowId.set(row.id, { propertyColors, rowColor })
+    }
+
+    return colorsByRowId
+  }, [
+    activeConditionalColors,
+    personOptionsById,
+    properties,
+    propertyValuesByKey,
+    sortedRows,
+  ])
   useEffect(() => {
     if (
       activeEditingPropertyKey &&
@@ -1007,8 +1040,17 @@ export function DatabaseTableView() {
 
   useEffect(() => {
     window.addEventListener("resize", measureRows)
+    const resizeObserver = new ResizeObserver(() => measureRows())
+    const wrapperElement = tableWrapRef.current
 
-    return () => window.removeEventListener("resize", measureRows)
+    if (wrapperElement) {
+      resizeObserver.observe(wrapperElement)
+    }
+
+    return () => {
+      resizeObserver.disconnect()
+      window.removeEventListener("resize", measureRows)
+    }
   }, [measureRows])
 
   useEffect(() => {
@@ -1039,8 +1081,8 @@ export function DatabaseTableView() {
     activePropertyValueKey,
     collapsedGroups,
     measureRows,
-    renderedProperties,
-    sortedRows,
+    renderedColumnIds,
+    visibleRows,
   ])
   const startColumnResize = (
     columnKey: string,
@@ -1249,7 +1291,7 @@ export function DatabaseTableView() {
     startDatabaseRowDrag()
     hideNativeDatabaseRowDragPreview(event.dataTransfer)
     setDraggedRowId(row.id)
-    setRowDropTargetIndex(visibleRows.findIndex((item) => item.id === row.id))
+    setRowDropTargetIndex(visibleRowIndexById.get(row.id) ?? 0)
     event.dataTransfer.effectAllowed = "copyMove"
     event.dataTransfer.setData(
       DATABASE_PAGE_DRAG_MIME,
@@ -1541,7 +1583,10 @@ export function DatabaseTableView() {
   const renderTableRows = (tableRows: TableRow[]) => (
     <tbody>
       {tableRows.map((row) => {
-        const conditionalColors = getRowConditionalColors(row)
+        const conditionalColors = conditionalColorsByRowId.get(row.id) ?? {
+          propertyColors: {},
+          rowColor: undefined,
+        }
         const nameCellKey = `${row.pageId}:name`
 
         return (
@@ -1552,7 +1597,6 @@ export function DatabaseTableView() {
             onMouseEnter={
               editable
                 ? () => {
-                    measureRows()
                     setHoveredRowId(row.id)
                   }
                 : undefined
@@ -1695,7 +1739,6 @@ export function DatabaseTableView() {
               data-visible={isRowHandleVisible ? "true" : undefined}
               key={row.id}
               onMouseEnter={() => {
-                measureRows()
                 setHoveredRowId(row.id)
               }}
               onMouseLeave={() => {
@@ -1782,7 +1825,6 @@ export function DatabaseTableView() {
                 : overlay
             )
           }
-          measureRows()
           setRowDropTargetIndex(getRowDropTargetIndex(event.clientY))
         }}
         onDrop={(event) => {
