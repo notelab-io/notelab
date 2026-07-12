@@ -6,6 +6,7 @@ export function register({ assert, loadModule, test }) {
       parseRowDateRange,
       ganttMoveToCellValue,
       buildTimelineRowItem,
+      DEFAULT_TIMELINE_ITEM_DURATION_DAYS,
       groupTimelineRows,
       UNSCHEDULED_GROUP_NAME,
     } = await loadModule(
@@ -54,5 +55,7 @@ export function register({ assert, loadModule, test }) {
 
     assert.equal(groupedRows[0].groupName, "In progress")
     assert.equal(groupedRows[1].groupName, UNSCHEDULED_GROUP_NAME)
+
+    assert.equal(DEFAULT_TIMELINE_ITEM_DURATION_DAYS, 5)
   })
 }

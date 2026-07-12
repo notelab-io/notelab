@@ -16,6 +16,7 @@ import {
 } from "../../core/utils"
 
 export const UNSCHEDULED_GROUP_NAME = "Unscheduled"
+export const DEFAULT_TIMELINE_ITEM_DURATION_DAYS = 5
 
 const defaultGanttStatus: GanttStatus = {
   color: getPaletteColor("gray")!,

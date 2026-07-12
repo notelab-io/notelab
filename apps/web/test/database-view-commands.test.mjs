@@ -953,6 +953,99 @@ export function register({ assert, loadModule, test }) {
     );
   });
 
+  test("database view commands add a dated row to its timeline group", async () => {
+    const { getDatabaseViewCommands } = await loadModule(
+      "/src/editor/extensions/database/views/database-view-commands.ts",
+    );
+    const addRow = createMutation();
+    const updateValue = createMutation();
+    const dateProperty = createProperty(
+      "database-property-date",
+      "property-date",
+      "Due date",
+      "date",
+    );
+    const statusProperty = createProperty(
+      "database-property-status",
+      "property-status",
+      "Status",
+      "status",
+    );
+    const commands = getDatabaseViewCommands({
+      activeDatabaseFilters: [],
+      activeDatabaseSorts: [],
+      activeView: {
+        config: {
+          datePropertyId: "property-date",
+          groupPropertyId: "property-status",
+        },
+        id: "view-timeline",
+        name: "Timeline",
+        type: "timeline",
+      },
+      databaseId,
+      editable: true,
+      isKanbanView: false,
+      items: [],
+      kanbanGroupProperty: statusProperty,
+      mutations: createMutations({ addRow, updateValue }),
+      payload: createPayload({ properties: [dateProperty, statusProperty] }),
+      properties: [dateProperty, statusProperty],
+      setActiveViewId: () => {},
+      setFilterPickerOpen: () => {},
+      setShowFilterPill: () => {},
+      setShowSortPill: () => {},
+      setSortPickerOpen: () => {},
+      timelineDateProperty: dateProperty,
+    });
+
+    commands.addTimelineRow(
+      new Date(2026, 5, 15),
+      new Date(2026, 5, 20),
+      "In progress",
+      statusProperty,
+    );
+    addRow.calls[0][1].onSuccess({ rows: [{ id: "row-1" }] });
+
+    assert.deepEqual(addRow.calls[0][0], {
+      databaseId,
+      optimisticValues: [
+        {
+          propertyId: "property-date",
+          value: {
+            end: "2026-06-20",
+            start: "2026-06-15",
+          },
+        },
+        {
+          propertyId: "property-status",
+          value: "In progress",
+        },
+      ],
+      title: "Untitled",
+    });
+    assert.deepEqual(
+      updateValue.calls.map(([input]) => input),
+      [
+        {
+          databaseId,
+          propertyId: "property-date",
+          rowId: "row-1",
+          value: {
+            start: "2026-06-15",
+            end: "2026-06-20",
+          },
+        },
+        {
+          databaseId,
+          propertyId: "property-status",
+          rowId: "row-1",
+          value: "In progress",
+        },
+      ],
+    );
+  });
+
   test("database view commands add timeline view creates date property", async () => {
     const { getDatabaseViewCommands } = await loadModule(
       "/src/editor/extensions/database/views/database-view-commands.ts",

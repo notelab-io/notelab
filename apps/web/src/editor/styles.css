@@ -845,7 +845,7 @@
   }
 
   .database-timeline-view .database-timeline-gantt-grid-overlay .gantt-columns {
-    @apply pointer-events-auto h-full;
+    @apply h-full;
   }
 
   .database-timeline-view .database-timeline-sidebar-cell {
@@ -881,6 +881,25 @@
 
   .database-timeline-view .database-timeline-gantt-cell {
     @apply relative z-0 min-h-0 min-w-0;
+  }
+
+  .database-timeline-view .database-timeline-add-cell {
+    @apply pointer-events-auto z-10 h-8;
+  }
+
+  .database-timeline-view .gantt-add-preview {
+    opacity: var(--gantt-add-opacity, 0);
+    width: var(--gantt-add-width);
+    transform: translate3d(var(--gantt-add-left), 0, 0);
+  }
+
+  .gantt-marker-preview {
+    transform: translate3d(var(--gantt-marker-left, 0px), 0, 0)
+      translateX(-50%);
+  }
+
+  [data-preview-visible="true"] > .gantt-marker-preview {
+    opacity: 1;
   }
 
   .database-timeline-view .database-timeline-gantt-dates {

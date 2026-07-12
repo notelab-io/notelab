@@ -80,7 +80,12 @@ export type DatabaseViewContextValue = {
   addKanbanView: () => void
   addLinkedDatabaseView: (view: DatabaseLinkedViewConfig) => void
   addTableView: () => void
-  addTimelineRow: (startAt: Date) => void
+  addTimelineRow: (
+    startAt: Date,
+    endAt: Date,
+    groupValue?: string,
+    groupProperty?: DatabasePropertyListItem | null
+  ) => void
   addTimelineView: () => void
   canAddDatabaseFilter: boolean
   canAddDatabaseProperties?: boolean

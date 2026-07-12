@@ -11,6 +11,10 @@ export type AddRowCacheInput = {
   sourceDatabaseId?: string
   sourcePropertyMode?: "duplicate" | "match"
   title?: string
+  values?: Array<{
+    propertyId: string
+    value: unknown
+  }>
 }
 
 export type AddRowResponse = {
@@ -85,6 +89,31 @@ export function applyOptimisticAddedDatabaseRow(
     )
     .concat(optimisticRow)
     .sort((left, right) => left.position - right.position)
+  const values = [...payload.values]
+
+  for (const inputValue of input.values ?? []) {
+    const existingIndex = values.findIndex(
+      (value) =>
+        value.pageId === pageId && value.propertyId === inputValue.propertyId,
+    )
+    const optimisticValue: PagePropertyValue = {
+      createdAt: existingIndex >= 0 ? values[existingIndex]!.createdAt : now,
+      id:
+        existingIndex >= 0
+          ? values[existingIndex]!.id
+          : `optimistic-property-value-${crypto.randomUUID()}`,
+      pageId,
+      propertyId: inputValue.propertyId,
+      updatedAt: now,
+      value: inputValue.value,
+    }
+
+    if (existingIndex >= 0) {
+      values[existingIndex] = optimisticValue
+    } else {
+      values.push(optimisticValue)
+    }
+  }
 
   return {
     pageId,
@@ -94,6 +123,7 @@ export function applyOptimisticAddedDatabaseRow(
       rowCount:
         payload.rowCount === undefined ? undefined : payload.rowCount + 1,
       rows,
+      values,
     },
   }
 }
@@ -150,7 +180,11 @@ export function applyConfirmedAddedDatabaseRow(
     rows.splice(0, rows.length, ...shiftedRows, confirmedRow)
   }
 
-  const values = [...payload.values]
+  const values = payload.values.map((value) =>
+    optimistic && value.pageId === optimistic.pageId
+      ? { ...value, pageId: response.pageId }
+      : value,
+  )
 
   for (const value of response.values ?? []) {
     const index = values.findIndex(

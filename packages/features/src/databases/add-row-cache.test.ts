@@ -24,6 +24,33 @@ test("applyOptimisticAddedDatabaseRow appends an optimistic row", () => {
   assert.equal(result.payload.rows[2]?.page.name, "Gamma")
 })
 
+test("applyOptimisticAddedDatabaseRow includes intended property values", () => {
+  const payload = createTestDatabasePayload({ rowCount: 2 })
+  const result = applyOptimisticAddedDatabaseRow(payload, {
+    title: "Gamma",
+    values: [
+      { propertyId: "property-status", value: "In progress" },
+      {
+        propertyId: "property-date",
+        value: { start: "2026-07-13", end: "2026-07-18" },
+      },
+    ],
+  })
+
+  assert.deepEqual(
+    result.payload.values
+      .filter((value) => value.pageId === result.pageId)
+      .map((value) => [value.propertyId, value.value]),
+    [
+      ["property-status", "In progress"],
+      [
+        "property-date",
+        { start: "2026-07-13", end: "2026-07-18" },
+      ],
+    ],
+  )
+})
+
 test("applyOptimisticAddedDatabaseRow inserts in the middle and shifts rows", () => {
   const payload = createTestDatabasePayload()
   const result = applyOptimisticAddedDatabaseRow(payload, {
@@ -47,6 +74,9 @@ test("applyConfirmedAddedDatabaseRow replaces optimistic ids and adds values", (
   const optimistic = applyOptimisticAddedDatabaseRow(payload, {
     position: 1,
     title: "Draft",
+    values: [
+      { propertyId: "property-date", value: "2026-07-13" },
+    ],
   })
   const next = applyConfirmedAddedDatabaseRow(
     optimistic.payload,
@@ -83,6 +113,17 @@ test("applyConfirmedAddedDatabaseRow replaces optimistic ids and adds values", (
   )
   assert.equal(next.rowCount, 3)
   assert.equal(next.values.at(-1)?.id, "value-2")
+  assert.equal(
+    next.values.find(
+      (value) =>
+        value.pageId === "page-3" && value.propertyId === "property-date",
+    )?.value,
+    "2026-07-13",
+  )
+  assert.equal(
+    next.values.some((value) => value.pageId === optimistic.pageId),
+    false,
+  )
 })
 
 test("isAddRowResponse detects compact row create responses", () => {

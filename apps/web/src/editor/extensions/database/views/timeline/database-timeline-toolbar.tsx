@@ -74,10 +74,15 @@ function DatabaseTimelineToolbar({
   const [scrollX] = useGanttScrollX()
 
   const visibleDate = useMemo(
-    () => getDateByTimelinePosition(gantt, scrollX),
+    () =>
+      getDateByTimelinePosition(
+        gantt,
+        Math.max(0, scrollX - gantt.sidebarWidth),
+      ),
     [
       gantt.columnWidth,
       gantt.range,
+      gantt.sidebarWidth,
       gantt.timelineData,
       gantt.zoom,
       scrollX,

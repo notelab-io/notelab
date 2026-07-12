@@ -98,6 +98,10 @@ type UpdatePropertyInput = {
 
 type AddRowInput = {
   databaseId: string;
+  optimisticValues?: Array<{
+    propertyId: string;
+    value: unknown;
+  }>;
   pageId?: string;
   parentRowId?: string | null;
   position?: number;
@@ -809,7 +813,11 @@ export function useAddDatabaseRow() {
   const { apiFetch, queryClient } = useNotelabFeatures();
 
   return useMutation({
-    mutationFn: async ({ databaseId, ...input }: AddRowInput) => {
+    mutationFn: async ({
+      databaseId,
+      optimisticValues,
+      ...input
+    }: AddRowInput) => {
       await queryClient.cancelQueries({
         queryKey: databaseQueryKey(databaseId),
       });
@@ -818,7 +826,10 @@ export function useAddDatabaseRow() {
         databaseQueryKey(databaseId),
       );
       const optimistic = current
-        ? applyOptimisticAddedDatabaseRow(current, input)
+        ? applyOptimisticAddedDatabaseRow(current, {
+            ...input,
+            values: optimisticValues,
+          })
         : null;
 
       if (optimistic) {

@@ -64,6 +64,16 @@ type DatabaseMutations = {
   updateValue: ReturnType<typeof useUpdateDatabasePropertyValue>;
 };
 
+type NewRowPropertyValue = {
+  propertyId: string;
+  value: unknown;
+};
+
+type NewRowSetup = {
+  propertyValues: NewRowPropertyValue[];
+  title: string;
+};
+
 export type DatabaseViewCommands = ReturnType<typeof getDatabaseViewCommands>;
 
 export function getDatabaseViewCommands({
@@ -136,6 +146,57 @@ export function getDatabaseViewCommands({
     properties,
     timelineDateProperty,
   });
+
+  const addRowWithValues = ({
+    propertyValues,
+    title,
+  }: NewRowSetup) => {
+    if (!editable || !databaseId || addRow.isPending) {
+      return;
+    }
+
+    const existingItemIds = new Set(items.map((row) => row.id));
+    const uniquePropertyValues = new Map(
+      propertyValues.map((propertyValue) => [
+        propertyValue.propertyId,
+        propertyValue,
+      ]),
+    );
+
+    addRow.mutate(
+      {
+        databaseId,
+        ...(uniquePropertyValues.size > 0
+          ? { optimisticValues: [...uniquePropertyValues.values()] }
+          : {}),
+        title,
+      },
+      {
+        onSuccess: (nextPayload) => {
+          if (uniquePropertyValues.size === 0) {
+            return;
+          }
+
+          const addedItem = findAddedDatabaseRow(
+            nextPayload.rows,
+            existingItemIds,
+          );
+          if (!addedItem) {
+            return;
+          }
+
+          for (const propertyValue of uniquePropertyValues.values()) {
+            updateValue.mutate({
+              databaseId,
+              propertyId: propertyValue.propertyId,
+              rowId: addedItem.id,
+              value: propertyValue.value,
+            });
+          }
+        },
+      },
+    );
+  };
 
   const saveDatabaseSorts = (nextSorts: DatabaseSortConfig[]) => {
     if (!databaseId || !activeView?.id) {
@@ -258,11 +319,6 @@ export function getDatabaseViewCommands({
       groupValue?: string,
       groupPropertyOverride?: DatabasePropertyListItem | null,
     ) => {
-      if (!editable || !databaseId || addRow.isPending) {
-        return;
-      }
-
-      const existingItemIds = new Set(items.map((row) => row.id));
       const defaultStatusValue = defaultStatusOption.name;
       const nextGroupProperty =
         groupPropertyOverride ?? (isKanbanView ? kanbanGroupProperty : null);
@@ -271,44 +327,8 @@ export function getDatabaseViewCommands({
         (isKanbanView && kanbanGroupProperty?.property.type === "status"
           ? defaultStatusValue
           : null);
-
-      addRow.mutate(
-        {
-          databaseId,
-          title:
-            nextGroupProperty?.id === "name" && nextGroupValue
-              ? nextGroupValue
-              : "Untitled",
-        },
-        {
-          onSuccess: (nextPayload) => {
-            if (
-              !nextGroupValue ||
-              !nextGroupProperty ||
-              !canUpdateKanbanGroupProperty(nextGroupProperty)
-            ) {
-              return;
-            }
-
-            const addedItem =
-              nextPayload.rows.find((row) => !existingItemIds.has(row.id)) ??
-              nextPayload.rows.at(-1);
-
-            if (!addedItem) {
-              return;
-            }
-
-            updateValue.mutate({
-              databaseId,
-              propertyId: nextGroupProperty.property.id,
-              rowId: addedItem.id,
-              value: serializePropertyValue(
-                nextGroupProperty.property.type,
-                nextGroupValue,
-              ),
-            });
-          },
-        },
+      addRowWithValues(
+        getNewRowGroupSetup(nextGroupValue, nextGroupProperty),
       );
     },
     addDraggedPageRow: async (
@@ -409,42 +429,27 @@ export function getDatabaseViewCommands({
 
       addView("name", []);
     },
-    addTimelineRow: (startAt: Date) => {
-      if (
-        !editable ||
-        !databaseId ||
-        !timelineDateProperty ||
-        addRow.isPending
-      ) {
+    addTimelineRow: (
+      startAt: Date,
+      endAt: Date,
+      groupValue?: string,
+      groupProperty?: DatabasePropertyListItem | null,
+    ) => {
+      if (!timelineDateProperty) {
         return;
       }
 
-      const existingItemIds = new Set(items.map((row) => row.id));
-
-      addRow.mutate(
-        {
-          databaseId,
-          title: "Untitled",
-        },
-        {
-          onSuccess: (nextPayload) => {
-            const addedItem =
-              nextPayload.rows.find((row) => !existingItemIds.has(row.id)) ??
-              nextPayload.rows.at(-1);
-
-            if (!addedItem) {
-              return;
-            }
-
-            updateValue.mutate({
-              databaseId,
-              propertyId: timelineDateProperty.property.id,
-              rowId: addedItem.id,
-              value: ganttMoveToDateValue(startAt, null),
-            });
+      const groupSetup = getNewRowGroupSetup(groupValue, groupProperty);
+      addRowWithValues({
+        propertyValues: [
+          {
+            propertyId: timelineDateProperty.property.id,
+            value: ganttMoveToDateValue(startAt, endAt),
           },
-        },
-      );
+          ...groupSetup.propertyValues,
+        ],
+        title: groupSetup.title,
+      });
     },
     addTimelineView: () => {
       if (!databaseId || addDatabaseView.isPending || addProperty.isPending) {
@@ -906,6 +911,43 @@ export function getDatabaseViewCommands({
       );
     },
   };
+}
+
+function getNewRowGroupSetup(
+  groupValue?: string | null,
+  groupProperty?: DatabasePropertyListItem | null,
+): NewRowSetup {
+  if (!groupValue || !groupProperty) {
+    return { propertyValues: [], title: "Untitled" };
+  }
+
+  if (groupProperty.id === "name") {
+    return { propertyValues: [], title: groupValue };
+  }
+
+  if (!canUpdateKanbanGroupProperty(groupProperty)) {
+    return { propertyValues: [], title: "Untitled" };
+  }
+
+  return {
+    propertyValues: [
+      {
+        propertyId: groupProperty.property.id,
+        value: serializePropertyValue(
+          groupProperty.property.type,
+          groupValue,
+        ),
+      },
+    ],
+    title: "Untitled",
+  };
+}
+
+function findAddedDatabaseRow(
+  rows: DatabaseRow[],
+  existingRowIds: Set<string>,
+) {
+  return rows.find((row) => !existingRowIds.has(row.id)) ?? rows.at(-1);
 }
 
 function getTimelineGroupPropertyId(currentProperties: DatabaseProperty[]) {
