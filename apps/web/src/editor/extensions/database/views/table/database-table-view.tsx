@@ -49,10 +49,7 @@ import {
 } from "@/lib/color-tokens"
 
 import { AddDatabasePropertyMenu } from "../../properties/add-database-property-menu"
-import {
-  DatabaseTableCellContent,
-  useDatabaseTableCellWheel,
-} from "./database-table-cell-content"
+import { DatabaseTableCellContent } from "./database-table-cell-content"
 import {
   databaseAddPropertyColumnDefaultWidth,
   databaseColumnMinWidth,
@@ -721,7 +718,6 @@ export function DatabaseTableView() {
     centers: {},
     dropTops: [],
   })
-  useDatabaseTableCellWheel(tableScrollRef)
   const activeEditingPropertyKey =
     getPropertyKeyFromHeaderEditingKey(editingPropertyKey)
   const isTableSorted = activeDatabaseSorts.length > 0

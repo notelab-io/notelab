@@ -27,33 +27,3 @@ export function getDatabaseHorizontalWheelDelta(event: DatabaseWheelEventLike) {
     ? event.deltaX
     : 0
 }
-
-export function preserveDatabaseScrollLeftOnVerticalWheel(
-  event: DatabaseWheelEventLike,
-  scrollElements: Array<HTMLElement | null | undefined>
-) {
-  if (!event.deltaX || getDatabaseHorizontalWheelDelta(event)) {
-    return
-  }
-
-  const snapshots = scrollElements
-    .filter((element): element is HTMLElement => Boolean(element))
-    .map((element) => ({
-      element,
-      scrollLeft: element.scrollLeft,
-    }))
-
-  if (snapshots.length === 0) {
-    return
-  }
-
-  const requestFrame =
-    globalThis.requestAnimationFrame ??
-    ((callback: FrameRequestCallback) => globalThis.setTimeout(callback, 0))
-
-  requestFrame(() => {
-    for (const snapshot of snapshots) {
-      snapshot.element.scrollLeft = snapshot.scrollLeft
-    }
-  })
-}

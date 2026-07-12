@@ -10,7 +10,6 @@ import {
 
 import {
   getDatabaseHorizontalWheelDelta,
-  preserveDatabaseScrollLeftOnVerticalWheel,
 } from "./database-wheel-scroll"
 
 export type InlineDatabaseScrollLayout = {
@@ -170,14 +169,9 @@ function handleInlineDatabaseScrollWheel(
   event: WheelEvent,
   scrollElement: HTMLElement
 ) {
-  if (isNestedDatabaseCellScroll(event, scrollElement)) {
-    return
-  }
-
   const horizontalDelta = getDatabaseHorizontalWheelDelta(event)
 
   if (!horizontalDelta) {
-    preserveDatabaseScrollLeftOnVerticalWheel(event, [scrollElement])
     return
   }
 
@@ -186,9 +180,6 @@ function handleInlineDatabaseScrollWheel(
   if (maxScrollLeft <= 1) {
     return
   }
-
-  event.preventDefault()
-  event.stopPropagation()
 
   const nextScrollLeft = Math.min(
     maxScrollLeft,
@@ -200,17 +191,7 @@ function handleInlineDatabaseScrollWheel(
   }
 
   scrollElement.scrollLeft = nextScrollLeft
-}
-
-function isNestedDatabaseCellScroll(
-  event: WheelEvent,
-  scrollElement: HTMLElement
-) {
-  const target = event.target
-
-  return (
-    target instanceof HTMLElement &&
-    scrollElement.contains(target) &&
-    Boolean(target.closest("[data-database-cell-scroll]"))
-  )
+  if (event.cancelable) {
+    event.preventDefault()
+  }
 }
