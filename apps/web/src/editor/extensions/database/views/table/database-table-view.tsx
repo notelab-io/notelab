@@ -1678,6 +1678,11 @@ export function DatabaseTableView() {
                             getHeaderEditingKey(headerScope, "name")
                           }
                           schemaActionsEnabled={canEditStructure}
+                          sortDirection={
+                            activeDatabaseSorts.find(
+                              (sort) => sort.column === "name"
+                            )?.direction
+                          }
                           onSort={(direction) =>
                             void saveDatabaseSorts([
                               ...activeDatabaseSorts.filter(
@@ -1765,6 +1770,11 @@ export function DatabaseTableView() {
                           getHeaderEditingKey(headerScope, property.id)
                         }
                         schemaActionsEnabled={canEditStructure}
+                        sortDirection={
+                          activeDatabaseSorts.find(
+                            (sort) => sort.column === property.id
+                          )?.direction
+                        }
                         sourceDatabaseId={loadedDatabaseId}
                         sourceDatabaseName={databaseName}
                         sourcePropertyId={property.property.id}

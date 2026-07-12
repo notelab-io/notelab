@@ -99,6 +99,7 @@ export function DatabasePropertyMenu({
   triggerDragProps,
   isGrouped = false,
   schemaActionsEnabled = true,
+  sortDirection,
   sourceDatabaseId,
   sourceDatabaseName,
   sourcePropertyId,
@@ -120,6 +121,7 @@ export function DatabasePropertyMenu({
   onUpdateConfig?: (config: DatabasePropertyConfig) => void;
   open?: boolean;
   schemaActionsEnabled?: boolean;
+  sortDirection?: DatabaseSortDirection;
   sourceDatabaseId?: string;
   sourceDatabaseName?: string;
   sourcePropertyId?: string;
@@ -145,9 +147,9 @@ export function DatabasePropertyMenu({
   const propertyType = getDatabasePropertyType(type);
   const PropertyIcon = propertyType.icon;
   const currentSorts = getDatabaseSorts(databaseConfig);
-  const currentSortDirection = currentSorts.find(
-    (sort) => sort.column === databasePropertyId,
-  )?.direction;
+  const currentSortDirection =
+    sortDirection ??
+    currentSorts.find((sort) => sort.column === databasePropertyId)?.direction;
   const isButtonProperty = type === "button";
   const isFormulaProperty = type === "formula";
   const hidesEditProperty =
