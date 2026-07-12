@@ -322,7 +322,7 @@ function getIsActiveNavItem({
   }
 
   if (item.isDatabase) {
-    return activeDatabaseId === item.databaseId && item.pages.length === 0
+    return activeDatabaseId === item.databaseId
   }
 
   return activePageId === item.pageId
