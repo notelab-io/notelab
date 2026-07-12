@@ -109,6 +109,9 @@ export const useEditorInstance = ({
       extensions: editorExtensions,
       content: initialContent,
       editable,
+      // ProseMirror updates its own DOM. Keep transactions from rerendering the
+      // entire React editor shell; controls subscribe to the editor directly.
+      shouldRerenderOnTransaction: false,
       onCreate: ({ editor: currentEditor }) => {
         editorRef.current = currentEditor
         onEditorReadyRef.current?.(currentEditor)

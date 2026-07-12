@@ -1,5 +1,5 @@
 import { useState, type DragEvent } from "react"
-import { useLocation, useNavigate } from "@tanstack/react-router"
+import { Link, useLocation, useNavigate } from "@tanstack/react-router"
 import { useDeleteDatabase } from "@notelab/features/databases"
 import { useDeletePage } from "@notelab/features/pages"
 import {
@@ -57,7 +57,7 @@ export type { PageNavItem } from "@/components/nav-tree"
 type DatabaseDropInput = {
   databaseId: string
   pageId: string
-  targetPageId: string
+  targetPageId: string | null
   title?: string
 }
 
@@ -279,9 +279,11 @@ function PageSection({
           ) : null}
           {pages.length > 0 ? (
             <SidebarMenuItem>
-              <SidebarMenuButton className="text-sidebar-foreground/70">
-                <MoreHorizontalIcon />
-                <span>More</span>
+              <SidebarMenuButton asChild className="text-sidebar-foreground/70">
+                <Link to="/dashboard">
+                  <MoreHorizontalIcon />
+                  <span>More</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           ) : null}
@@ -338,6 +340,10 @@ function PageItemMenu({ item }: {
           )
         },
       })
+      return
+    }
+
+    if (!item.pageId) {
       return
     }
 

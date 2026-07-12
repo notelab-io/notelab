@@ -1,9 +1,9 @@
-import type { ReactNode } from "react"
-import { Link } from "@tanstack/react-router"
-import { ArrowRight } from "lucide-react"
+import type { ReactNode } from "react";
+import { Link } from "@tanstack/react-router";
+import { ArrowRight } from "lucide-react";
 
-import { NavActions } from "@/components/nav-actions"
-import { Button } from "@/components/ui/button"
+import { NavActions } from "@/components/nav-actions";
+import { Button } from "@/components/ui/button";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -11,16 +11,17 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
-import { Separator } from "@/components/ui/separator"
-import { useActiveWorkspaceId } from "@notelab/features/integrations"
-import { useDatabase } from "@notelab/features/databases"
-import { formatPageBreadcrumbLabel } from "@/lib/page-icon"
+} from "@/components/ui/breadcrumb";
+import { Separator } from "@/components/ui/separator";
+import { useActiveWorkspaceId } from "@notelab/features/integrations";
+import { useDatabase } from "@notelab/features/databases";
+import { formatPageBreadcrumbLabel } from "@/lib/page-icon";
 import {
-  readParentItemId,
-  usePages,
+  getPrimaryPageParentId,
+  usePageNavigation,
   type Page,
-} from "@notelab/features/pages"
+  type PageItemPlacement,
+} from "@notelab/features/pages";
 
 export function PagePaneHeader({
   bordered = true,
@@ -30,29 +31,28 @@ export function PagePaneHeader({
   pathname,
   showActions = true,
 }: {
-  bordered?: boolean
-  className?: string
-  leadingControl?: ReactNode | null
-  onClose?: () => void
-  pathname: string
-  showActions?: boolean
+  bordered?: boolean;
+  className?: string;
+  leadingControl?: ReactNode | null;
+  onClose?: () => void;
+  pathname: string;
+  showActions?: boolean;
 }) {
-  const pageId = getPageId(pathname)
-  const databaseId = getDatabaseId(pathname)
-  const closeControl =
-    onClose ? (
-      <Button
-        aria-label="Close"
-        onClick={onClose}
-        size="icon-sm"
-        type="button"
-        variant="ghost"
-      >
-        <ArrowRight />
-      </Button>
-    ) : (
-      leadingControl
-    )
+  const pageId = getPageId(pathname);
+  const databaseId = getDatabaseId(pathname);
+  const closeControl = onClose ? (
+    <Button
+      aria-label="Close"
+      onClick={onClose}
+      size="icon-sm"
+      type="button"
+      variant="ghost"
+    >
+      <ArrowRight />
+    </Button>
+  ) : (
+    leadingControl
+  );
 
   return (
     <header
@@ -72,30 +72,27 @@ export function PagePaneHeader({
       </div>
       {showActions ? (
         <div className="ml-auto px-3">
-          <NavActions
-            databaseId={databaseId}
-            pageId={pageId}
-          />
+          <NavActions databaseId={databaseId} pageId={pageId} />
         </div>
       ) : null}
     </header>
-  )
+  );
 }
 
 export function AppBreadcrumbs({ pathname }: { pathname: string }) {
-  const pageId = getPageId(pathname)
-  const databaseId = getDatabaseId(pathname)
+  const pageId = getPageId(pathname);
+  const databaseId = getDatabaseId(pathname);
 
   if (pageId) {
-    return <PageBreadcrumb pageId={pageId} />
+    return <PageBreadcrumb pageId={pageId} />;
   }
 
   if (databaseId) {
-    return <DatabaseBreadcrumb databaseId={databaseId} />
+    return <DatabaseBreadcrumb databaseId={databaseId} />;
   }
 
   if (pathname.startsWith("/settings")) {
-    const settingsPageTitle = getSettingsPageTitle(pathname)
+    const settingsPageTitle = getSettingsPageTitle(pathname);
 
     return (
       <Breadcrumb>
@@ -117,7 +114,7 @@ export function AppBreadcrumbs({ pathname }: { pathname: string }) {
           ) : null}
         </BreadcrumbList>
       </Breadcrumb>
-    )
+    );
   }
 
   if (pathname === "/canvas") {
@@ -129,7 +126,7 @@ export function AppBreadcrumbs({ pathname }: { pathname: string }) {
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
-    )
+    );
   }
 
   return (
@@ -140,16 +137,17 @@ export function AppBreadcrumbs({ pathname }: { pathname: string }) {
         </BreadcrumbItem>
       </BreadcrumbList>
     </Breadcrumb>
-  )
+  );
 }
 
 function PageBreadcrumb({ pageId }: { pageId: string }) {
-  const workspaceId = useActiveWorkspaceId()
-  const { data: pages = [] } = usePages(workspaceId)
-  const page = pages.find((item) => item.id === pageId)
+  const workspaceId = useActiveWorkspaceId();
+  const { data: navigation } = usePageNavigation(workspaceId);
+  const pages = navigation?.pages ?? [];
+  const page = pages.find((item) => item.id === pageId);
   const breadcrumbs = page
-    ? buildPageBreadcrumbs(page, pages)
-    : []
+    ? buildPageBreadcrumbs(page, pages, navigation?.placements ?? [])
+    : [];
 
   return (
     <Breadcrumb className="min-w-0">
@@ -162,8 +160,8 @@ function PageBreadcrumb({ pageId }: { pageId: string }) {
         <BreadcrumbSeparator className="hidden sm:inline-flex" />
         {breadcrumbs.length > 0 ? (
           breadcrumbs.map((item, index) => {
-            const isCurrent = index === breadcrumbs.length - 1
-            const label = getPageBreadcrumbLabel(item)
+            const isCurrent = index === breadcrumbs.length - 1;
+            const label = getPageBreadcrumbLabel(item);
 
             return (
               <BreadcrumbFragment
@@ -172,7 +170,7 @@ function PageBreadcrumb({ pageId }: { pageId: string }) {
                 key={item.id}
                 label={label}
               />
-            )
+            );
           })
         ) : (
           <BreadcrumbItem className="min-w-0">
@@ -183,20 +181,23 @@ function PageBreadcrumb({ pageId }: { pageId: string }) {
         )}
       </BreadcrumbList>
     </Breadcrumb>
-  )
+  );
 }
 
 function DatabaseBreadcrumb({ databaseId }: { databaseId: string }) {
-  const workspaceId = useActiveWorkspaceId()
-  const { data: payload } = useDatabase(databaseId)
-  const databasePageId = payload?.database.pageId
-  const { data: pages = [] } = usePages(workspaceId)
+  const workspaceId = useActiveWorkspaceId();
+  const { data: payload } = useDatabase(databaseId, {
+    includeDeleted: true,
+  });
+  const databasePageId = payload?.database.pageId;
+  const { data: navigation } = usePageNavigation(workspaceId);
+  const pages = navigation?.pages ?? [];
   const page = databasePageId
     ? pages.find((item) => item.id === databasePageId)
-    : undefined
+    : undefined;
   const breadcrumbs = page
-    ? buildPageBreadcrumbs(page, pages)
-    : []
+    ? buildPageBreadcrumbs(page, pages, navigation?.placements ?? [])
+    : [];
 
   return (
     <Breadcrumb className="min-w-0">
@@ -222,7 +223,7 @@ function DatabaseBreadcrumb({ databaseId }: { databaseId: string }) {
         </BreadcrumbItem>
       </BreadcrumbList>
     </Breadcrumb>
-  )
+  );
 }
 
 function BreadcrumbFragment({
@@ -230,9 +231,9 @@ function BreadcrumbFragment({
   item,
   label,
 }: {
-  isCurrent: boolean
-  item: Page
-  label: string
+  isCurrent: boolean;
+  item: Page;
+  label: string;
 }) {
   return (
     <>
@@ -242,7 +243,10 @@ function BreadcrumbFragment({
             {label}
           </BreadcrumbPage>
         ) : (
-          <BreadcrumbLink asChild className="block max-w-32 truncate sm:max-w-48">
+          <BreadcrumbLink
+            asChild
+            className="block max-w-32 truncate sm:max-w-48"
+          >
             <Link to="/p/$pageId" params={{ pageId: item.id }}>
               {label}
             </Link>
@@ -251,42 +255,41 @@ function BreadcrumbFragment({
       </BreadcrumbItem>
       {!isCurrent ? <BreadcrumbSeparator /> : null}
     </>
-  )
+  );
 }
 
 function buildPageBreadcrumbs(
   page: Page,
   pages: Page[],
+  placements: PageItemPlacement[],
 ) {
-  const pagesById = new Map(
-    [...pages, page].map((item) => [item.id, item]),
-  )
-  const breadcrumbs: Page[] = []
-  const visited = new Set<string>()
-  let current: Page | undefined = page
+  const pagesById = new Map([...pages, page].map((item) => [item.id, item]));
+  const breadcrumbs: Page[] = [];
+  const visited = new Set<string>();
+  let current: Page | undefined = page;
 
   while (current && !visited.has(current.id)) {
-    breadcrumbs.unshift(current)
-    visited.add(current.id)
+    breadcrumbs.unshift(current);
+    visited.add(current.id);
 
-    const parentItemId = readParentItemId(current.metadata)
+    const parentItemId = getPrimaryPageParentId(placements, current.id);
 
-    current = parentItemId ? pagesById.get(parentItemId) : undefined
+    current = parentItemId ? pagesById.get(parentItemId) : undefined;
   }
 
-  return breadcrumbs
+  return breadcrumbs;
 }
 
 function getPageBreadcrumbLabel(page: Page) {
-  return formatPageBreadcrumbLabel(page)
+  return formatPageBreadcrumbLabel(page);
 }
 
 function getSettingsPageTitle(pathname: string) {
-  const pathParts = pathname.split("/").filter(Boolean)
-  const page = pathParts[1]
+  const pathParts = pathname.split("/").filter(Boolean);
+  const page = pathParts[1];
 
   if (!page) {
-    return null
+    return null;
   }
 
   const titles: Record<string, string> = {
@@ -295,19 +298,19 @@ function getSettingsPageTitle(pathname: string) {
     workspace: "Workspace",
     profile: "Profile",
     team: "Team",
-  }
+  };
 
-  return titles[page] ?? null
+  return titles[page] ?? null;
 }
 
 export function getPageId(pathname: string) {
-  const match = pathname.match(/^\/p\/([^/]+)/)
+  const match = pathname.match(/^\/p\/([^/]+)/);
 
-  return match?.[1] ? decodeURIComponent(match[1]) : null
+  return match?.[1] ? decodeURIComponent(match[1]) : null;
 }
 
 export function getDatabaseId(pathname: string) {
-  const match = pathname.match(/^\/d\/([^/]+)/)
+  const match = pathname.match(/^\/d\/([^/]+)/);
 
-  return match?.[1] ? decodeURIComponent(match[1]) : null
+  return match?.[1] ? decodeURIComponent(match[1]) : null;
 }

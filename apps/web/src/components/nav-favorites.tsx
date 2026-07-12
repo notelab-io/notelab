@@ -111,7 +111,9 @@ function FavoriteItemMenu({
       return
     }
 
-    onRemoveFavorite(item.pageId)
+    if (item.pageId) {
+      onRemoveFavorite(item.pageId)
+    }
   }
 
   return (

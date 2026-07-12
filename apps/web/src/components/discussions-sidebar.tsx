@@ -87,12 +87,12 @@ function DiscussionsThreads({
 
   const activeUnresolved = threadItems.find((t) => !t.thread?.resolvedAt)
   const showActiveDiscussion = Boolean(
-    activeUnresolved && activeUnresolved.comments.length > 0,
+    activeUnresolved && activeUnresolved.commentCount > 0,
   )
   const past = threadItems.filter(
     (t) =>
       t.thread &&
-      t.comments.length > 0 &&
+      t.commentCount > 0 &&
       t.thread.id !== activeUnresolved?.thread?.id,
   )
 

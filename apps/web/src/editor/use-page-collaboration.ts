@@ -5,11 +5,13 @@ import {
   WebSocketStatus,
 } from "@hocuspocus/provider"
 import type { SessionUser } from "@notelab/features/auth"
+import * as Y from "yjs"
 import { apiFetch } from "@/lib/api"
 
 type CollaborationTicket = {
   documentName: string
   expiresAt: string
+  initialState: string
   token: string
   websocketUrl: string
 }
@@ -59,8 +61,11 @@ export function usePageCollaboration({
         if (disposed) return
 
         let currentTicket = ticket
+        const document = new Y.Doc()
+        Y.applyUpdate(document, decodeBase64(ticket.initialState))
 
         activeProvider = new HocuspocusProvider({
+          document,
           name: ticket.documentName,
           token: async () => {
             if (
@@ -150,7 +155,9 @@ function readCollaborationUsers(states: StatesArray) {
       continue
     }
 
-    users.set(`${state.clientId}:${user.id}`, {
+    // Yjs awareness is connection-scoped, so the same account gets a distinct
+    // clientId in every tab. Presence avatars represent people, not sessions.
+    users.set(user.id, {
       avatar: typeof user.avatar === "string" ? user.avatar : null,
       clientId: state.clientId,
       color: user.color,
@@ -180,4 +187,15 @@ function collaborationColor(id: string) {
   }
 
   return colors[hash % colors.length]
+}
+
+function decodeBase64(value: string) {
+  const binary = window.atob(value)
+  const bytes = new Uint8Array(binary.length)
+
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index)
+  }
+
+  return bytes
 }

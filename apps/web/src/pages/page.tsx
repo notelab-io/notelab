@@ -1,37 +1,27 @@
-import { useCallback, useEffect, useRef, useState } from "react"
-import { Link, useParams } from "@tanstack/react-router"
-import { ArrowRight, Maximize2 } from "lucide-react"
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Link, useParams } from "@tanstack/react-router";
+import { ArrowRight, Maximize2 } from "lucide-react";
 
-import { AppLayout } from "@/components/app-layout"
-import { PageWorkspaceGate } from "@/components/page-workspace-gate"
+import { AppLayout } from "@/components/app-layout";
+import { PageWorkspaceGate } from "@/components/page-workspace-gate";
 import {
   PageSidePaneLayout,
   PageSidePaneProvider,
   usePageSidePane,
-} from "@/contexts/page-side-pane"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Button } from "@/components/ui/button"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { isEmbeddedMobileViewer } from "@/lib/embedded-view"
-import { cn } from "@/lib/utils"
-import { toast } from "sonner"
-import { formatPageBreadcrumbLabel } from "@/lib/page-icon"
+} from "@/contexts/page-side-pane";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { TrashedItemBanner } from "@/components/trashed-item-banner";
+import { isEmbeddedMobileViewer } from "@/lib/embedded-view";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { formatPageBreadcrumbLabel } from "@/lib/page-icon";
 import {
   getPageCover,
   getPageEmoji,
-  readParentItemId,
   resolvePageFullWidth,
   type PageMetadata,
-} from "@notelab/features/pages"
+} from "@notelab/features/pages";
 import {
   useUpdatePage,
   useRestorePage,
@@ -40,63 +30,58 @@ import {
   useRemovePageEmbed,
   usePage,
   usePageAccessLevel,
-} from "@notelab/features/pages"
-import { EmbeddedPageDialog } from "@/components/embedded-page-dialog"
-import { useOpenEmbeddedPage } from "@/hooks/use-open-embedded-page"
-import { useSession } from "@notelab/features/auth"
-import { useUserSettings } from "@notelab/features/user-settings"
-import { usePageEditorRegistry } from "@/contexts/page-editor-registry"
-import { createPageEditorHandle } from "@/hooks/use-page-edit-applier"
-import { Editor, type PageEditPreviewControls } from "@/packages/editor"
-import { usePageCollaboration } from "@/packages/editor/use-page-collaboration"
-
+} from "@notelab/features/pages";
+import { EmbeddedPageDialog } from "@/components/embedded-page-dialog";
+import { useOpenEmbeddedPage } from "@/hooks/use-open-embedded-page";
+import { useSession } from "@notelab/features/auth";
+import { useUserSettings } from "@notelab/features/user-settings";
+import { usePageEditorRegistry } from "@/contexts/page-editor-registry";
+import { createPageEditorHandle } from "@/hooks/use-page-edit-applier";
+import { Editor, type PageEditPreviewControls } from "@/packages/editor";
+import { usePageCollaboration } from "@/packages/editor/use-page-collaboration";
 
 type PageEditorPaneProps = {
-  className?: string
-  databaseId?: string | null
-  enableComments?: boolean
-  onOpenPage: (pageId: string) => void
-  readOnly?: boolean
-  pageId: string
-}
+  className?: string;
+  databaseId?: string | null;
+  enableComments?: boolean;
+  onOpenPage: (pageId: string) => void;
+  readOnly?: boolean;
+  pageId: string;
+};
 
 export default function Page() {
-  const { data: session } = useSession()
+  const { data: session } = useSession();
 
   if (!session?.user) {
-    return <PublicPage />
+    return <PublicPage />;
   }
 
   return (
     <AppLayout>
       <AuthenticatedPage />
     </AppLayout>
-  )
+  );
 }
 
 function AuthenticatedPage() {
-  const { pageId } = useParams({ from: "/p/$pageId" })
-  const { data: page } = usePage(pageId, { refetchOnMount: false })
+  const { pageId } = useParams({ from: "/p/$pageId" });
+  const { data: page } = usePage(pageId, { refetchOnMount: false });
   const {
     renderedSidePanePageId,
     sidePaneAnimatedOpen,
     sidePaneContentReady,
     sidePaneDatabaseId,
-  } = usePageSidePane()
+  } = usePageSidePane();
   const { openPage } = useOpenEmbeddedPage({
     contextPageId: pageId,
     page,
-  })
+  });
 
   return (
     <PageSidePaneLayout
       main={
         <PageWorkspaceGate pageId={pageId}>
-          <PageEditorPane
-            key={pageId}
-            onOpenPage={openPage}
-            pageId={pageId}
-          />
+          <PageEditorPane key={pageId} onOpenPage={openPage} pageId={pageId} />
         </PageWorkspaceGate>
       }
       sidePane={
@@ -115,112 +100,106 @@ function AuthenticatedPage() {
       sidePaneOpen={sidePaneAnimatedOpen}
       sidePaneVisible={renderedSidePanePageId !== null}
     />
-  )
+  );
 }
 
 function PublicPage() {
-  const { pageId } = useParams({ from: "/p/$pageId" })
+  const { pageId } = useParams({ from: "/p/$pageId" });
 
   return (
     <PageSidePaneProvider resetKey={pageId}>
       <PublicPageContent pageId={pageId} />
     </PageSidePaneProvider>
-  )
+  );
 }
 
 function PublicPageContent({ pageId }: { pageId: string }) {
-  const { data: page } = usePage(pageId, { refetchOnMount: false })
+  const { data: page } = usePage(pageId, { refetchOnMount: false });
   const {
     closeSidePane,
     renderedSidePanePageId,
     sidePaneAnimatedOpen,
     sidePaneContentReady,
     sidePaneDatabaseId,
-  } = usePageSidePane()
+  } = usePageSidePane();
   const { openPage } = useOpenEmbeddedPage({
     contextPageId: pageId,
     page,
-  })
+  });
 
   return (
     <>
-    <PageSidePaneLayout
-      className="bg-background"
-      standalone
-      viewportHeightClass="h-svh"
-      main={
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <PublicPaneTopbar pageId={pageId} />
-          <PageEditorPane
-            className="min-h-0 min-w-0 flex-1 overflow-y-auto"
-            key={pageId}
-            onOpenPage={openPage}
-            readOnly
-            pageId={pageId}
-          />
-        </div>
-      }
-      sidePane={
-        renderedSidePanePageId ? (
-          <div className="flex h-full min-h-0 flex-col">
-            <div className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
-              <div className="flex shrink-0 items-center gap-1">
-                <Button
-                  aria-label="Close side pane"
-                  onClick={closeSidePane}
-                  size="icon-sm"
-                  type="button"
-                  variant="ghost"
-                >
-                  <ArrowRight />
-                </Button>
-                <Button
-                  aria-label="Open as main page"
-                  asChild
-                  size="icon-sm"
-                  variant="ghost"
-                >
-                  <Link
-                    params={{ pageId: renderedSidePanePageId }}
-                    to="/p/$pageId"
-                  >
-                    <Maximize2 />
-                  </Link>
-                </Button>
-              </div>
-              <PublicPageBreadcrumb
-                pageId={renderedSidePanePageId}
-              />
-            </div>
-            {sidePaneContentReady ? (
-              <PageEditorPane
-                className="min-h-0 flex-1"
-                databaseId={sidePaneDatabaseId}
-                enableComments={false}
-                key={renderedSidePanePageId}
-                onOpenPage={openPage}
-                readOnly
-                pageId={renderedSidePanePageId}
-              />
-            ) : null}
+      <PageSidePaneLayout
+        className="bg-background"
+        standalone
+        viewportHeightClass="h-svh"
+        main={
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+            <PublicPaneTopbar pageId={pageId} />
+            <PageEditorPane
+              className="min-h-0 min-w-0 flex-1 overflow-y-auto"
+              key={pageId}
+              onOpenPage={openPage}
+              readOnly
+              pageId={pageId}
+            />
           </div>
-        ) : null
-      }
-      sidePaneOpen={sidePaneAnimatedOpen}
-      sidePaneVisible={renderedSidePanePageId !== null}
-    />
-    <EmbeddedPageDialog onOpenPage={openPage} />
+        }
+        sidePane={
+          renderedSidePanePageId ? (
+            <div className="flex h-full min-h-0 flex-col">
+              <div className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
+                <div className="flex shrink-0 items-center gap-1">
+                  <Button
+                    aria-label="Close side pane"
+                    onClick={closeSidePane}
+                    size="icon-sm"
+                    type="button"
+                    variant="ghost"
+                  >
+                    <ArrowRight />
+                  </Button>
+                  <Button
+                    aria-label="Open as main page"
+                    asChild
+                    size="icon-sm"
+                    variant="ghost"
+                  >
+                    <Link
+                      params={{ pageId: renderedSidePanePageId }}
+                      to="/p/$pageId"
+                    >
+                      <Maximize2 />
+                    </Link>
+                  </Button>
+                </div>
+                <PublicPageBreadcrumb pageId={renderedSidePanePageId} />
+              </div>
+              {sidePaneContentReady ? (
+                <PageEditorPane
+                  className="min-h-0 flex-1"
+                  databaseId={sidePaneDatabaseId}
+                  enableComments={false}
+                  key={renderedSidePanePageId}
+                  onOpenPage={openPage}
+                  readOnly
+                  pageId={renderedSidePanePageId}
+                />
+              ) : null}
+            </div>
+          ) : null
+        }
+        sidePaneOpen={sidePaneAnimatedOpen}
+        sidePaneVisible={renderedSidePanePageId !== null}
+      />
+      <EmbeddedPageDialog onOpenPage={openPage} />
     </>
-  )
+  );
 }
 
-export function PublicPaneTopbar({
-  pageId,
-}: {
-  pageId: string | null
-}) {
+export function PublicPaneTopbar({ pageId }: { pageId: string | null }) {
   if (isEmbeddedMobileViewer()) {
-    return null
+    return null;
   }
 
   return (
@@ -228,16 +207,12 @@ export function PublicPaneTopbar({
       <PublicPageBreadcrumb pageId={pageId} />
       <PublicLoginButton />
     </header>
-  )
+  );
 }
 
-export function PublicPageBreadcrumb({
-  pageId,
-}: {
-  pageId: string | null
-}) {
+export function PublicPageBreadcrumb({ pageId }: { pageId: string | null }) {
   if (!pageId) {
-    return null
+    return null;
   }
 
   return (
@@ -246,24 +221,18 @@ export function PublicPageBreadcrumb({
         <PublicPageBreadcrumbAncestors pageId={pageId} />
       </ol>
     </nav>
-  )
+  );
 }
 
-function PublicPageBreadcrumbAncestors({
-  pageId,
-}: {
-  pageId: string
-}) {
-  const { data: page } = usePage(pageId)
-  const parentItemId = readParentItemId(page?.metadata) ?? null
+function PublicPageBreadcrumbAncestors({ pageId }: { pageId: string }) {
+  const { data: page } = usePage(pageId);
+  const parentItemId = page?.parentPageId ?? null;
 
   return (
     <>
       {parentItemId ? (
         <>
-          <PublicPageBreadcrumbAncestors
-            pageId={parentItemId}
-          />
+          <PublicPageBreadcrumbAncestors pageId={parentItemId} />
           <li className="shrink-0">/</li>
         </>
       ) : null}
@@ -277,7 +246,7 @@ function PublicPageBreadcrumbAncestors({
         </Link>
       </li>
     </>
-  )
+  );
 }
 
 function PublicLoginButton() {
@@ -285,13 +254,13 @@ function PublicLoginButton() {
     <Button asChild size="sm" variant="outline">
       <Link to="/login">Login</Link>
     </Button>
-  )
+  );
 }
 
 function getPageBreadcrumbLabel(
   page: NonNullable<ReturnType<typeof usePage>["data"]>,
 ) {
-  return formatPageBreadcrumbLabel(page)
+  return formatPageBreadcrumbLabel(page);
 }
 
 export function PageEditorPane({
@@ -302,106 +271,102 @@ export function PageEditorPane({
   readOnly = false,
   pageId,
 }: PageEditorPaneProps) {
-  const { data: page, isLoading } = usePage(pageId)
-  const { data: session } = useSession()
+  const { data: page, isLoading } = usePage(pageId);
+  const { data: session } = useSession();
   const { data: accessLevel } = usePageAccessLevel(pageId, {
     refetchOnMount: false,
-  })
-  const { data: userSettings } = useUserSettings()
-  const createPage = useCreatePage()
-  const embedPageItem = useEmbedPageItem()
-  const removePageEmbed = useRemovePageEmbed()
-  const updatePage = useUpdatePage()
-  const restorePage = useRestorePage()
-  const contentSaveTimeoutRef = useRef<number | null>(null)
-  const lastSavedContentRef = useRef<string | null>(null)
-  const lastPageBlockIdsRef = useRef<Set<string>>(new Set())
-  const pendingContentRef = useRef<unknown>(null)
-  const editorContentRef = useRef<(() => unknown) | null>(null)
-  const editorInstanceRef = useRef<import("@tiptap/core").Editor | null>(null)
-  const pageEditPreviewRef =
-    useRef<PageEditPreviewControls | null>(null)
-  const { registerEditor, unregisterEditor } = usePageEditorRegistry()
-  const [name, setName] = useState("")
-  const [cover, setCover] = useState("")
-  const [emoji, setEmoji] = useState("")
-  const [restoreConfirmOpen, setRestoreConfirmOpen] = useState(false)
-  const fullWidth = resolvePageFullWidth(
-    page,
-    userSettings?.pageFullWidth,
-  )
+  });
+  const { data: userSettings } = useUserSettings();
+  const createPage = useCreatePage();
+  const embedPageItem = useEmbedPageItem();
+  const removePageEmbed = useRemovePageEmbed();
+  const updatePage = useUpdatePage();
+  const restorePage = useRestorePage();
+  const contentSaveTimeoutRef = useRef<number | null>(null);
+  const lastSavedContentRef = useRef<string | null>(null);
+  const lastPageBlockIdsRef = useRef<Set<string>>(new Set());
+  const pendingContentRef = useRef<unknown>(null);
+  const editorContentRef = useRef<(() => unknown) | null>(null);
+  const editorInstanceRef = useRef<import("@tiptap/core").Editor | null>(null);
+  const pageEditPreviewRef = useRef<PageEditPreviewControls | null>(null);
+  const { registerEditor, unregisterEditor } = usePageEditorRegistry();
+  const [name, setName] = useState("");
+  const [cover, setCover] = useState("");
+  const [emoji, setEmoji] = useState("");
+  const fullWidth = resolvePageFullWidth(page, userSettings?.pageFullWidth);
 
   const flushContentSaveTimeout = useCallback(() => {
     if (contentSaveTimeoutRef.current === null) {
-      return
+      return;
     }
 
-    window.clearTimeout(contentSaveTimeoutRef.current)
-    contentSaveTimeoutRef.current = null
+    window.clearTimeout(contentSaveTimeoutRef.current);
+    contentSaveTimeoutRef.current = null;
 
     if (page && pendingContentRef.current !== null) {
       updatePage.mutate({
         id: page.id,
         content: pendingContentRef.current,
-      })
-      pendingContentRef.current = null
+      });
+      pendingContentRef.current = null;
     }
-  }, [updatePage, page])
+  }, [updatePage, page]);
 
   const clearContentSaveTimeout = useCallback(() => {
     if (contentSaveTimeoutRef.current === null) {
-      return
+      return;
     }
 
-    window.clearTimeout(contentSaveTimeoutRef.current)
-    contentSaveTimeoutRef.current = null
-    pendingContentRef.current = null
-  }, [])
+    window.clearTimeout(contentSaveTimeoutRef.current);
+    contentSaveTimeoutRef.current = null;
+    pendingContentRef.current = null;
+  }, []);
 
-  const pageCover = page ? getPageCover(page) ?? "" : ""
-  const pageEmoji = page ? getPageEmoji(page) ?? "" : ""
+  const pageCover = page ? (getPageCover(page) ?? "") : "";
+  const pageEmoji = page ? (getPageEmoji(page) ?? "") : "";
 
   useEffect(() => {
     if (!page) {
-      return
+      return;
     }
 
-    setName(page.name)
-    setCover(pageCover)
-    setEmoji(pageEmoji)
-  }, [page, page?.name, page?.updatedAt, pageCover, pageEmoji])
+    setName(page.name);
+    setCover(pageCover);
+    setEmoji(pageEmoji);
+  }, [page, page?.name, page?.updatedAt, pageCover, pageEmoji]);
 
   useEffect(() => {
-    return flushContentSaveTimeout
-  }, [flushContentSaveTimeout, pageId])
+    return flushContentSaveTimeout;
+  }, [flushContentSaveTimeout, pageId]);
 
   const pageEditable =
     !readOnly &&
     !page?.deletedAt &&
-    (accessLevel === "edit" || accessLevel === "full")
+    (accessLevel === "edit" || accessLevel === "full");
   const collaboration = usePageCollaboration({
     enabled: pageEditable,
     pageId,
     user: session?.user,
-  })
+  });
+  const liveEditingReady =
+    !pageEditable || Boolean(collaboration.provider && !collaboration.error);
 
   const restoreTrashedPage = () => {
     if (!page || restorePage.isPending) {
-      return
+      return;
     }
 
     restorePage.mutate(page.id, {
       onSuccess: () => {
-        setRestoreConfirmOpen(false)
-        toast.success("Page restored.")
+        toast.success("Page restored.");
       },
       onError: (error) => {
         toast.error(
           error instanceof Error ? error.message : "Could not restore page.",
-        )
+        );
       },
-    })
-  }
+    });
+  };
 
   useEffect(() => {
     if (
@@ -411,18 +376,18 @@ export function PageEditorPane({
       (accessLevel !== "edit" && accessLevel !== "full") ||
       name.trim() === page.name
     ) {
-      return
+      return;
     }
 
     const timeout = window.setTimeout(() => {
-      updatePage.mutate({ id: page.id, name: name.trim() })
-    }, 600)
+      updatePage.mutate({ id: page.id, name: name.trim() });
+    }, 600);
 
-    return () => window.clearTimeout(timeout)
-  }, [accessLevel, name, readOnly, updatePage, page])
+    return () => window.clearTimeout(timeout);
+  }, [accessLevel, name, readOnly, updatePage, page]);
 
   const updateCover = (nextCover: string) => {
-    setCover(nextCover)
+    setCover(nextCover);
 
     if (
       readOnly ||
@@ -430,7 +395,7 @@ export function PageEditorPane({
       page.deletedAt ||
       (accessLevel !== "edit" && accessLevel !== "full")
     ) {
-      return
+      return;
     }
 
     updatePage.mutate({
@@ -439,11 +404,11 @@ export function PageEditorPane({
         ...((page.metadata ?? {}) as PageMetadata),
         cover: nextCover,
       },
-    })
-  }
+    });
+  };
 
   const updateEmoji = (nextEmoji: string) => {
-    setEmoji(nextEmoji)
+    setEmoji(nextEmoji);
 
     if (
       readOnly ||
@@ -451,7 +416,7 @@ export function PageEditorPane({
       page.deletedAt ||
       (accessLevel !== "edit" && accessLevel !== "full")
     ) {
-      return
+      return;
     }
 
     updatePage.mutate({
@@ -460,61 +425,61 @@ export function PageEditorPane({
         ...((page.metadata ?? {}) as PageMetadata),
         emoji: nextEmoji,
       },
-    })
-  }
+    });
+  };
 
   const updateContent = useCallback(
     (content: unknown) => {
       if (!page) {
-        return
+        return;
       }
       if (
         readOnly ||
         page.deletedAt ||
         (accessLevel !== "edit" && accessLevel !== "full")
       ) {
-        return
+        return;
       }
 
-      const serializedContent = serializePageContent(content)
+      const serializedContent = serializePageContent(content);
 
       if (
         serializedContent &&
         serializedContent === lastSavedContentRef.current
       ) {
-        return
+        return;
       }
 
       if (serializedContent) {
-        lastSavedContentRef.current = serializedContent
+        lastSavedContentRef.current = serializedContent;
       }
 
-      const nextPageBlockIds = extractPageBlockIds(content)
+      const nextPageBlockIds = extractPageBlockIds(content);
       const removedPageBlockIds = [...lastPageBlockIdsRef.current].filter(
         (pageId) => !nextPageBlockIds.has(pageId),
-      )
+      );
 
-      lastPageBlockIdsRef.current = nextPageBlockIds
+      lastPageBlockIdsRef.current = nextPageBlockIds;
       for (const pageId of removedPageBlockIds) {
         removePageEmbed.mutate({
           hostPageId: page.id,
           itemId: pageId,
           kind: "page",
-        })
+        });
       }
 
       if (collaboration.provider) {
-        return
+        return;
       }
 
-      clearContentSaveTimeout()
-      pendingContentRef.current = content
+      clearContentSaveTimeout();
+      pendingContentRef.current = content;
 
       contentSaveTimeoutRef.current = window.setTimeout(() => {
-        updatePage.mutate({ id: page.id, content })
-        contentSaveTimeoutRef.current = null
-        pendingContentRef.current = null
-      }, 800)
+        updatePage.mutate({ id: page.id, content });
+        contentSaveTimeoutRef.current = null;
+        pendingContentRef.current = null;
+      }, 800);
     },
     [
       accessLevel,
@@ -525,44 +490,45 @@ export function PageEditorPane({
       updatePage,
       page,
     ],
-  )
+  );
 
   useEffect(() => {
     registerEditor(
       pageId,
       createPageEditorHandle({
-        editable: pageEditable,
+        editable: pageEditable && liveEditingReady,
         getEditor: () => editorInstanceRef.current,
         onContentChange: updateContent,
         pageEditPreviewRef,
       }),
-    )
+    );
 
     return () => {
-      unregisterEditor(pageId)
-    }
+      unregisterEditor(pageId);
+    };
   }, [
+    liveEditingReady,
     pageEditable,
     registerEditor,
     unregisterEditor,
     updateContent,
     pageId,
-  ])
+  ]);
 
   const embedLinkedPage = useCallback(
     async (pageId: string) => {
       if (!page) {
-        return
+        return;
       }
 
       await embedPageItem.mutateAsync({
         hostPageId: page.id,
         itemId: pageId,
         kind: "page",
-      })
+      });
     },
     [embedPageItem, page],
-  )
+  );
 
   const createNestedPage = useCallback(async () => {
     if (
@@ -571,7 +537,7 @@ export function PageEditorPane({
       page.deletedAt ||
       (accessLevel !== "edit" && accessLevel !== "full")
     ) {
-      throw new Error("Page is required")
+      throw new Error("Page is required");
     }
 
     return createPage.mutateAsync({
@@ -580,17 +546,15 @@ export function PageEditorPane({
       name: "",
       workspaceId: page.workspaceId,
       parentItemId: page.id,
-    })
-  }, [accessLevel, createPage, readOnly, page])
+    });
+  }, [accessLevel, createPage, readOnly, page]);
 
   if (isLoading) {
     return (
       <section className={cn(className, "animate-in fade-in duration-200")}>
-        <PageEditorSkeleton
-          fullWidth={Boolean(userSettings?.pageFullWidth)}
-        />
+        <PageEditorSkeleton fullWidth={Boolean(userSettings?.pageFullWidth)} />
       </section>
-    )
+    );
   }
 
   if (!page) {
@@ -600,50 +564,21 @@ export function PageEditorPane({
       >
         Page not found.
       </section>
-    )
-  }
-
-  if (pageEditable && collaboration.error && !collaboration.synced) {
-    return (
-      <section
-        className={cn(
-          className,
-          "flex min-h-[50vh] items-center justify-center px-6 text-sm text-destructive",
-        )}
-      >
-        {collaboration.error}
-      </section>
-    )
-  }
-
-  if (pageEditable && !collaboration.synced) {
-    return (
-      <section className={cn(className, "animate-in fade-in duration-200")}>
-        <PageEditorSkeleton fullWidth={fullWidth} />
-      </section>
-    )
+    );
   }
 
   return (
     <section className={cn(className, "animate-in fade-in-0 duration-300")}>
       {page.deletedAt ? (
-        <div className="sticky top-0 z-20 flex min-h-12 items-center justify-between gap-3 border-b bg-background/95 px-4 py-2 text-sm shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/80">
-          <span className="font-medium">This page is in trash.</span>
-          {!readOnly ? (
-            <Button
-              disabled={restorePage.isPending}
-              onClick={() => setRestoreConfirmOpen(true)}
-              size="sm"
-              type="button"
-              variant="outline"
-            >
-              Restore
-            </Button>
-          ) : null}
-        </div>
+        <TrashedItemBanner
+          itemLabel="page"
+          onRestore={restoreTrashedPage}
+          restoring={restorePage.isPending}
+          showRestore={!readOnly}
+        />
       ) : null}
       <Editor
-        key={page.id}
+        key={`${page.id}:${collaboration.provider ? "live" : "preview"}`}
         collaboration={
           collaboration.provider && collaboration.user
             ? {
@@ -658,16 +593,16 @@ export function PageEditorPane({
         cover={cover}
         databaseId={databaseId}
         editorContentRef={editorContentRef}
-        editable={pageEditable}
+        editable={pageEditable && liveEditingReady}
         enableComments={enableComments}
         onEditorReady={(editor) => {
-          editorInstanceRef.current = editor
+          editorInstanceRef.current = editor;
           lastSavedContentRef.current = editor
             ? serializePageContent(editor.getJSON())
-            : null
+            : null;
           lastPageBlockIdsRef.current = editor
             ? extractPageBlockIds(editor.getJSON())
-            : new Set()
+            : new Set();
         }}
         emoji={emoji}
         fullWidth={fullWidth}
@@ -683,33 +618,8 @@ export function PageEditorPane({
         pageEditPreviewRef={pageEditPreviewRef}
         pageId={page.id}
       />
-      <AlertDialog
-        open={restoreConfirmOpen}
-        onOpenChange={setRestoreConfirmOpen}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Restore page?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This page will be moved out of trash and appear in your active
-              pages again.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={restorePage.isPending}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              disabled={restorePage.isPending}
-              onClick={restoreTrashedPage}
-            >
-              Restore
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </section>
-  )
+  );
 }
 
 function PageEditorSkeleton({ fullWidth }: { fullWidth: boolean }) {
@@ -742,48 +652,48 @@ function PageEditorSkeleton({ fullWidth }: { fullWidth: boolean }) {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 function serializePageContent(content: unknown) {
   try {
-    return JSON.stringify(content)
+    return JSON.stringify(content);
   } catch {
-    return null
+    return null;
   }
 }
 
 function extractPageBlockIds(content: unknown) {
-  const pageIds = new Set<string>()
-  collectPageBlockIds(content, pageIds)
-  return pageIds
+  const pageIds = new Set<string>();
+  collectPageBlockIds(content, pageIds);
+  return pageIds;
 }
 
 function collectPageBlockIds(value: unknown, pageIds: Set<string>) {
   if (!value || typeof value !== "object") {
-    return
+    return;
   }
 
   if (Array.isArray(value)) {
     for (const item of value) {
-      collectPageBlockIds(item, pageIds)
+      collectPageBlockIds(item, pageIds);
     }
-    return
+    return;
   }
 
   const record = value as {
-    attrs?: { pageId?: unknown }
-    content?: unknown
-    type?: unknown
-  }
+    attrs?: { pageId?: unknown };
+    content?: unknown;
+    type?: unknown;
+  };
 
   if (
     record.type === "pageBlock" &&
     typeof record.attrs?.pageId === "string" &&
     record.attrs.pageId.length > 0
   ) {
-    pageIds.add(record.attrs.pageId)
+    pageIds.add(record.attrs.pageId);
   }
 
-  collectPageBlockIds(record.content, pageIds)
+  collectPageBlockIds(record.content, pageIds);
 }

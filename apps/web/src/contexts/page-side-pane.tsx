@@ -26,10 +26,12 @@ export type PageSidePaneContextValue = {
     pageId: string,
     options?: OpenPageSidePaneOptions,
   ) => void
+  openDatabaseSidePane: (databaseId: string) => void
   openSidePane: (
     pageId: string,
     options?: OpenPageSidePaneOptions,
   ) => void
+  renderedSidePaneDatabaseId: string | null
   renderedSidePanePageId: string | null
   sidePaneAnimatedOpen: boolean
   sidePaneContentReady: boolean
@@ -276,6 +278,8 @@ export function usePageSidePaneState(
   const [dialogDatabaseId, setDialogDatabaseId] = useState<string | null>(null)
   const [renderedSidePanePageId, setRenderedSidePanePageId] =
     useState<string | null>(null)
+  const [renderedSidePaneDatabaseId, setRenderedSidePaneDatabaseId] =
+    useState<string | null>(null)
   const [sidePaneAnimatedOpen, setSidePaneAnimatedOpen] = useState(false)
   const [sidePaneContentReady, setSidePaneContentReady] = useState(false)
   const sidePaneWasOpenRef = useRef(false)
@@ -289,7 +293,7 @@ export function usePageSidePaneState(
         params.delete(SIDE_PANE_PAGE_PARAM)
       }
 
-      if (pageId && databaseId) {
+      if (databaseId) {
         params.set(SIDE_PANE_DATABASE_PARAM, databaseId)
       } else {
         params.delete(SIDE_PANE_DATABASE_PARAM)
@@ -326,6 +330,13 @@ export function usePageSidePaneState(
     },
     [closeEmbeddedPageDialog, writeSidePaneParams],
   )
+  const openDatabaseSidePane = useCallback(
+    (databaseId: string) => {
+      closeEmbeddedPageDialog()
+      writeSidePaneParams(null, databaseId)
+    },
+    [closeEmbeddedPageDialog, writeSidePaneParams],
+  )
   const openEmbeddedPageDialog = useCallback(
     (nextPageId: string, options?: OpenPageSidePaneOptions) => {
       closeSidePane()
@@ -336,13 +347,20 @@ export function usePageSidePaneState(
   )
 
   useEffect(() => {
-    if (!sidePanePageId) {
+    const sidePaneTargetKey = sidePanePageId
+      ? `page:${sidePanePageId}`
+      : sidePaneDatabaseId
+        ? `database:${sidePaneDatabaseId}`
+        : null
+
+    if (!sidePaneTargetKey) {
       sidePaneWasOpenRef.current = false
       setSidePaneContentReady(false)
       setSidePaneAnimatedOpen(false)
 
       const timer = window.setTimeout(() => {
         setRenderedSidePanePageId(null)
+        setRenderedSidePaneDatabaseId(null)
       }, WORKSPACE_SIDE_PANE_TRANSITION_MS)
 
       return () => {
@@ -353,6 +371,9 @@ export function usePageSidePaneState(
     const isAlreadyOpen = sidePaneWasOpenRef.current
 
     setRenderedSidePanePageId(sidePanePageId)
+    setRenderedSidePaneDatabaseId(
+      sidePanePageId ? null : sidePaneDatabaseId,
+    )
     sidePaneWasOpenRef.current = true
 
     if (isAlreadyOpen) {
@@ -388,7 +409,7 @@ export function usePageSidePaneState(
       cancelAnimationFrame(settleFrame)
       window.clearTimeout(contentTimer)
     }
-  }, [sidePanePageId])
+  }, [sidePaneDatabaseId, sidePanePageId])
 
   return useMemo<PageSidePaneContextValue>(
     () => ({
@@ -397,7 +418,9 @@ export function usePageSidePaneState(
       dialogDatabaseId,
       dialogPageId,
       openEmbeddedPageDialog,
+      openDatabaseSidePane,
       openSidePane,
+      renderedSidePaneDatabaseId,
       renderedSidePanePageId,
       sidePaneAnimatedOpen,
       sidePaneContentReady,
@@ -410,7 +433,9 @@ export function usePageSidePaneState(
       dialogDatabaseId,
       dialogPageId,
       openEmbeddedPageDialog,
+      openDatabaseSidePane,
       openSidePane,
+      renderedSidePaneDatabaseId,
       renderedSidePanePageId,
       sidePaneAnimatedOpen,
       sidePaneContentReady,

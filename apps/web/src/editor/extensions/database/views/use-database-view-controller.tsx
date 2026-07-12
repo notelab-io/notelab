@@ -22,7 +22,10 @@ import {
   useUpdateDatabasePropertyValue,
 } from "@notelab/features/databases"
 import { useNotelabFeatures } from "@notelab/features"
-import { usePagePersonAccessTargets } from "@notelab/features/pages"
+import {
+  usePage,
+  usePagePersonAccessTargets,
+} from "@notelab/features/pages"
 import { ArrowRight, Columns3, Link2 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -58,6 +61,7 @@ export type DatabaseViewProps = {
   databaseId: string | null | undefined
   editable?: boolean
   fullPage?: boolean
+  includeDeleted?: boolean
   onActiveViewIdChange?: (viewId: string | null) => void
   onOpenPage?: (pageId: string) => void
   onDismissSetup?: () => void
@@ -124,6 +128,7 @@ export function useDatabaseViewController({
   databaseId,
   editable = true,
   fullPage = false,
+  includeDeleted = false,
   onActiveViewIdChange,
   onOpenPage,
   onDismissSetup,
@@ -152,13 +157,21 @@ export function useDatabaseViewController({
   const updateProperty = useUpdateDatabaseProperty()
   const addRow = useAddDatabaseRow()
   const updateValue = useUpdateDatabasePropertyValue()
+  const { data: hostPage } = usePage(pageId, {
+    refetchOnMount: false,
+  })
+  const includeDeletedDatabases = includeDeleted || Boolean(hostPage?.deletedAt)
   const {
     data: payload,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    error,
+    isError,
     isLoading,
-  } = useDatabase(databaseId)
+  } = useDatabase(databaseId, {
+    includeDeleted: includeDeletedDatabases,
+  })
   const [draftDatabaseTitle, setDraftDatabaseTitle] = useState("New database")
   const [draftViewTitle, setDraftViewTitle] = useState("Table")
   const [activeViewId, setActiveViewId] = useState<string | null>(
@@ -197,8 +210,12 @@ export function useDatabaseViewController({
     fetchNextPage: fetchNextLinkedPage,
     hasNextPage: hasNextLinkedPage,
     isFetchingNextPage: isFetchingNextLinkedPage,
+    error: linkedError,
+    isError: isLinkedError,
     isLoading: isLoadingLinkedPayload,
-  } = useDatabase(activeLinkedDatabaseView?.databaseId)
+  } = useDatabase(activeLinkedDatabaseView?.databaseId, {
+    includeDeleted: includeDeletedDatabases,
+  })
   const activePayload = activeLinkedDatabaseView ? linkedPayload : payload
   const activeDatabaseId = activeLinkedDatabaseView?.databaseId ?? databaseId
   const activeFetchNextPage = activeLinkedDatabaseView
@@ -777,6 +794,8 @@ export function useDatabaseViewController({
       : "database-block-shell",
     context: databaseViewContext,
     databaseId,
+    error: activeLinkedDatabaseView ? linkedError : error,
+    isError: activeLinkedDatabaseView ? isLinkedError : isError,
     handleDatabaseBlockDragOver,
     handleDatabaseBlockDrop,
     isLoading: isLoading || Boolean(activeLinkedDatabaseView && isLoadingLinkedPayload),

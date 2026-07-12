@@ -32,7 +32,7 @@ export type PageNavItem = {
   navNodeId?: string
   emoji: ReactNode
   notelabai?: NotelabAiMode | null
-  pageId: string
+  pageId: string | null
   pages: PageNavItem[]
 }
 
@@ -173,7 +173,7 @@ function NavTreeItem({
               </Link>
             ) : (
               <Link
-                params={{ pageId: item.pageId } as never}
+                params={{ pageId: item.pageId as string } as never}
                 title={displayName}
                 to="/p/$pageId"
                 {...linkProps}

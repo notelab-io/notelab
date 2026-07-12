@@ -24,8 +24,10 @@ export function DatabaseView(props: DatabaseViewProps) {
     className,
     context,
     databaseId,
+    error,
     handleDatabaseBlockDragOver,
     handleDatabaseBlockDrop,
+    isError,
     isLoading,
     onDismissSetup,
     onSetupComplete,
@@ -53,10 +55,22 @@ export function DatabaseView(props: DatabaseViewProps) {
             <div className="database-empty-state">
               <span>Database reference missing.</span>
             </div>
-          ) : isLoading || !payload ? (
+          ) : isLoading ? (
             <div className="database-empty-state">
               <Loader2 className="animate-spin" />
               <span>Loading database...</span>
+            </div>
+          ) : isError ? (
+            <div className="database-empty-state">
+              <span>
+                {error instanceof Error
+                  ? error.message
+                  : "This database is unavailable."}
+              </span>
+            </div>
+          ) : !payload ? (
+            <div className="database-empty-state">
+              <span>This database is unavailable.</span>
             </div>
           ) : (
             <DatabaseViewContent viewType={viewType} />

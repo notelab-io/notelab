@@ -18,9 +18,9 @@ import {
   Trash2,
   Type,
   UserRound,
-} from "lucide-react"
-import { Reorder, useDragControls } from "framer-motion"
-import { useEffect, useRef, useState, type ReactNode } from "react"
+} from "lucide-react";
+import { Reorder, useDragControls } from "framer-motion";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import {
   DropDrawerItem,
@@ -30,7 +30,7 @@ import {
   DropDrawerSub,
   DropDrawerSubContent,
   DropDrawerSubTrigger,
-} from "@/components/ui/dropdrawer"
+} from "@/components/ui/dropdrawer";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,9 +40,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -51,30 +51,30 @@ import {
   SelectLabel,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Switch } from "@/components/ui/switch"
+} from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Switch } from "@/components/ui/switch";
 import {
   useAddDatabaseProperty,
   useDatabase,
   useUpdateDatabaseProperty,
   useUpdateDatabasePropertyValue,
-} from "@notelab/features/databases"
-import { usePages } from "@notelab/features/pages"
+} from "@notelab/features/databases";
+import { usePageNavigation } from "@notelab/features/pages";
 import {
   colorTokens,
   getColorTokenBadgeClassName,
   getColorTokenDotClassName,
   getColorTokenValue,
-} from "@/lib/color-tokens"
+} from "@/lib/color-tokens";
 
-import { defaultStatusOptions } from "../core/database-property-types"
+import { defaultStatusOptions } from "../core/database-property-types";
 import {
   getNextDatabaseOptionColor,
   hasDatabasePropertyTypeEditSettings,
   isDateLikePropertyType,
   isSelectLikePropertyType,
-} from "../core/database-property-types"
+} from "../core/database-property-types";
 import {
   dateFormatOptions,
   getDateFormatConfig,
@@ -82,7 +82,7 @@ import {
   timeFormatOptions,
   type DateFormatValue,
   type TimeFormatValue,
-} from "./database-date-config"
+} from "./database-date-config";
 import {
   getNumberDecimalPlaces,
   getNumberDisplayColor,
@@ -96,23 +96,23 @@ import {
   type DatabasePropertyConfig,
   type DatabaseSelectOption,
   type NumberDecimalPlacesValue,
-} from "../views/database-view-config"
-import { useDatabaseViewContext } from "../views/database-view-context"
+} from "../views/database-view-config";
+import { useDatabaseViewContext } from "../views/database-view-context";
 import {
   DatabaseSearchableMenuItems,
   type DatabaseSearchableMenuOption,
-} from "../views/database-searchable-menu-items"
-import { useNavigate } from "@tanstack/react-router"
+} from "../views/database-searchable-menu-items";
+import { useNavigate } from "@tanstack/react-router";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip"
+} from "@/components/ui/tooltip";
 import {
   getRelationNeedsRepair,
   getRelationRepairMutationPlan,
   getRelationTwoWayConfigUpdate,
-} from "./database-relation-sync"
+} from "./database-relation-sync";
 import {
   getRollupCalculationsForType,
   getRollupConfig,
@@ -124,18 +124,18 @@ import {
   rollupShowCalculations,
   getValidRollupCalculation,
   type DatabaseRollupConfig,
-} from "./rollup/rollup-config"
-import { getRollupRelationProperty } from "./rollup/rollup-engine"
+} from "./rollup/rollup-config";
+import { getRollupRelationProperty } from "./rollup/rollup-engine";
 
 type StatusOption = DatabaseSelectOption & {
-  group?: string
-}
+  group?: string;
+};
 
-type FilesLimitValue = "one_file" | "no_limit"
-type PersonDefaultValue = "no_default" | "created_by"
-type PersonLimitValue = "one_person" | "no_limit"
-type PersonNotificationsValue = "users_and_groups" | "users_only" | "none"
-type SelectOptionSortValue = "manual" | "alphabetical" | "reverse_alphabetical"
+type FilesLimitValue = "one_file" | "no_limit";
+type PersonDefaultValue = "no_default" | "created_by";
+type PersonLimitValue = "one_person" | "no_limit";
+type PersonNotificationsValue = "users_and_groups" | "users_only" | "none";
+type SelectOptionSortValue = "manual" | "alphabetical" | "reverse_alphabetical";
 
 export function DatabasePropertyEditSubmenu({
   children,
@@ -148,15 +148,15 @@ export function DatabasePropertyEditSubmenu({
   type,
   workspaceId,
 }: {
-  children: ReactNode
-  config?: unknown
-  databaseId: string
-  databasePropertyId: string
-  sourceDatabaseId?: string
-  sourceDatabaseName?: string
-  sourcePropertyId?: string
-  type: string
-  workspaceId?: string | null
+  children: ReactNode;
+  config?: unknown;
+  databaseId: string;
+  databasePropertyId: string;
+  sourceDatabaseId?: string;
+  sourceDatabaseName?: string;
+  sourcePropertyId?: string;
+  type: string;
+  workspaceId?: string | null;
 }) {
   return (
     <DropDrawerSub>
@@ -176,11 +176,11 @@ export function DatabasePropertyEditSubmenu({
         />
       </DropDrawerSubContent>
     </DropDrawerSub>
-  )
+  );
 }
 
 export function hasDatabasePropertyEditSettings(type: string) {
-  return hasDatabasePropertyTypeEditSettings(type)
+  return hasDatabasePropertyTypeEditSettings(type);
 }
 
 function DatabasePropertyEditMenuItems({
@@ -193,32 +193,32 @@ function DatabasePropertyEditMenuItems({
   type,
   workspaceId,
 }: {
-  config?: unknown
-  databaseId: string
-  databasePropertyId: string
-  sourceDatabaseId?: string
-  sourceDatabaseName?: string
-  sourcePropertyId?: string
-  type: string
-  workspaceId?: string | null
+  config?: unknown;
+  databaseId: string;
+  databasePropertyId: string;
+  sourceDatabaseId?: string;
+  sourceDatabaseName?: string;
+  sourcePropertyId?: string;
+  type: string;
+  workspaceId?: string | null;
 }) {
-  const { updateDatabasePropertyConfig } = useDatabaseViewContext()
-  const isStatusProperty = type === "status"
-  const isSelectProperty = isSelectLikePropertyType(type) && type !== "status"
-  const isPersonProperty = type === "person"
-  const isFilesProperty = type === "files"
-  const isRelationProperty = type === "relation"
-  const isRollupProperty = type === "rollup"
-  const isNumberProperty = type === "number"
-  const isUrlProperty = type === "url"
-  const isDateProperty = isDateLikePropertyType(type)
-  const showFullUrl = getShowFullUrl(config)
-  const statusDefaultOptionId = getStatusDefaultOptionId(config)
-  const statusOptions = getStatusOptions(config)
-  const selectOptions = getSelectOptions(config)
+  const { updateDatabasePropertyConfig } = useDatabaseViewContext();
+  const isStatusProperty = type === "status";
+  const isSelectProperty = isSelectLikePropertyType(type) && type !== "status";
+  const isPersonProperty = type === "person";
+  const isFilesProperty = type === "files";
+  const isRelationProperty = type === "relation";
+  const isRollupProperty = type === "rollup";
+  const isNumberProperty = type === "number";
+  const isUrlProperty = type === "url";
+  const isDateProperty = isDateLikePropertyType(type);
+  const showFullUrl = getShowFullUrl(config);
+  const statusDefaultOptionId = getStatusDefaultOptionId(config);
+  const statusOptions = getStatusOptions(config);
+  const selectOptions = getSelectOptions(config);
   const updatePropertyConfig = (nextConfig: DatabasePropertyConfig) => {
-    void updateDatabasePropertyConfig(databasePropertyId, nextConfig)
-  }
+    void updateDatabasePropertyConfig(databasePropertyId, nextConfig);
+  };
 
   if (isNumberProperty) {
     return (
@@ -226,7 +226,7 @@ function DatabasePropertyEditMenuItems({
         config={getNumberPropertyConfig(config)}
         onUpdateConfig={updatePropertyConfig}
       />
-    )
+    );
   }
 
   if (isUrlProperty) {
@@ -234,8 +234,8 @@ function DatabasePropertyEditMenuItems({
       <DropDrawerItem
         aria-pressed={showFullUrl}
         onSelect={(event) => {
-          event.preventDefault()
-          updatePropertyConfig({ showFullUrl: !showFullUrl })
+          event.preventDefault();
+          updatePropertyConfig({ showFullUrl: !showFullUrl });
         }}
       >
         <ArrowLeftRight />
@@ -247,7 +247,7 @@ function DatabasePropertyEditMenuItems({
           tabIndex={-1}
         />
       </DropDrawerItem>
-    )
+    );
   }
 
   if (isStatusProperty) {
@@ -257,7 +257,7 @@ function DatabasePropertyEditMenuItems({
         onUpdateConfig={updatePropertyConfig}
         options={statusOptions}
       />
-    )
+    );
   }
 
   if (isSelectProperty) {
@@ -267,7 +267,7 @@ function DatabasePropertyEditMenuItems({
         options={selectOptions}
         sort={getSelectOptionSort(config)}
       />
-    )
+    );
   }
 
   if (isPersonProperty) {
@@ -276,7 +276,7 @@ function DatabasePropertyEditMenuItems({
         config={getPersonConfig(config)}
         onUpdateConfig={updatePropertyConfig}
       />
-    )
+    );
   }
 
   if (isFilesProperty) {
@@ -285,7 +285,7 @@ function DatabasePropertyEditMenuItems({
         config={getFilesConfig(config)}
         onUpdateConfig={updatePropertyConfig}
       />
-    )
+    );
   }
 
   if (isRelationProperty) {
@@ -300,7 +300,7 @@ function DatabasePropertyEditMenuItems({
         sourcePropertyId={sourcePropertyId}
         workspaceId={workspaceId}
       />
-    )
+    );
   }
 
   if (isRollupProperty) {
@@ -310,7 +310,7 @@ function DatabasePropertyEditMenuItems({
         databaseId={databaseId}
         onUpdateConfig={updatePropertyConfig}
       />
-    )
+    );
   }
 
   if (isDateProperty) {
@@ -320,10 +320,10 @@ function DatabasePropertyEditMenuItems({
         timeFormat={getTimeFormatConfig(config)}
         onUpdateConfig={updatePropertyConfig}
       />
-    )
+    );
   }
 
-  return <DropDrawerItem disabled>Property settings</DropDrawerItem>
+  return <DropDrawerItem disabled>Property settings</DropDrawerItem>;
 }
 
 function getDatabasePropertyEditSubmenuContentClassName(type: string) {
@@ -336,7 +336,7 @@ function getDatabasePropertyEditSubmenuContentClassName(type: string) {
     type === "rollup" ||
     isDateLikePropertyType(type)
     ? "w-80"
-    : undefined
+    : undefined;
 }
 
 export function DatabaseRollupPropertySettings({
@@ -345,24 +345,28 @@ export function DatabaseRollupPropertySettings({
   onUpdateConfig,
   surface = "menu",
 }: {
-  config?: unknown
-  databaseId: string
-  onUpdateConfig: (config: DatabasePropertyConfig) => void
-  surface?: "menu" | "popover"
+  config?: unknown;
+  databaseId: string;
+  onUpdateConfig: (config: DatabasePropertyConfig) => void;
+  surface?: "menu" | "popover";
 }) {
-  const rollupConfig = getRollupConfig(config)
+  const rollupConfig = getRollupConfig(config);
   const { data: currentDatabasePayload, isLoading: isLoadingCurrentDatabase } =
-    useDatabase(databaseId, { schemaOnly: true })
+    useDatabase(databaseId, { schemaOnly: true });
   const relationProperties =
     currentDatabasePayload?.properties.filter(
-      (property) => property.property.type === "relation"
-    ) ?? []
+      (property) => property.property.type === "relation",
+    ) ?? [];
   const selectedRelationProperty =
-    getRollupRelationProperty(relationProperties, rollupConfig.relationPropertyId) ??
-    relationProperties[0]
-  const relationConfig = getRelationConfig(selectedRelationProperty?.property.config)
+    getRollupRelationProperty(
+      relationProperties,
+      rollupConfig.relationPropertyId,
+    ) ?? relationProperties[0];
+  const relationConfig = getRelationConfig(
+    selectedRelationProperty?.property.config,
+  );
   const { data: relatedDatabasePayload, isLoading: isLoadingRelatedDatabase } =
-    useDatabase(relationConfig.relatedDatabaseId, { schemaOnly: true })
+    useDatabase(relationConfig.relatedDatabaseId, { schemaOnly: true });
   const targetProperties = [
     {
       id: "name",
@@ -376,17 +380,17 @@ export function DatabaseRollupPropertySettings({
         name: property.property.name,
         type: property.property.type,
       })),
-  ]
+  ];
   const selectedTargetProperty = targetProperties.find(
-    (property) => property.id === rollupConfig.targetPropertyId
-  )
-  const effectiveTargetProperty = selectedTargetProperty ?? targetProperties[0]
-  const selectedTargetType = effectiveTargetProperty?.type ?? "text"
+    (property) => property.id === rollupConfig.targetPropertyId,
+  );
+  const effectiveTargetProperty = selectedTargetProperty ?? targetProperties[0];
+  const selectedTargetType = effectiveTargetProperty?.type ?? "text";
   const calculation = getValidRollupCalculation(
     rollupConfig.calculation,
-    selectedTargetType
-  )
-  const calculationOptions = getRollupCalculationsForType(selectedTargetType)
+    selectedTargetType,
+  );
+  const calculationOptions = getRollupCalculationsForType(selectedTargetType);
   const updateRollupConfig = (patch: Partial<DatabaseRollupConfig>) => {
     onUpdateConfig(
       getRollupConfigUpdate(
@@ -395,20 +399,22 @@ export function DatabaseRollupPropertySettings({
           relationPropertyId: selectedRelationProperty?.id,
           targetPropertyId: effectiveTargetProperty?.id,
         },
-        patch
-      )
-    )
-  }
+        patch,
+      ),
+    );
+  };
 
   if (surface === "popover") {
     if (isLoadingCurrentDatabase) {
-      return <RollupPopoverMessage>Loading relations...</RollupPopoverMessage>
+      return <RollupPopoverMessage>Loading relations...</RollupPopoverMessage>;
     }
 
     if (relationProperties.length === 0) {
       return (
-        <RollupPopoverMessage>Add a relation property first.</RollupPopoverMessage>
-      )
+        <RollupPopoverMessage>
+          Add a relation property first.
+        </RollupPopoverMessage>
+      );
     }
 
     return (
@@ -418,8 +424,8 @@ export function DatabaseRollupPropertySettings({
           label="Relation"
           onValueChange={(relationPropertyId) => {
             const nextRelationProperty = relationProperties.find(
-              (property) => property.id === relationPropertyId
-            )
+              (property) => property.id === relationPropertyId,
+            );
 
             updateRollupConfig({
               calculation: "show_original",
@@ -428,7 +434,7 @@ export function DatabaseRollupPropertySettings({
                 nextRelationProperty?.id === rollupConfig.relationPropertyId
                   ? rollupConfig.targetPropertyId
                   : undefined,
-            })
+            });
           }}
           options={relationProperties.map((property) => ({
             label: property.property.name,
@@ -441,16 +447,16 @@ export function DatabaseRollupPropertySettings({
           label="Target property"
           onValueChange={(targetPropertyId) => {
             const nextTarget = targetProperties.find(
-              (property) => property.id === targetPropertyId
-            )
+              (property) => property.id === targetPropertyId,
+            );
 
             updateRollupConfig({
               calculation: getValidRollupCalculation(
                 rollupConfig.calculation,
-                nextTarget?.type ?? "text"
+                nextTarget?.type ?? "text",
               ),
               targetPropertyId,
-            })
+            });
           }}
           options={targetProperties.map((property) => ({
             label: property.name,
@@ -475,15 +481,17 @@ export function DatabaseRollupPropertySettings({
           options={calculationOptions}
         />
       </div>
-    )
+    );
   }
 
   if (isLoadingCurrentDatabase) {
-    return <DropDrawerItem disabled>Loading relations...</DropDrawerItem>
+    return <DropDrawerItem disabled>Loading relations...</DropDrawerItem>;
   }
 
   if (relationProperties.length === 0) {
-    return <DropDrawerItem disabled>Add a relation property first.</DropDrawerItem>
+    return (
+      <DropDrawerItem disabled>Add a relation property first.</DropDrawerItem>
+    );
   }
 
   return (
@@ -493,8 +501,8 @@ export function DatabaseRollupPropertySettings({
         label="Relation"
         onSelect={(relationPropertyId) => {
           const nextRelationProperty = relationProperties.find(
-            (property) => property.id === relationPropertyId
-          )
+            (property) => property.id === relationPropertyId,
+          );
 
           updateRollupConfig({
             calculation: "show_original",
@@ -503,7 +511,7 @@ export function DatabaseRollupPropertySettings({
               nextRelationProperty?.id === rollupConfig.relationPropertyId
                 ? rollupConfig.targetPropertyId
                 : undefined,
-          })
+          });
         }}
         options={relationProperties.map((property) => ({
           label: property.property.name,
@@ -516,16 +524,16 @@ export function DatabaseRollupPropertySettings({
         label="Target property"
         onSelect={(targetPropertyId) => {
           const nextTarget = targetProperties.find(
-            (property) => property.id === targetPropertyId
-          )
+            (property) => property.id === targetPropertyId,
+          );
 
           updateRollupConfig({
             calculation: getValidRollupCalculation(
               rollupConfig.calculation,
-              nextTarget?.type ?? "text"
+              nextTarget?.type ?? "text",
             ),
             targetPropertyId,
-          })
+          });
         }}
         options={targetProperties.map((property) => ({
           label: property.name,
@@ -559,7 +567,7 @@ export function DatabaseRollupPropertySettings({
         </>
       ) : null}
     </>
-  )
+  );
 }
 
 function RollupSelect<TValue extends string>({
@@ -569,14 +577,14 @@ function RollupSelect<TValue extends string>({
   options,
   value,
 }: {
-  icon: ReactNode
-  label: string
-  onValueChange: (value: TValue) => void
+  icon: ReactNode;
+  label: string;
+  onValueChange: (value: TValue) => void;
   options: {
-    label: string
-    value: TValue
-  }[]
-  value: TValue
+    label: string;
+    value: TValue;
+  }[];
+  value: TValue;
 }) {
   return (
     <label className="grid gap-1.5 px-1.5 py-1 text-sm">
@@ -600,13 +608,13 @@ function RollupSelect<TValue extends string>({
         </SelectContent>
       </Select>
     </label>
-  )
+  );
 }
 
 function RollupPopoverMessage({ children }: { children: ReactNode }) {
   return (
     <div className="px-1.5 py-1 text-sm text-muted-foreground">{children}</div>
-  )
+  );
 }
 
 function RollupCalculationSelect({
@@ -614,38 +622,40 @@ function RollupCalculationSelect({
   onValueChange,
   options,
 }: {
-  calculation: DatabaseRollupConfig["calculation"]
-  onValueChange: (value: NonNullable<DatabaseRollupConfig["calculation"]>) => void
+  calculation: DatabaseRollupConfig["calculation"];
+  onValueChange: (
+    value: NonNullable<DatabaseRollupConfig["calculation"]>,
+  ) => void;
   options: {
-    label: string
-    value: NonNullable<DatabaseRollupConfig["calculation"]>
-  }[]
+    label: string;
+    value: NonNullable<DatabaseRollupConfig["calculation"]>;
+  }[];
 }) {
-  const visibleValues = new Set(options.map((option) => option.value))
+  const visibleValues = new Set(options.map((option) => option.value));
   const showOptions = rollupShowCalculations.filter((option) =>
-    visibleValues.has(option.value)
-  )
+    visibleValues.has(option.value),
+  );
   const countOptions = rollupCountCalculations.filter((option) =>
-    visibleValues.has(option.value)
-  )
+    visibleValues.has(option.value),
+  );
   const percentOptions = rollupPercentCalculations.filter((option) =>
-    visibleValues.has(option.value)
-  )
+    visibleValues.has(option.value),
+  );
   const dateOptions = rollupDateCalculations.filter((option) =>
-    visibleValues.has(option.value)
-  )
+    visibleValues.has(option.value),
+  );
   const otherOptions = options.filter(
     (option) =>
       !showOptions.some((item) => item.value === option.value) &&
       !countOptions.some((item) => item.value === option.value) &&
       !percentOptions.some((item) => item.value === option.value) &&
-      !dateOptions.some((item) => item.value === option.value)
-  )
+      !dateOptions.some((item) => item.value === option.value),
+  );
   const groups = [
     { label: "Count", options: countOptions },
     { label: "Percent", options: percentOptions },
     { label: "Date", options: dateOptions },
-  ].filter((group) => group.options.length > 0)
+  ].filter((group) => group.options.length > 0);
 
   return (
     <label className="grid gap-1.5 px-1.5 py-1 text-sm">
@@ -656,7 +666,7 @@ function RollupCalculationSelect({
       <Select
         onValueChange={(nextValue) =>
           onValueChange(
-            nextValue as NonNullable<DatabaseRollupConfig["calculation"]>
+            nextValue as NonNullable<DatabaseRollupConfig["calculation"]>,
           )
         }
         value={calculation ?? options[0]?.value}
@@ -683,12 +693,12 @@ function RollupCalculationSelect({
         </SelectContent>
       </Select>
     </label>
-  )
+  );
 }
 
 type RelationDatabaseOption = DatabaseSearchableMenuOption & {
-  pageName: string
-}
+  pageName: string;
+};
 
 function RelationPropertyOptions({
   config,
@@ -700,70 +710,78 @@ function RelationPropertyOptions({
   sourcePropertyId,
   workspaceId,
 }: {
-  config?: unknown
-  databaseId: string
-  databasePropertyId: string
-  onUpdateConfig: (config: DatabasePropertyConfig) => void
-  sourceDatabaseId: string
-  sourceDatabaseName?: string
-  sourcePropertyId?: string
-  workspaceId?: string | null
+  config?: unknown;
+  databaseId: string;
+  databasePropertyId: string;
+  onUpdateConfig: (config: DatabasePropertyConfig) => void;
+  sourceDatabaseId: string;
+  sourceDatabaseName?: string;
+  sourcePropertyId?: string;
+  workspaceId?: string | null;
 }) {
-  const navigate = useNavigate()
-  const relationConfig = getRelationConfig(config)
-  const addProperty = useAddDatabaseProperty()
-  const updateProperty = useUpdateDatabaseProperty()
-  const updateValue = useUpdateDatabasePropertyValue()
-  const [repairDialogOpen, setRepairDialogOpen] = useState(false)
+  const navigate = useNavigate();
+  const relationConfig = getRelationConfig(config);
+  const addProperty = useAddDatabaseProperty();
+  const updateProperty = useUpdateDatabaseProperty();
+  const updateValue = useUpdateDatabasePropertyValue();
+  const [repairDialogOpen, setRepairDialogOpen] = useState(false);
   const [repairPrimarySource, setRepairPrimarySource] = useState<
     "source" | "related"
-  >("source")
+  >("source");
   const [optimisticTwoWayRelation, setOptimisticTwoWayRelation] = useState<
     boolean | null
-  >(null)
+  >(null);
   const [selectedDatabaseId, setSelectedDatabaseId] = useState<string | null>(
-    relationConfig.relatedDatabaseId ?? null
-  )
+    relationConfig.relatedDatabaseId ?? null,
+  );
   const [relatedPropertyName, setRelatedPropertyName] = useState(
-    relationConfig.relatedPropertyName ?? ""
-  )
-  const { data: pages = [], isLoading } = usePages(workspaceId, {
+    relationConfig.relatedPropertyName ?? "",
+  );
+  const { data: navigation, isLoading } = usePageNavigation(workspaceId, {
     enabled: Boolean(workspaceId),
-  })
+  });
   const { data: relatedDatabaseSchema } = useDatabase(selectedDatabaseId, {
     schemaOnly: true,
-  })
-  const databaseOptions = pages.flatMap((page) =>
-    (page.databases ?? [])
-      .filter((database) => database.id !== sourceDatabaseId)
-      .map<RelationDatabaseOption>((database) => ({
+  });
+  const pagesById = new Map(
+    (navigation?.pages ?? []).map((page) => [page.id, page]),
+  );
+  const databaseOptions = (navigation?.databases ?? [])
+    .filter((database) => database.id !== sourceDatabaseId)
+    .map<RelationDatabaseOption>((database) => {
+      const pageName = database.pageId
+        ? pagesById.get(database.pageId)?.name || "Untitled"
+        : "Standalone";
+
+      return {
         icon: <Database />,
         label: database.name || "Untitled database",
-        pageName: page.name,
-        searchText: `${database.name} ${page.name}`.trim(),
+        pageName,
+        searchText: `${database.name} ${pageName}`.trim(),
         value: database.id,
-      }))
-  )
+      };
+    });
   const selectedDatabase = selectedDatabaseId
     ? databaseOptions.find((option) => option.value === selectedDatabaseId)
-    : null
-  const limit = relationConfig.limit ?? "no_limit"
+    : null;
+  const limit = relationConfig.limit ?? "no_limit";
   const twoWayRelation =
-    optimisticTwoWayRelation ?? relationConfig.twoWayRelation ?? false
-  const relationCreated = relationConfig.relatedDatabaseId === selectedDatabaseId
+    optimisticTwoWayRelation ?? relationConfig.twoWayRelation ?? false;
+  const relationCreated =
+    relationConfig.relatedDatabaseId === selectedDatabaseId;
   const needsRepair = getRelationNeedsRepair({
     propertyConfig: config,
     relatedDatabasePayload: relatedDatabaseSchema,
-  })
+  });
   const { data: currentDatabasePayload } = useDatabase(sourceDatabaseId, {
     schemaOnly: !needsRepair,
-  })
+  });
   const { data: relatedDatabasePayload } = useDatabase(selectedDatabaseId, {
     schemaOnly: !needsRepair,
-  })
+  });
   useEffect(() => {
-    setOptimisticTwoWayRelation(null)
-  }, [relationConfig.twoWayRelation])
+    setOptimisticTwoWayRelation(null);
+  }, [relationConfig.twoWayRelation]);
 
   const repairRelations = () => {
     const repairPlan = getRelationRepairMutationPlan({
@@ -773,10 +791,10 @@ function RelationPropertyOptions({
       primarySource: repairPrimarySource,
       propertyConfig: config,
       relatedDatabasePayload,
-    })
+    });
 
     if (!repairPlan) {
-      return
+      return;
     }
 
     repairPlan.valueUpdates.forEach((update) => {
@@ -785,16 +803,16 @@ function RelationPropertyOptions({
         propertyId: update.propertyId,
         rowId: update.rowId,
         value: update.value,
-      })
-    })
+      });
+    });
 
-    repairPlan.configUpdates.forEach((update) => updateProperty.mutate(update))
+    repairPlan.configUpdates.forEach((update) => updateProperty.mutate(update));
 
-    setRepairDialogOpen(false)
-  }
+    setRepairDialogOpen(false);
+  };
   const saveRelation = () => {
     if (!selectedDatabase) {
-      return
+      return;
     }
 
     const nextRelation = {
@@ -804,11 +822,11 @@ function RelationPropertyOptions({
       relatedPageName: selectedDatabase.pageName,
       relatedPropertyName: relatedPropertyName.trim() || undefined,
       twoWayRelation,
-    }
+    };
 
     if (!twoWayRelation || !relatedPropertyName.trim() || !sourcePropertyId) {
-      onUpdateConfig({ relation: nextRelation })
-      return
+      onUpdateConfig({ relation: nextRelation });
+      return;
     }
 
     const reciprocalRelation = {
@@ -817,7 +835,7 @@ function RelationPropertyOptions({
       relatedDatabaseName: sourceDatabaseName,
       relatedPropertyId: sourcePropertyId,
       twoWayRelation: true,
-    }
+    };
 
     addProperty.mutate(
       {
@@ -834,28 +852,28 @@ function RelationPropertyOptions({
             .filter(
               (property) =>
                 property.property.type === "relation" &&
-                property.property.name === relatedPropertyName.trim()
+                property.property.name === relatedPropertyName.trim(),
             )
-            .at(-1)
+            .at(-1);
 
           onUpdateConfig({
             relation: {
               ...nextRelation,
               relatedPropertyId: reciprocalProperty?.property.id,
             },
-          })
+          });
         },
-      }
-    )
-  }
+      },
+    );
+  };
 
   if (selectedDatabase) {
     return (
       <>
         <DropDrawerItem
           onSelect={(event) => {
-            event.preventDefault()
-            setSelectedDatabaseId(null)
+            event.preventDefault();
+            setSelectedDatabaseId(null);
           }}
         >
           <ChevronLeft />
@@ -889,13 +907,13 @@ function RelationPropertyOptions({
         </Tooltip>
         <DropDrawerItem
           onSelect={(event) => {
-            event.preventDefault()
+            event.preventDefault();
             onUpdateConfig({
               relation: {
                 ...relationConfig,
                 limit: limit === "no_limit" ? "one_page" : "no_limit",
               },
-            })
+            });
           }}
         >
           <Hash />
@@ -907,17 +925,17 @@ function RelationPropertyOptions({
         <DropDrawerItem
           aria-pressed={twoWayRelation}
           onSelect={(event) => {
-            event.preventDefault()
-            const nextTwoWayRelation = !twoWayRelation
-            setOptimisticTwoWayRelation(nextTwoWayRelation)
+            event.preventDefault();
+            const nextTwoWayRelation = !twoWayRelation;
+            setOptimisticTwoWayRelation(nextTwoWayRelation);
             const relatedConfigUpdate = getRelationTwoWayConfigUpdate({
               nextTwoWayRelation,
               propertyConfig: config,
               relatedDatabasePayload: relatedDatabaseSchema,
-            })
+            });
 
             if (relatedConfigUpdate) {
-              updateProperty.mutate(relatedConfigUpdate)
+              updateProperty.mutate(relatedConfigUpdate);
             }
 
             onUpdateConfig({
@@ -926,10 +944,10 @@ function RelationPropertyOptions({
                 relatedPropertyName: relatedPropertyName.trim() || undefined,
                 twoWayRelation: nextTwoWayRelation,
               },
-            })
+            });
 
             if (nextTwoWayRelation && needsRepair) {
-              setRepairDialogOpen(true)
+              setRepairDialogOpen(true);
             }
           }}
         >
@@ -981,7 +999,9 @@ function RelationPropertyOptions({
               type="button"
             >
               <Plus />
-              <span>{addProperty.isPending ? "Adding..." : "Add relation"}</span>
+              <span>
+                {addProperty.isPending ? "Adding..." : "Add relation"}
+              </span>
             </Button>
           </div>
         ) : null}
@@ -990,10 +1010,7 @@ function RelationPropertyOptions({
           <CircleHelp />
           <span>Learn about relations</span>
         </DropDrawerItem>
-        <AlertDialog
-          open={repairDialogOpen}
-          onOpenChange={setRepairDialogOpen}
-        >
+        <AlertDialog open={repairDialogOpen} onOpenChange={setRepairDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Repair relation links?</AlertDialogTitle>
@@ -1004,7 +1021,9 @@ function RelationPropertyOptions({
             <RadioGroup
               className="grid gap-2"
               onValueChange={(value) =>
-                setRepairPrimarySource(value === "related" ? "related" : "source")
+                setRepairPrimarySource(
+                  value === "related" ? "related" : "source",
+                )
               }
               value={repairPrimarySource}
             >
@@ -1042,11 +1061,11 @@ function RelationPropertyOptions({
           </AlertDialogContent>
         </AlertDialog>
       </>
-    )
+    );
   }
 
   if (isLoading) {
-    return <DropDrawerItem disabled>Loading databases...</DropDrawerItem>
+    return <DropDrawerItem disabled>Loading databases...</DropDrawerItem>;
   }
 
   return (
@@ -1058,14 +1077,14 @@ function RelationPropertyOptions({
       open
       options={databaseOptions}
       renderOption={(option) => {
-        const databaseOption = option as RelationDatabaseOption
+        const databaseOption = option as RelationDatabaseOption;
 
         return (
           <DropDrawerItem
             key={databaseOption.value}
             onSelect={(event) => {
-              event.preventDefault()
-              setSelectedDatabaseId(databaseOption.value)
+              event.preventDefault();
+              setSelectedDatabaseId(databaseOption.value);
             }}
           >
             <Database />
@@ -1076,46 +1095,45 @@ function RelationPropertyOptions({
               </div>
             </div>
           </DropDrawerItem>
-        )
+        );
       }}
     />
-  )
+  );
 }
 
 function getRelationConfig(config: unknown): {
-  limit?: "no_limit" | "one_page"
-  relatedDatabaseId?: string
-  relatedDatabaseName?: string
-  relatedPageName?: string
-  relatedPropertyId?: string
-  relatedPropertyName?: string
-  syncStatus?: "not_synced" | "synced"
-  twoWayRelation?: boolean
+  limit?: "no_limit" | "one_page";
+  relatedDatabaseId?: string;
+  relatedDatabaseName?: string;
+  relatedPageName?: string;
+  relatedPropertyId?: string;
+  relatedPropertyName?: string;
+  syncStatus?: "not_synced" | "synced";
+  twoWayRelation?: boolean;
 } {
   const relation =
     config && typeof config === "object" && !Array.isArray(config)
       ? (config as { relation?: unknown }).relation
-      : null
+      : null;
 
   if (!relation || typeof relation !== "object" || Array.isArray(relation)) {
-    return {}
+    return {};
   }
 
   const relationConfig = relation as {
-    limit?: unknown
-    relatedDatabaseId?: unknown
-    relatedDatabaseName?: unknown
-    relatedPageName?: unknown
-    relatedPropertyId?: unknown
-    relatedPropertyName?: unknown
-    syncStatus?: unknown
-    twoWayRelation?: unknown
-  }
+    limit?: unknown;
+    relatedDatabaseId?: unknown;
+    relatedDatabaseName?: unknown;
+    relatedPageName?: unknown;
+    relatedPropertyId?: unknown;
+    relatedPropertyName?: unknown;
+    syncStatus?: unknown;
+    twoWayRelation?: unknown;
+  };
 
   return {
     limit:
-      relationConfig.limit === "one_page" ||
-      relationConfig.limit === "no_limit"
+      relationConfig.limit === "one_page" || relationConfig.limit === "no_limit"
         ? relationConfig.limit
         : undefined,
     relatedDatabaseId:
@@ -1147,7 +1165,7 @@ function getRelationConfig(config: unknown): {
       typeof relationConfig.twoWayRelation === "boolean"
         ? relationConfig.twoWayRelation
         : undefined,
-  }
+  };
 }
 
 function NumberPropertyOptions({
@@ -1155,16 +1173,16 @@ function NumberPropertyOptions({
   onUpdateConfig,
 }: {
   config: {
-    numberDecimalPlaces: NumberDecimalPlacesValue
-    numberDisplayColor: string
-    numberDisplayDivideBy: number
-    numberDisplayShowNumber: boolean
-    numberDisplayStyle: DatabaseNumberDisplayStyle
-    numberFormat: string
-  }
-  onUpdateConfig: (config: DatabasePropertyConfig) => void
+    numberDecimalPlaces: NumberDecimalPlacesValue;
+    numberDisplayColor: string;
+    numberDisplayDivideBy: number;
+    numberDisplayShowNumber: boolean;
+    numberDisplayStyle: DatabaseNumberDisplayStyle;
+    numberFormat: string;
+  };
+  onUpdateConfig: (config: DatabasePropertyConfig) => void;
 }) {
-  const showVisualOptions = config.numberDisplayStyle !== "number"
+  const showVisualOptions = config.numberDisplayStyle !== "number";
 
   return (
     <div className="space-y-1">
@@ -1175,7 +1193,9 @@ function NumberPropertyOptions({
       <PropertySettingSubmenu
         icon={<Hash />}
         label="Decimal places"
-        onSelect={(numberDecimalPlaces) => onUpdateConfig({ numberDecimalPlaces })}
+        onSelect={(numberDecimalPlaces) =>
+          onUpdateConfig({ numberDecimalPlaces })
+        }
         options={numberDecimalPlacesOptions}
         selectedValue={config.numberDecimalPlaces}
       />
@@ -1183,7 +1203,7 @@ function NumberPropertyOptions({
       <DropDrawerLabel>Show as</DropDrawerLabel>
       <div className="grid grid-cols-3 gap-2 px-1.5 pb-1">
         {numberDisplayStyleOptions.map((option) => {
-          const isSelected = option.value === config.numberDisplayStyle
+          const isSelected = option.value === config.numberDisplayStyle;
 
           return (
             <button
@@ -1194,13 +1214,15 @@ function NumberPropertyOptions({
                   : "border-border bg-background text-muted-foreground hover:bg-accent/60 hover:text-foreground"
               }`}
               key={option.value}
-              onClick={() => onUpdateConfig({ numberDisplayStyle: option.value })}
+              onClick={() =>
+                onUpdateConfig({ numberDisplayStyle: option.value })
+              }
               type="button"
             >
               <option.preview />
               <span>{option.label}</span>
             </button>
-          )
+          );
         })}
       </div>
       {showVisualOptions ? (
@@ -1213,27 +1235,31 @@ function NumberPropertyOptions({
               />
             }
             label="Color"
-            onSelect={(numberDisplayColor) => onUpdateConfig({ numberDisplayColor })}
+            onSelect={(numberDisplayColor) =>
+              onUpdateConfig({ numberDisplayColor })
+            }
             options={numberColorOptions}
             selectedValue={getColorTokenValue(config.numberDisplayColor)}
           />
           <div className="space-y-1">
-            <label className="text-sm font-medium text-foreground">Divide by</label>
+            <label className="text-sm font-medium text-foreground">
+              Divide by
+            </label>
             <Input
               defaultValue={String(config.numberDisplayDivideBy)}
               inputMode="decimal"
               onBlur={(event) => {
-                const nextValue = Number(event.target.value)
+                const nextValue = Number(event.target.value);
 
                 if (Number.isFinite(nextValue) && nextValue > 0) {
-                  onUpdateConfig({ numberDisplayDivideBy: nextValue })
+                  onUpdateConfig({ numberDisplayDivideBy: nextValue });
                 } else {
-                  event.target.value = String(config.numberDisplayDivideBy)
+                  event.target.value = String(config.numberDisplayDivideBy);
                 }
               }}
               onKeyDown={(event) => {
                 if (event.key === "Enter") {
-                  event.currentTarget.blur()
+                  event.currentTarget.blur();
                 }
               }}
             />
@@ -1242,10 +1268,10 @@ function NumberPropertyOptions({
             aria-pressed={config.numberDisplayShowNumber}
             className="rounded-md border border-transparent px-0 hover:bg-transparent focus:bg-transparent"
             onSelect={(event) => {
-              event.preventDefault()
+              event.preventDefault();
               onUpdateConfig({
                 numberDisplayShowNumber: !config.numberDisplayShowNumber,
-              })
+              });
             }}
           >
             <span>Show number</span>
@@ -1259,7 +1285,7 @@ function NumberPropertyOptions({
         </div>
       ) : null}
     </div>
-  )
+  );
 }
 
 function DatePropertyOptions({
@@ -1267,36 +1293,40 @@ function DatePropertyOptions({
   onUpdateConfig,
   timeFormat,
 }: {
-  dateFormat: DateFormatValue
-  onUpdateConfig: (config: DatabasePropertyConfig) => void
-  timeFormat: TimeFormatValue
+  dateFormat: DateFormatValue;
+  onUpdateConfig: (config: DatabasePropertyConfig) => void;
+  timeFormat: TimeFormatValue;
 }) {
   return (
     <>
       <PropertySettingSubmenu
         icon={<Calendar />}
         label="Date format"
-        onSelect={(nextDateFormat) => onUpdateConfig({ dateFormat: nextDateFormat })}
+        onSelect={(nextDateFormat) =>
+          onUpdateConfig({ dateFormat: nextDateFormat })
+        }
         options={dateFormatOptions}
         selectedValue={dateFormat}
       />
       <PropertySettingSubmenu
         icon={<Calendar />}
         label="Time format"
-        onSelect={(nextTimeFormat) => onUpdateConfig({ timeFormat: nextTimeFormat })}
+        onSelect={(nextTimeFormat) =>
+          onUpdateConfig({ timeFormat: nextTimeFormat })
+        }
         options={timeFormatOptions}
         selectedValue={timeFormat}
       />
     </>
-  )
+  );
 }
 
 function FilesPropertyOptions({
   config,
   onUpdateConfig,
 }: {
-  config: Required<Pick<DatabasePropertyConfig, "filesLimit">>
-  onUpdateConfig: (config: DatabasePropertyConfig) => void
+  config: Required<Pick<DatabasePropertyConfig, "filesLimit">>;
+  onUpdateConfig: (config: DatabasePropertyConfig) => void;
 }) {
   return (
     <PropertySettingSubmenu
@@ -1306,7 +1336,7 @@ function FilesPropertyOptions({
       options={filesLimitOptions}
       selectedValue={config.filesLimit}
     />
-  )
+  );
 }
 
 function PersonPropertyOptions({
@@ -1318,8 +1348,8 @@ function PersonPropertyOptions({
       DatabasePropertyConfig,
       "personDefault" | "personLimit" | "personNotifications"
     >
-  >
-  onUpdateConfig: (config: DatabasePropertyConfig) => void
+  >;
+  onUpdateConfig: (config: DatabasePropertyConfig) => void;
 }) {
   return (
     <>
@@ -1347,7 +1377,7 @@ function PersonPropertyOptions({
         selectedValue={config.personNotifications}
       />
     </>
-  )
+  );
 }
 
 function PropertySettingSubmenu<TValue extends string | number>({
@@ -1357,18 +1387,18 @@ function PropertySettingSubmenu<TValue extends string | number>({
   options,
   selectedValue,
 }: {
-  icon: ReactNode
-  label: string
-  onSelect: (value: TValue) => void
+  icon: ReactNode;
+  label: string;
+  onSelect: (value: TValue) => void;
   options: {
-    icon?: ReactNode
-    label: string
-    value: TValue
-  }[]
-  selectedValue: TValue
+    icon?: ReactNode;
+    label: string;
+    value: TValue;
+  }[];
+  selectedValue: TValue;
 }) {
   const selectedOption =
-    options.find((option) => option.value === selectedValue) ?? options[0]
+    options.find((option) => option.value === selectedValue) ?? options[0];
 
   return (
     <DropDrawerSub>
@@ -1382,18 +1412,20 @@ function PropertySettingSubmenu<TValue extends string | number>({
           <DropDrawerItem
             key={option.value}
             onSelect={(event) => {
-              event.preventDefault()
-              onSelect(option.value)
+              event.preventDefault();
+              onSelect(option.value);
             }}
           >
             {option.icon ?? null}
             <span>{option.label}</span>
-            {option.value === selectedValue ? <Check className="ml-auto" /> : null}
+            {option.value === selectedValue ? (
+              <Check className="ml-auto" />
+            ) : null}
           </DropDrawerItem>
         ))}
       </DropDrawerSubContent>
     </DropDrawerSub>
-  )
+  );
 }
 
 function RollupCalculationSubmenu({
@@ -1401,40 +1433,40 @@ function RollupCalculationSubmenu({
   onSelect,
   options,
 }: {
-  calculation: DatabaseRollupConfig["calculation"]
-  onSelect: (value: NonNullable<DatabaseRollupConfig["calculation"]>) => void
+  calculation: DatabaseRollupConfig["calculation"];
+  onSelect: (value: NonNullable<DatabaseRollupConfig["calculation"]>) => void;
   options: {
-    label: string
-    value: NonNullable<DatabaseRollupConfig["calculation"]>
-  }[]
+    label: string;
+    value: NonNullable<DatabaseRollupConfig["calculation"]>;
+  }[];
 }) {
   const selectedOption =
-    options.find((option) => option.value === calculation) ?? options[0]
-  const visibleValues = new Set(options.map((option) => option.value))
+    options.find((option) => option.value === calculation) ?? options[0];
+  const visibleValues = new Set(options.map((option) => option.value));
   const showOptions = rollupShowCalculations.filter((option) =>
-    visibleValues.has(option.value)
-  )
+    visibleValues.has(option.value),
+  );
   const countOptions = rollupCountCalculations.filter((option) =>
-    visibleValues.has(option.value)
-  )
+    visibleValues.has(option.value),
+  );
   const percentOptions = rollupPercentCalculations.filter((option) =>
-    visibleValues.has(option.value)
-  )
+    visibleValues.has(option.value),
+  );
   const dateOptions = rollupDateCalculations.filter((option) =>
-    visibleValues.has(option.value)
-  )
+    visibleValues.has(option.value),
+  );
   const groups = [
     { label: "Count", options: countOptions },
     { label: "Percent", options: percentOptions },
     { label: "Date", options: dateOptions },
-  ].filter((group) => group.options.length > 0)
+  ].filter((group) => group.options.length > 0);
   const otherOptions = options.filter(
     (option) =>
       !showOptions.some((item) => item.value === option.value) &&
       !countOptions.some((item) => item.value === option.value) &&
       !percentOptions.some((item) => item.value === option.value) &&
-      !dateOptions.some((item) => item.value === option.value)
-  )
+      !dateOptions.some((item) => item.value === option.value),
+  );
 
   return (
     <DropDrawerSub>
@@ -1449,8 +1481,8 @@ function RollupCalculationSubmenu({
             key={option.value}
             calculation={calculation}
             onSelect={(event) => {
-              event.preventDefault()
-              onSelect(option.value)
+              event.preventDefault();
+              onSelect(option.value);
             }}
             option={option}
           />
@@ -1466,7 +1498,7 @@ function RollupCalculationSubmenu({
         ))}
       </DropDrawerSubContent>
     </DropDrawerSub>
-  )
+  );
 }
 
 function RollupCalculationGroupSubmenu({
@@ -1475,13 +1507,13 @@ function RollupCalculationGroupSubmenu({
   onSelect,
   options,
 }: {
-  calculation: DatabaseRollupConfig["calculation"]
-  label: string
-  onSelect: (value: NonNullable<DatabaseRollupConfig["calculation"]>) => void
+  calculation: DatabaseRollupConfig["calculation"];
+  label: string;
+  onSelect: (value: NonNullable<DatabaseRollupConfig["calculation"]>) => void;
   options: {
-    label: string
-    value: NonNullable<DatabaseRollupConfig["calculation"]>
-  }[]
+    label: string;
+    value: NonNullable<DatabaseRollupConfig["calculation"]>;
+  }[];
 }) {
   return (
     <DropDrawerSub>
@@ -1494,15 +1526,15 @@ function RollupCalculationGroupSubmenu({
             key={option.value}
             calculation={calculation}
             onSelect={(event) => {
-              event.preventDefault()
-              onSelect(option.value)
+              event.preventDefault();
+              onSelect(option.value);
             }}
             option={option}
           />
         ))}
       </DropDrawerSubContent>
     </DropDrawerSub>
-  )
+  );
 }
 
 function RollupCalculationItem({
@@ -1510,35 +1542,35 @@ function RollupCalculationItem({
   onSelect,
   option,
 }: {
-  calculation: DatabaseRollupConfig["calculation"]
-  onSelect: (event: Event) => void
+  calculation: DatabaseRollupConfig["calculation"];
+  onSelect: (event: Event) => void;
   option: {
-    label: string
-    value: NonNullable<DatabaseRollupConfig["calculation"]>
-  }
+    label: string;
+    value: NonNullable<DatabaseRollupConfig["calculation"]>;
+  };
 }) {
   return (
     <DropDrawerItem onSelect={onSelect}>
       <span>{option.label}</span>
       {option.value === calculation ? <Check className="ml-auto" /> : null}
     </DropDrawerItem>
-  )
+  );
 }
 
 function NumberFormatSettingSubmenu({
   onSelect,
   selectedValue,
 }: {
-  onSelect: (value: string) => void
-  selectedValue: string
+  onSelect: (value: string) => void;
+  selectedValue: string;
 }) {
-  const [query, setQuery] = useState("")
+  const [query, setQuery] = useState("");
   const filteredOptions = numberFormatOptions.filter((option) =>
-    option.label.toLowerCase().includes(query.trim().toLowerCase())
-  )
+    option.label.toLowerCase().includes(query.trim().toLowerCase()),
+  );
   const selectedOption =
     numberFormatOptions.find((option) => option.value === selectedValue) ??
-    numberFormatOptions[0]
+    numberFormatOptions[0];
 
   return (
     <DropDrawerSub>
@@ -1560,12 +1592,14 @@ function NumberFormatSettingSubmenu({
           <DropDrawerItem
             key={option.value}
             onSelect={(event) => {
-              event.preventDefault()
-              onSelect(option.value)
+              event.preventDefault();
+              onSelect(option.value);
             }}
           >
             <span>{option.label}</span>
-            {option.value === selectedValue ? <Check className="ml-auto" /> : null}
+            {option.value === selectedValue ? (
+              <Check className="ml-auto" />
+            ) : null}
           </DropDrawerItem>
         ))}
         {filteredOptions.length === 0 ? (
@@ -1573,7 +1607,7 @@ function NumberFormatSettingSubmenu({
         ) : null}
       </DropDrawerSubContent>
     </DropDrawerSub>
-  )
+  );
 }
 
 function SelectPropertyOptions({
@@ -1581,39 +1615,39 @@ function SelectPropertyOptions({
   options,
   sort,
 }: {
-  onUpdateConfig: (config: DatabasePropertyConfig) => void
-  options: DatabaseSelectOption[]
-  sort: SelectOptionSortValue
+  onUpdateConfig: (config: DatabasePropertyConfig) => void;
+  options: DatabaseSelectOption[];
+  sort: SelectOptionSortValue;
 }) {
-  const [showCreateInput, setShowCreateInput] = useState(false)
-  const optionIds = options.map((option) => option.id)
-  const [draftOptionIds, setDraftOptionIds] = useState<string[] | null>(null)
-  const draftOptionIdsRef = useRef<string[] | null>(null)
-  const draftOptionFrameRef = useRef<number | null>(null)
-  const renderedOptionIds = draftOptionIds ?? optionIds
-  const renderedOptions = reorderOptionsByIds(options, renderedOptionIds)
+  const [showCreateInput, setShowCreateInput] = useState(false);
+  const optionIds = options.map((option) => option.id);
+  const [draftOptionIds, setDraftOptionIds] = useState<string[] | null>(null);
+  const draftOptionIdsRef = useRef<string[] | null>(null);
+  const draftOptionFrameRef = useRef<number | null>(null);
+  const renderedOptionIds = draftOptionIds ?? optionIds;
+  const renderedOptions = reorderOptionsByIds(options, renderedOptionIds);
   useEffect(() => {
     if (
       draftOptionIds &&
       (areSameOrderedIds(draftOptionIds, optionIds) ||
         !haveSameIds(draftOptionIds, optionIds))
     ) {
-      draftOptionIdsRef.current = null
-      setDraftOptionIds(null)
+      draftOptionIdsRef.current = null;
+      setDraftOptionIds(null);
     }
-  }, [draftOptionIds, optionIds])
+  }, [draftOptionIds, optionIds]);
   const updateOption = (
     optionId: string,
-    patch: Partial<DatabaseSelectOption>
+    patch: Partial<DatabaseSelectOption>,
   ) => {
     const nextOptions = options.map((option) =>
-      option.id === optionId ? { ...option, ...patch } : option
-    )
+      option.id === optionId ? { ...option, ...patch } : option,
+    );
 
     onUpdateConfig({
       options: getSortedSelectOptions(nextOptions, sort),
-    })
-  }
+    });
+  };
   const addOption = (name: string) => {
     const nextOptions = [
       ...options,
@@ -1622,12 +1656,12 @@ function SelectPropertyOptions({
         id: crypto.randomUUID(),
         name,
       },
-    ]
+    ];
 
     onUpdateConfig({
       options: getSortedSelectOptions(nextOptions, sort),
-    })
-  }
+    });
+  };
   const updateSort = (selectOptionSort: SelectOptionSortValue) => {
     onUpdateConfig({
       options:
@@ -1635,55 +1669,55 @@ function SelectPropertyOptions({
           ? options
           : getSortedSelectOptions(options, selectOptionSort),
       selectOptionSort,
-    })
-  }
+    });
+  };
   const queueOptionReorder = (nextOptionIds: string[]) => {
-    draftOptionIdsRef.current = nextOptionIds
+    draftOptionIdsRef.current = nextOptionIds;
 
     if (draftOptionFrameRef.current !== null) {
-      return
+      return;
     }
 
     draftOptionFrameRef.current = requestAnimationFrame(() => {
-      draftOptionFrameRef.current = null
-      const latestOptionIds = draftOptionIdsRef.current
+      draftOptionFrameRef.current = null;
+      const latestOptionIds = draftOptionIdsRef.current;
 
       if (!latestOptionIds) {
-        return
+        return;
       }
 
       setDraftOptionIds((currentOptionIds) =>
         areSameOrderedIds(currentOptionIds ?? optionIds, latestOptionIds)
           ? currentOptionIds
-          : latestOptionIds
-      )
-    })
-  }
+          : latestOptionIds,
+      );
+    });
+  };
   const commitOptionReorder = () => {
-    const nextOptionIds = draftOptionIdsRef.current
+    const nextOptionIds = draftOptionIdsRef.current;
 
     if (!nextOptionIds) {
-      return
+      return;
     }
 
     if (draftOptionFrameRef.current !== null) {
-      cancelAnimationFrame(draftOptionFrameRef.current)
-      draftOptionFrameRef.current = null
+      cancelAnimationFrame(draftOptionFrameRef.current);
+      draftOptionFrameRef.current = null;
     }
 
-    draftOptionIdsRef.current = null
-    setDraftOptionIds(nextOptionIds)
+    draftOptionIdsRef.current = null;
+    setDraftOptionIds(nextOptionIds);
 
     if (areSameOrderedIds(nextOptionIds, optionIds)) {
-      setDraftOptionIds(null)
-      return
+      setDraftOptionIds(null);
+      return;
     }
 
     onUpdateConfig({
       options: reorderOptionsByIds(options, nextOptionIds),
       selectOptionSort: "manual",
-    })
-  }
+    });
+  };
 
   return (
     <>
@@ -1711,8 +1745,8 @@ function SelectPropertyOptions({
           ariaLabel="New select option name"
           onCancel={() => setShowCreateInput(false)}
           onCreate={(name) => {
-            addOption(name)
-            setShowCreateInput(false)
+            addOption(name);
+            setShowCreateInput(false);
           }}
           placeholder="New option"
         />
@@ -1739,7 +1773,7 @@ function SelectPropertyOptions({
         <DropDrawerItem disabled>No options yet</DropDrawerItem>
       )}
     </>
-  )
+  );
 }
 
 function StatusPropertyOptions({
@@ -1747,74 +1781,76 @@ function StatusPropertyOptions({
   onUpdateConfig,
   options,
 }: {
-  defaultOptionId?: string
-  onUpdateConfig: (config: DatabasePropertyConfig) => void
-  options: StatusOption[]
+  defaultOptionId?: string;
+  onUpdateConfig: (config: DatabasePropertyConfig) => void;
+  options: StatusOption[];
 }) {
   const groups = [
     {
       name: "To-do",
       options: options.filter(
-        (option) => getStatusOptionGroup(option) === "To-do"
+        (option) => getStatusOptionGroup(option) === "To-do",
       ),
     },
     {
       name: "In progress",
       options: options.filter(
-        (option) => getStatusOptionGroup(option) === "In progress"
+        (option) => getStatusOptionGroup(option) === "In progress",
       ),
     },
     {
       name: "Complete",
       options: options.filter(
-        (option) => getStatusOptionGroup(option) === "Complete"
+        (option) => getStatusOptionGroup(option) === "Complete",
       ),
     },
-  ]
-  const resolvedDefaultOptionId = defaultOptionId ?? options[0]?.id
-  const [creatingGroupName, setCreatingGroupName] = useState<string | null>(null)
+  ];
+  const resolvedDefaultOptionId = defaultOptionId ?? options[0]?.id;
+  const [creatingGroupName, setCreatingGroupName] = useState<string | null>(
+    null,
+  );
   const [draftGroupOptionIdsByName, setDraftGroupOptionIdsByName] = useState<
     Record<string, string[]>
-  >({})
-  const draftGroupOptionIdsByNameRef = useRef<Record<string, string[]>>({})
-  const draftGroupOptionFrameRef = useRef<number | null>(null)
+  >({});
+  const draftGroupOptionIdsByNameRef = useRef<Record<string, string[]>>({});
+  const draftGroupOptionFrameRef = useRef<number | null>(null);
   useEffect(() => {
-    const nextDrafts = { ...draftGroupOptionIdsByNameRef.current }
-    let changed = false
+    const nextDrafts = { ...draftGroupOptionIdsByNameRef.current };
+    let changed = false;
 
     for (const group of groups) {
-      const draftOptionIds = nextDrafts[group.name]
-      const groupOptionIds = group.options.map((option) => option.id)
+      const draftOptionIds = nextDrafts[group.name];
+      const groupOptionIds = group.options.map((option) => option.id);
 
       if (
         draftOptionIds &&
         (areSameOrderedIds(draftOptionIds, groupOptionIds) ||
           !haveSameIds(draftOptionIds, groupOptionIds))
       ) {
-        delete nextDrafts[group.name]
-        changed = true
+        delete nextDrafts[group.name];
+        changed = true;
       }
     }
 
     if (changed) {
-      draftGroupOptionIdsByNameRef.current = nextDrafts
-      setDraftGroupOptionIdsByName(nextDrafts)
+      draftGroupOptionIdsByNameRef.current = nextDrafts;
+      setDraftGroupOptionIdsByName(nextDrafts);
     }
-  }, [options])
+  }, [options]);
   const updateOption = (optionId: string, patch: Partial<StatusOption>) => {
     onUpdateConfig({
       defaultOptionId: resolvedDefaultOptionId,
       options: options.map((option) =>
-        option.id === optionId ? { ...option, ...patch } : option
+        option.id === optionId ? { ...option, ...patch } : option,
       ),
-    })
-  }
+    });
+  };
   const setDefaultOption = (optionId: string) => {
     onUpdateConfig({
       defaultOptionId: optionId,
       options,
-    })
-  }
+    });
+  };
   const addOption = (groupName: string, name: string) => {
     onUpdateConfig({
       defaultOptionId: resolvedDefaultOptionId,
@@ -1827,78 +1863,78 @@ function StatusPropertyOptions({
           name,
         },
       ],
-    })
-  }
+    });
+  };
   const setDraftGroupOptionIds = (groupName: string, optionIds: string[]) => {
     draftGroupOptionIdsByNameRef.current = {
       ...draftGroupOptionIdsByNameRef.current,
       [groupName]: optionIds,
-    }
+    };
 
     if (draftGroupOptionFrameRef.current !== null) {
-      return
+      return;
     }
 
     draftGroupOptionFrameRef.current = requestAnimationFrame(() => {
-      draftGroupOptionFrameRef.current = null
+      draftGroupOptionFrameRef.current = null;
       setDraftGroupOptionIdsByName({
         ...draftGroupOptionIdsByNameRef.current,
-      })
-    })
-  }
+      });
+    });
+  };
   const clearDraftGroupOptionIds = (groupName: string) => {
     if (draftGroupOptionFrameRef.current !== null) {
-      cancelAnimationFrame(draftGroupOptionFrameRef.current)
-      draftGroupOptionFrameRef.current = null
+      cancelAnimationFrame(draftGroupOptionFrameRef.current);
+      draftGroupOptionFrameRef.current = null;
     }
 
-    const nextDrafts = { ...draftGroupOptionIdsByNameRef.current }
-    delete nextDrafts[groupName]
-    draftGroupOptionIdsByNameRef.current = nextDrafts
+    const nextDrafts = { ...draftGroupOptionIdsByNameRef.current };
+    delete nextDrafts[groupName];
+    draftGroupOptionIdsByNameRef.current = nextDrafts;
 
     setDraftGroupOptionIdsByName((drafts) => {
-      const nextStateDrafts = { ...drafts }
-      delete nextStateDrafts[groupName]
+      const nextStateDrafts = { ...drafts };
+      delete nextStateDrafts[groupName];
 
-      return nextStateDrafts
-    })
-  }
+      return nextStateDrafts;
+    });
+  };
   const commitGroupOptionReorder = (
     groupName: string,
-    groupOptions: StatusOption[]
+    groupOptions: StatusOption[],
   ) => {
-    const draftOptionIds = draftGroupOptionIdsByNameRef.current[groupName]
+    const draftOptionIds = draftGroupOptionIdsByNameRef.current[groupName];
 
     if (!draftOptionIds) {
-      return
+      return;
     }
 
     if (
       areSameOrderedIds(
         draftOptionIds,
-        groupOptions.map((option) => option.id)
+        groupOptions.map((option) => option.id),
       )
     ) {
-      clearDraftGroupOptionIds(groupName)
-      return
+      clearDraftGroupOptionIds(groupName);
+      return;
     }
 
     onUpdateConfig({
       defaultOptionId: resolvedDefaultOptionId,
       options: reorderStatusGroupOptions(options, groupName, draftOptionIds),
-    })
-  }
+    });
+  };
 
   return (
     <>
       {groups.map((group, groupIndex) => {
-        const groupOptionIds = group.options.map((option) => option.id)
+        const groupOptionIds = group.options.map((option) => option.id);
         const renderedOptionIds =
-          draftGroupOptionIdsByName[group.name] ?? groupOptionIds
+          draftGroupOptionIdsByName[group.name] ?? groupOptionIds;
         const renderedOptions = reorderOptionsByIds(
           group.options,
-          renderedOptionIds
-        )
+          renderedOptionIds,
+        );
 
         return (
           <div key={group.name}>
@@ -1914,46 +1950,46 @@ function StatusPropertyOptions({
                 <Plus className="size-4" />
               </button>
             </DropDrawerLabel>
-          <Reorder.Group
-            as="div"
-            axis="y"
-            layoutScroll
-            values={renderedOptionIds}
-            onReorder={(optionIds) =>
-              setDraftGroupOptionIds(group.name, optionIds)
-            }
-          >
-            {renderedOptions.map((option) => (
-              <OptionEditorSubmenu
-                defaultOptionId={resolvedDefaultOptionId}
-                draggable
-                key={option.id}
-                onDragEnd={() =>
-                  commitGroupOptionReorder(group.name, group.options)
-                }
-                onSetDefaultOption={setDefaultOption}
-                onUpdateOption={updateOption}
-                option={option}
-                showDot
+            <Reorder.Group
+              as="div"
+              axis="y"
+              layoutScroll
+              values={renderedOptionIds}
+              onReorder={(optionIds) =>
+                setDraftGroupOptionIds(group.name, optionIds)
+              }
+            >
+              {renderedOptions.map((option) => (
+                <OptionEditorSubmenu
+                  defaultOptionId={resolvedDefaultOptionId}
+                  draggable
+                  key={option.id}
+                  onDragEnd={() =>
+                    commitGroupOptionReorder(group.name, group.options)
+                  }
+                  onSetDefaultOption={setDefaultOption}
+                  onUpdateOption={updateOption}
+                  option={option}
+                  showDot
+                />
+              ))}
+            </Reorder.Group>
+            {creatingGroupName === group.name ? (
+              <OptionCreateInput
+                ariaLabel={`New ${group.name} status name`}
+                onCancel={() => setCreatingGroupName(null)}
+                onCreate={(name) => {
+                  addOption(group.name, name);
+                  setCreatingGroupName(null);
+                }}
+                placeholder="New status"
               />
-            ))}
-          </Reorder.Group>
-          {creatingGroupName === group.name ? (
-            <OptionCreateInput
-              ariaLabel={`New ${group.name} status name`}
-              onCancel={() => setCreatingGroupName(null)}
-              onCreate={(name) => {
-                addOption(group.name, name)
-                setCreatingGroupName(null)
-              }}
-              placeholder="New status"
-            />
-          ) : null}
+            ) : null}
           </div>
-        )
+        );
       })}
     </>
-  )
+  );
 }
 
 function OptionCreateInput({
@@ -1962,12 +1998,12 @@ function OptionCreateInput({
   onCreate,
   placeholder,
 }: {
-  ariaLabel: string
-  onCancel: () => void
-  onCreate: (name: string) => void
-  placeholder: string
+  ariaLabel: string;
+  onCancel: () => void;
+  onCreate: (name: string) => void;
+  placeholder: string;
 }) {
-  const [name, setName] = useState("")
+  const [name, setName] = useState("");
 
   return (
     <div className="px-1.5 py-1">
@@ -1976,28 +2012,28 @@ function OptionCreateInput({
         autoFocus
         onChange={(event) => setName(event.target.value)}
         onKeyDown={(event) => {
-          event.stopPropagation()
+          event.stopPropagation();
 
           if (event.key === "Enter") {
-            event.preventDefault()
+            event.preventDefault();
 
-            const nextName = name.trim()
+            const nextName = name.trim();
 
             if (nextName) {
-              onCreate(nextName)
+              onCreate(nextName);
             }
           }
 
           if (event.key === "Escape") {
-            event.preventDefault()
-            onCancel()
+            event.preventDefault();
+            onCancel();
           }
         }}
         placeholder={placeholder}
         value={name}
       />
     </div>
-  )
+  );
 }
 
 function OptionEditorSubmenu({
@@ -2009,18 +2045,18 @@ function OptionEditorSubmenu({
   option,
   showDot = false,
 }: {
-  defaultOptionId?: string
-  draggable?: boolean
-  onDragEnd?: () => void
-  onSetDefaultOption?: (optionId: string) => void
+  defaultOptionId?: string;
+  draggable?: boolean;
+  onDragEnd?: () => void;
+  onSetDefaultOption?: (optionId: string) => void;
   onUpdateOption: (
     optionId: string,
-    patch: Partial<DatabaseSelectOption>
-  ) => void
-  option: DatabaseSelectOption
-  showDot?: boolean
+    patch: Partial<DatabaseSelectOption>,
+  ) => void;
+  option: DatabaseSelectOption;
+  showDot?: boolean;
 }) {
-  const dragControls = useDragControls()
+  const dragControls = useDragControls();
   const content = (
     <DropDrawerSub>
       <DropDrawerSubTrigger>
@@ -2029,12 +2065,12 @@ function OptionEditorSubmenu({
           className="inline-flex size-4 cursor-grab touch-none items-center justify-center active:cursor-grabbing"
           onPointerDown={(event) => {
             if (!draggable) {
-              return
+              return;
             }
 
-            event.preventDefault()
-            event.stopPropagation()
-            dragControls.start(event)
+            event.preventDefault();
+            event.stopPropagation();
+            dragControls.start(event);
           }}
           role="button"
           tabIndex={-1}
@@ -2060,17 +2096,17 @@ function OptionEditorSubmenu({
             aria-label={`${option.name} option name`}
             defaultValue={option.name}
             onBlur={(event) => {
-              const nextName = event.target.value.trim()
+              const nextName = event.target.value.trim();
 
               if (nextName && nextName !== option.name) {
-                onUpdateOption(option.id, { name: nextName })
+                onUpdateOption(option.id, { name: nextName });
               }
             }}
             onKeyDown={(event) => {
-              event.stopPropagation()
+              event.stopPropagation();
 
               if (event.key === "Enter") {
-                event.currentTarget.blur()
+                event.currentTarget.blur();
               }
             }}
           />
@@ -2082,13 +2118,15 @@ function OptionEditorSubmenu({
         {onSetDefaultOption ? (
           <DropDrawerItem
             onSelect={(event) => {
-              event.preventDefault()
-              onSetDefaultOption(option.id)
+              event.preventDefault();
+              onSetDefaultOption(option.id);
             }}
           >
             <Flag />
             <span>Set as default</span>
-            {option.id === defaultOptionId ? <Check className="ml-auto" /> : null}
+            {option.id === defaultOptionId ? (
+              <Check className="ml-auto" />
+            ) : null}
           </DropDrawerItem>
         ) : null}
         <DropDrawerSeparator />
@@ -2097,10 +2135,10 @@ function OptionEditorSubmenu({
           <DropDrawerItem
             key={color.name}
             onSelect={(event) => {
-              event.preventDefault()
+              event.preventDefault();
               onUpdateOption(option.id, {
                 color: color.value ?? "default",
-              })
+              });
             }}
           >
             <span
@@ -2115,10 +2153,10 @@ function OptionEditorSubmenu({
         ))}
       </DropDrawerSubContent>
     </DropDrawerSub>
-  )
+  );
 
   if (!draggable) {
-    return content
+    return content;
   }
 
   return (
@@ -2133,10 +2171,10 @@ function OptionEditorSubmenu({
     >
       {content}
     </Reorder.Item>
-  )
+  );
 }
 
-const statusColorOptions = colorTokens
+const statusColorOptions = colorTokens;
 
 const filesLimitOptions = [
   {
@@ -2148,9 +2186,9 @@ const filesLimitOptions = [
     value: "no_limit",
   },
 ] satisfies {
-  label: string
-  value: FilesLimitValue
-}[]
+  label: string;
+  value: FilesLimitValue;
+}[];
 
 const personLimitOptions = [
   {
@@ -2162,9 +2200,9 @@ const personLimitOptions = [
     value: "no_limit",
   },
 ] satisfies {
-  label: string
-  value: PersonLimitValue
-}[]
+  label: string;
+  value: PersonLimitValue;
+}[];
 
 const personDefaultOptions = [
   {
@@ -2177,10 +2215,10 @@ const personDefaultOptions = [
     value: "created_by",
   },
 ] satisfies {
-  icon?: ReactNode
-  label: string
-  value: PersonDefaultValue
-}[]
+  icon?: ReactNode;
+  label: string;
+  value: PersonDefaultValue;
+}[];
 
 const personNotificationsOptions = [
   {
@@ -2196,9 +2234,9 @@ const personNotificationsOptions = [
     value: "none",
   },
 ] satisfies {
-  label: string
-  value: PersonNotificationsValue
-}[]
+  label: string;
+  value: PersonNotificationsValue;
+}[];
 
 const selectOptionSortOptions = [
   {
@@ -2214,9 +2252,9 @@ const selectOptionSortOptions = [
     value: "reverse_alphabetical",
   },
 ] satisfies {
-  label: string
-  value: SelectOptionSortValue
-}[]
+  label: string;
+  value: SelectOptionSortValue;
+}[];
 
 const numberFormatOptions = [
   { label: "Number", value: "number" },
@@ -2253,9 +2291,9 @@ const numberFormatOptions = [
   { label: "Colombian peso (COP)", value: "cop" },
   { label: "Saudi riyal (SAR)", value: "sar" },
 ] satisfies {
-  label: string
-  value: string
-}[]
+  label: string;
+  value: string;
+}[];
 
 const numberDecimalPlacesOptions = [
   { label: "Default", value: "default" },
@@ -2266,9 +2304,9 @@ const numberDecimalPlacesOptions = [
   { label: "4", value: 4 },
   { label: "5", value: 5 },
 ] satisfies {
-  label: string
-  value: NumberDecimalPlacesValue
-}[]
+  label: string;
+  value: NumberDecimalPlacesValue;
+}[];
 
 const numberColorOptions = statusColorOptions.map((color) => ({
   icon: (
@@ -2279,7 +2317,7 @@ const numberColorOptions = statusColorOptions.map((color) => ({
   ),
   label: color.name,
   value: color.value ?? "default",
-}))
+}));
 
 const numberDisplayStyleOptions = [
   {
@@ -2298,13 +2336,15 @@ const numberDisplayStyleOptions = [
     value: "ring",
   },
 ] satisfies {
-  label: string
-  preview: () => ReactNode
-  value: DatabaseNumberDisplayStyle
-}[]
+  label: string;
+  preview: () => ReactNode;
+  value: DatabaseNumberDisplayStyle;
+}[];
 
 function NumberDisplayPreview() {
-  return <span className="text-2xl font-semibold leading-none text-primary">42</span>
+  return (
+    <span className="text-2xl font-semibold leading-none text-primary">42</span>
+  );
 }
 
 function BarDisplayPreview() {
@@ -2312,16 +2352,12 @@ function BarDisplayPreview() {
     <span className="flex h-3 w-16 items-center rounded-full bg-muted">
       <span className="h-2 w-9 rounded-full bg-primary" />
     </span>
-  )
+  );
 }
 
 function RingDisplayPreview() {
   return (
-    <svg
-      aria-hidden="true"
-      className="size-8 text-primary"
-      viewBox="0 0 24 24"
-    >
+    <svg aria-hidden="true" className="size-8 text-primary" viewBox="0 0 24 24">
       <circle
         cx="12"
         cy="12"
@@ -2344,26 +2380,28 @@ function RingDisplayPreview() {
         transform="rotate(-90 12 12)"
       />
     </svg>
-  )
+  );
 }
 
 function getColorSwatchClassName(color?: string | null) {
-  const resolvedColor = getColorTokenValue(color)
+  const resolvedColor = getColorTokenValue(color);
 
   return (
     colorTokens.find((token) => (token.value ?? "default") === resolvedColor)
-      ?.backgroundClass ?? colorTokens[0]?.backgroundClass ?? "bg-background"
-  )
+      ?.backgroundClass ??
+    colorTokens[0]?.backgroundClass ??
+    "bg-background"
+  );
 }
 
 function getStatusOptionGroup(option: StatusOption) {
   return (
     option.group ??
     defaultStatusOptions.find(
-      (defaultOption) => defaultOption.name === option.name
+      (defaultOption) => defaultOption.name === option.name,
     )?.group ??
     "To-do"
-  )
+  );
 }
 
 function getNumberPropertyConfig(config: unknown) {
@@ -2374,17 +2412,17 @@ function getNumberPropertyConfig(config: unknown) {
     numberDisplayShowNumber: getNumberDisplayShowNumber(config),
     numberDisplayStyle: getNumberDisplayStyle(config),
     numberFormat: getNumberFormat(config),
-  }
+  };
 }
 
 function getStatusOptions(config: unknown) {
   const options =
     config && typeof config === "object" && "options" in config
       ? (config as DatabasePropertyConfig).options
-      : null
+      : null;
 
   if (!Array.isArray(options) || options.length === 0) {
-    return defaultStatusOptions
+    return defaultStatusOptions;
   }
 
   const validOptions = options.filter(
@@ -2392,34 +2430,34 @@ function getStatusOptions(config: unknown) {
       Boolean(option) &&
       typeof option === "object" &&
       typeof option.id === "string" &&
-      typeof option.name === "string"
-  )
+      typeof option.name === "string",
+  );
 
-  return validOptions.length > 0 ? validOptions : defaultStatusOptions
+  return validOptions.length > 0 ? validOptions : defaultStatusOptions;
 }
 
 function getFilesConfig(config: unknown) {
   const parsedConfig =
     config && typeof config === "object"
       ? (config as DatabasePropertyConfig)
-      : {}
+      : {};
 
   return {
     filesLimit: isFilesLimitValue(parsedConfig.filesLimit)
       ? parsedConfig.filesLimit
       : "no_limit",
-  }
+  };
 }
 
 function isFilesLimitValue(value: unknown): value is FilesLimitValue {
-  return value === "one_file" || value === "no_limit"
+  return value === "one_file" || value === "no_limit";
 }
 
 function getPersonConfig(config: unknown) {
   const parsedConfig =
     config && typeof config === "object"
       ? (config as DatabasePropertyConfig)
-      : {}
+      : {};
 
   return {
     personDefault: isPersonDefaultValue(parsedConfig.personDefault)
@@ -2429,35 +2467,37 @@ function getPersonConfig(config: unknown) {
       ? parsedConfig.personLimit
       : "no_limit",
     personNotifications: isPersonNotificationsValue(
-      parsedConfig.personNotifications
+      parsedConfig.personNotifications,
     )
       ? parsedConfig.personNotifications
       : "users_only",
-  }
+  };
 }
 
 function isPersonLimitValue(value: unknown): value is PersonLimitValue {
-  return value === "one_person" || value === "no_limit"
+  return value === "one_person" || value === "no_limit";
 }
 
 function isPersonDefaultValue(value: unknown): value is PersonDefaultValue {
-  return value === "no_default" || value === "created_by"
+  return value === "no_default" || value === "created_by";
 }
 
 function isPersonNotificationsValue(
-  value: unknown
+  value: unknown,
 ): value is PersonNotificationsValue {
-  return value === "users_and_groups" || value === "users_only" || value === "none"
+  return (
+    value === "users_and_groups" || value === "users_only" || value === "none"
+  );
 }
 
 function getSelectOptions(config: unknown) {
   const options =
     config && typeof config === "object" && "options" in config
       ? (config as DatabasePropertyConfig).options
-      : null
+      : null;
 
   if (!Array.isArray(options)) {
-    return []
+    return [];
   }
 
   return options.filter(
@@ -2465,8 +2505,8 @@ function getSelectOptions(config: unknown) {
       Boolean(option) &&
       typeof option === "object" &&
       typeof option.id === "string" &&
-      typeof option.name === "string"
-  )
+      typeof option.name === "string",
+  );
 }
 
 function getSelectOptionSort(config: unknown): SelectOptionSortValue {
@@ -2475,96 +2515,98 @@ function getSelectOptionSort(config: unknown): SelectOptionSortValue {
     typeof config !== "object" ||
     !("selectOptionSort" in config)
   ) {
-    return "manual"
+    return "manual";
   }
 
-  const selectOptionSort = (config as DatabasePropertyConfig).selectOptionSort
+  const selectOptionSort = (config as DatabasePropertyConfig).selectOptionSort;
 
-  return isSelectOptionSortValue(selectOptionSort) ? selectOptionSort : "manual"
+  return isSelectOptionSortValue(selectOptionSort)
+    ? selectOptionSort
+    : "manual";
 }
 
 function isSelectOptionSortValue(
-  value: unknown
+  value: unknown,
 ): value is SelectOptionSortValue {
   return (
     value === "manual" ||
     value === "alphabetical" ||
     value === "reverse_alphabetical"
-  )
+  );
 }
 
 function getSortedSelectOptions(
   options: DatabaseSelectOption[],
-  sort: SelectOptionSortValue
+  sort: SelectOptionSortValue,
 ) {
   if (sort === "manual") {
-    return options
+    return options;
   }
 
   const sortedOptions = [...options].sort((firstOption, secondOption) =>
     firstOption.name.localeCompare(secondOption.name, undefined, {
       sensitivity: "base",
-    })
-  )
+    }),
+  );
 
   return sort === "reverse_alphabetical"
     ? sortedOptions.reverse()
-    : sortedOptions
+    : sortedOptions;
 }
 
 function reorderOptionsByIds<TOption extends { id: string }>(
   options: TOption[],
-  optionIds: string[]
+  optionIds: string[],
 ) {
-  const optionsById = new Map(options.map((option) => [option.id, option]))
+  const optionsById = new Map(options.map((option) => [option.id, option]));
   const orderedOptions = optionIds.flatMap((optionId) => {
-    const option = optionsById.get(optionId)
+    const option = optionsById.get(optionId);
 
-    return option ? [option] : []
-  })
+    return option ? [option] : [];
+  });
   const remainingOptions = options.filter(
-    (option) => !optionIds.includes(option.id)
-  )
+    (option) => !optionIds.includes(option.id),
+  );
 
-  return [...orderedOptions, ...remainingOptions]
+  return [...orderedOptions, ...remainingOptions];
 }
 
 function reorderStatusGroupOptions(
   options: StatusOption[],
   groupName: string,
-  optionIds: string[]
+  optionIds: string[],
 ) {
   const reorderedGroupOptions = reorderOptionsByIds(
     options.filter((option) => getStatusOptionGroup(option) === groupName),
-    optionIds
-  )
-  let nextGroupIndex = 0
+    optionIds,
+  );
+  let nextGroupIndex = 0;
 
   return options.map((option) => {
     if (getStatusOptionGroup(option) !== groupName) {
-      return option
+      return option;
     }
 
-    const nextOption = reorderedGroupOptions[nextGroupIndex]
-    nextGroupIndex += 1
+    const nextOption = reorderedGroupOptions[nextGroupIndex];
+    nextGroupIndex += 1;
 
-    return nextOption ?? option
-  })
+    return nextOption ?? option;
+  });
 }
 
 function areSameOrderedIds(firstIds: string[], secondIds: string[]) {
   return (
     firstIds.length === secondIds.length &&
     firstIds.every((id, index) => id === secondIds[index])
-  )
+  );
 }
 
 function haveSameIds(firstIds: string[], secondIds: string[]) {
   if (firstIds.length !== secondIds.length) {
-    return false
+    return false;
   }
 
-  const secondIdSet = new Set(secondIds)
+  const secondIdSet = new Set(secondIds);
 
-  return firstIds.every((id) => secondIdSet.has(id))
+  return firstIds.every((id) => secondIdSet.has(id));
 }

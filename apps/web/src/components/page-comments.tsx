@@ -1,6 +1,13 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import {
+  memo,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react"
 
 import { ThreadAvatar, ThreadLine } from "@/components/ui/thread-line"
 import {
@@ -104,26 +111,7 @@ export function CommentAvatar({
   )
 }
 
-export function CommentItem({
-  canEdit,
-  canReact,
-  canResolve,
-  className,
-  comment,
-  editingBody,
-  isMutating,
-  mentionLabels,
-  onCancelEdit,
-  onAddReaction,
-  onDelete,
-  onEdit,
-  onEditingBodyChange,
-  onResolve,
-  onRemoveReaction,
-  onSaveEdit,
-  onUnresolve,
-  showResolveUnresolve = true,
-}: {
+type CommentItemProps = {
   canEdit: boolean
   canReact: boolean
   canResolve: boolean
@@ -142,7 +130,28 @@ export function CommentItem({
   onSaveEdit: () => void
   onUnresolve?: () => void
   showResolveUnresolve?: boolean
-}) {
+}
+
+function CommentItemComponent({
+  canEdit,
+  canReact,
+  canResolve,
+  className,
+  comment,
+  editingBody,
+  isMutating,
+  mentionLabels,
+  onCancelEdit,
+  onAddReaction,
+  onDelete,
+  onEdit,
+  onEditingBodyChange,
+  onResolve,
+  onRemoveReaction,
+  onSaveEdit,
+  onUnresolve,
+  showResolveUnresolve = true,
+}: CommentItemProps) {
   const isEditing = editingBody !== null
   const reactions = comment.reactions ?? []
   const commentTextParts = useMemo(
@@ -386,6 +395,21 @@ export function CommentItem({
     </article>
   )
 }
+
+export const CommentItem = memo(
+  CommentItemComponent,
+  (previous, next) =>
+    previous.canEdit === next.canEdit &&
+    previous.canReact === next.canReact &&
+    previous.canResolve === next.canResolve &&
+    previous.className === next.className &&
+    previous.comment === next.comment &&
+    previous.editingBody === next.editingBody &&
+    previous.isMutating === next.isMutating &&
+    previous.mentionLabels === next.mentionLabels &&
+    Boolean(previous.onUnresolve) === Boolean(next.onUnresolve) &&
+    previous.showResolveUnresolve === next.showResolveUnresolve,
+)
 
 function CommentReactionPicker({
   align = "start",
@@ -662,8 +686,14 @@ export function PageCommentThread({
     [accessTargets?.members],
   )
   const newCommentTextParts = useMemo(
-    () => tokenizeCommentMentions(newCommentBody, mentionLabels),
+    () =>
+      newCommentBody.includes("@")
+        ? tokenizeCommentMentions(newCommentBody, mentionLabels)
+        : [],
     [mentionLabels, newCommentBody],
+  )
+  const showMentionHighlight = newCommentTextParts.some(
+    (part) => part.isMention,
   )
 
   useEffect(() => {
@@ -682,7 +712,8 @@ export function PageCommentThread({
     const input = inputRef.current
 
     if (input) {
-      setNewCommentCursor(input.selectionStart ?? input.value.length)
+      const cursor = input.selectionStart ?? input.value.length
+      setNewCommentCursor((current) => current === cursor ? current : cursor)
     }
   }
 
@@ -916,7 +947,7 @@ export function PageCommentThread({
                   <CommentAvatar author={session?.user ?? null} small />
                 </ThreadAvatar>
                 <div className="relative min-w-0 flex-1">
-                  {newCommentBody && !mentionMenuOpen ? (
+                  {showMentionHighlight && !mentionMenuOpen ? (
                     <div
                       aria-hidden
                       className="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre text-sm text-foreground"
@@ -926,16 +957,18 @@ export function PageCommentThread({
                   ) : null}
                   <input
                     className={`relative w-full bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none ${
-                      newCommentBody && !mentionMenuOpen
+                      showMentionHighlight && !mentionMenuOpen
                         ? "text-transparent caret-foreground"
                         : "text-foreground"
                     }`}
                     disabled={isMutating}
                     onChange={(event) => {
                       setNewCommentBody(event.target.value)
-                      setNewCommentCursor(
-                        event.target.selectionStart ?? event.target.value.length,
-                      )
+                      setNewCommentCursor((current) => {
+                        const cursor =
+                          event.target.selectionStart ?? event.target.value.length
+                        return current === cursor ? current : cursor
+                      })
                       setDismissedMentionKey(null)
                     }}
                     onClick={syncCommentInputCursor}

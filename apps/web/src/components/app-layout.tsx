@@ -1,19 +1,10 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { ReactNode } from "react"
 import { Outlet, useRouterState } from "@tanstack/react-router"
 
 import { AppSidebar } from "@/components/app-sidebar"
 import { AppSearchProvider } from "@/components/app-search"
-import {
-  ChatSidebarPanel,
-  ChatSidebarTrigger,
-} from "@/components/chat-sidebar"
+import { ChatSidebarPanel, ChatSidebarTrigger } from "@/components/chat-sidebar"
 import {
   usePageSidePaneState,
   PageSidePaneContext,
@@ -35,10 +26,7 @@ import {
 } from "@/components/page-pane-header"
 import { SettingsSidebar } from "@/components/settings-sidebar"
 import { Separator } from "@/components/ui/separator"
-import {
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable"
+import { ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable"
 import {
   SidebarInset,
   SidebarProvider,
@@ -47,10 +35,7 @@ import {
 } from "@/components/ui/sidebar"
 import { isEmbeddedMobileViewer } from "@/lib/embedded-view"
 import { useDatabase } from "@notelab/features/databases"
-import {
-  useRecordItemVisit,
-  usePage,
-} from "@notelab/features/pages"
+import { useRecordItemVisit, usePage } from "@notelab/features/pages"
 import { EmbeddedPageDialog } from "@/components/embedded-page-dialog"
 import { useOpenEmbeddedPage } from "@/hooks/use-open-embedded-page"
 
@@ -83,9 +68,10 @@ function AppLayoutContent({ children }: { children?: ReactNode }) {
   const isAiPage = pathname === "/ai"
   const pageId = getPageId(pathname)
   const databaseId = getDatabaseId(pathname)
-  const { data: databasePayload } = useDatabase(databaseId)
-  const hostPageId =
-    pageId ?? databasePayload?.database.pageId ?? null
+  const { data: databasePayload } = useDatabase(databaseId, {
+    includeDeleted: true,
+  })
+  const hostPageId = pageId ?? databasePayload?.database.pageId ?? null
   const { data: hostPage } = usePage(hostPageId, {
     refetchOnMount: false,
   })
@@ -95,9 +81,12 @@ function AppLayoutContent({ children }: { children?: ReactNode }) {
   const sidePaneState = usePageSidePaneState(pageId)
   const {
     closeSidePane,
+    openDatabaseSidePane: openDatabaseSidePaneBase,
     openSidePane: openSidePaneBase,
+    renderedSidePaneDatabaseId,
     renderedSidePanePageId,
     sidePaneAnimatedOpen,
+    sidePaneDatabaseId,
     sidePanePageId,
   } = sidePaneState
   const [chatSidebarOpen, setChatSidebarOpen] = useState(false)
@@ -107,10 +96,7 @@ function AppLayoutContent({ children }: { children?: ReactNode }) {
     (discussionsEnabled && discussionsSidebarOpen ? 1 : 0)
   const desktopRightPanelCount = isMobile ? 0 : openRightPanelCount
   const openSidePane = useCallback(
-    (
-      nextPageId: string,
-      options?: { databaseId?: string | null },
-    ) => {
+    (nextPageId: string, options?: { databaseId?: string | null }) => {
       if (appSidebarOpen) {
         setChatSidebarOpen(false)
         setDiscussionsSidebarOpen(false)
@@ -119,6 +105,17 @@ function AppLayoutContent({ children }: { children?: ReactNode }) {
       openSidePaneBase(nextPageId, options)
     },
     [appSidebarOpen, openSidePaneBase],
+  )
+  const openDatabaseSidePane = useCallback(
+    (nextDatabaseId: string) => {
+      if (appSidebarOpen) {
+        setChatSidebarOpen(false)
+        setDiscussionsSidebarOpen(false)
+      }
+
+      openDatabaseSidePaneBase(nextDatabaseId)
+    },
+    [appSidebarOpen, openDatabaseSidePaneBase],
   )
   const openChatSidebar = useCallback(() => {
     if (appSidebarOpen) {
@@ -129,9 +126,10 @@ function AppLayoutContent({ children }: { children?: ReactNode }) {
   const sidePaneContext = useMemo(
     () => ({
       ...sidePaneState,
+      openDatabaseSidePane,
       openSidePane,
     }),
-    [openSidePane, sidePaneState],
+    [openDatabaseSidePane, openSidePane, sidePaneState],
   )
 
   useEffect(() => {
@@ -143,10 +141,9 @@ function AppLayoutContent({ children }: { children?: ReactNode }) {
   useEffect(() => {
     const itemKind = databaseId ? "database" : pageId ? "page" : null
     const itemId = databaseId ?? pageId
-    const workspaceId =
-      databaseId
-        ? databasePayload?.database.workspaceId
-        : hostPage?.workspaceId
+    const workspaceId = databaseId
+      ? databasePayload?.database.workspaceId
+      : hostPage?.workspaceId
 
     if (!itemKind || !itemId || !workspaceId) {
       return
@@ -173,18 +170,33 @@ function AppLayoutContent({ children }: { children?: ReactNode }) {
   ])
 
   useEffect(() => {
-    if (appSidebarOpen && sidePanePageId && chatSidebarOpen) {
+    if (
+      appSidebarOpen &&
+      (sidePanePageId || sidePaneDatabaseId) &&
+      chatSidebarOpen
+    ) {
       setChatSidebarOpen(false)
     }
-  }, [appSidebarOpen, chatSidebarOpen, sidePanePageId])
+  }, [appSidebarOpen, chatSidebarOpen, sidePaneDatabaseId, sidePanePageId])
 
   useEffect(() => {
-    if (appSidebarOpen && sidePanePageId && discussionsSidebarOpen) {
+    if (
+      appSidebarOpen &&
+      (sidePanePageId || sidePaneDatabaseId) &&
+      discussionsSidebarOpen
+    ) {
       setDiscussionsSidebarOpen(false)
     }
-  }, [appSidebarOpen, discussionsSidebarOpen, sidePanePageId])
+  }, [
+    appSidebarOpen,
+    discussionsSidebarOpen,
+    sidePaneDatabaseId,
+    sidePanePageId,
+  ])
 
-  const showSidePaneLayout = renderedSidePanePageId !== null
+  const showSidePaneLayout = Boolean(
+    renderedSidePanePageId || renderedSidePaneDatabaseId,
+  )
 
   return (
     <PageSidePaneContext.Provider value={sidePaneContext}>
@@ -193,11 +205,7 @@ function AppLayoutContent({ children }: { children?: ReactNode }) {
         databaseId={databaseId}
         hostPage={hostPage}
       />
-      {isSettingsPage ? (
-        <SettingsSidebar />
-      ) : (
-        <AppSidebar />
-      )}
+      {isSettingsPage ? <SettingsSidebar /> : <AppSidebar />}
       <ResizablePanelGroup
         className="min-h-0 min-w-0 flex-1 overflow-hidden"
         orientation="horizontal"
@@ -205,9 +213,7 @@ function AppLayoutContent({ children }: { children?: ReactNode }) {
       >
         <ResizablePanel
           className="min-h-0 min-w-0"
-          defaultSize={getRightSidebarEditorDefaultSize(
-            desktopRightPanelCount,
-          )}
+          defaultSize={getRightSidebarEditorDefaultSize(desktopRightPanelCount)}
           id="app-editor-pane"
           minSize={getRightSidebarEditorMinSize(desktopRightPanelCount)}
           style={{
@@ -228,6 +234,9 @@ function AppLayoutContent({ children }: { children?: ReactNode }) {
                     pathname={pathname}
                     renderedSidePanePageId={
                       showSidePaneLayout ? renderedSidePanePageId : null
+                    }
+                    renderedSidePaneDatabaseId={
+                      showSidePaneLayout ? renderedSidePaneDatabaseId : null
                     }
                     sidePaneAnimatedOpen={
                       showSidePaneLayout && sidePaneAnimatedOpen
@@ -315,17 +324,24 @@ function AppHeader({
   isSettingsPage,
   onCloseSidePane,
   pathname,
+  renderedSidePaneDatabaseId,
   renderedSidePanePageId,
   sidePaneAnimatedOpen,
 }: {
   isSettingsPage: boolean
   onCloseSidePane: () => void
   pathname: string
+  renderedSidePaneDatabaseId: string | null
   renderedSidePanePageId: string | null
   sidePaneAnimatedOpen: boolean
 }) {
-  const showSidePaneHeader = renderedSidePanePageId !== null
+  const showSidePaneHeader = Boolean(
+    renderedSidePanePageId || renderedSidePaneDatabaseId,
+  )
   const splitActive = showSidePaneHeader && sidePaneAnimatedOpen
+  const sidePanePathname = renderedSidePaneDatabaseId
+    ? `/d/${encodeURIComponent(renderedSidePaneDatabaseId)}`
+    : `/p/${encodeURIComponent(renderedSidePanePageId ?? "")}`
 
   return (
     <>
@@ -354,7 +370,7 @@ function AppHeader({
             bordered={false}
             className="min-w-0 flex-1"
             onClose={onCloseSidePane}
-            pathname={`/p/${encodeURIComponent(renderedSidePanePageId ?? "")}`}
+            pathname={sidePanePathname}
           />
         </PageSidePaneHeaderCell>
       ) : null}

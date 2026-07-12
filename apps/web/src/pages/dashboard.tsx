@@ -1,25 +1,23 @@
-import { useMemo, useState } from "react"
-import { useNavigate } from "@tanstack/react-router"
-import { ChevronDown, Database, FileText, Loader2, Plus } from "lucide-react"
-import { toast } from "sonner"
+import { useMemo, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import { ChevronDown, Database, FileText, Loader2, Plus } from "lucide-react";
+import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button"
-import {
-  PageSidePaneLayout,
-  usePageSidePane,
-} from "@/contexts/page-side-pane"
-import { useOpenEmbeddedPage } from "@/hooks/use-open-embedded-page"
-import { PageEditorPane } from "@/pages/page"
+import { Button } from "@/components/ui/button";
+import { PageSidePaneLayout, usePageSidePane } from "@/contexts/page-side-pane";
+import { useOpenEmbeddedPage } from "@/hooks/use-open-embedded-page";
+import { PageEditorPane } from "@/pages/page";
+import { DatabaseMainPane } from "@/pages/database";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { DatabaseTableView } from "@/packages/editor/extensions/database/views/table/database-table-view"
-import { DatabaseViewProvider } from "@/packages/editor/extensions/database/views/database-view-context"
-import { DatabaseViewToolbar } from "@/packages/editor/extensions/database/views/database-view-toolbar"
-import { getDatabaseViewModel } from "@/packages/editor/extensions/database/views/database-view-model"
+} from "@/components/ui/dropdown-menu";
+import { DatabaseTableView } from "@/packages/editor/extensions/database/views/table/database-table-view";
+import { DatabaseViewProvider } from "@/packages/editor/extensions/database/views/database-view-context";
+import { DatabaseViewToolbar } from "@/packages/editor/extensions/database/views/database-view-toolbar";
+import { getDatabaseViewModel } from "@/packages/editor/extensions/database/views/database-view-model";
 import {
   getMergedDatabaseConfig,
   getMergedNameColumnConfig,
@@ -27,62 +25,63 @@ import {
   type DatabaseNameColumnConfig,
   type DatabasePropertyConfig,
   type DatabaseSortConfig,
-} from "@/packages/editor/extensions/database/views/database-view-config"
-import { getDatabaseEmoji, useCreateDatabase } from "@notelab/features/databases"
-import { useActiveWorkspaceId } from "@notelab/features/integrations"
+} from "@/packages/editor/extensions/database/views/database-view-config";
+import {
+  getDatabaseEmoji,
+  useCreateDatabase,
+} from "@notelab/features/databases";
+import { useActiveWorkspaceId } from "@notelab/features/integrations";
 import {
   useCreatePage,
-  usePages,
+  usePageNavigation,
   type Page,
   type PageDatabase,
   type PageItemPlacement,
-} from "@notelab/features/pages"
+  type PageNavigationPayload,
+} from "@notelab/features/pages";
 import type {
   DatabasePayload,
   DatabaseProperty,
   DatabaseView,
   PagePropertyValue,
-} from "@notelab/features/databases"
+} from "@notelab/features/databases";
 
-type HomepageView = "recents" | "favourites" | "shared" | "private"
+type HomepageView = "recents" | "favourites" | "shared" | "private";
 
-type DashboardMode = "home" | "trash"
+type DashboardMode = "home" | "trash";
 
 type HomepageRow = {
-  createdAt: string
-  createdBy: string
-  deletedAt: string
-  deletedBy: string
-  iconKind: "database" | "page"
-  id: string
-  isDatabase: boolean
-  isFavorite: boolean
-  isTeamspace: boolean
-  itemId: string
-  itemKind: "database" | "page"
-  lastVisitedAt: string | null
-  metadata: Page["metadata"] | null
-  name: string
-  openDatabaseId: string | null
-  openPageId: string
-  source: string
-  sourcePage: HomepageSourcePage | null
-  updatedAt: string
-}
+  createdAt: string;
+  createdBy: string;
+  deletedAt: string;
+  deletedBy: string;
+  iconKind: "database" | "page";
+  id: string;
+  isFavorite: boolean;
+  isTeamspace: boolean;
+  lastVisitedAt: string | null;
+  metadata: Page["metadata"] | null;
+  name: string;
+  openDatabaseId: string | null;
+  openPageId: string | null;
+  source: string;
+  sourcePage: HomepageSourcePage | null;
+  updatedAt: string;
+};
 
 type HomepageSourcePage = {
-  iconKind: "database" | "page"
-  id: string
-  metadata: Page["metadata"] | null
-  name: string
-}
+  iconKind: "database" | "page";
+  id: string;
+  metadata: Page["metadata"] | null;
+  name: string;
+};
 
 const homepageViews: Array<{ id: HomepageView; label: string }> = [
   { id: "recents", label: "Recents" },
   { id: "favourites", label: "Favourites" },
   { id: "shared", label: "Shared" },
   { id: "private", label: "Private" },
-]
+];
 
 const homepagePropertyDefinitions = [
   { id: "source", name: "Source", type: "relation", width: 220 },
@@ -90,50 +89,65 @@ const homepagePropertyDefinitions = [
   { id: "lastVisitedAt", name: "Last visited time", type: "date", width: 210 },
   { id: "updatedAt", name: "Last edited time", type: "date", width: 210 },
   { id: "createdAt", name: "Created time", type: "date", width: 210 },
-] as const
+] as const;
 
 const trashPropertyDefinitions = [
   { id: "deletedAt", name: "Deleted at", type: "date", width: 210 },
   { id: "deletedBy", name: "Deleted by", type: "text", width: 190 },
-] as const
+] as const;
 
-const emptyAsync = async () => undefined
+const emptyAsync = async () => undefined;
 
-export default function DashboardPage({ mode = "home" }: { mode?: DashboardMode }) {
-  const navigate = useNavigate()
-  const workspaceId = useActiveWorkspaceId()
-  const { data: pages = [], isLoading } = usePages(workspaceId, {
+export default function DashboardPage({
+  mode = "home",
+}: {
+  mode?: DashboardMode;
+}) {
+  const navigate = useNavigate();
+  const workspaceId = useActiveWorkspaceId();
+  const { data: navigation, isLoading } = usePageNavigation(workspaceId, {
     deleted: mode === "trash" ? "only" : "active",
-  })
+  });
   const {
+    openDatabaseSidePane,
+    renderedSidePaneDatabaseId,
     renderedSidePanePageId,
     sidePaneAnimatedOpen,
     sidePaneContentReady,
     sidePaneDatabaseId,
-  } = usePageSidePane()
+  } = usePageSidePane();
   const { openPage } = useOpenEmbeddedPage({
     contextPageId: null,
     databaseId: null,
     page: null,
-  })
-  const createPageMutation = useCreatePage()
-  const createDatabase = useCreateDatabase()
-  const [activeViewId, setActiveViewId] = useState<string | null>("recents")
+  });
+  const createPageMutation = useCreatePage();
+  const createDatabase = useCreateDatabase();
+  const [activeViewId, setActiveViewId] = useState<string | null>("recents");
   const [databaseConfig, setDatabaseConfig] = useState<unknown>({
     nameColumn: {
       label: "Page name",
       showPageIcon: true,
     },
-  })
-  const [propertyConfigs, setPropertyConfigs] = useState<Record<string, unknown>>({})
+  });
+  const [propertyConfigs, setPropertyConfigs] = useState<
+    Record<string, unknown>
+  >({});
   const [viewConfigs, setViewConfigs] = useState<Record<string, unknown>>({
     recents: {
       sorts: [{ column: "lastVisitedAt", direction: "descending" }],
     },
-  })
-  const rows = useMemo(() => buildHomepageRows(pages, mode), [pages, mode])
-  const pageTitle = mode === "trash" ? "Trash" : "Home"
-  const emptyLabel = mode === "trash" ? "Loading trash..." : "Loading pages..."
+  });
+  const rows = useMemo(
+    () =>
+      buildHomepageRows(
+        navigation ?? { databases: [], pages: [], placements: [] },
+        mode,
+      ),
+    [navigation, mode],
+  );
+  const pageTitle = mode === "trash" ? "Trash" : "Home";
+  const emptyLabel = mode === "trash" ? "Loading trash..." : "Loading pages...";
   const payload = useMemo(
     () =>
       buildHomepagePayload({
@@ -154,7 +168,7 @@ export default function DashboardPage({ mode = "home" }: { mode?: DashboardMode 
       rows,
       viewConfigs,
     ],
-  )
+  );
   const viewModel = useMemo(
     () =>
       getDatabaseViewModel({
@@ -162,33 +176,32 @@ export default function DashboardPage({ mode = "home" }: { mode?: DashboardMode 
         payload,
       }),
     [activeViewId, payload],
-  )
-  const activeView = viewModel.activeView
+  );
+  const activeView = viewModel.activeView;
   const updateActiveViewConfig = (nextConfig: unknown) => {
     if (!activeViewId) {
-      return
+      return;
     }
 
     setViewConfigs((current) => ({
       ...current,
       [activeViewId]: nextConfig,
-    }))
-  }
+    }));
+  };
   const saveDatabaseSorts = async (sorts: DatabaseSortConfig[]) => {
     updateActiveViewConfig(
       getMergedDatabaseConfig(activeView?.config, {
-        sort: undefined,
         sorts,
       }),
-    )
-  }
+    );
+  };
   const setViewGroupProperty = (groupPropertyId: string | null) => {
     updateActiveViewConfig(
       getMergedDatabaseConfig(activeView?.config, {
         groupPropertyId: groupPropertyId ?? undefined,
       }),
-    )
-  }
+    );
+  };
   const updateDatabasePropertyConfig = async (
     databasePropertyId: string,
     config: unknown,
@@ -199,70 +212,79 @@ export default function DashboardPage({ mode = "home" }: { mode?: DashboardMode 
         current[databasePropertyId],
         config as DatabasePropertyConfig,
       ),
-    }))
-  }
+    }));
+  };
   const updateNameColumnConfig = (config: unknown) => {
     setDatabaseConfig((current: unknown) =>
       getMergedNameColumnConfig(current, config as DatabaseNameColumnConfig),
-    )
-  }
-  const isCreating = createPageMutation.isPending || createDatabase.isPending
+    );
+  };
+  const isCreating = createPageMutation.isPending || createDatabase.isPending;
 
   const createPage = async () => {
     if (!workspaceId || createPageMutation.isPending) {
-      return
+      return;
     }
 
     try {
-      const page = await createPageMutation.mutateAsync({ workspaceId })
+      const page = await createPageMutation.mutateAsync({ workspaceId });
 
       await navigate({
         params: { pageId: page.id },
         to: "/p/$pageId",
-      })
+      });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not create page.")
+      toast.error(
+        error instanceof Error ? error.message : "Could not create page.",
+      );
     }
-  }
+  };
 
   const createStandaloneDatabase = async () => {
-    if (!workspaceId || createPageMutation.isPending || createDatabase.isPending) {
-      return
+    if (!workspaceId || createDatabase.isPending) {
+      return;
     }
 
     try {
-      const page = await createPageMutation.mutateAsync({ workspaceId })
       const payload = await createDatabase.mutateAsync({
         workspaceId,
-        pageId: page.id,
         standalone: true,
-      })
+      });
 
       await navigate({
         params: { databaseId: payload.database.id },
         search: { view: undefined },
         to: "/d/$databaseId",
-      })
+      });
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Could not create database.",
-      )
+      );
     }
-  }
+  };
 
   const openHomepagePage = (pageId: string) => {
     const row = rows.find(
-      (candidate) =>
-        candidate.id === pageId || candidate.openPageId === pageId,
-    )
+      (candidate) => candidate.id === pageId || candidate.openPageId === pageId,
+    );
 
     if (row) {
-      openPage(row.openPageId, { databaseId: row.openDatabaseId })
-      return
+      if (row.openDatabaseId) {
+        openDatabaseSidePane(row.openDatabaseId);
+        return;
+      }
+
+      if (row.openPageId) {
+        openPage(row.openPageId);
+      }
+      return;
     }
 
-    openPage(pageId)
-  }
+    openPage(pageId);
+  };
+  const openSidePaneChildPage = (pageId: string) => {
+    openPage(pageId, { databaseId: sidePaneDatabaseId });
+  };
 
   return (
     <PageSidePaneLayout
@@ -353,7 +375,7 @@ export default function DashboardPage({ mode = "home" }: { mode?: DashboardMode 
                   togglePropertyVisibility: (propertyId) => {
                     void updateDatabasePropertyConfig(propertyId, {
                       hidden: true,
-                    })
+                    });
                   },
                   togglePropertyTitles: () => {},
                   toggleSortPillVisibility: () => {},
@@ -427,20 +449,33 @@ export default function DashboardPage({ mode = "home" }: { mode?: DashboardMode 
         </main>
       }
       sidePane={
-        sidePaneContentReady && renderedSidePanePageId ? (
-          <PageEditorPane
-            databaseId={sidePaneDatabaseId}
-            enableComments={false}
-            key={renderedSidePanePageId}
-            onOpenPage={openPage}
-            pageId={renderedSidePanePageId}
-          />
+        sidePaneContentReady &&
+        (renderedSidePanePageId || renderedSidePaneDatabaseId) ? (
+          renderedSidePaneDatabaseId ? (
+            <DatabaseMainPane
+              className="min-h-0 flex-1 overflow-y-auto"
+              databaseId={renderedSidePaneDatabaseId}
+              embedded
+              key={renderedSidePaneDatabaseId}
+              onOpenPage={openSidePaneChildPage}
+            />
+          ) : renderedSidePanePageId ? (
+            <PageEditorPane
+              databaseId={sidePaneDatabaseId}
+              enableComments={false}
+              key={renderedSidePanePageId}
+              onOpenPage={openSidePaneChildPage}
+              pageId={renderedSidePanePageId}
+            />
+          ) : null
         ) : null
       }
       sidePaneOpen={sidePaneAnimatedOpen}
-      sidePaneVisible={renderedSidePanePageId !== null}
+      sidePaneVisible={Boolean(
+        renderedSidePanePageId || renderedSidePaneDatabaseId,
+      )}
     />
-  )
+  );
 }
 
 function buildHomepagePayload({
@@ -452,23 +487,23 @@ function buildHomepagePayload({
   rows,
   viewConfigs,
 }: {
-  activeViewId: string
-  databaseConfig: unknown
-  mode: DashboardMode
-  workspaceId: string | null | undefined
-  propertyConfigs: Record<string, unknown>
-  rows: HomepageRow[]
-  viewConfigs: Record<string, unknown>
+  activeViewId: string;
+  databaseConfig: unknown;
+  mode: DashboardMode;
+  workspaceId: string | null | undefined;
+  propertyConfigs: Record<string, unknown>;
+  rows: HomepageRow[];
+  viewConfigs: Record<string, unknown>;
 }): DatabasePayload {
-  const homepageDatabaseId = mode === "trash" ? "trash" : "homepage"
+  const homepageDatabaseId = mode === "trash" ? "trash" : "homepage";
   const propertyDefinitions =
     mode === "trash"
       ? [...homepagePropertyDefinitions, ...trashPropertyDefinitions]
-      : homepagePropertyDefinitions
-  const filteredRows = applyHomepageView(rows, activeViewId as HomepageView)
+      : homepagePropertyDefinitions;
+  const filteredRows = applyHomepageView(rows, activeViewId as HomepageView);
   const properties: DatabaseProperty[] = propertyDefinitions.map(
     (definition, index) => {
-      const propertyConfig = propertyConfigs[definition.id]
+      const propertyConfig = propertyConfigs[definition.id];
       const config =
         definition.id === "source"
           ? {
@@ -479,7 +514,7 @@ function buildHomepagePayload({
                 ),
               ),
             }
-          : propertyConfig
+          : propertyConfig;
 
       return {
         createdAt: "",
@@ -499,9 +534,9 @@ function buildHomepagePayload({
         updatedAt: "",
         visible: true,
         width: definition.width,
-      }
+      };
     },
-  )
+  );
   const values: PagePropertyValue[] = filteredRows.flatMap((row) =>
     propertyDefinitions.map((definition) => ({
       createdAt: row.createdAt,
@@ -511,7 +546,7 @@ function buildHomepagePayload({
       value: row[definition.id] ?? "",
       pageId: row.id,
     })),
-  )
+  );
 
   return {
     database: {
@@ -531,7 +566,7 @@ function buildHomepagePayload({
       page: {
         createdAt: row.createdAt,
         iconKind: row.iconKind,
-        id: row.openPageId,
+        id: row.id,
         metadata: row.metadata,
         name: row.name,
         updatedAt: row.updatedAt,
@@ -541,79 +576,52 @@ function buildHomepagePayload({
       updatedAt: row.updatedAt,
     })),
     values,
-    views: homepageViews.map((view, index): DatabaseView => ({
-      config: viewConfigs[view.id],
-      createdAt: "",
-      databaseId: homepageDatabaseId,
-      id: view.id,
-      name: view.label,
-      position: index,
-      type: "table",
-      updatedAt: "",
-    })),
-  }
+    views: homepageViews.map(
+      (view, index): DatabaseView => ({
+        config: viewConfigs[view.id],
+        createdAt: "",
+        databaseId: homepageDatabaseId,
+        id: view.id,
+        name: view.label,
+        position: index,
+        type: "table",
+        updatedAt: "",
+      }),
+    ),
+  };
 }
 
-function buildHomepageRows(pages: Page[], mode: DashboardMode): HomepageRow[] {
-  const pagesById = new Map(pages.map((page) => [page.id, page]))
-  const databases = pages.flatMap((page) =>
-    (page.databases ?? []).map((database) => ({ database, page })),
-  )
-  const showTrash = mode === "trash"
+function buildHomepageRows(
+  navigation: PageNavigationPayload,
+  mode: DashboardMode,
+): HomepageRow[] {
+  const { databases: databaseRecords, pages, placements } = navigation;
+  const pagesById = new Map(pages.map((page) => [page.id, page]));
+  const databases = databaseRecords.map((database) => ({
+    database,
+    page: database.pageId ? (pagesById.get(database.pageId) ?? null) : null,
+  }));
+  const showTrash = mode === "trash";
   const includePage = (page: Page) =>
-    showTrash ? Boolean(page.deletedAt) : !page.deletedAt
-  const includeDatabase = (database: PageDatabase, page: Page) =>
+    showTrash ? Boolean(page.deletedAt) : !page.deletedAt;
+  const includeDatabase = (database: PageDatabase, page: Page | null) =>
     showTrash
-      ? Boolean(database.deletedAt ?? page.deletedAt)
-      : !database.deletedAt && !page.deletedAt
+      ? Boolean(database.deletedAt ?? page?.deletedAt)
+      : !database.deletedAt && !page?.deletedAt;
   const databasesById = new Map(
     databases.map(({ database, page }) => [database.id, { database, page }]),
-  )
-  const standaloneDatabasePageIds = new Set(
-    databases
-      .filter(({ database }) => isStandaloneDatabase(database))
-      .map(({ database }) => database.pageId),
-  )
-  const placements = pages.flatMap(
-    (page) => page.navigationPlacements ?? [],
-  )
+  );
   const parentKeys = new Set(
-    placements.map((placement) => `${placement.parentKind}:${placement.parentId}`),
-  )
+    placements.map(
+      (placement) => `${placement.parentKind}:${placement.parentId}`,
+    ),
+  );
 
   return [
     ...pages
-      .filter(
-        (page) =>
-          includePage(page) && !standaloneDatabasePageIds.has(page.id),
-      )
-      .map((page) => ({
-        createdAt: page.createdAt,
-        createdBy: formatCreator(page.createdBy),
-        deletedAt: page.deletedAt ?? "",
-        deletedBy: formatCreator(page.deletedBy),
-        iconKind: "page" as const,
-        id: `page:${page.id}`,
-        isDatabase: false,
-        isFavorite: Boolean(page.isFavorite),
-        isTeamspace: Boolean(page.isTeamspace),
-        itemId: page.id,
-        itemKind: "page" as const,
-        lastVisitedAt: page.lastVisitedAt ?? null,
-        metadata: page.metadata ?? null,
-        name: page.name || "Untitled",
-        openDatabaseId: null,
-        openPageId: page.id,
-        source: parentKeys.has(`page:${page.id}`)
-          ? ""
-          : resolveSourcePage(
-              placements,
-              pagesById,
-              databasesById,
-              "page",
-              page.id,
-            )?.id ?? "",
-        sourcePage: parentKeys.has(`page:${page.id}`)
+      .filter((page) => includePage(page))
+      .map((page) => {
+        const sourcePage = parentKeys.has(`page:${page.id}`)
           ? null
           : resolveSourcePage(
               placements,
@@ -621,54 +629,67 @@ function buildHomepageRows(pages: Page[], mode: DashboardMode): HomepageRow[] {
               databasesById,
               "page",
               page.id,
-            ),
-        updatedAt: page.updatedAt,
-      })),
+            );
+
+        return {
+          createdAt: page.createdAt,
+          createdBy: formatCreator(page.createdBy),
+          deletedAt: page.deletedAt ?? "",
+          deletedBy: formatCreator(page.deletedBy),
+          iconKind: "page" as const,
+          id: `page:${page.id}`,
+          isFavorite: Boolean(page.isFavorite),
+          isTeamspace: Boolean(page.isTeamspace),
+          lastVisitedAt: page.lastVisitedAt ?? null,
+          metadata: page.metadata ?? null,
+          name: page.name || "Untitled",
+          openDatabaseId: null,
+          openPageId: page.id,
+          source: sourcePage?.id ?? "",
+          sourcePage,
+          updatedAt: page.updatedAt,
+        };
+      }),
     ...databases
       .filter(({ database, page }) => includeDatabase(database, page))
       .map(({ database, page }) => {
-        const databaseEmoji = getDatabaseEmoji(database)
+        const databaseEmoji = getDatabaseEmoji(database);
         const sourcePage = parentKeys.has(`database:${database.id}`)
           ? null
-          : resolveSourcePage(
+          : (resolveSourcePage(
               placements,
               pagesById,
               databasesById,
               "database",
               database.id,
-            ) ?? getPageSourcePage(page)
+            ) ?? (page ? getPageSourcePage(page) : null));
 
         return {
           createdAt: database.createdAt,
-          createdBy: formatCreator(database.createdBy ?? page.createdBy),
-          deletedAt: database.deletedAt ?? page.deletedAt ?? "",
-          deletedBy: formatCreator(
-            database.deletedBy ?? page.deletedBy,
-          ),
+          createdBy: formatCreator(database.createdBy ?? page?.createdBy),
+          deletedAt: database.deletedAt ?? page?.deletedAt ?? "",
+          deletedBy: formatCreator(database.deletedBy ?? page?.deletedBy),
           iconKind: "database" as const,
           id: `database:${database.id}`,
-          isDatabase: true,
           isFavorite: Boolean(database.isFavorite),
-          isTeamspace: Boolean(page.isTeamspace),
-          itemId: database.id,
-          itemKind: "database" as const,
+          isTeamspace: Boolean(page?.isTeamspace),
           lastVisitedAt: database.lastVisitedAt ?? null,
           metadata: databaseEmoji ? { emoji: databaseEmoji } : null,
           name: database.name || "Untitled",
           openDatabaseId: database.id,
-          openPageId: page.id,
+          openPageId: database.pageId,
           source: sourcePage?.id ?? "",
           sourcePage,
           updatedAt: database.updatedAt,
-        }
+        };
       }),
-  ]
+  ];
 }
 
 function resolveSourcePage(
   placements: PageItemPlacement[],
   pagesById: Map<string, Page>,
-  databasesById: Map<string, { database: PageDatabase; page: Page }>,
+  databasesById: Map<string, { database: PageDatabase; page: Page | null }>,
   itemKind: "database" | "page",
   itemId: string,
 ): HomepageSourcePage | null {
@@ -678,25 +699,25 @@ function resolveSourcePage(
       candidate.itemId === itemId &&
       (candidate.placementKind === "primary" ||
         candidate.placementKind === "database_row"),
-  )
+  );
 
   if (!placement) {
-    return null
+    return null;
   }
 
   if (placement.parentKind === "page") {
-    const parentPage = pagesById.get(placement.parentId)
+    const parentPage = pagesById.get(placement.parentId);
 
-    return parentPage ? getPageSourcePage(parentPage) : null
+    return parentPage ? getPageSourcePage(parentPage) : null;
   }
 
   if (placement.parentKind === "database") {
-    const parentDatabase = databasesById.get(placement.parentId)?.database
+    const parentDatabase = databasesById.get(placement.parentId)?.database;
 
-    return parentDatabase ? getDatabaseSourcePage(parentDatabase) : null
+    return parentDatabase ? getDatabaseSourcePage(parentDatabase) : null;
   }
 
-  return null
+  return null;
 }
 
 function getPageSourcePage(page: Page): HomepageSourcePage {
@@ -705,48 +726,40 @@ function getPageSourcePage(page: Page): HomepageSourcePage {
     id: `page:${page.id}`,
     metadata: page.metadata ?? null,
     name: page.name?.trim() || "Untitled",
-  }
+  };
 }
 
 function getDatabaseSourcePage(database: PageDatabase): HomepageSourcePage {
-  const emoji = getDatabaseEmoji(database)
+  const emoji = getDatabaseEmoji(database);
 
   return {
     iconKind: "database",
     id: `database:${database.id}`,
     metadata: emoji ? { emoji } : null,
     name: database.name?.trim() || "Untitled",
-  }
+  };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value)
-}
-
-function isStandaloneDatabase(database: PageDatabase) {
-  if (!database.config || typeof database.config !== "object") {
-    return true
-  }
-
-  return !("parentItemId" in database.config)
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 function applyHomepageView(rows: HomepageRow[], view: HomepageView) {
   switch (view) {
     case "favourites":
-      return rows.filter((row) => row.isFavorite)
+      return rows.filter((row) => row.isFavorite);
     case "shared":
-      return rows.filter((row) => row.isTeamspace)
+      return rows.filter((row) => row.isTeamspace);
     case "private":
-      return rows.filter((row) => !row.isTeamspace)
+      return rows.filter((row) => !row.isTeamspace);
     case "recents":
     default:
-      return rows
+      return rows;
   }
 }
 
 function formatCreator(
   creator: Page["createdBy"] | PageDatabase["createdBy"] | undefined,
 ) {
-  return creator?.name?.trim() || creator?.email?.trim() || "Unknown"
+  return creator?.name?.trim() || creator?.email?.trim() || "Unknown";
 }

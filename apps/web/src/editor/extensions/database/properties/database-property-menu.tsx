@@ -19,8 +19,8 @@ import {
   Sparkles,
   TextWrap,
   Trash2,
-} from "lucide-react"
-import { useState, type ButtonHTMLAttributes } from "react"
+} from "lucide-react";
+import { useState, type ButtonHTMLAttributes } from "react";
 
 import {
   AlertDialog,
@@ -31,8 +31,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { Button } from "@/components/ui/button"
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import {
   DropDrawer,
   DropDrawerContent,
@@ -42,9 +42,9 @@ import {
   DropDrawerSubContent,
   DropDrawerSubTrigger,
   DropDrawerTrigger,
-} from "@/components/ui/dropdrawer"
-import { Input } from "@/components/ui/input"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+} from "@/components/ui/dropdrawer";
+import { Input } from "@/components/ui/input";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Dialog,
   DialogContent,
@@ -52,24 +52,19 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   useDatabase,
   useDeleteDatabaseProperty,
   useDuplicateDatabaseProperty,
   useUpdateDatabase,
   useUpdateDatabaseProperty,
-} from "@notelab/features/databases"
-import { Separator } from "@/components/ui/separator"
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs"
-import { Textarea } from "@/components/ui/textarea"
+} from "@notelab/features/databases";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 
-import { getDatabasePropertyType } from "../core/database-property-types"
+import { getDatabasePropertyType } from "../core/database-property-types";
 import {
   getDatabaseSorts,
   getMergedDatabaseConfig,
@@ -78,11 +73,11 @@ import {
   upsertDatabaseSort,
   type DatabasePropertyConfig,
   type DatabaseSortDirection,
-} from "../views/database-view-config"
-import { DatabasePropertyEditSubmenu } from "./database-property-edit-submenu"
+} from "../views/database-view-config";
+import { DatabasePropertyEditSubmenu } from "./database-property-edit-submenu";
 
-export { DatabaseNamePropertyMenu } from "./database-name-property-menu"
-export { DatabasePropertyEditSubmenu } from "./database-property-edit-submenu"
+export { DatabaseNamePropertyMenu } from "./database-name-property-menu";
+export { DatabasePropertyEditSubmenu } from "./database-property-edit-submenu";
 
 export function DatabasePropertyMenu({
   config,
@@ -107,115 +102,118 @@ export function DatabasePropertyMenu({
   type,
   workspaceId,
 }: {
-  config?: unknown
-  databaseConfig?: unknown
-  databaseId: string
-  databasePropertyId: string
-  isGrouped?: boolean
-  name: string
-  onOpenChange?: (open: boolean) => void
-  onInsertProperty: (side: "left" | "right") => void
-  onEditFormula?: () => void
-  onRename: (name: string) => void
-  onSort?: (direction: DatabaseSortDirection) => void
-  onToggleGroup?: () => void
-  onUpdateConfig?: (config: DatabasePropertyConfig) => void
-  open?: boolean
-  schemaActionsEnabled?: boolean
-  sourceDatabaseId?: string
-  sourceDatabaseName?: string
-  sourcePropertyId?: string
-  type: string
+  config?: unknown;
+  databaseConfig?: unknown;
+  databaseId: string;
+  databasePropertyId: string;
+  isGrouped?: boolean;
+  name: string;
+  onOpenChange?: (open: boolean) => void;
+  onInsertProperty: (side: "left" | "right") => void;
+  onEditFormula?: () => void;
+  onRename: (name: string) => void;
+  onSort?: (direction: DatabaseSortDirection) => void;
+  onToggleGroup?: () => void;
+  onUpdateConfig?: (config: DatabasePropertyConfig) => void;
+  open?: boolean;
+  schemaActionsEnabled?: boolean;
+  sourceDatabaseId?: string;
+  sourceDatabaseName?: string;
+  sourcePropertyId?: string;
+  type: string;
   triggerDragProps?: Pick<
     ButtonHTMLAttributes<HTMLButtonElement>,
     "onClick" | "onPointerDownCapture" | "title"
-  >
-  workspaceId?: string | null
+  >;
+  workspaceId?: string | null;
 }) {
-  const [automationDialogOpen, setAutomationDialogOpen] = useState(false)
-  const [basicAutofillDialogOpen, setBasicAutofillDialogOpen] = useState(false)
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [relationDeleteMode, setRelationDeleteMode] =
-    useState<"this" | "related">("this")
-  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false)
-  const updateDatabase = useUpdateDatabase()
-  const updateProperty = useUpdateDatabaseProperty()
-  const deleteProperty = useDeleteDatabaseProperty()
-  const duplicateProperty = useDuplicateDatabaseProperty()
-  const propertyType = getDatabasePropertyType(type)
-  const PropertyIcon = propertyType.icon
-  const currentSorts = getDatabaseSorts(databaseConfig)
+  const [automationDialogOpen, setAutomationDialogOpen] = useState(false);
+  const [basicAutofillDialogOpen, setBasicAutofillDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [relationDeleteMode, setRelationDeleteMode] = useState<
+    "this" | "related"
+  >("this");
+  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
+  const updateDatabase = useUpdateDatabase();
+  const updateProperty = useUpdateDatabaseProperty();
+  const deleteProperty = useDeleteDatabaseProperty();
+  const duplicateProperty = useDuplicateDatabaseProperty();
+  const propertyType = getDatabasePropertyType(type);
+  const PropertyIcon = propertyType.icon;
+  const currentSorts = getDatabaseSorts(databaseConfig);
   const currentSortDirection = currentSorts.find(
-    (sort) => sort.column === databasePropertyId
-  )?.direction
-  const isButtonProperty = type === "button"
-  const isFormulaProperty = type === "formula"
+    (sort) => sort.column === databasePropertyId,
+  )?.direction;
+  const isButtonProperty = type === "button";
+  const isFormulaProperty = type === "formula";
   const hidesEditProperty =
-    type === "text" || type === "checkbox" || type === "email" || type === "phone"
+    type === "text" ||
+    type === "checkbox" ||
+    type === "email" ||
+    type === "phone";
   const canBasicAutofill =
-    type === "text" || type === "select" || type === "multi_select"
-  const relationDeleteConfig = getRelationDeleteConfig(config)
+    type === "text" || type === "select" || type === "multi_select";
+  const relationDeleteConfig = getRelationDeleteConfig(config);
   const { data: relatedDatabasePayload } = useDatabase(
     type === "relation" ? relationDeleteConfig.relatedDatabaseId : null,
-    { schemaOnly: true }
-  )
+    { schemaOnly: true },
+  );
   const relatedDatabaseProperty = relatedDatabasePayload?.properties.find(
     (property) =>
-      property.property.id === relationDeleteConfig.relatedPropertyId
-  )
-  const wrapContent = getPropertyWrapContent(config)
+      property.property.id === relationDeleteConfig.relatedPropertyId,
+  );
+  const wrapContent = getPropertyWrapContent(config);
   const updatePropertyConfig = (nextConfig: DatabasePropertyConfig) => {
     if (onUpdateConfig) {
-      onUpdateConfig(nextConfig)
-      return
+      onUpdateConfig(nextConfig);
+      return;
     }
 
     updateProperty.mutate({
       config: getMergedPropertyConfig(config, nextConfig),
       databaseId,
       databasePropertyId,
-    })
-  }
+    });
+  };
   const updateSort = (direction: DatabaseSortDirection) => {
     if (onSort) {
-      onSort(direction)
-      return
+      onSort(direction);
+      return;
     }
 
     updateDatabase.mutate({
       config: getMergedDatabaseConfig(databaseConfig, {
-        sort: undefined,
         sorts: upsertDatabaseSort(currentSorts, {
           column: databasePropertyId,
           direction,
         }),
       }),
       databaseId,
-    })
-  }
+    });
+  };
   const duplicateDatabaseProperty = (includeValues: boolean) => {
     duplicateProperty.mutate({
       databaseId,
       databasePropertyId,
       includeValues,
-    })
-  }
+    });
+  };
   const deleteDatabaseProperty = () => {
     deleteProperty.mutate({
       databaseId,
       databasePropertyId,
-    })
-  }
+    });
+  };
   const deleteRelationProperties = (includeRelated: boolean) => {
     if (includeRelated && relatedDatabaseProperty) {
       deleteProperty.mutate({
         databaseId: relationDeleteConfig.relatedDatabaseId!,
         databasePropertyId: relatedDatabaseProperty.id,
-      })
+      });
     }
 
-    deleteDatabaseProperty()
-  }
+    deleteDatabaseProperty();
+  };
 
   return (
     <>
@@ -243,15 +241,15 @@ export function DatabasePropertyMenu({
               className="h-auto rounded-none border-0 bg-transparent px-0 py-0 text-sm font-medium shadow-none focus-visible:border-transparent focus-visible:ring-0 dark:bg-transparent"
               defaultValue={name}
               onBlur={(event) => {
-                const nextName = event.target.value.trim()
+                const nextName = event.target.value.trim();
 
                 if (nextName !== name) {
-                  onRename(nextName)
+                  onRename(nextName);
                 }
               }}
               onKeyDown={(event) => {
                 if (event.key === "Enter") {
-                  event.currentTarget.blur()
+                  event.currentTarget.blur();
                 }
               }}
             />
@@ -288,8 +286,8 @@ export function DatabasePropertyMenu({
           <DropDrawerItem
             aria-pressed={wrapContent}
             onSelect={(event) => {
-              event.preventDefault()
-              updatePropertyConfig({ wrapContent: !wrapContent })
+              event.preventDefault();
+              updatePropertyConfig({ wrapContent: !wrapContent });
             }}
           >
             <TextWrap />
@@ -332,8 +330,8 @@ export function DatabasePropertyMenu({
           </DropDrawerItem>
           <DropDrawerItem
             onSelect={(event) => {
-              event.preventDefault()
-              onToggleGroup?.()
+              event.preventDefault();
+              onToggleGroup?.();
             }}
           >
             <GripVertical />
@@ -347,8 +345,8 @@ export function DatabasePropertyMenu({
             <DropDrawerSubContent>
               <DropDrawerItem
                 onSelect={(event) => {
-                  event.preventDefault()
-                  updateSort("ascending")
+                  event.preventDefault();
+                  updateSort("ascending");
                 }}
               >
                 <span>Ascending</span>
@@ -358,8 +356,8 @@ export function DatabasePropertyMenu({
               </DropDrawerItem>
               <DropDrawerItem
                 onSelect={(event) => {
-                  event.preventDefault()
-                  updateSort("descending")
+                  event.preventDefault();
+                  updateSort("descending");
                 }}
               >
                 <span>Descending</span>
@@ -438,10 +436,7 @@ export function DatabasePropertyMenu({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <AlertDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-      >
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete relation property?</AlertDialogTitle>
@@ -487,7 +482,9 @@ export function DatabasePropertyMenu({
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => deleteRelationProperties(relationDeleteMode === "related")}
+              onClick={() =>
+                deleteRelationProperties(relationDeleteMode === "related")
+              }
               variant="destructive"
             >
               Delete
@@ -512,23 +509,23 @@ export function DatabasePropertyMenu({
         </DialogContent>
       </Dialog>
     </>
-  )
+  );
 }
 
 function getRelationDeleteConfig(config: unknown) {
   const relation =
     config && typeof config === "object" && !Array.isArray(config)
       ? (config as { relation?: unknown }).relation
-      : null
+      : null;
 
   if (!relation || typeof relation !== "object" || Array.isArray(relation)) {
-    return {}
+    return {};
   }
 
   const relationConfig = relation as {
-    relatedDatabaseId?: unknown
-    relatedPropertyId?: unknown
-  }
+    relatedDatabaseId?: unknown;
+    relatedPropertyId?: unknown;
+  };
 
   return {
     relatedDatabaseId:
@@ -539,14 +536,10 @@ function getRelationDeleteConfig(config: unknown) {
       typeof relationConfig.relatedPropertyId === "string"
         ? relationConfig.relatedPropertyId
         : undefined,
-  }
+  };
 }
 
-function ButtonAutomationDialog({
-  propertyName,
-}: {
-  propertyName: string
-}) {
+function ButtonAutomationDialog({ propertyName }: { propertyName: string }) {
   return (
     <>
       <DialogHeader>
@@ -558,11 +551,7 @@ function ButtonAutomationDialog({
       <div className="grid gap-6">
         <section className="grid gap-2">
           <div className="text-sm font-medium text-muted-foreground">When</div>
-          <Button
-            className="w-full"
-            type="button"
-            variant="outline"
-          >
+          <Button className="w-full" type="button" variant="outline">
             <Sparkles className="size-5 shrink-0 text-muted-foreground" />
             <span className="font-medium text-foreground">
               Button is clicked
@@ -574,30 +563,20 @@ function ButtonAutomationDialog({
         </div>
         <section className="grid gap-2">
           <div className="text-sm font-medium text-muted-foreground">Do</div>
-          <Button
-            className="w-full"
-            type="button"
-            variant="outline"
-          >
+          <Button className="w-full" type="button" variant="outline">
             <Plus className="size-5 shrink-0" />
             <span>New action</span>
           </Button>
         </section>
       </div>
       <DialogFooter>
-        <Button type="button">
-          Save
-        </Button>
+        <Button type="button">Save</Button>
       </DialogFooter>
     </>
-  )
+  );
 }
 
-function BasicAutofillDialog({
-  propertyName,
-}: {
-  propertyName: string
-}) {
+function BasicAutofillDialog({ propertyName }: { propertyName: string }) {
   return (
     <>
       <div className="grid min-h-[28rem] gap-4 md:grid-cols-[minmax(0,1fr)_1px_minmax(18rem,0.95fr)] md:grid-rows-[auto_minmax(0,1fr)]">
@@ -611,7 +590,10 @@ function BasicAutofillDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <Separator className="hidden md:row-span-2 md:block" orientation="vertical" />
+        <Separator
+          className="hidden md:row-span-2 md:block"
+          orientation="vertical"
+        />
 
         <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
           <span>Preview with</span>
@@ -709,5 +691,5 @@ function BasicAutofillDialog({
         </Button>
       </DialogFooter>
     </>
-  )
+  );
 }

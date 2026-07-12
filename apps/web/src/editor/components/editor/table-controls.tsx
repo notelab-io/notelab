@@ -354,33 +354,63 @@ export function TableControls({ editor }: { editor: Editor | null }) {
       return
     }
 
-    const updateOnNextFrame = () => requestAnimationFrame(updateRect)
-    const handleTransaction = () => {
-      updateTableMinWidths(editor)
+    let updateFrame: number | null = null
+    let pointerFrame: number | null = null
+    let latestPointerEvent: globalThis.PointerEvent | null = null
+    let tableWidthsDirty = false
+    const updateOnNextFrame = () => {
+      if (updateFrame !== null) return
+      updateFrame = window.requestAnimationFrame(() => {
+        updateFrame = null
+        if (tableWidthsDirty) {
+          tableWidthsDirty = false
+          updateTableMinWidths(editor)
+        }
+        updateRect()
+      })
+    }
+    const handleTransaction = ({
+      transaction,
+    }: {
+      transaction: { docChanged: boolean }
+    }) => {
+      // Selection and metadata transactions cannot change table widths.
+      if (transaction.docChanged) {
+        tableWidthsDirty = true
+      }
       updateOnNextFrame()
     }
     const handlePointerMove = (event: globalThis.PointerEvent) => {
-      const currentRect = rectRef.current
+      latestPointerEvent = event
+      if (pointerFrame !== null) return
 
-      if (
-        dragState.current ||
-        isTableControlElement(event.target) ||
-        (currentRect &&
-          isInsideTableControls(currentRect, event.clientX, event.clientY))
-      ) {
-        return
-      }
+      pointerFrame = window.requestAnimationFrame(() => {
+        pointerFrame = null
+        const event = latestPointerEvent
+        if (!event) return
 
-      const hoveredTable = findHoveredTable(editor, event.target)
+        const currentRect = rectRef.current
 
-      hoveredTableRef.current = hoveredTable
+        if (
+          dragState.current ||
+          isTableControlElement(event.target) ||
+          (currentRect &&
+            isInsideTableControls(currentRect, event.clientX, event.clientY))
+        ) {
+          return
+        }
 
-      if (!hoveredTable) {
-        setRect(getTableControlRect(editor))
-        return
-      }
+        const hoveredTable = findHoveredTable(editor, event.target)
 
-      setRect(getTableControlRectByDOM(editor, hoveredTable))
+        hoveredTableRef.current = hoveredTable
+
+        if (!hoveredTable) {
+          setRect(getTableControlRect(editor))
+          return
+        }
+
+        setRect(getTableControlRectByDOM(editor, hoveredTable))
+      })
     }
 
     updateTableMinWidths(editor)
@@ -392,6 +422,12 @@ export function TableControls({ editor }: { editor: Editor | null }) {
     window.addEventListener("scroll", updateRect, true)
 
     return () => {
+      if (updateFrame !== null) {
+        window.cancelAnimationFrame(updateFrame)
+      }
+      if (pointerFrame !== null) {
+        window.cancelAnimationFrame(pointerFrame)
+      }
       editor.off("selectionUpdate", updateOnNextFrame)
       editor.off("transaction", handleTransaction)
       window.removeEventListener("pointermove", handlePointerMove, true)

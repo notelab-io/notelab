@@ -327,10 +327,7 @@ export function Editor({
         onPointerMoveCapture={updateDragTargetFromPointer}
       >
         {collaboration ? (
-          <CollaborationPresence
-            status={collaboration.status}
-            users={collaboration.users}
-          />
+          <CollaborationPresence users={collaboration.users} />
         ) : null}
         <EditorChrome
           blockDropLine={blockDropLine}

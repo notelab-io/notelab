@@ -12,6 +12,10 @@ export const useEditorDragHandle = (
   dragHandleMenuOpen: boolean
 ) => {
   const dragHandleRef = useRef<DragHandleState | null>(null)
+  const pointerFrameRef = useRef<number | null>(null)
+  const pointerPositionRef = useRef<{ clientX: number; clientY: number } | null>(
+    null,
+  )
   const [dragHandle, setDragHandle] = useState<DragHandleState | null>(null)
 
   const resolveDragTargetFromPoint = useCallback(
@@ -28,6 +32,11 @@ export const useEditorDragHandle = (
   )
 
   const clearDesktopDragHandle = useCallback(() => {
+    if (pointerFrameRef.current !== null) {
+      window.cancelAnimationFrame(pointerFrameRef.current)
+      pointerFrameRef.current = null
+    }
+    pointerPositionRef.current = null
     dragHandleRef.current = null
     setDragHandle(null)
   }, [])
@@ -49,11 +58,27 @@ export const useEditorDragHandle = (
   const updateDragTargetFromPointer = useCallback(
     (event: ReactPointerEvent<HTMLElement>) => {
       if (dragHandleMenuOpen || !editor) return
-      const nextTarget = resolveDragTargetFromPoint(event.clientX, event.clientY)
-      if (!nextTarget) return clearDesktopDragHandle()
-      const position = getBlockDragHandleRect(editor.view, nextTarget)
-      if (!position) return clearDesktopDragHandle()
-      showDesktopDragHandle({ position, target: nextTarget })
+      pointerPositionRef.current = {
+        clientX: event.clientX,
+        clientY: event.clientY,
+      }
+
+      if (pointerFrameRef.current !== null) return
+
+      pointerFrameRef.current = window.requestAnimationFrame(() => {
+        pointerFrameRef.current = null
+        const pointer = pointerPositionRef.current
+        if (!pointer || editor.isDestroyed) return
+
+        const nextTarget = resolveDragTargetFromPoint(
+          pointer.clientX,
+          pointer.clientY,
+        )
+        if (!nextTarget) return clearDesktopDragHandle()
+        const position = getBlockDragHandleRect(editor.view, nextTarget)
+        if (!position) return clearDesktopDragHandle()
+        showDesktopDragHandle({ position, target: nextTarget })
+      })
     },
     [
       clearDesktopDragHandle,
@@ -70,6 +95,15 @@ export const useEditorDragHandle = (
     window.addEventListener("scroll", handleScroll, true)
     return () => window.removeEventListener("scroll", handleScroll, true)
   }, [clearDesktopDragHandle, dragHandleMenuOpen])
+
+  useEffect(
+    () => () => {
+      if (pointerFrameRef.current !== null) {
+        window.cancelAnimationFrame(pointerFrameRef.current)
+      }
+    },
+    [],
+  )
 
   return {
     dragHandle,

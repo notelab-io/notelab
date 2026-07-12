@@ -23,11 +23,11 @@ import {
   Table2,
   Trash2,
   X,
-} from "lucide-react"
-import { Reorder } from "framer-motion"
-import { useMemo, useState, type ReactNode } from "react"
+} from "lucide-react";
+import { Reorder } from "framer-motion";
+import { useMemo, useState, type ReactNode } from "react";
 
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 import {
   DropDrawer,
   DropDrawerContent,
@@ -38,94 +38,91 @@ import {
   DropDrawerSubContent,
   DropDrawerSubTrigger,
   DropDrawerTrigger,
-} from "@/components/ui/dropdrawer"
-import { Input } from "@/components/ui/input"
-import { Switch } from "@/components/ui/switch"
+} from "@/components/ui/dropdrawer";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { cn } from "@/lib/utils"
-import { useDatabase } from "@notelab/features/databases"
-import { usePages } from "@notelab/features/pages"
-import {
-  cyclingColorTokens,
-  getColorToken,
-} from "@/lib/color-tokens"
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+import { useDatabase } from "@notelab/features/databases";
+import { usePageNavigation } from "@notelab/features/pages";
+import { cyclingColorTokens, getColorToken } from "@/lib/color-tokens";
 
-import { getDatabasePropertyType } from "../core/database-property-types"
+import { getDatabasePropertyType } from "../core/database-property-types";
 import {
   getDatabaseLinkedViewKey,
   getPropertyHiddenForView,
   getDatabaseFilterOperatorsForType,
   type DatabaseConditionalColorConfig,
   type DatabaseLinkedViewConfig,
-} from "./database-view-config"
-import { DatabasePropertyEditSubmenu } from "../properties/database-property-menu"
-import { hasDatabasePropertyEditSettings } from "../properties/database-property-edit-submenu"
+} from "./database-view-config";
+import { DatabasePropertyEditSubmenu } from "../properties/database-property-menu";
+import { hasDatabasePropertyEditSettings } from "../properties/database-property-edit-submenu";
 import {
   DatabaseSearchableMenuItems,
   type DatabaseSearchableMenuOption,
-} from "./database-searchable-menu-items"
+} from "./database-searchable-menu-items";
 import {
   DatabaseFilterSubmenu,
   type DatabaseActiveFilter,
   type DatabaseFilterUpdatePatch,
-} from "./database-filter-menu"
-import { DatabaseConditionEditor } from "./database-condition-editor"
+} from "./database-filter-menu";
+import { DatabaseConditionEditor } from "./database-condition-editor";
 import {
   DatabaseSortSubmenu,
   type DatabaseActiveSort,
   type DatabaseSortUpdatePatch,
-} from "./database-sort-menu"
-import { NameColumnGlyph } from "../interactions/name-column-glyph"
-import type { DatabaseActiveConditionalColor } from "./database-view-context"
+} from "./database-sort-menu";
+import { NameColumnGlyph } from "../interactions/name-column-glyph";
+import type { DatabaseActiveConditionalColor } from "./database-view-context";
 
 type DatabaseViewProperty = {
-  id: string
+  id: string;
   property: {
-    config?: unknown
-    id: string
-    name: string
-    type: string
-  }
-}
+    config?: unknown;
+    id: string;
+    name: string;
+    type: string;
+  };
+};
 
 type DatabaseSourceMenuItem = {
-  id: string
-  name: string
-  viewCount: number
-}
+  id: string;
+  name: string;
+  viewCount: number;
+};
 
 type LinkableDatabaseOption = DatabaseSearchableMenuOption & {
-  pageName: string
-}
+  pageName: string;
+};
 
 type LinkableDatabaseViewOption = DatabaseSearchableMenuOption & {
-  viewType: string
-}
+  viewType: string;
+};
 
-const DEFAULT_CONDITIONAL_COLOR = "green"
+const DEFAULT_CONDITIONAL_COLOR = "green";
 
 const conditionalColorApplyTargetOptions: {
-  label: string
-  value: DatabaseConditionalColorConfig["applyTo"]
+  label: string;
+  value: DatabaseConditionalColorConfig["applyTo"];
 }[] = [
   { label: "Entire row", value: "entire-row" },
   { label: "This property", value: "this-property" },
-]
+];
 
 function ViewSettingsRow({
   icon,
   label,
   right,
 }: {
-  icon: ReactNode
-  label: string
-  right?: ReactNode
+  icon: ReactNode;
+  label: string;
+  right?: ReactNode;
 }) {
   return (
     <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -135,7 +132,7 @@ function ViewSettingsRow({
         <span className="ml-auto shrink-0 text-muted-foreground">{right}</span>
       ) : null}
     </div>
-  )
+  );
 }
 
 function DataSourceSectionLabel({ children }: { children: ReactNode }) {
@@ -143,7 +140,7 @@ function DataSourceSectionLabel({ children }: { children: ReactNode }) {
     <div className="px-2 py-1 text-xs font-medium text-muted-foreground">
       {children}
     </div>
-  )
+  );
 }
 
 function DataSourceAddGlyph() {
@@ -151,15 +148,11 @@ function DataSourceAddGlyph() {
     <span className="inline-flex size-4 items-center justify-center text-base leading-none text-muted-foreground">
       +
     </span>
-  )
+  );
 }
 
-function DataSourceMenuItem({
-  item,
-}: {
-  item: DatabaseSourceMenuItem
-}) {
-  const viewLabel = `${item.viewCount} view${item.viewCount === 1 ? "" : "s"}`
+function DataSourceMenuItem({ item }: { item: DatabaseSourceMenuItem }) {
+  const viewLabel = `${item.viewCount} view${item.viewCount === 1 ? "" : "s"}`;
 
   return (
     <DropDrawerItem disabled>
@@ -172,15 +165,15 @@ function DataSourceMenuItem({
         <MoreHorizontal className="text-muted-foreground" />
       </div>
     </DropDrawerItem>
-  )
+  );
 }
 
 function LinkedDataSourceMenuItem({
   view,
 }: {
-  view: DatabaseLinkedViewConfig
+  view: DatabaseLinkedViewConfig;
 }) {
-  const ViewIcon = view.viewType === "kanban" ? Kanban : Table2
+  const ViewIcon = view.viewType === "kanban" ? Kanban : Table2;
 
   return (
     <DropDrawerItem disabled>
@@ -198,21 +191,21 @@ function LinkedDataSourceMenuItem({
         />
       </div>
     </DropDrawerItem>
-  )
+  );
 }
 
 function createConditionalColorId(prefix: string) {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return `${prefix}-${crypto.randomUUID()}`
+    return `${prefix}-${crypto.randomUUID()}`;
   }
 
   return `${prefix}-${Date.now().toString(36)}-${Math.random()
     .toString(36)
-    .slice(2)}`
+    .slice(2)}`;
 }
 
 function getPlainConditionalColorSettings(
-  settings: DatabaseActiveConditionalColor[]
+  settings: DatabaseActiveConditionalColor[],
 ): DatabaseConditionalColorConfig[] {
   return settings.map(({ applyTo, color, filter, id, style }) => ({
     applyTo,
@@ -225,25 +218,25 @@ function getPlainConditionalColorSettings(
     },
     id,
     style,
-  }))
+  }));
 }
 
 function getFilterPropertyType(
   propertyId: string,
-  properties: DatabaseViewProperty[]
+  properties: DatabaseViewProperty[],
 ) {
   if (propertyId === "name") {
-    return "text"
+    return "text";
   }
 
   return (
     properties.find((property) => property.id === propertyId)?.property.type ??
     "text"
-  )
+  );
 }
 
 function getConditionalColorLabel(value: string) {
-  return getColorToken(value).name
+  return getColorToken(value).name;
 }
 
 function ConditionalColorPreview() {
@@ -266,37 +259,35 @@ function ConditionalColorPreview() {
           key={name}
         >
           <div className="px-2 py-1.5">{name}</div>
-          <div className="border-l border-border/40 px-2 py-1.5">
-            {office}
-          </div>
+          <div className="border-l border-border/40 px-2 py-1.5">{office}</div>
           <div className="border-l border-border/40 px-2 py-1.5 text-right">
             {units}
           </div>
         </div>
       ))}
     </div>
-  )
+  );
 }
 
 function ConditionalColorPropertyPicker({
   filterFieldOptions,
   onSelect,
 }: {
-  filterFieldOptions: DatabaseSearchableMenuOption[]
-  onSelect: (propertyId: string) => void
+  filterFieldOptions: DatabaseSearchableMenuOption[];
+  onSelect: (propertyId: string) => void;
 }) {
-  const [propertySearch, setPropertySearch] = useState("")
+  const [propertySearch, setPropertySearch] = useState("");
   const filteredOptions = useMemo(() => {
-    const query = propertySearch.trim().toLowerCase()
+    const query = propertySearch.trim().toLowerCase();
 
     if (!query) {
-      return filterFieldOptions
+      return filterFieldOptions;
     }
 
     return filterFieldOptions.filter((option) =>
-      option.label.toLowerCase().includes(query)
-    )
-  }, [filterFieldOptions, propertySearch])
+      option.label.toLowerCase().includes(query),
+    );
+  }, [filterFieldOptions, propertySearch]);
 
   return (
     <div className="rounded-md border p-2">
@@ -331,7 +322,7 @@ function ConditionalColorPropertyPicker({
         )}
       </div>
     </div>
-  )
+  );
 }
 
 function ConditionalColorRuleItem({
@@ -346,23 +337,23 @@ function ConditionalColorRuleItem({
   onUpdateFilter,
   onUpdateSetting,
 }: {
-  filterFieldOptions: DatabaseSearchableMenuOption[]
-  filterValueOptionsByField: Record<string, DatabaseSearchableMenuOption[]>
-  isDragging: boolean
-  properties: DatabaseViewProperty[]
-  setting: DatabaseActiveConditionalColor
-  onDragEnd: () => void
-  onDragStart: () => void
-  onRemove: () => void
-  onUpdateFilter: (patch: DatabaseFilterUpdatePatch) => void
-  onUpdateSetting: (patch: Partial<DatabaseConditionalColorConfig>) => void
+  filterFieldOptions: DatabaseSearchableMenuOption[];
+  filterValueOptionsByField: Record<string, DatabaseSearchableMenuOption[]>;
+  isDragging: boolean;
+  properties: DatabaseViewProperty[];
+  setting: DatabaseActiveConditionalColor;
+  onDragEnd: () => void;
+  onDragStart: () => void;
+  onRemove: () => void;
+  onUpdateFilter: (patch: DatabaseFilterUpdatePatch) => void;
+  onUpdateSetting: (patch: Partial<DatabaseConditionalColorConfig>) => void;
 }) {
-  const filter = setting.filter
-  const color = getColorToken(setting.color)
+  const filter = setting.filter;
+  const color = getColorToken(setting.color);
   const applyTarget =
     conditionalColorApplyTargetOptions.find(
-      (option) => option.value === setting.applyTo
-    ) ?? conditionalColorApplyTargetOptions[0]
+      (option) => option.value === setting.applyTo,
+    ) ?? conditionalColorApplyTargetOptions[0];
 
   return (
     <DatabaseConditionEditor
@@ -386,7 +377,7 @@ function ConditionalColorRuleItem({
                 <span
                   className={cn(
                     "size-3 rounded-sm border",
-                    color.backgroundClass
+                    color.backgroundClass,
                   )}
                 />
                 <SelectValue />
@@ -400,7 +391,7 @@ function ConditionalColorRuleItem({
                     <span
                       className={cn(
                         "mr-2 inline-flex size-3 rounded-sm border align-middle",
-                        option.backgroundClass
+                        option.backgroundClass,
                       )}
                     />
                     {option.name}
@@ -438,18 +429,19 @@ function ConditionalColorRuleItem({
       removeLabel="Delete conditional color setting"
       valueOptions={filterValueOptionsByField[filter.propertyId] ?? []}
       onFieldChange={(field) => {
-        const propertyType = getFilterPropertyType(field, properties)
+        const propertyType = getFilterPropertyType(field, properties);
 
         onUpdateFilter({
-          operator: getDatabaseFilterOperatorsForType(propertyType)[0]?.value ?? "is",
+          operator:
+            getDatabaseFilterOperatorsForType(propertyType)[0]?.value ?? "is",
           propertyId: field,
           values: [],
-        })
+        });
       }}
       onRemove={onRemove}
       onUpdate={onUpdateFilter}
     />
-  )
+  );
 }
 
 function ConditionalColorPanel({
@@ -459,21 +451,23 @@ function ConditionalColorPanel({
   settings,
   onSettingsChange,
 }: {
-  filterFieldOptions: DatabaseSearchableMenuOption[]
-  filterValueOptionsByField: Record<string, DatabaseSearchableMenuOption[]>
-  properties: DatabaseViewProperty[]
-  settings: DatabaseActiveConditionalColor[]
-  onSettingsChange: (settings: DatabaseConditionalColorConfig[]) => void
+  filterFieldOptions: DatabaseSearchableMenuOption[];
+  filterValueOptionsByField: Record<string, DatabaseSearchableMenuOption[]>;
+  properties: DatabaseViewProperty[];
+  settings: DatabaseActiveConditionalColor[];
+  onSettingsChange: (settings: DatabaseConditionalColorConfig[]) => void;
 }) {
-  const [isChoosingProperty, setIsChoosingProperty] = useState(false)
-  const [draggingSettingId, setDraggingSettingId] = useState<string | null>(null)
+  const [isChoosingProperty, setIsChoosingProperty] = useState(false);
+  const [draggingSettingId, setDraggingSettingId] = useState<string | null>(
+    null,
+  );
 
   const saveSettings = (nextSettings: DatabaseConditionalColorConfig[]) => {
-    onSettingsChange(nextSettings)
-  }
+    onSettingsChange(nextSettings);
+  };
 
   const addSetting = (propertyId: string) => {
-    const propertyType = getFilterPropertyType(propertyId, properties)
+    const propertyType = getFilterPropertyType(propertyId, properties);
 
     saveSettings([
       ...getPlainConditionalColorSettings(settings),
@@ -482,67 +476,68 @@ function ConditionalColorPanel({
         color: DEFAULT_CONDITIONAL_COLOR,
         filter: {
           id: createConditionalColorId("conditional-filter"),
-          operator: getDatabaseFilterOperatorsForType(propertyType)[0]?.value ?? "is",
+          operator:
+            getDatabaseFilterOperatorsForType(propertyType)[0]?.value ?? "is",
           propertyId,
           values: [],
         },
         id: createConditionalColorId("conditional-color"),
         style: "page-background",
       },
-    ])
-    setIsChoosingProperty(false)
-  }
+    ]);
+    setIsChoosingProperty(false);
+  };
 
   const updateSetting = (
     settingId: string,
-    updates: Partial<DatabaseConditionalColorConfig>
+    updates: Partial<DatabaseConditionalColorConfig>,
   ) => {
     saveSettings(
       getPlainConditionalColorSettings(settings).map((setting) =>
-        setting.id === settingId ? { ...setting, ...updates } : setting
-      )
-    )
-  }
+        setting.id === settingId ? { ...setting, ...updates } : setting,
+      ),
+    );
+  };
 
   const updateFilter = (
     settingId: string,
-    updates: DatabaseFilterUpdatePatch
+    updates: DatabaseFilterUpdatePatch,
   ) => {
     saveSettings(
       getPlainConditionalColorSettings(settings).map((setting) =>
         setting.id === settingId
           ? { ...setting, filter: { ...setting.filter, ...updates } }
-          : setting
-      )
-    )
-  }
+          : setting,
+      ),
+    );
+  };
 
   const removeSetting = (settingId: string) => {
     saveSettings(
       getPlainConditionalColorSettings(settings).filter(
-        (setting) => setting.id !== settingId
-      )
-    )
-  }
+        (setting) => setting.id !== settingId,
+      ),
+    );
+  };
 
   const reorderSettings = (settingIds: string[]) => {
     const settingsById = new Map(
       getPlainConditionalColorSettings(settings).map((setting) => [
         setting.id,
         setting,
-      ])
-    )
+      ]),
+    );
     const reorderedSettings = settingIds.flatMap((settingId) => {
-      const setting = settingsById.get(settingId)
+      const setting = settingsById.get(settingId);
 
-      return setting ? [setting] : []
-    })
+      return setting ? [setting] : [];
+    });
     const remainingSettings = getPlainConditionalColorSettings(settings).filter(
-      (setting) => !settingIds.includes(setting.id)
-    )
+      (setting) => !settingIds.includes(setting.id),
+    );
 
-    saveSettings([...reorderedSettings, ...remainingSettings])
-  }
+    saveSettings([...reorderedSettings, ...remainingSettings]);
+  };
 
   return (
     <div className="w-80 max-w-[calc(100vw-2rem)] p-1">
@@ -596,12 +591,14 @@ function ConditionalColorPanel({
             variant="secondary"
           >
             <Plus className="size-4" />
-            <span>{settings.length > 0 ? "Add another" : "New color setting"}</span>
+            <span>
+              {settings.length > 0 ? "Add another" : "New color setting"}
+            </span>
           </Button>
         )}
       </div>
     </div>
-  )
+  );
 }
 
 export function DatabaseViewSettingsMenu({
@@ -654,143 +651,158 @@ export function DatabaseViewSettingsMenu({
   visiblePropertyCount,
   showPropertyTitles,
 }: {
-  activeConditionalColors: DatabaseActiveConditionalColor[]
-  activeDatabaseFilters: DatabaseActiveFilter[]
-  activeDatabaseSorts: DatabaseActiveSort[]
-  activeViewType?: string
-  dateProperties?: DatabaseViewProperty[]
-  datePropertyId?: string | null
-  addableFilterFieldOptions: DatabaseSearchableMenuOption[]
-  addableSortFieldOptions: DatabaseSearchableMenuOption[]
-  canAddDatabaseFilter: boolean
-  canAddDatabaseSort: boolean
-  databaseId?: string
-  databaseName?: string
-  dataSources: DatabaseSourceMenuItem[]
-  draftViewTitle: string
-  filterFieldOptions: DatabaseSearchableMenuOption[]
-  filterValueOptionsByField: Record<string, DatabaseSearchableMenuOption[]>
-  groupProperties: DatabaseViewProperty[]
-  groupPropertyId: string | null
-  linkedViews?: DatabaseLinkedViewConfig[]
-  titlePropertyLabel: string
-  open?: boolean
-  workspaceId?: string
-  onAddLinkedDatabaseView: (view: DatabaseLinkedViewConfig) => void
-  onCopyDatabaseViewLink: () => void
-  onOpenChange?: (open: boolean) => void
-  onClearDatabaseFilter: () => void
-  onClearDatabaseSort: () => void
-  onCreateDatabaseFilter: (field: string) => void
-  onCreateDatabaseSort: (field: string) => void
-  onDraftViewTitleChange: (title: string) => void
-  onRemoveDatabaseFilter: (index: number) => void
-  onRemoveDatabaseSort: (index: number) => void
-  onReorderDatabaseFilters: (filterIds: string[]) => void
+  activeConditionalColors: DatabaseActiveConditionalColor[];
+  activeDatabaseFilters: DatabaseActiveFilter[];
+  activeDatabaseSorts: DatabaseActiveSort[];
+  activeViewType?: string;
+  dateProperties?: DatabaseViewProperty[];
+  datePropertyId?: string | null;
+  addableFilterFieldOptions: DatabaseSearchableMenuOption[];
+  addableSortFieldOptions: DatabaseSearchableMenuOption[];
+  canAddDatabaseFilter: boolean;
+  canAddDatabaseSort: boolean;
+  databaseId?: string;
+  databaseName?: string;
+  dataSources: DatabaseSourceMenuItem[];
+  draftViewTitle: string;
+  filterFieldOptions: DatabaseSearchableMenuOption[];
+  filterValueOptionsByField: Record<string, DatabaseSearchableMenuOption[]>;
+  groupProperties: DatabaseViewProperty[];
+  groupPropertyId: string | null;
+  linkedViews?: DatabaseLinkedViewConfig[];
+  titlePropertyLabel: string;
+  open?: boolean;
+  workspaceId?: string;
+  onAddLinkedDatabaseView: (view: DatabaseLinkedViewConfig) => void;
+  onCopyDatabaseViewLink: () => void;
+  onOpenChange?: (open: boolean) => void;
+  onClearDatabaseFilter: () => void;
+  onClearDatabaseSort: () => void;
+  onCreateDatabaseFilter: (field: string) => void;
+  onCreateDatabaseSort: (field: string) => void;
+  onDraftViewTitleChange: (title: string) => void;
+  onRemoveDatabaseFilter: (index: number) => void;
+  onRemoveDatabaseSort: (index: number) => void;
+  onReorderDatabaseFilters: (filterIds: string[]) => void;
   onSaveDatabaseConditionalColors: (
-    settings: DatabaseConditionalColorConfig[]
-  ) => void
-  onSaveDatabaseViewTitle: (title: string) => void
-  onSetViewDateProperty: (datePropertyId: string | null) => void
-  onSetViewGroupProperty: (groupPropertyId: string | null) => void
-  onSetViewType: (type: "table" | "kanban" | "timeline") => void
-  onTogglePropertyTitles: () => void
-  onTogglePropertyVisibility: (propertyId: string) => void
-  onUpdateDatabaseFilter: (index: number, patch: DatabaseFilterUpdatePatch) => void
-  onUpdateDatabaseSort: (index: number, patch: DatabaseSortUpdatePatch) => void
-  properties: DatabaseViewProperty[]
-  sortFieldOptions: DatabaseSearchableMenuOption[]
-  sourceDatabaseId?: string
-  viewConfig?: unknown
-  visiblePropertyCount: number
-  showPropertyTitles: boolean
+    settings: DatabaseConditionalColorConfig[],
+  ) => void;
+  onSaveDatabaseViewTitle: (title: string) => void;
+  onSetViewDateProperty: (datePropertyId: string | null) => void;
+  onSetViewGroupProperty: (groupPropertyId: string | null) => void;
+  onSetViewType: (type: "table" | "kanban" | "timeline") => void;
+  onTogglePropertyTitles: () => void;
+  onTogglePropertyVisibility: (propertyId: string) => void;
+  onUpdateDatabaseFilter: (
+    index: number,
+    patch: DatabaseFilterUpdatePatch,
+  ) => void;
+  onUpdateDatabaseSort: (index: number, patch: DatabaseSortUpdatePatch) => void;
+  properties: DatabaseViewProperty[];
+  sortFieldOptions: DatabaseSearchableMenuOption[];
+  sourceDatabaseId?: string;
+  viewConfig?: unknown;
+  visiblePropertyCount: number;
+  showPropertyTitles: boolean;
 }) {
-  const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
-  const open = controlledOpen ?? uncontrolledOpen
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = controlledOpen ?? uncontrolledOpen;
   const setOpen = (nextOpen: boolean) => {
     if (controlledOpen === undefined) {
-      setUncontrolledOpen(nextOpen)
+      setUncontrolledOpen(nextOpen);
     }
 
-    onOpenChange?.(nextOpen)
-  }
-  const [manageDataSourcesOpen, setManageDataSourcesOpen] = useState(false)
-  const [showLinkExistingPicker, setShowLinkExistingPicker] = useState(false)
+    onOpenChange?.(nextOpen);
+  };
+  const [manageDataSourcesOpen, setManageDataSourcesOpen] = useState(false);
+  const [showLinkExistingPicker, setShowLinkExistingPicker] = useState(false);
   const [selectedLinkDatabaseId, setSelectedLinkDatabaseId] = useState<
     string | null
-  >(null)
+  >(null);
   const {
     data: selectedLinkDatabasePayload,
     isLoading: isLoadingSelectedLinkDatabase,
-  } = useDatabase(selectedLinkDatabaseId)
-  const { data: pages = [], isLoading: isLoadingPages } =
-    usePages(workspaceId, {
+  } = useDatabase(selectedLinkDatabaseId);
+  const { data: navigation, isLoading: isLoadingPages } = usePageNavigation(
+    workspaceId,
+    {
       enabled: manageDataSourcesOpen || showLinkExistingPicker,
-    })
-  const isKanbanView = activeViewType === "kanban"
-  const isTimelineView = activeViewType === "timeline"
+    },
+  );
+  const isKanbanView = activeViewType === "kanban";
+  const isTimelineView = activeViewType === "timeline";
   const ViewTypeIcon = isKanbanView
     ? Kanban
     : isTimelineView
       ? CalendarRange
-      : Table2
+      : Table2;
   const viewTypeLabel = isKanbanView
     ? "Kanban"
     : isTimelineView
       ? "Timeline"
-      : "Table"
+      : "Table";
   const activeDateProperty = dateProperties.find(
-    (property) => property.property.id === datePropertyId
-  )
+    (property) => property.property.id === datePropertyId,
+  );
   const activeGroupProperty = groupProperties.find(
-    (property) => property.property.id === groupPropertyId
-  )
-  const linkableDatabaseOptions = pages.flatMap((page) =>
-    (page.databases ?? [])
-      .filter((database) => database.id !== sourceDatabaseId)
-      .map<LinkableDatabaseOption>((database) => ({
-        icon: <Database />,
-        label: database.name,
-        searchText: `${database.name} ${page.name}`.trim(),
-        value: database.id,
-        pageName: page.name,
-      }))
-  )
-  const selectedDatabaseOption = selectedLinkDatabaseId
-    ? linkableDatabaseOptions.find(
-        (option) => option.value === selectedLinkDatabaseId
-      )
-    : null
-  const linkedViewKeys = new Set(
-    linkedViews.map((linkedView) => getDatabaseLinkedViewKey(linkedView))
-  )
-  const linkableDatabaseViewOptions =
-    selectedLinkDatabasePayload?.views.map<LinkableDatabaseViewOption>((view) => {
-      const ViewIcon =
-        view.type === "kanban"
-          ? Kanban
-          : view.type === "timeline"
-            ? CalendarRange
-            : Table2
+    (property) => property.property.id === groupPropertyId,
+  );
+  const pagesById = new Map(
+    (navigation?.pages ?? []).map((page) => [page.id, page]),
+  );
+  const linkableDatabaseOptions = (navigation?.databases ?? [])
+    .filter((database) => database.id !== sourceDatabaseId)
+    .map<LinkableDatabaseOption>((database) => {
+      const pageName = database.pageId
+        ? pagesById.get(database.pageId)?.name || "Untitled"
+        : "Standalone";
 
       return {
-        icon: <ViewIcon />,
-        label: view.name,
-        searchText: `${view.name} ${selectedLinkDatabasePayload.database.name}`.trim(),
-        value: view.id,
-        viewType: view.type,
-      }
-    }) ?? []
+        icon: <Database />,
+        label: database.name,
+        searchText: `${database.name} ${pageName}`.trim(),
+        value: database.id,
+        pageName,
+      };
+    });
+  const selectedDatabaseOption = selectedLinkDatabaseId
+    ? linkableDatabaseOptions.find(
+        (option) => option.value === selectedLinkDatabaseId,
+      )
+    : null;
+  const linkedViewKeys = new Set(
+    linkedViews.map((linkedView) => getDatabaseLinkedViewKey(linkedView)),
+  );
+  const linkableDatabaseViewOptions =
+    selectedLinkDatabasePayload?.views.map<LinkableDatabaseViewOption>(
+      (view) => {
+        const ViewIcon =
+          view.type === "kanban"
+            ? Kanban
+            : view.type === "timeline"
+              ? CalendarRange
+              : Table2;
+
+        return {
+          icon: <ViewIcon />,
+          label: view.name,
+          searchText:
+            `${view.name} ${selectedLinkDatabasePayload.database.name}`.trim(),
+          value: view.id,
+          viewType: view.type,
+        };
+      },
+    ) ?? [];
 
   const handleOpenChange = (nextOpen: boolean) => {
-    setOpen(nextOpen)
+    setOpen(nextOpen);
 
     if (!nextOpen) {
-      setManageDataSourcesOpen(false)
-      setShowLinkExistingPicker(false)
-      setSelectedLinkDatabaseId(null)
+      setManageDataSourcesOpen(false);
+      setShowLinkExistingPicker(false);
+      setSelectedLinkDatabaseId(null);
     }
-  }
+  };
 
   return (
     <DropDrawer open={open} onOpenChange={handleOpenChange}>
@@ -831,16 +843,16 @@ export function DatabaseViewSettingsMenu({
             defaultValue={draftViewTitle}
             key={draftViewTitle}
             onBlur={(event) => {
-              const nextTitle = event.target.value.trim()
+              const nextTitle = event.target.value.trim();
 
               if (nextTitle !== draftViewTitle) {
-                onDraftViewTitleChange(nextTitle)
-                onSaveDatabaseViewTitle(nextTitle)
+                onDraftViewTitleChange(nextTitle);
+                onSaveDatabaseViewTitle(nextTitle);
               }
             }}
             onKeyDown={(event) => {
               if (event.key === "Enter") {
-                event.currentTarget.blur()
+                event.currentTarget.blur();
               }
             }}
             placeholder="Untitled view"
@@ -892,9 +904,9 @@ export function DatabaseViewSettingsMenu({
               {dateProperties.length > 0 ? (
                 dateProperties.map((property) => {
                   const PropertyIcon = getDatabasePropertyType(
-                    property.property.type
-                  ).icon
-                  const isSelected = property.property.id === datePropertyId
+                    property.property.type,
+                  ).icon;
+                  const isSelected = property.property.id === datePropertyId;
 
                   return (
                     <DropDrawerItem
@@ -909,7 +921,7 @@ export function DatabaseViewSettingsMenu({
                         <Check className="ml-auto text-foreground" />
                       ) : null}
                     </DropDrawerItem>
-                  )
+                  );
                 })
               ) : (
                 <DropDrawerItem disabled>No date properties yet</DropDrawerItem>
@@ -920,8 +932,8 @@ export function DatabaseViewSettingsMenu({
         <DropDrawerItem
           aria-pressed={!showPropertyTitles}
           onSelect={(event) => {
-            event.preventDefault()
-            onTogglePropertyTitles()
+            event.preventDefault();
+            onTogglePropertyTitles();
           }}
         >
           <EyeOff />
@@ -948,20 +960,22 @@ export function DatabaseViewSettingsMenu({
               <Eye className="ml-auto text-muted-foreground" />
             </DropDrawerItem>
             {properties.map((property) => {
-              const PropertyIcon = getDatabasePropertyType(property.property.type).icon
+              const PropertyIcon = getDatabasePropertyType(
+                property.property.type,
+              ).icon;
               const visible = !getPropertyHiddenForView(
                 property.id,
                 property.property.config,
-                viewConfig
-              )
+                viewConfig,
+              );
 
               return (
                 <DropDrawerItem
                   aria-pressed={visible}
                   key={property.id}
                   onSelect={(event) => {
-                    event.preventDefault()
-                    onTogglePropertyVisibility(property.id)
+                    event.preventDefault();
+                    onTogglePropertyVisibility(property.id);
                   }}
                 >
                   <PropertyIcon />
@@ -972,7 +986,7 @@ export function DatabaseViewSettingsMenu({
                     <EyeOff className="ml-auto text-muted-foreground" />
                   )}
                 </DropDrawerItem>
-              )
+              );
             })}
           </DropDrawerSubContent>
         </DropDrawerSub>
@@ -1012,7 +1026,9 @@ export function DatabaseViewSettingsMenu({
             icon={<ArrowDownUp />}
             label="Sort"
             right={
-              activeDatabaseSorts.length > 0 ? activeDatabaseSorts.length : undefined
+              activeDatabaseSorts.length > 0
+                ? activeDatabaseSorts.length
+                : undefined
             }
           />
         </DatabaseSortSubmenu>
@@ -1035,14 +1051,16 @@ export function DatabaseViewSettingsMenu({
             {groupProperties.length > 0 ? (
               groupProperties.map((property) => {
                 const PropertyIcon = getDatabasePropertyType(
-                  property.property.type
-                ).icon
-                const isSelected = property.property.id === groupPropertyId
+                  property.property.type,
+                ).icon;
+                const isSelected = property.property.id === groupPropertyId;
 
                 return (
                   <DropDrawerItem
                     key={property.id}
-                    onSelect={() => onSetViewGroupProperty(property.property.id)}
+                    onSelect={() =>
+                      onSetViewGroupProperty(property.property.id)
+                    }
                   >
                     <PropertyIcon />
                     <span>{property.property.name}</span>
@@ -1050,10 +1068,12 @@ export function DatabaseViewSettingsMenu({
                       <Check className="ml-auto text-foreground" />
                     ) : null}
                   </DropDrawerItem>
-                )
+                );
               })
             ) : (
-              <DropDrawerItem disabled>No groupable properties yet</DropDrawerItem>
+              <DropDrawerItem disabled>
+                No groupable properties yet
+              </DropDrawerItem>
             )}
           </DropDrawerSubContent>
         </DropDrawerSub>
@@ -1112,23 +1132,23 @@ export function DatabaseViewSettingsMenu({
               open={open}
               options={properties
                 .filter((property) =>
-                  hasDatabasePropertyEditSettings(property.property.type)
+                  hasDatabasePropertyEditSettings(property.property.type),
                 )
                 .map((property) => {
                   const PropertyIcon = getDatabasePropertyType(
-                    property.property.type
-                  ).icon
+                    property.property.type,
+                  ).icon;
 
                   return {
                     icon: <PropertyIcon />,
                     label: property.property.name,
                     value: property.id,
-                  }
+                  };
                 })}
               renderOption={(option) => {
                 const property = properties.find(
-                  (candidate) => candidate.id === option.value
-                )
+                  (candidate) => candidate.id === option.value,
+                );
 
                 if (!property || !databaseId) {
                   return (
@@ -1136,7 +1156,7 @@ export function DatabaseViewSettingsMenu({
                       {option.icon}
                       <span>{option.label}</span>
                     </DropDrawerItem>
-                  )
+                  );
                 }
 
                 return (
@@ -1153,7 +1173,7 @@ export function DatabaseViewSettingsMenu({
                     {option.icon}
                     <span>{option.label}</span>
                   </DatabasePropertyEditSubmenu>
-                )
+                );
               }}
             />
           </DropDrawerSubContent>
@@ -1197,11 +1217,11 @@ export function DatabaseViewSettingsMenu({
         <DropDrawerSeparator />
         <DropDrawerSub
           onOpenChange={(nextOpen) => {
-            setManageDataSourcesOpen(nextOpen)
+            setManageDataSourcesOpen(nextOpen);
 
             if (!nextOpen) {
-              setShowLinkExistingPicker(false)
-              setSelectedLinkDatabaseId(null)
+              setShowLinkExistingPicker(false);
+              setSelectedLinkDatabaseId(null);
             }
           }}
           open={manageDataSourcesOpen}
@@ -1215,11 +1235,11 @@ export function DatabaseViewSettingsMenu({
               <div className="h-96 overflow-y-auto overscroll-contain">
                 <DropDrawerItem
                   onSelect={(event) => {
-                    event.preventDefault()
+                    event.preventDefault();
                     if (selectedLinkDatabaseId) {
-                      setSelectedLinkDatabaseId(null)
+                      setSelectedLinkDatabaseId(null);
                     } else {
-                      setShowLinkExistingPicker(false)
+                      setShowLinkExistingPicker(false);
                     }
                   }}
                 >
@@ -1243,7 +1263,7 @@ export function DatabaseViewSettingsMenu({
                       }
                       options={linkableDatabaseViewOptions}
                       renderOption={(option) => {
-                        const viewOption = option as LinkableDatabaseViewOption
+                        const viewOption = option as LinkableDatabaseViewOption;
                         const linkedView = {
                           databaseId: selectedLinkDatabasePayload.database.id,
                           databaseName:
@@ -1253,18 +1273,18 @@ export function DatabaseViewSettingsMenu({
                           viewId: viewOption.value,
                           viewName: viewOption.label,
                           viewType: viewOption.viewType,
-                        }
+                        };
                         const alreadyLinked = linkedViewKeys.has(
-                          getDatabaseLinkedViewKey(linkedView)
-                        )
+                          getDatabaseLinkedViewKey(linkedView),
+                        );
 
                         return (
                           <DropDrawerItem
                             key={viewOption.value}
                             onSelect={(event) => {
-                              event.preventDefault()
-                              onAddLinkedDatabaseView(linkedView)
-                              setOpen(false)
+                              event.preventDefault();
+                              onAddLinkedDatabaseView(linkedView);
+                              setOpen(false);
                             }}
                           >
                             {viewOption.icon}
@@ -1280,11 +1300,13 @@ export function DatabaseViewSettingsMenu({
                               <Check className="ml-auto text-foreground" />
                             ) : null}
                           </DropDrawerItem>
-                        )
+                        );
                       }}
                     />
                   ) : (
-                    <DropDrawerItem disabled>Database unavailable.</DropDrawerItem>
+                    <DropDrawerItem disabled>
+                      Database unavailable.
+                    </DropDrawerItem>
                   )
                 ) : isLoadingPages ? (
                   <DropDrawerItem disabled>Loading databases...</DropDrawerItem>
@@ -1301,27 +1323,29 @@ export function DatabaseViewSettingsMenu({
                     }
                     options={linkableDatabaseOptions}
                     renderOption={(option) => {
-                      const databaseOption = option as LinkableDatabaseOption
+                      const databaseOption = option as LinkableDatabaseOption;
 
                       return (
                         <DropDrawerItem
                           key={databaseOption.value}
                           onSelect={(event) => {
-                            event.preventDefault()
-                            setSelectedLinkDatabaseId(databaseOption.value)
+                            event.preventDefault();
+                            setSelectedLinkDatabaseId(databaseOption.value);
                           }}
                         >
                           <div className="flex min-w-0 flex-1 items-start gap-2">
                             {databaseOption.icon}
                             <div className="min-w-0">
-                              <div className="truncate">{databaseOption.label}</div>
+                              <div className="truncate">
+                                {databaseOption.label}
+                              </div>
                               <div className="truncate text-xs text-muted-foreground">
                                 {databaseOption.pageName}
                               </div>
                             </div>
                           </div>
                         </DropDrawerItem>
-                      )
+                      );
                     }}
                   />
                 )}
@@ -1345,18 +1369,18 @@ export function DatabaseViewSettingsMenu({
                 </DropDrawerItem>
                 <DropDrawerSeparator />
                 <DataSourceSectionLabel>Linked</DataSourceSectionLabel>
-                {linkedViews.length > 0 ? (
-                  linkedViews.map((view) => (
-                    <LinkedDataSourceMenuItem
-                      key={getDatabaseLinkedViewKey(view)}
-                      view={view}
-                    />
-                  ))
-                ) : null}
+                {linkedViews.length > 0
+                  ? linkedViews.map((view) => (
+                      <LinkedDataSourceMenuItem
+                        key={getDatabaseLinkedViewKey(view)}
+                        view={view}
+                      />
+                    ))
+                  : null}
                 <DropDrawerItem
                   onSelect={(event) => {
-                    event.preventDefault()
-                    setShowLinkExistingPicker(true)
+                    event.preventDefault();
+                    setShowLinkExistingPicker(true);
                   }}
                 >
                   <DataSourceAddGlyph />
@@ -1382,5 +1406,5 @@ export function DatabaseViewSettingsMenu({
         </DropDrawerSub>
       </DropDrawerContent>
     </DropDrawer>
-  )
+  );
 }

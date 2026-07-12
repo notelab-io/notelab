@@ -536,44 +536,62 @@ export function ColumnControls({ editor }: { editor: Editor | null }) {
       return
     }
 
-    const updateOnNextFrame = () => requestAnimationFrame(updateRect)
+    let updateFrame: number | null = null
+    let pointerFrame: number | null = null
+    let latestPointerEvent: globalThis.PointerEvent | null = null
+    const updateOnNextFrame = () => {
+      if (updateFrame !== null) return
+      updateFrame = window.requestAnimationFrame(() => {
+        updateFrame = null
+        updateRect()
+      })
+    }
     const updateHoveredColumnBlock = (event: globalThis.PointerEvent) => {
-      if (
-        dragState.current ||
-        pointerState.current ||
-        menuRef.current
-      ) {
-        return
-      }
+      latestPointerEvent = event
+      if (pointerFrame !== null) return
 
-      const currentRect = rectRef.current
-      const controlIndex = getColumnControlIndex(event.target)
+      pointerFrame = window.requestAnimationFrame(() => {
+        pointerFrame = null
+        const event = latestPointerEvent
+        if (!event) return
 
-      if (currentRect && controlIndex !== null) {
-        setRect(currentRect)
-        setHoveredColumnIndex(controlIndex)
-        return
-      }
+        if (
+          dragState.current ||
+          pointerState.current ||
+          menuRef.current
+        ) {
+          return
+        }
 
-      const controlZoneIndex = currentRect
-        ? getColumnIndexAtPoint(currentRect, event.clientX, event.clientY)
-        : null
+        const currentRect = rectRef.current
+        const controlIndex = getColumnControlIndex(event.target)
 
-      if (currentRect && controlZoneIndex !== null) {
-        setRect(currentRect)
-        setHoveredColumnIndex(controlZoneIndex)
-        return
-      }
+        if (currentRect && controlIndex !== null) {
+          setRect(currentRect)
+          setHoveredColumnIndex(controlIndex)
+          return
+        }
 
-      if (isColumnControlElement(event.target)) {
-        return
-      }
+        const controlZoneIndex = currentRect
+          ? getColumnIndexAtPoint(currentRect, event.clientX, event.clientY)
+          : null
 
-      const hoveredColumnBlock = findHoveredColumnBlock(editor, event.target)
+        if (currentRect && controlZoneIndex !== null) {
+          setRect(currentRect)
+          setHoveredColumnIndex(controlZoneIndex)
+          return
+        }
 
-      hoveredColumnBlockRef.current = hoveredColumnBlock?.dom ?? null
-      setRect(hoveredColumnBlock?.rect ?? null)
-      setHoveredColumnIndex(hoveredColumnBlock?.columnIndex ?? null)
+        if (isColumnControlElement(event.target)) {
+          return
+        }
+
+        const hoveredColumnBlock = findHoveredColumnBlock(editor, event.target)
+
+        hoveredColumnBlockRef.current = hoveredColumnBlock?.dom ?? null
+        setRect(hoveredColumnBlock?.rect ?? null)
+        setHoveredColumnIndex(hoveredColumnBlock?.columnIndex ?? null)
+      })
     }
 
     updateRect()
@@ -584,6 +602,12 @@ export function ColumnControls({ editor }: { editor: Editor | null }) {
     window.addEventListener("scroll", updateRect, true)
 
     return () => {
+      if (updateFrame !== null) {
+        window.cancelAnimationFrame(updateFrame)
+      }
+      if (pointerFrame !== null) {
+        window.cancelAnimationFrame(pointerFrame)
+      }
       editor.off("selectionUpdate", updateOnNextFrame)
       editor.off("transaction", updateOnNextFrame)
       window.removeEventListener("pointermove", updateHoveredColumnBlock, true)

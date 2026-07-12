@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type ReactNode } from "react"
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import {
   ArrowDownToLine,
   ArrowUpRight,
@@ -16,8 +16,8 @@ import {
   Sparkles,
   Table2,
   X,
-} from "lucide-react"
-import { toast } from "sonner"
+} from "lucide-react";
+import { toast } from "sonner";
 
 import {
   PromptInput,
@@ -25,11 +25,11 @@ import {
   PromptInputSubmit,
   PromptInputTextarea,
   type PromptInputMessage,
-} from "@/components/ai-elements/prompt-input"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { getColorToken } from "@/lib/color-tokens"
-import { cn } from "@/lib/utils"
+} from "@/components/ai-elements/prompt-input";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { getColorToken } from "@/lib/color-tokens";
+import { cn } from "@/lib/utils";
 import {
   useAddDatabaseProperty,
   useAddDatabaseRow,
@@ -37,8 +37,8 @@ import {
   useUpdateDatabase,
   useUpdateDatabasePropertyValue,
   type DatabaseProperty,
-} from "@notelab/features/databases"
-import { useUpdatePage, usePages } from "@notelab/features/pages"
+} from "@notelab/features/databases";
+import { useUpdatePage, usePageNavigation } from "@notelab/features/pages";
 
 import {
   getDatabaseSetupTemplate,
@@ -47,48 +47,48 @@ import {
   databaseSetupSuggestedTemplates,
   type DatabaseSetupTemplate,
   type DatabaseSetupTemplateId,
-} from "./database-setup-templates"
+} from "./database-setup-templates";
 import {
   getDatabaseLinkedViews,
   getDatabaseSetupDismissed,
   getMergedDatabaseConfig,
   type DatabaseLinkedViewConfig,
-} from "../views/database-view-config"
-import { serializePropertyValue } from "../core/utils"
+} from "../views/database-view-config";
+import { serializePropertyValue } from "../core/utils";
 
-type SetupView = "main" | "link"
+type SetupView = "main" | "link";
 
 type DatabaseSetupCardProps = {
-  databaseId: string
-  onComplete: () => void
-  onDismiss: () => void
-  workspaceId?: string | null
-  pageId?: string | null
-}
+  databaseId: string;
+  onComplete: () => void;
+  onDismiss: () => void;
+  workspaceId?: string | null;
+  pageId?: string | null;
+};
 
 type TextNode = {
-  type: "text"
-  text: string
-}
+  type: "text";
+  text: string;
+};
 
 type ContentNode = {
-  attrs?: Record<string, unknown>
-  content?: Array<ContentNode | TextNode>
-  type: string
-}
+  attrs?: Record<string, unknown>;
+  content?: Array<ContentNode | TextNode>;
+  type: string;
+};
 
 function createTextNode(text: string): TextNode {
   return {
     type: "text",
     text,
-  }
+  };
 }
 
 function createParagraphNode(text: string): ContentNode {
   return {
     type: "paragraph",
     ...(text ? { content: [createTextNode(text)] } : {}),
-  }
+  };
 }
 
 function createHeadingNode(text: string, level: number): ContentNode {
@@ -96,56 +96,60 @@ function createHeadingNode(text: string, level: number): ContentNode {
     type: "heading",
     attrs: { level },
     content: [createTextNode(`${getSampleHeadingEmoji(text, level)} ${text}`)],
-  }
+  };
 }
 
 function getSampleHeadingEmoji(text: string, level: number) {
-  const normalized = text.toLowerCase()
+  const normalized = text.toLowerCase();
 
-  if (/checklist|next steps|action items|follow-up|send checklist/.test(normalized)) {
-    return "✅"
+  if (
+    /checklist|next steps|action items|follow-up|send checklist/.test(
+      normalized,
+    )
+  ) {
+    return "✅";
   }
 
   if (/risk|blocker|difficult/.test(normalized)) {
-    return "⚠️"
+    return "⚠️";
   }
 
   if (/goal|objective|purpose|campaign/.test(normalized)) {
-    return "🎯"
+    return "🎯";
   }
 
   if (/summary|overview|context|status/.test(normalized)) {
-    return "📌"
+    return "📌";
   }
 
   if (/metric|criteria|proof|success/.test(normalized)) {
-    return "📈"
+    return "📈";
   }
 
   if (/link|asset|input|channel|stakeholder|contact/.test(normalized)) {
-    return "🔗"
+    return "🔗";
   }
 
   if (/question|open/.test(normalized)) {
-    return "❓"
+    return "❓";
   }
 
   if (/decision|requirement|scope|non-goal/.test(normalized)) {
-    return "🧭"
+    return "🧭";
   }
 
   if (/note|observation|feedback|research|interview/.test(normalized)) {
-    return "📝"
+    return "📝";
   }
 
-  return level === 1 ? "✨" : "📍"
+  return level === 1 ? "✨" : "📍";
 }
 
 function createListItemNode(text: string): ContentNode {
   return {
     type: "listItem",
     content: [createParagraphNode(text)],
-  }
+  };
 }
 
 function createTaskItemNode(text: string, checked: boolean): ContentNode {
@@ -153,87 +157,90 @@ function createTaskItemNode(text: string, checked: boolean): ContentNode {
     type: "taskItem",
     attrs: { checked },
     content: [createParagraphNode(text)],
-  }
+  };
 }
 
 function createSampleRowContent(markdown: string) {
-  const content: ContentNode[] = []
-  const lines = markdown.trim().split("\n")
+  const content: ContentNode[] = [];
+  const lines = markdown.trim().split("\n");
 
   for (let index = 0; index < lines.length; index += 1) {
-    const rawLine = lines[index] ?? ""
-    const line = rawLine.trim()
+    const rawLine = lines[index] ?? "";
+    const line = rawLine.trim();
 
     if (!line) {
-      continue
+      continue;
     }
 
-    const heading = /^(#{1,3})\s+(.+)$/.exec(line)
+    const heading = /^(#{1,3})\s+(.+)$/.exec(line);
 
     if (heading) {
-      content.push(createHeadingNode(heading[2], heading[1].length))
-      continue
+      content.push(createHeadingNode(heading[2], heading[1].length));
+      continue;
     }
 
     if (line.startsWith("> ")) {
       content.push({
         type: "blockquote",
         content: [createParagraphNode(line.slice(2).trim())],
-      })
-      continue
+      });
+      continue;
     }
 
-    const task = /^-\s+\[( |x|X)\]\s+(.+)$/.exec(line)
+    const task = /^-\s+\[( |x|X)\]\s+(.+)$/.exec(line);
 
     if (task) {
-      const items: ContentNode[] = []
+      const items: ContentNode[] = [];
 
       while (index < lines.length) {
         const nextTask = /^-\s+\[( |x|X)\]\s+(.+)$/.exec(
           (lines[index] ?? "").trim(),
-        )
+        );
 
         if (!nextTask) {
-          index -= 1
-          break
+          index -= 1;
+          break;
         }
 
         items.push(
           createTaskItemNode(nextTask[2], nextTask[1].toLowerCase() === "x"),
-        )
-        index += 1
+        );
+        index += 1;
       }
 
-      content.push({ type: "taskList", content: items })
-      continue
+      content.push({ type: "taskList", content: items });
+      continue;
     }
 
     if (line.startsWith("- ")) {
-      const items: ContentNode[] = []
+      const items: ContentNode[] = [];
 
       while (index < lines.length) {
-        const nextLine = (lines[index] ?? "").trim()
+        const nextLine = (lines[index] ?? "").trim();
 
-        if (!nextLine.startsWith("- ") || /^-\s+\[( |x|X)\]\s+/.test(nextLine)) {
-          index -= 1
-          break
+        if (
+          !nextLine.startsWith("- ") ||
+          /^-\s+\[( |x|X)\]\s+/.test(nextLine)
+        ) {
+          index -= 1;
+          break;
         }
 
-        items.push(createListItemNode(nextLine.slice(2).trim()))
-        index += 1
+        items.push(createListItemNode(nextLine.slice(2).trim()));
+        index += 1;
       }
 
-      content.push({ type: "bulletList", content: items })
-      continue
+      content.push({ type: "bulletList", content: items });
+      continue;
     }
 
-    content.push(createParagraphNode(line))
+    content.push(createParagraphNode(line));
   }
 
   return {
     type: "doc",
     content,
-  }
+  };
 }
 
 function getPageMetadataWithEmoji(metadata: unknown, emoji: string) {
@@ -242,13 +249,11 @@ function getPageMetadataWithEmoji(metadata: unknown, emoji: string) {
       ? metadata
       : {}),
     emoji,
-  }
+  };
 }
 
 function SetupSectionLabel({ children }: { children: ReactNode }) {
-  return (
-    <div className="database-setup-section-label">{children}</div>
-  )
+  return <div className="database-setup-section-label">{children}</div>;
 }
 
 function SetupOptionButton({
@@ -259,12 +264,12 @@ function SetupOptionButton({
   onClick,
   variant = "default",
 }: {
-  children: ReactNode
-  className?: string
-  disabled?: boolean
-  icon: ReactNode
-  onClick: () => void
-  variant?: "default" | "subtle"
+  children: ReactNode;
+  className?: string;
+  disabled?: boolean;
+  icon: ReactNode;
+  onClick: () => void;
+  variant?: "default" | "subtle";
 }) {
   return (
     <button
@@ -280,15 +285,15 @@ function SetupOptionButton({
       {icon}
       <span className="min-w-0 flex-1 truncate">{children}</span>
     </button>
-  )
+  );
 }
 
 function TemplateIcon({
   colorId,
   icon,
 }: {
-  colorId: DatabaseSetupTemplate["colorId"]
-  icon: ReactNode
+  colorId: DatabaseSetupTemplate["colorId"];
+  icon: ReactNode;
 }) {
   return (
     <span
@@ -299,25 +304,25 @@ function TemplateIcon({
     >
       {icon}
     </span>
-  )
+  );
 }
 
 function getTemplateGlyph(template: DatabaseSetupTemplate) {
   switch (template.id) {
     case "tasks-tracker":
-      return <Check className="size-4" />
+      return <Check className="size-4" />;
     case "projects":
-      return <CircleDashed className="size-4" />
+      return <CircleDashed className="size-4" />;
     case "document-hub":
-      return <FileText className="size-4" />
+      return <FileText className="size-4" />;
     case "content-calendar":
-      return <CalendarRange className="size-4" />
+      return <CalendarRange className="size-4" />;
     case "meeting-notes":
-      return <FileText className="size-4" />
+      return <FileText className="size-4" />;
     case "crm":
-      return <Database className="size-4" />
+      return <Database className="size-4" />;
     default:
-      return <Database className="size-4" />
+      return <Database className="size-4" />;
   }
 }
 
@@ -327,64 +332,71 @@ export function DatabaseSetupCard({
   onDismiss,
   workspaceId,
 }: DatabaseSetupCardProps) {
-  const [view, setView] = useState<SetupView>("main")
-  const [prompt, setPrompt] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [showMoreTemplates, setShowMoreTemplates] = useState(false)
-  const [linkSearch, setLinkSearch] = useState("")
+  const [view, setView] = useState<SetupView>("main");
+  const [prompt, setPrompt] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showMoreTemplates, setShowMoreTemplates] = useState(false);
+  const [linkSearch, setLinkSearch] = useState("");
   const [selectedLinkDatabaseId, setSelectedLinkDatabaseId] = useState<
     string | null
-  >(null)
+  >(null);
 
-  const addProperty = useAddDatabaseProperty()
-  const addRow = useAddDatabaseRow()
-  const updateDatabase = useUpdateDatabase()
-  const updateValue = useUpdateDatabasePropertyValue()
-  const updatePage = useUpdatePage()
-  const { data: databasePayload } = useDatabase(databaseId)
-  const { data: pages = [], isLoading: isLoadingPages } =
-    usePages(workspaceId, {
+  const addProperty = useAddDatabaseProperty();
+  const addRow = useAddDatabaseRow();
+  const updateDatabase = useUpdateDatabase();
+  const updateValue = useUpdateDatabasePropertyValue();
+  const updatePage = useUpdatePage();
+  const { data: databasePayload } = useDatabase(databaseId);
+  const { data: navigation, isLoading: isLoadingPages } = usePageNavigation(
+    workspaceId,
+    {
       enabled: view === "link",
-    })
+    },
+  );
   const { data: selectedLinkDatabasePayload, isLoading: isLoadingLinkViews } =
-    useDatabase(selectedLinkDatabaseId)
+    useDatabase(selectedLinkDatabaseId);
   const dismissSetup = useCallback(async () => {
-    if (databasePayload && !getDatabaseSetupDismissed(databasePayload.database.config)) {
+    if (
+      databasePayload &&
+      !getDatabaseSetupDismissed(databasePayload.database.config)
+    ) {
       await updateDatabase.mutateAsync({
         config: getMergedDatabaseConfig(databasePayload.database.config, {
           setupDismissed: true,
         }),
         databaseId,
-      })
+      });
     }
 
-    onDismiss()
-  }, [databaseId, databasePayload, onDismiss, updateDatabase])
+    onDismiss();
+  }, [databaseId, databasePayload, onDismiss, updateDatabase]);
 
-  const linkableDatabases = useMemo(
-    () =>
-      pages.flatMap((page) =>
-        (page.databases ?? [])
-          .filter((database) => database.id !== databaseId)
-          .map((database) => ({
-            database,
-            pageName: page.name.trim() || "Untitled",
-          })),
-      ),
-    [databaseId, pages],
-  )
+  const linkableDatabases = useMemo(() => {
+    const pagesById = new Map(
+      (navigation?.pages ?? []).map((page) => [page.id, page]),
+    );
+
+    return (navigation?.databases ?? [])
+      .filter((database) => database.id !== databaseId)
+      .map((database) => ({
+        database,
+        pageName: database.pageId
+          ? pagesById.get(database.pageId)?.name.trim() || "Untitled"
+          : "Standalone",
+      }));
+  }, [databaseId, navigation]);
 
   const filteredLinkableDatabases = useMemo(() => {
-    const query = linkSearch.trim().toLowerCase()
+    const query = linkSearch.trim().toLowerCase();
 
     if (!query) {
-      return linkableDatabases
+      return linkableDatabases;
     }
 
     return linkableDatabases.filter(({ database, pageName }) =>
       `${database.name} ${pageName}`.toLowerCase().includes(query),
-    )
-  }, [linkSearch, linkableDatabases])
+    );
+  }, [linkSearch, linkableDatabases]);
 
   const applyTemplateProperties = useCallback(
     async (
@@ -397,13 +409,13 @@ export function DatabaseSetupCard({
           property.property.name.toLowerCase(),
           property,
         ]),
-      )
+      );
 
       for (const property of template.properties) {
-        const propertyKey = property.name.toLowerCase()
+        const propertyKey = property.name.toLowerCase();
 
         if (existingPropertyNames.has(propertyKey)) {
-          continue
+          continue;
         }
 
         const nextPayload = await addProperty.mutateAsync({
@@ -411,22 +423,22 @@ export function DatabaseSetupCard({
           databaseId,
           name: property.name,
           type: property.type,
-        })
+        });
         const addedProperty = nextPayload.properties.find(
           (item) => item.property.name.toLowerCase() === propertyKey,
-        )
+        );
 
         if (addedProperty) {
-          propertiesByName.set(propertyKey, addedProperty)
+          propertiesByName.set(propertyKey, addedProperty);
         }
 
-        existingPropertyNames.add(propertyKey)
+        existingPropertyNames.add(propertyKey);
       }
 
-      return propertiesByName
+      return propertiesByName;
     },
     [addProperty, databasePayload?.properties],
-  )
+  );
 
   const applyTemplateSampleRows = useCallback(
     async (
@@ -435,28 +447,28 @@ export function DatabaseSetupCard({
       propertiesByName: Map<string, DatabaseProperty>,
     ) => {
       if ((databasePayload?.rows ?? []).length > 0) {
-        return
+        return;
       }
 
       const knownRowIds = new Set(
         (databasePayload?.rows ?? []).map((row) => row.id),
-      )
+      );
 
       for (const [position, sampleRow] of template.sampleRows.entries()) {
         const nextPayload = await addRow.mutateAsync({
           databaseId,
           position,
           title: sampleRow.title,
-        })
+        });
         const addedRow =
           nextPayload.rows.find((row) => !knownRowIds.has(row.id)) ??
-          nextPayload.rows.at(-1)
+          nextPayload.rows.at(-1);
 
         if (!addedRow) {
-          continue
+          continue;
         }
 
-        knownRowIds.add(addedRow.id)
+        knownRowIds.add(addedRow.id);
 
         await updatePage.mutateAsync({
           content: createSampleRowContent(sampleRow.content),
@@ -465,13 +477,13 @@ export function DatabaseSetupCard({
             addedRow.page.metadata,
             sampleRow.emoji,
           ),
-        })
+        });
 
         for (const [propertyName, value] of Object.entries(sampleRow.values)) {
-          const property = propertiesByName.get(propertyName.toLowerCase())
+          const property = propertiesByName.get(propertyName.toLowerCase());
 
           if (!property) {
-            continue
+            continue;
           }
 
           await updateValue.mutateAsync({
@@ -479,12 +491,12 @@ export function DatabaseSetupCard({
             propertyId: property.property.id,
             rowId: addedRow.id,
             value: serializePropertyValue(property.property.type, value),
-          })
+          });
         }
       }
     },
     [addRow, databasePayload?.rows, updateValue, updatePage],
-  )
+  );
 
   const finishSetup = useCallback(
     async ({
@@ -492,19 +504,19 @@ export function DatabaseSetupCard({
       linkedView,
       templateId,
     }: {
-      databaseName?: string
-      linkedView?: DatabaseLinkedViewConfig
-      templateId?: DatabaseSetupTemplateId | null
+      databaseName?: string;
+      linkedView?: DatabaseLinkedViewConfig;
+      templateId?: DatabaseSetupTemplateId | null;
     }) => {
-      setIsSubmitting(true)
+      setIsSubmitting(true);
 
       try {
-        let setupDismissedPersisted = false
+        let setupDismissedPersisted = false;
 
         if (linkedView) {
           const linkedDatabaseViews = getDatabaseLinkedViews(
             databasePayload?.database.config,
-          )
+          );
 
           await updateDatabase.mutateAsync({
             config: getMergedDatabaseConfig(databasePayload?.database.config, {
@@ -512,64 +524,74 @@ export function DatabaseSetupCard({
               setupDismissed: true,
             }),
             databaseId,
-          })
-          setupDismissedPersisted = true
+          });
+          setupDismissedPersisted = true;
         } else if (templateId) {
-          const template = getDatabaseSetupTemplate(templateId)
+          const template = getDatabaseSetupTemplate(templateId);
 
           if (template) {
             const nextDatabasePatch: {
-              config: unknown
-              databaseId: string
-              name?: string
+              config: unknown;
+              databaseId: string;
+              name?: string;
             } = {
-              config: getMergedDatabaseConfig(databasePayload?.database.config, {
-                emoji: template.emoji,
-                setupDismissed: true,
-              }),
+              config: getMergedDatabaseConfig(
+                databasePayload?.database.config,
+                {
+                  emoji: template.emoji,
+                  setupDismissed: true,
+                },
+              ),
               databaseId,
-            }
+            };
 
             if (template.name !== databasePayload?.database.name) {
-              nextDatabasePatch.name = template.name
+              nextDatabasePatch.name = template.name;
             }
 
-            await updateDatabase.mutateAsync(nextDatabasePatch)
-            setupDismissedPersisted = true
+            await updateDatabase.mutateAsync(nextDatabasePatch);
+            setupDismissedPersisted = true;
 
             const existingPropertyNames = new Set(
               (databasePayload?.properties ?? []).map((property) =>
                 property.property.name.toLowerCase(),
               ),
-            )
+            );
 
             const propertiesByName = await applyTemplateProperties(
               databaseId,
               template,
               existingPropertyNames,
-            )
-            await applyTemplateSampleRows(databaseId, template, propertiesByName)
+            );
+            await applyTemplateSampleRows(
+              databaseId,
+              template,
+              propertiesByName,
+            );
           }
-        } else if (databaseName && databaseName !== databasePayload?.database.name) {
+        } else if (
+          databaseName &&
+          databaseName !== databasePayload?.database.name
+        ) {
           await updateDatabase.mutateAsync({
             databaseId,
             name: databaseName,
-          })
+          });
         }
 
         if (setupDismissedPersisted) {
-          onDismiss()
+          onDismiss();
         } else {
-          await dismissSetup()
+          await dismissSetup();
         }
-        onComplete()
+        onComplete();
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : "Database setup failed."
+          error instanceof Error ? error.message : "Database setup failed.";
 
-        toast.error("Couldn't update database", { description: message })
+        toast.error("Couldn't update database", { description: message });
       } finally {
-        setIsSubmitting(false)
+        setIsSubmitting(false);
       }
     },
     [
@@ -582,34 +604,36 @@ export function DatabaseSetupCard({
       onDismiss,
       updateDatabase,
     ],
-  )
+  );
 
   const handlePromptSubmit = useCallback(
     async (message: PromptInputMessage) => {
-      const nextPrompt = message.text.trim()
+      const nextPrompt = message.text.trim();
 
       if (!nextPrompt || isSubmitting) {
-        return
+        return;
       }
 
-      const templateId = inferDatabaseSetupTemplateId(nextPrompt)
+      const templateId = inferDatabaseSetupTemplateId(nextPrompt);
       const databaseName =
-        nextPrompt.length > 48 ? `${nextPrompt.slice(0, 45).trim()}...` : nextPrompt
+        nextPrompt.length > 48
+          ? `${nextPrompt.slice(0, 45).trim()}...`
+          : nextPrompt;
 
       await finishSetup({
         databaseName,
         templateId,
-      })
+      });
     },
     [finishSetup, isSubmitting],
-  )
+  );
 
   const handleLinkView = useCallback(
     async (linkedView: DatabaseLinkedViewConfig) => {
-      await finishSetup({ linkedView })
+      await finishSetup({ linkedView });
     },
     [finishSetup],
-  )
+  );
 
   const renderTemplateButton = (template: DatabaseSetupTemplate) => (
     <SetupOptionButton
@@ -630,7 +654,7 @@ export function DatabaseSetupCard({
     >
       {template.name}
     </SetupOptionButton>
-  )
+  );
 
   const renderMainContent = () => (
     <div className="database-setup-columns">
@@ -722,9 +746,9 @@ export function DatabaseSetupCard({
               </span>
             }
             onClick={() => {
-              setView("link")
-              setSelectedLinkDatabaseId(null)
-              setLinkSearch("")
+              setView("link");
+              setSelectedLinkDatabaseId(null);
+              setLinkSearch("");
             }}
           >
             Link to existing data source
@@ -732,17 +756,17 @@ export function DatabaseSetupCard({
         </div>
       </div>
     </div>
-  )
+  );
 
   const renderLinkPicker = () => {
     if (selectedLinkDatabaseId) {
-      const views = selectedLinkDatabasePayload?.views ?? []
+      const views = selectedLinkDatabasePayload?.views ?? [];
       const databaseName =
         selectedLinkDatabasePayload?.database.name ??
         linkableDatabases.find(
           (item) => item.database.id === selectedLinkDatabaseId,
         )?.database.name ??
-        "Untitled database"
+        "Untitled database";
 
       return (
         <div className="space-y-2 px-1 pb-1">
@@ -752,7 +776,9 @@ export function DatabaseSetupCard({
           >
             Back
           </SetupOptionButton>
-          <div className="px-2 text-muted-foreground text-xs">{databaseName}</div>
+          <div className="px-2 text-muted-foreground text-xs">
+            {databaseName}
+          </div>
           {isLoadingLinkViews ? (
             <div className="flex items-center justify-center gap-2 px-2 py-8 text-muted-foreground text-sm">
               <Loader2 className="size-4 animate-spin" />
@@ -769,7 +795,7 @@ export function DatabaseSetupCard({
                   ? Kanban
                   : viewItem.type === "timeline"
                     ? CalendarRange
-                    : Table2
+                    : Table2;
 
               return (
                 <SetupOptionButton
@@ -792,11 +818,11 @@ export function DatabaseSetupCard({
                 >
                   {viewItem.name}
                 </SetupOptionButton>
-              )
+              );
             })
           )}
         </div>
-      )
+      );
     }
 
     return (
@@ -804,9 +830,9 @@ export function DatabaseSetupCard({
         <SetupOptionButton
           icon={<ChevronLeft className="size-4 text-muted-foreground" />}
           onClick={() => {
-            setView("main")
-            setSelectedLinkDatabaseId(null)
-            setLinkSearch("")
+            setView("main");
+            setSelectedLinkDatabaseId(null);
+            setLinkSearch("");
           }}
         >
           Back
@@ -853,8 +879,8 @@ export function DatabaseSetupCard({
           ))
         )}
       </div>
-    )
-  }
+    );
+  };
 
   return (
     <div className="database-setup-overlay">
@@ -863,7 +889,7 @@ export function DatabaseSetupCard({
           aria-label="Close database setup"
           className="database-setup-close"
           onClick={() => {
-            void dismissSetup()
+            void dismissSetup();
           }}
           size="icon-sm"
           type="button"
@@ -879,5 +905,5 @@ export function DatabaseSetupCard({
         ) : null}
       </div>
     </div>
-  )
+  );
 }

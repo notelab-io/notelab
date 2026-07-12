@@ -10,8 +10,8 @@ import {
   Pin,
   Sparkles,
   TextWrap,
-} from "lucide-react"
-import type { ButtonHTMLAttributes } from "react"
+} from "lucide-react";
+import type { ButtonHTMLAttributes } from "react";
 
 import {
   DropDrawer,
@@ -23,10 +23,10 @@ import {
   DropDrawerSubContent,
   DropDrawerSubTrigger,
   DropDrawerTrigger,
-} from "@/components/ui/dropdrawer"
-import { Input } from "@/components/ui/input"
-import { Switch } from "@/components/ui/switch"
-import { useUpdateDatabase } from "@notelab/features/databases"
+} from "@/components/ui/dropdrawer";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { useUpdateDatabase } from "@notelab/features/databases";
 
 import {
   getDatabaseSorts,
@@ -38,8 +38,8 @@ import {
   upsertDatabaseSort,
   type DatabaseNameColumnConfig,
   type DatabaseSortDirection,
-} from "../views/database-view-config"
-import { NameColumnGlyph } from "../interactions/name-column-glyph"
+} from "../views/database-view-config";
+import { NameColumnGlyph } from "../interactions/name-column-glyph";
 
 export function DatabaseNamePropertyMenu({
   config,
@@ -54,57 +54,56 @@ export function DatabaseNamePropertyMenu({
   schemaActionsEnabled = true,
   triggerDragProps,
 }: {
-  config?: unknown
-  databaseId: string
-  isGrouped?: boolean
-  onOpenChange?: (open: boolean) => void
-  onInsertProperty: (side: "left" | "right") => void
-  onSort?: (direction: DatabaseSortDirection) => void
-  onToggleGroup?: () => void
-  onUpdateConfig?: (config: DatabaseNameColumnConfig) => void
-  open?: boolean
-  schemaActionsEnabled?: boolean
+  config?: unknown;
+  databaseId: string;
+  isGrouped?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  onInsertProperty: (side: "left" | "right") => void;
+  onSort?: (direction: DatabaseSortDirection) => void;
+  onToggleGroup?: () => void;
+  onUpdateConfig?: (config: DatabaseNameColumnConfig) => void;
+  open?: boolean;
+  schemaActionsEnabled?: boolean;
   triggerDragProps?: Pick<
     ButtonHTMLAttributes<HTMLButtonElement>,
     "onClick" | "onPointerDownCapture" | "title"
-  >
+  >;
 }) {
-  const updateDatabase = useUpdateDatabase()
-  const label = getNameColumnLabel(config)
-  const currentSorts = getDatabaseSorts(config)
+  const updateDatabase = useUpdateDatabase();
+  const label = getNameColumnLabel(config);
+  const currentSorts = getDatabaseSorts(config);
   const currentSortDirection = currentSorts.find(
-    (sort) => sort.column === "name"
-  )?.direction
-  const showPageIcon = getNameColumnShowPageIcon(config)
-  const wrapContent = getNameColumnWrapContent(config)
+    (sort) => sort.column === "name",
+  )?.direction;
+  const showPageIcon = getNameColumnShowPageIcon(config);
+  const wrapContent = getNameColumnWrapContent(config);
   const updateNameColumnConfig = (nextConfig: DatabaseNameColumnConfig) => {
     if (onUpdateConfig) {
-      onUpdateConfig(nextConfig)
-      return
+      onUpdateConfig(nextConfig);
+      return;
     }
 
     updateDatabase.mutate({
       config: getMergedNameColumnConfig(config, nextConfig),
       databaseId,
-    })
-  }
+    });
+  };
   const updateSort = (direction: DatabaseSortDirection) => {
     if (onSort) {
-      onSort(direction)
-      return
+      onSort(direction);
+      return;
     }
 
     updateDatabase.mutate({
       config: getMergedDatabaseConfig(config, {
-        sort: undefined,
         sorts: upsertDatabaseSort(currentSorts, {
           column: "name",
           direction,
         }),
       }),
       databaseId,
-    })
-  }
+    });
+  };
 
   return (
     <DropDrawer open={open} onOpenChange={onOpenChange}>
@@ -135,17 +134,17 @@ export function DatabaseNamePropertyMenu({
             className="h-auto rounded-none border-0 bg-transparent px-0 py-0 text-sm font-medium shadow-none focus-visible:border-transparent focus-visible:ring-0 dark:bg-transparent"
             defaultValue={label}
             onBlur={(event) => {
-              const nextLabel = event.target.value.trim() || "Name"
+              const nextLabel = event.target.value.trim() || "Name";
 
               if (nextLabel !== label) {
                 updateNameColumnConfig({
                   label: nextLabel === "Name" ? undefined : nextLabel,
-                })
+                });
               }
             }}
             onKeyDown={(event) => {
               if (event.key === "Enter") {
-                event.currentTarget.blur()
+                event.currentTarget.blur();
               }
             }}
           />
@@ -154,8 +153,8 @@ export function DatabaseNamePropertyMenu({
         <DropDrawerItem
           aria-pressed={showPageIcon}
           onSelect={(event) => {
-            event.preventDefault()
-            updateNameColumnConfig({ showPageIcon: !showPageIcon })
+            event.preventDefault();
+            updateNameColumnConfig({ showPageIcon: !showPageIcon });
           }}
         >
           <FileText />
@@ -179,8 +178,8 @@ export function DatabaseNamePropertyMenu({
         </DropDrawerItem>
         <DropDrawerItem
           onSelect={(event) => {
-            event.preventDefault()
-            onToggleGroup?.()
+            event.preventDefault();
+            onToggleGroup?.();
           }}
         >
           <GripVertical />
@@ -194,8 +193,8 @@ export function DatabaseNamePropertyMenu({
           <DropDrawerSubContent>
             <DropDrawerItem
               onSelect={(event) => {
-                event.preventDefault()
-                updateSort("ascending")
+                event.preventDefault();
+                updateSort("ascending");
               }}
             >
               <span>Ascending</span>
@@ -205,8 +204,8 @@ export function DatabaseNamePropertyMenu({
             </DropDrawerItem>
             <DropDrawerItem
               onSelect={(event) => {
-                event.preventDefault()
-                updateSort("descending")
+                event.preventDefault();
+                updateSort("descending");
               }}
             >
               <span>Descending</span>
@@ -223,8 +222,8 @@ export function DatabaseNamePropertyMenu({
         <DropDrawerItem
           aria-pressed={wrapContent}
           onSelect={(event) => {
-            event.preventDefault()
-            updateNameColumnConfig({ wrapContent: !wrapContent })
+            event.preventDefault();
+            updateNameColumnConfig({ wrapContent: !wrapContent });
           }}
         >
           <TextWrap />
@@ -245,5 +244,5 @@ export function DatabaseNamePropertyMenu({
         ) : null}
       </DropDrawerContent>
     </DropDrawer>
-  )
+  );
 }

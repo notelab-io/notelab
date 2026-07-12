@@ -105,7 +105,7 @@ export function PageMetadata({
     [threadsData?.threads],
   )
   const totalCommentCount = unresolvedThreads.reduce(
-    (sum, item) => sum + item.comments.length,
+    (sum, item) => sum + item.commentCount,
     0,
   )
   const showCommentsSection = commentsOpen || unresolvedThreads.length > 0
