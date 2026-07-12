@@ -360,6 +360,7 @@ export default function DashboardPage({
                   setFilterPickerOpen: () => {},
                   setSortPickerOpen: () => {},
                   setViewDateProperty: () => {},
+                  setupTimelineDateProperty: () => {},
                   setViewGroupProperty,
                   setViewType: () => {},
                   showExpandButton: false,

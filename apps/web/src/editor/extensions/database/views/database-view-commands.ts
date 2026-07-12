@@ -222,6 +222,20 @@ export function getDatabaseViewCommands({
       values,
     }));
 
+  const updateTimelineDateProperty = (datePropertyId: string | null) => {
+    if (!databaseId || !activeView?.id) {
+      return;
+    }
+
+    updateDatabaseView.mutate({
+      config: getMergedDatabaseConfig(activeView.config, {
+        datePropertyId: datePropertyId ?? undefined,
+      }),
+      databaseId,
+      databaseViewId: activeView.id,
+    });
+  };
+
   return {
     addDatabaseProperty: (
       type = "text",
@@ -534,16 +548,15 @@ export function getDatabaseViewCommands({
       });
     },
     setViewDateProperty: (datePropertyId: string | null) => {
+      updateTimelineDateProperty(datePropertyId);
+    },
+    setupTimelineDateProperty: () => {
       if (!databaseId || !activeView?.id) {
         return;
       }
 
-      updateDatabaseView.mutate({
-        config: getMergedDatabaseConfig(activeView.config, {
-          datePropertyId: datePropertyId ?? undefined,
-        }),
-        databaseId,
-        databaseViewId: activeView.id,
+      ensureTimelineDatePropertyId((datePropertyId) => {
+        updateTimelineDateProperty(datePropertyId);
       });
     },
     createDatabaseSort: (field: string) => {

@@ -752,6 +752,7 @@ export function useDatabaseViewController({
     setDraftViewTitle,
     setFilterPickerOpen,
     setViewDateProperty: commands.setViewDateProperty,
+    setupTimelineDateProperty: commands.setupTimelineDateProperty,
     setViewGroupProperty: commands.setViewGroupProperty,
     setViewType: commands.setViewType,
     timelineDateProperties,

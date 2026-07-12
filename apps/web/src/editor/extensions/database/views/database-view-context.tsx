@@ -157,6 +157,7 @@ export type DatabaseViewContextValue = {
   setDraftViewTitle: Dispatch<SetStateAction<string>>
   setFilterPickerOpen: Dispatch<SetStateAction<boolean>>
   setViewDateProperty: (datePropertyId: string | null) => void
+  setupTimelineDateProperty: () => void
   setViewGroupProperty: (groupPropertyId: string | null) => void
   setViewType: (type: "table" | "kanban" | "timeline") => void
   timelineDateProperties: DatabasePropertyListItem[]
