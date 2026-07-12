@@ -3,12 +3,6 @@ import type { TableOfContentDataItem } from "@tiptap/extension-table-of-contents
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
-  Command,
-  CommandGroup,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
-import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
@@ -31,11 +25,9 @@ export function EditorTableOfContents({
       item.pos + 1,
       editor.state.doc.content.size
     )
+    item.dom.scrollIntoView({ block: "center", behavior: "smooth" })
     editor.commands.setTextSelection(selectionPosition)
     editor.view.dom.focus({ preventScroll: true })
-    requestAnimationFrame(() => {
-      item.dom.scrollIntoView({ block: "start", behavior: "smooth" })
-    })
   }
 
   return (
@@ -66,28 +58,32 @@ export function EditorTableOfContents({
               ))}
             </Button>
           </HoverCardTrigger>
-          <HoverCardContent align="end" className="w-80 p-0" side="left">
-            <Command>
-              <CommandList>
-                <CommandGroup>
-                  {visibleItems.map((item) => (
-                    <CommandItem
-                      className={cn(
-                        "truncate",
-                        item.level === 2 && "pl-6",
-                        item.level >= 3 && "pl-10",
-                        item.isActive && "bg-muted text-foreground"
-                      )}
-                      key={item.id}
-                      onSelect={() => jumpToItem(item)}
-                      value={item.id}
-                    >
-                      <span className="truncate">{item.textContent}</span>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </CommandList>
-            </Command>
+          <HoverCardContent
+            align="end"
+            className="w-72 overflow-hidden p-1.5"
+            side="left"
+          >
+            <nav
+              aria-label="Page headings"
+              className="max-h-[min(28rem,70vh)] overflow-y-auto"
+            >
+              {visibleItems.map((item) => (
+                <button
+                  className={cn(
+                    "flex h-9 w-full items-center rounded-md px-2 text-left text-sm transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none",
+                    item.level === 2 && "pl-5",
+                    item.level >= 3 && "pl-8",
+                    item.isActive && "bg-muted text-foreground"
+                  )}
+                  key={item.id}
+                  onClick={() => jumpToItem(item)}
+                  title={item.textContent}
+                  type="button"
+                >
+                  <span className="truncate">{item.textContent}</span>
+                </button>
+              ))}
+            </nav>
           </HoverCardContent>
         </HoverCard>
       </div>
