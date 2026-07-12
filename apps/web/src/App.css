@@ -69,14 +69,14 @@
 }
 
 .dark {
-  --background: #09090B;
+  --background: #0D0D0F;
   --foreground: #FFFFFF;
-  --card: #18181B;
+  --card: #0D0D0F;
   --card-foreground: #FFFFFF;
-  --popover: #18181B;
+  --popover: #0D0D0F;
   --popover-foreground: #FFFFFF;
   --primary: #FFFFFF;
-  --primary-foreground: #18181B;
+  --primary-foreground: #0D0D0F;
   --secondary: #27272A;
   --secondary-foreground: #D4D4D8;
   --muted: #27272A;
@@ -95,11 +95,11 @@
   --chart-5: oklch(0.4200 0.1800 266);
 
   --calendar-weekend: #0D0D10;
-  --calendar-current-week: #18181B;
+  --calendar-current-week: #0D0D0F;
   --calendar-day-hover: #27272A;
   --calendar-day-hover-current-week: #3F3F46;
-  --sidebar: #18181B;
-  --context-panel: #09090B;
+  --sidebar: #09090B;
+  --context-panel: #0D0D0F;
   --sidebar-foreground: #FFFFFF;
   --sidebar-primary: #27272A;
   --sidebar-primary-foreground: #FFFFFF;
