@@ -19,6 +19,7 @@ Notelab uses one product version across the web, server, desktop, and mobile app
 
 - Kept database table headers visible while scrolling.
 - Applied published page owner width preferences for fallback viewers.
+- Opened embedded page pane mode menus only on click.
 
 ## 0.0.4
 
