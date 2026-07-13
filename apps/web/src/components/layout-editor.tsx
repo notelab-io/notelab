@@ -19,12 +19,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Editor } from "@/packages/editor"
-import { useDatabase } from "@notelab/features/databases"
+import {
+  useDatabase,
+  useDatabaseIdForRowPage,
+} from "@notelab/features/databases"
 import {
   getPageCover,
   getPageEmoji,
   resolvePageFullWidth,
   usePage,
+  usePageNavigation,
   useResolvedPageLayout,
   useResetPageLayout,
   useSavePageLayout,
@@ -78,6 +82,55 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
   )
 }
 
+function PreviewPageDropdown({
+  currentPageId,
+  loading,
+  onSelect,
+  pages,
+  previewName,
+}: {
+  currentPageId: string | null | undefined
+  loading?: boolean
+  onSelect: (pageId: string) => void
+  pages: Array<{ id: string; name: string }>
+  previewName: string
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          className="min-w-0 justify-start gap-2 px-2"
+          title={`Preview: ${previewName}`}
+          type="button"
+          variant="ghost"
+        >
+          <span className="min-w-0 truncate text-sm font-medium">
+            {previewName}
+          </span>
+          <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-72">
+        {pages.length ? (
+          pages.map((page) => (
+            <DropdownMenuItem
+              key={page.id}
+              onSelect={() => onSelect(page.id)}
+            >
+              <span className="min-w-0 flex-1 truncate">{page.name}</span>
+              {page.id === currentPageId ? <Check className="ml-auto" /> : null}
+            </DropdownMenuItem>
+          ))
+        ) : loading ? (
+          <DropdownMenuItem disabled>Loading pages...</DropdownMenuItem>
+        ) : (
+          <DropdownMenuItem disabled>No database pages</DropdownMenuItem>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
 function LayoutEditor({
   onClose,
   target,
@@ -86,10 +139,41 @@ function LayoutEditor({
   target: LayoutEditorTarget
 }) {
   const { data: resolved, isLoading } = useResolvedPageLayout(target)
-  const databaseId = target.databaseId ?? resolved?.databaseId ?? null
   const pageId = target.pageId ?? resolved?.pageId ?? null
-  const { data: databasePayload } = useDatabase(databaseId)
-  const { data: page } = usePage(pageId, { refetchOnMount: false })
+  const cachedRowDatabaseId = useDatabaseIdForRowPage(
+    pageId,
+    target.databaseId ?? resolved?.databaseId ?? null,
+  )
+  const [previewPageId, setPreviewPageId] = useState<string | null>(
+    pageId ?? null,
+  )
+  const effectivePreviewPageId = previewPageId ?? pageId
+  const { data: page } = usePage(effectivePreviewPageId, {
+    refetchOnMount: false,
+  })
+  const workspaceId = page?.workspaceId ?? resolved?.workspaceId ?? null
+  const { data: navigation, isLoading: navigationLoading } =
+    usePageNavigation(workspaceId)
+  const navigationRowDatabaseId = useMemo(
+    () =>
+      pageId
+        ? (navigation?.placements.find(
+            (placement) =>
+              placement.parentKind === "database" &&
+              placement.itemKind === "page" &&
+              placement.itemId === pageId &&
+              placement.placementKind === "database_row",
+          )?.parentId ?? null)
+        : null,
+    [navigation?.placements, pageId],
+  )
+  const databaseId =
+    target.databaseId ??
+    resolved?.databaseId ??
+    cachedRowDatabaseId ??
+    navigationRowDatabaseId
+  const { data: databasePayload, isLoading: databaseLoading } =
+    useDatabase(databaseId)
   const { data: userSettings = defaultUserSettings } = useUserSettings()
   const [draft, setDraft] = useState<PageLayoutConfig | null>(null)
   const saveLayout = useSavePageLayout()
@@ -102,6 +186,10 @@ function LayoutEditor({
     }
   }, [resolved?.config])
 
+  useEffect(() => {
+    setPreviewPageId(pageId ?? null)
+  }, [pageId])
+
   const properties = databasePayload?.properties ?? []
   const previewName =
     page?.name?.trim() || (databaseId ? "Untitled" : "New page")
@@ -110,6 +198,18 @@ function LayoutEditor({
   const previewWorkspaceId =
     page?.workspaceId ?? databasePayload?.database.workspaceId ?? null
   const fullWidth = resolvePageFullWidth(page, userSettings.pageFullWidth)
+  const previewPages = useMemo(
+    () =>
+      databasePayload?.rows
+        .filter((row) => !row.deletedAt && !row.page.deletedAt)
+        .slice()
+        .sort((first, second) => first.position - second.position)
+        .map((row) => ({
+          id: row.pageId,
+          name: row.page.name.trim() || "Untitled",
+        })) ?? [],
+    [databasePayload?.rows],
+  )
   const resolvedConfig = resolved?.config
     ? withoutLayoutFullWidth(resolved.config)
     : null
@@ -195,11 +295,16 @@ function LayoutEditor({
     <div className="fixed inset-0 z-[100] flex h-svh flex-col bg-background text-foreground">
       <header className="flex h-14 shrink-0 items-center border-b px-4">
         <div className="flex min-w-0 flex-1 items-center gap-2">
-          <LayoutPanelLeft className="size-4" />
-          <span className="font-medium">Customize layout</span>
-          <span className="truncate text-sm text-muted-foreground">
-            Preview: {previewName}
-          </span>
+          <LayoutPanelLeft className="size-4 text-muted-foreground" />
+          <PreviewPageDropdown
+            currentPageId={effectivePreviewPageId}
+            loading={
+              navigationLoading || (Boolean(databaseId) && databaseLoading)
+            }
+            onSelect={setPreviewPageId}
+            pages={previewPages}
+            previewName={previewName}
+          />
         </div>
         <Button onClick={close} variant="ghost">
           <X /> Cancel
@@ -263,7 +368,7 @@ function LayoutEditor({
               layoutConfig={draft}
               layoutPreview
               onLayoutChange={setDraft}
-              pageId={pageId}
+              pageId={effectivePreviewPageId}
               title={previewName}
               workspaceId={previewWorkspaceId}
             />
