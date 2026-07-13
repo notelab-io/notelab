@@ -4,6 +4,22 @@ All notable Notelab product releases are documented here.
 
 Notelab uses one product version across the web, server, desktop, and mobile apps. Versions stay on `0.x.y` until the self-hosted install, upgrade, auth, data storage, and core note workflows are stable enough for `1.0.0`.
 
+## 0.0.5
+
+### Added
+
+- Added embedded page pane controls for opening pages as full pages, dialogs, or side panels.
+- Added row navigation controls for database-backed embedded pages.
+
+### Changed
+
+- Lazy-loaded the AI chatbot UI to reduce initial page weight.
+
+### Fixed
+
+- Kept database table headers visible while scrolling.
+- Applied published page owner width preferences for fallback viewers.
+
 ## 0.0.4
 
 ### Added
