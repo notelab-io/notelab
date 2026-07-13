@@ -14,9 +14,11 @@ import { Input } from "@/components/ui/input"
 
 export function LinkedDataSourcePicker({
   children,
+  menuFirst = false,
   onSelect,
 }: {
   children?: React.ReactNode
+  menuFirst?: boolean
   onSelect: (tab: PageLayoutLinkedTab) => void
 }) {
   const workspaceId = useActiveWorkspaceId()
@@ -24,6 +26,7 @@ export function LinkedDataSourcePicker({
   const [open, setOpen] = useState(false)
   const [databaseId, setDatabaseId] = useState<string | null>(null)
   const [search, setSearch] = useState("")
+  const [showPicker, setShowPicker] = useState(!menuFirst)
   const databases = navigation?.databases ?? []
   const selectedDatabase = databases.find((database) => database.id === databaseId)
   const databaseOptions = useMemo(() => {
@@ -41,6 +44,7 @@ export function LinkedDataSourcePicker({
     setOpen(false)
     setDatabaseId(null)
     setSearch("")
+    setShowPicker(!menuFirst)
   }
 
   return (
@@ -55,8 +59,22 @@ export function LinkedDataSourcePicker({
           </Button>
         )}
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-80 overflow-hidden p-0">
-        <div className="flex items-center gap-2 border-b px-2 py-2">
+      <PopoverContent
+        align="start"
+        className={showPicker ? "w-80 overflow-hidden p-0" : "w-72 p-1"}
+      >
+        {!showPicker ? (
+          <button
+            className="flex h-9 w-full items-center gap-2 rounded-md px-2 text-left text-sm hover:bg-accent"
+            onClick={() => setShowPicker(true)}
+            type="button"
+          >
+            <Table2 className="size-4 text-muted-foreground" />
+            <span>Link existing data source</span>
+          </button>
+        ) : (
+          <>
+            <div className="flex items-center gap-2 border-b px-2 py-2">
           {selectedDatabase ? (
             <Button
               aria-label="Back to databases"
@@ -77,8 +95,8 @@ export function LinkedDataSourcePicker({
             placeholder={selectedDatabase ? "Search views..." : "Search databases..."}
             value={search}
           />
-        </div>
-        <div className="max-h-80 overflow-y-auto p-1">
+            </div>
+            <div className="max-h-80 overflow-y-auto p-1">
           {selectedDatabase ? (
             viewOptions.length ? viewOptions.map((option) => {
               const ViewIcon = option.type === "kanban" ? Kanban : Table2
@@ -123,7 +141,9 @@ export function LinkedDataSourcePicker({
               No databases available.
             </div>
           )}
-        </div>
+            </div>
+          </>
+        )}
       </PopoverContent>
     </Popover>
   )

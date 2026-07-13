@@ -26,7 +26,9 @@ import {
 
 type PageLayoutModuleCanvasProps = {
   config: PageLayoutConfig
+  fixedAfterHeading?: ReactNode
   fullWidth?: boolean
+  mainContentOverride?: ReactNode
   onChange?: (config: PageLayoutConfig) => void
   renderModule: (module: PageLayoutModule) => ReactNode
 }
@@ -260,7 +262,9 @@ function DroppableModuleSequence({
 
 export function PageLayoutModuleCanvas({
   config,
+  fixedAfterHeading,
   fullWidth = true,
+  mainContentOverride,
   onChange,
   renderModule,
 }: PageLayoutModuleCanvasProps) {
@@ -280,6 +284,14 @@ export function PageLayoutModuleCanvas({
   const panelModules = config.modules.filter(
     (module) => module.region === "panel",
   )
+  const heading = mainModules.find((module) => module.type === "heading")
+  const propertyGroup = mainModules.find(
+    (module) => module.type === "property_group",
+  )
+  const movableMainModules = mainModules.filter(
+    (module) =>
+      module.type !== "heading" && module.type !== "property_group",
+  )
 
   if (!onChange) {
     return (
@@ -290,7 +302,10 @@ export function PageLayoutModuleCanvas({
         )}
       >
         <div className="min-w-0">
-          {mainModules.map((module) => (
+          {heading ? renderModule(heading) : null}
+          {fixedAfterHeading}
+          {propertyGroup ? renderModule(propertyGroup) : null}
+          {mainContentOverride ?? movableMainModules.map((module) => (
             <Fragment key={module.id}>{renderModule(module)}</Fragment>
           ))}
         </div>
@@ -305,14 +320,6 @@ export function PageLayoutModuleCanvas({
     )
   }
 
-  const heading = mainModules.find((module) => module.type === "heading")
-  const propertyGroup = mainModules.find(
-    (module) => module.type === "property_group",
-  )
-  const movableMainModules = mainModules.filter(
-    (module) =>
-      module.type !== "heading" && module.type !== "property_group",
-  )
   const renderModuleFrame = (module: PageLayoutModule) => (
     <DraggableModule key={module.id} module={module}>
       {renderModule(module)}
@@ -355,6 +362,7 @@ export function PageLayoutModuleCanvas({
           {heading ? (
             <FixedModule module={heading}>{renderModule(heading)}</FixedModule>
           ) : null}
+          {fixedAfterHeading}
           <DropSlot
             disabled={
               activeModule?.type !== "property_group" ||
@@ -364,12 +372,14 @@ export function PageLayoutModuleCanvas({
           />
           {propertyGroup ? renderModuleFrame(propertyGroup) : null}
           <ModuleSeparator />
-          <DroppableModuleSequence
-            activeModule={activeModule}
-            modules={movableMainModules}
-            region="main"
-            renderModuleFrame={renderModuleFrame}
-          />
+          {mainContentOverride ?? (
+            <DroppableModuleSequence
+              activeModule={activeModule}
+              modules={movableMainModules}
+              region="main"
+              renderModuleFrame={renderModuleFrame}
+            />
+          )}
         </LayoutRegion>
         {panelVisible ? (
           <LayoutRegion region="panel">

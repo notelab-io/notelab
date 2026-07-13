@@ -1,4 +1,11 @@
-import { Trash2 } from "lucide-react"
+import {
+  ArrowUpRight,
+  CalendarRange,
+  FileText,
+  Kanban,
+  Table2,
+  Trash2,
+} from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -38,25 +45,45 @@ export function PageLayoutTabs({
   }
 
   return (
-    <div className="sticky top-0 z-10 shrink-0 border-b bg-background/95 px-5 pt-2 backdrop-blur md:px-20 lg:px-24">
-      <div className="flex items-center">
-        <Tabs onValueChange={onValueChange} value={value}>
-          <TabsList className="h-9 bg-transparent p-0">
-            <TabsTrigger value="content">Content</TabsTrigger>
-            {config.linkedTabs.map((tab) => (
-              <TabsTrigger key={tab.id} value={tab.id}>
-                {tab.viewName}
-              </TabsTrigger>
-            ))}
+    <div className="shrink-0 py-2">
+      <div className="flex min-w-0 items-center gap-1 overflow-x-auto">
+        <Tabs className="min-w-0" onValueChange={onValueChange} value={value}>
+          <TabsList
+            className="min-w-0 justify-start overflow-x-auto"
+            variant="tab"
+          >
+            <TabsTrigger className="h-8 shrink-0 grow-0 gap-2 px-3" value="content">
+              <FileText />
+              <span>Content</span>
+            </TabsTrigger>
+            {config.linkedTabs.map((tab) => {
+              const ViewIcon =
+                tab.viewType === "kanban"
+                  ? Kanban
+                  : tab.viewType === "timeline"
+                    ? CalendarRange
+                    : Table2
+
+              return (
+                <TabsTrigger
+                  className="h-8 shrink-0 grow-0 gap-2 px-3"
+                  key={tab.id}
+                  value={tab.id}
+                >
+                  <ViewIcon />
+                  <span className="truncate">{tab.viewName}</span>
+                  <ArrowUpRight className="size-3 text-muted-foreground" />
+                </TabsTrigger>
+              )
+            })}
           </TabsList>
         </Tabs>
         {onChange ? (
           <>
-            <LinkedDataSourcePicker onSelect={addLinkedTab} />
+            <LinkedDataSourcePicker menuFirst onSelect={addLinkedTab} />
             {value !== "content" ? (
               <Button
                 aria-label="Remove linked data source tab"
-                className="ml-auto"
                 onClick={removeActiveTab}
                 size="icon-sm"
                 type="button"

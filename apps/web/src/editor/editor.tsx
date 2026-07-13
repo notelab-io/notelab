@@ -414,36 +414,6 @@ export function Editor({
         onClickCapture={handleMobileNodeClick}
         onPointerMoveCapture={updateDragTargetFromPointer}
       >
-        {layoutConfig?.structure === "tabbed" ? (
-          <PageLayoutTabs
-            config={layoutConfig}
-            onChange={onLayoutChange}
-            onValueChange={setActiveLayoutTab}
-            value={activeLayoutTab}
-          />
-        ) : null}
-        {activeLinkedTab ? (
-          <div
-            className={cn(
-              "p-5 md:px-12",
-              layoutPreview
-                ? "min-h-0 flex-1 overflow-y-auto"
-                : "min-h-[calc(100svh-6rem)]",
-            )}
-          >
-            <DatabaseView
-              activeViewId={activeLinkedTab.viewId}
-              databaseId={activeLinkedTab.databaseId}
-              editable={editable}
-              fullPage
-              onOpenPage={onOpenPage}
-              pageId={pageId}
-              showExpandButton={false}
-              workspaceId={workspaceId}
-            />
-          </div>
-        ) : (
-          <>
         {collaboration ? (
           <CollaborationPresence users={collaboration.users} />
         ) : null}
@@ -466,7 +436,46 @@ export function Editor({
         {layoutConfig ? (
           <PageLayoutModuleCanvas
             config={layoutConfig}
+            fixedAfterHeading={
+              layoutConfig.structure === "tabbed" ? (
+                <PageLayoutTabs
+                  config={layoutConfig}
+                  onChange={onLayoutChange}
+                  onValueChange={setActiveLayoutTab}
+                  value={activeLayoutTab}
+                />
+              ) : undefined
+            }
             fullWidth={fullWidth}
+            mainContentOverride={
+              activeLinkedTab ? (
+                <div
+                  className={cn(
+                    "relative min-w-0 p-5 md:px-12",
+                    layoutPreview
+                      ? "h-[32rem] overflow-hidden"
+                      : "min-h-[calc(100svh-6rem)]",
+                  )}
+                >
+                  <DatabaseView
+                    activeViewId={activeLinkedTab.viewId}
+                    databaseId={activeLinkedTab.databaseId}
+                    editable={editable}
+                    fullPage
+                    onOpenPage={onOpenPage}
+                    pageId={pageId}
+                    showExpandButton={false}
+                    workspaceId={workspaceId}
+                  />
+                  {layoutPreview ? (
+                    <div
+                      aria-hidden
+                      className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-24 bg-gradient-to-t from-background via-background/85 to-transparent"
+                    />
+                  ) : null}
+                </div>
+              ) : undefined
+            }
             onChange={onLayoutChange}
             renderModule={renderLayoutModule}
           />
@@ -511,8 +520,6 @@ export function Editor({
             onDecline={clearSelectionAiPreview}
           />
         ) : null}
-          </>
-        )}
       </section>
     </div>
   )
