@@ -285,7 +285,6 @@ function OpenPageAsDropdown({
         <Button
           aria-label="Open pages as"
           disabled={disabled}
-          onMouseEnter={() => setOpen(true)}
           size="icon-sm"
           title={`Open pages as ${embeddedItemsOpenAsLabels[mode]}`}
           type="button"
@@ -297,8 +296,6 @@ function OpenPageAsDropdown({
       <DropdownMenuContent
         align="start"
         className="w-52"
-        onMouseEnter={() => setOpen(true)}
-        onMouseLeave={() => setOpen(false)}
       >
         {embeddedItemsOpenAsModes.map((value) => {
           const OptionIcon = value === "sidepanel" ? PanelRightIcon : SquareIcon;
