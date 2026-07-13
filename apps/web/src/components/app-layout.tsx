@@ -259,6 +259,7 @@ function AppLayoutContent({ children }: { children?: ReactNode }) {
             <ChatSidebarPanel
               databaseId={databaseId}
               onClose={() => setChatSidebarOpen(false)}
+              open={chatSidebarOpen}
               pageId={pageId}
             />
           }
@@ -281,6 +282,7 @@ function AppLayoutContent({ children }: { children?: ReactNode }) {
           <ChatSidebarPanel
             databaseId={databaseId}
             onClose={() => setChatSidebarOpen(false)}
+            open={chatSidebarOpen}
             pageId={pageId}
           />
         }

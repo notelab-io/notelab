@@ -1,5 +1,8 @@
-import Chatbot from "@/components/ai-elements/chatbot";
+import { lazy, Suspense } from "react";
+
 import { useAiChatThreadState } from "@/hooks/use-ai-chat-thread-state";
+
+const Chatbot = lazy(() => import("@/components/ai-elements/chatbot"));
 
 export default function AiPage() {
   const { activeThreadId, isBootstrapping } = useAiChatThreadState();
@@ -13,7 +16,15 @@ export default function AiPage() {
               Loading chat...
             </div>
           ) : (
-            <Chatbot key={activeThreadId} threadId={activeThreadId} />
+            <Suspense
+              fallback={
+                <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
+                  Loading chat...
+                </div>
+              }
+            >
+              <Chatbot key={activeThreadId} threadId={activeThreadId} />
+            </Suspense>
           )}
         </section>
       </main>

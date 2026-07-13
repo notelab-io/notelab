@@ -1,7 +1,6 @@
 "use client"
 
 import { AiChatHistoryList } from "@/components/ai-elements/ai-chat-history-list"
-import Chatbot from "@/components/ai-elements/chatbot"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useAiChatThreadActions } from "@/hooks/use-ai-chat-thread-actions"
@@ -12,7 +11,9 @@ import {
   PlusIcon,
   SparklesIcon,
 } from "lucide-react"
-import { useCallback, useState } from "react"
+import { lazy, Suspense, useCallback, useState } from "react"
+
+const Chatbot = lazy(() => import("@/components/ai-elements/chatbot"))
 
 type ChatSidebarView = "chat" | "history"
 
@@ -45,10 +46,12 @@ export function ChatSidebarTrigger({
 export function ChatSidebarPanel({
   databaseId,
   onClose,
+  open = true,
   pageId,
 }: {
   databaseId?: string | null
   onClose: () => void
+  open?: boolean
   pageId?: string | null
 }) {
   const { activeThreadId, isBootstrapping, setActiveThreadId } =
@@ -126,17 +129,25 @@ export function ChatSidebarPanel({
           className="min-h-0 flex-1 overflow-y-auto px-4 py-4"
           data-ai-scroll-shell
         >
-          {isBootstrapping || !activeThreadId ? (
+          {!open || isBootstrapping || !activeThreadId ? (
             <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
               Loading chat...
             </div>
           ) : (
-            <Chatbot
-              databaseId={databaseId}
-              isSidebar
-              threadId={activeThreadId}
-              pageId={pageId}
-            />
+            <Suspense
+              fallback={
+                <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
+                  Loading chat...
+                </div>
+              }
+            >
+              <Chatbot
+                databaseId={databaseId}
+                isSidebar
+                threadId={activeThreadId}
+                pageId={pageId}
+              />
+            </Suspense>
           )}
         </div>
       )}
