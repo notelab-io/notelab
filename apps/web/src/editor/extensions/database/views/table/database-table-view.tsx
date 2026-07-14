@@ -55,8 +55,10 @@ import {
   databaseAddPropertyColumnDefaultWidth,
   databaseColumnMinWidth,
   databaseNameColumnDefaultWidth,
-  DATABASE_PAGE_DRAG_MIME,
 } from "../../core/database-contracts"
+import {
+  setDatabasePageDragPayload,
+} from "../../interactions/database-page-drop"
 import { DatabasePageLink } from "../../interactions/database-page-link"
 import { DatabaseFormulaDialog } from "../../properties/formula/database-formula-dialog"
 import {
@@ -1676,16 +1678,12 @@ export function DatabaseTableView() {
           }
         : null
     )
-    event.dataTransfer.effectAllowed = "copyMove"
-    event.dataTransfer.setData(
-      DATABASE_PAGE_DRAG_MIME,
-      JSON.stringify({
-        databaseId: loadedDatabaseId,
-        pageId: row.pageId,
-        rowId: row.id,
-      })
-    )
-    event.dataTransfer.setData("text/plain", getRowTitle(row))
+    setDatabasePageDragPayload(event.dataTransfer, {
+      databaseId: loadedDatabaseId,
+      pageId: row.pageId,
+      rowId: row.id,
+      title: getRowTitle(row),
+    })
   }
 
   const renderInsertPropertyHeader = (insertKey: string, position: number) => (
@@ -2166,7 +2164,12 @@ export function DatabaseTableView() {
 
   const renderRowDropLine = () =>
     rowDropLineTop !== null ? (
-      <div className="database-row-drop-line" style={{ top: rowDropLineTop }} />
+      <div
+        aria-hidden="true"
+        className="drag-drop-line database-row-drop-line"
+        data-orientation="horizontal"
+        style={{ top: rowDropLineTop }}
+      />
     ) : null
 
   return (

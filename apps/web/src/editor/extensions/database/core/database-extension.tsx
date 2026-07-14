@@ -6,7 +6,7 @@ import {
 } from "@tiptap/react"
 import { useSyncExternalStore } from "react"
 
-import { DATABASE_PAGE_DRAG_MIME } from "./database-contracts"
+import { hasDatabasePageDragPayload } from "../interactions/database-page-drop"
 import { DatabaseView } from "../views/database-view"
 import type { DatabaseBlockOptions } from "./database-contracts"
 
@@ -24,9 +24,7 @@ function isDatabasePageDragEvent(event: Event) {
     return false
   }
 
-  return Array.from(event.dataTransfer?.types ?? []).includes(
-    DATABASE_PAGE_DRAG_MIME
-  )
+  return hasDatabasePageDragPayload(event.dataTransfer)
 }
 
 function DatabaseBlockView({

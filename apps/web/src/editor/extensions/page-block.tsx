@@ -27,7 +27,9 @@ import {
   type DatabasePayload,
 } from "@notelab/features/databases";
 import { colorWithAlpha, getPaletteColor } from "@/lib/color-tokens";
-import { DATABASE_PAGE_DRAG_MIME } from "@/packages/editor/extensions/database";
+import {
+  setDatabasePageDragPayload,
+} from "@/packages/editor/extensions/database/interactions/database-page-drop";
 
 export type CreatedPage = {
   id: string;
@@ -182,15 +184,7 @@ function PageBlockView({
       return;
     }
 
-    event.dataTransfer.effectAllowed = "copyMove";
-    event.dataTransfer.setData(
-      DATABASE_PAGE_DRAG_MIME,
-      JSON.stringify({
-        pageId,
-        title,
-      }),
-    );
-    event.dataTransfer.setData("text/plain", title);
+    setDatabasePageDragPayload(event.dataTransfer, { pageId, title });
   };
 
   const selectOption = (index: number) => {

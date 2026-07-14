@@ -12,8 +12,8 @@ import {
   useReorderDatabaseRows,
 } from "@notelab/features/databases"
 
-import { DATABASE_PAGE_DRAG_MIME } from "../../core/database-contracts"
 import type { SortableDatabaseItem } from "../../interactions/database-item-utils"
+import { setDatabasePageDragPayload } from "../../interactions/database-page-drop"
 import {
   finishDatabaseRowDrag,
   hideNativeDatabaseRowDragPreview,
@@ -136,16 +136,12 @@ export function useTimelineRowDrag(input: TimelineRowDragInput) {
       hideNativeDatabaseRowDragPreview(event.dataTransfer)
       setDraggedRowId(row.id)
       setDropTargetIndex(input.visibleRowIndexById.get(row.id) ?? 0)
-      event.dataTransfer.effectAllowed = "copyMove"
-      event.dataTransfer.setData(
-        DATABASE_PAGE_DRAG_MIME,
-        JSON.stringify({
-          databaseId: input.databaseId,
-          pageId: row.pageId,
-          rowId: row.id,
-        }),
-      )
-      event.dataTransfer.setData("text/plain", getTimelineRowTitle(row))
+      setDatabasePageDragPayload(event.dataTransfer, {
+        databaseId: input.databaseId,
+        pageId: row.pageId,
+        rowId: row.id,
+        title: getTimelineRowTitle(row),
+      })
     },
     [input],
   )

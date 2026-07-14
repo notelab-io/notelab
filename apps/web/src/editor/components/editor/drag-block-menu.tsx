@@ -40,8 +40,8 @@ import {
   colorWithAlpha,
   getPaletteColor,
 } from "@/lib/color-tokens"
+import { setDatabasePageDragPayload } from "@/packages/editor/extensions/database/interactions/database-page-drop"
 import type { DragHandleTarget } from "./types"
-import { DATABASE_PAGE_DRAG_MIME } from "@/packages/editor/extensions/database"
 
 const blockCommandItems = slashCommandItems.filter(
   (item) => item.title !== "Emoji"
@@ -236,7 +236,9 @@ export function DragBlockMenu({
       window.setTimeout(() => {
         if (!pointer.moved && !suppressGripMenuOpenRef.current) {
           openGripActionsMenu()
-        } else if (!pointer.moved) {
+        }
+
+        if (!pointer.moved) {
           endBlockDrag(editor.view)
         }
 
@@ -246,8 +248,14 @@ export function DragBlockMenu({
       unbindGripPointerTracking()
     }
 
+    const handlePointerCancel = () => {
+      gripPointerRef.current = null
+      endBlockDrag(editor.view)
+      unbindGripPointerTracking()
+    }
+
     gripPointerListenersRef.current = {
-      onPointerCancel: handlePointerUp,
+      onPointerCancel: handlePointerCancel,
       onPointerMove: handlePointerMove,
       onPointerUp: handlePointerUp,
     }
@@ -494,13 +502,10 @@ export function DragBlockMenu({
                 target.node.type.name === "pageBlock" &&
                 typeof pageId === "string"
               ) {
-                event.dataTransfer.setData(
-                  DATABASE_PAGE_DRAG_MIME,
-                  JSON.stringify({
-                    pageId,
-                    title: target.node.textContent || "Untitled",
-                  })
-                )
+                setDatabasePageDragPayload(event.dataTransfer, {
+                  pageId,
+                  title: target.node.textContent || "Untitled",
+                })
               }
             }}
             onKeyDown={(event) => {

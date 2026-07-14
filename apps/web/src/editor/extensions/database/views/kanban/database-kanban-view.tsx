@@ -40,7 +40,9 @@ import {
   getNextDatabaseOptionColor,
   getDatabasePropertyType,
 } from "../../core/database-property-types"
-import { DATABASE_PAGE_DRAG_MIME } from "../../core/database-contracts"
+import {
+  setDatabasePageDragPayload,
+} from "../../interactions/database-page-drop"
 import { DatabasePropertyDate } from "../../properties/database-property-date"
 import { DatabasePropertyInput } from "../../properties/database-property-input"
 import { DatabasePageLink } from "../../interactions/database-page-link"
@@ -788,17 +790,12 @@ export function DatabaseKanbanView() {
 
     event.stopPropagation()
     startDatabaseRowDrag()
-    event.dataTransfer.effectAllowed = "copyMove"
-    event.dataTransfer.setData(
-      DATABASE_PAGE_DRAG_MIME,
-      JSON.stringify({
-        databaseId,
-        pageId: row.pageId,
-        rowId: row.id,
-        title,
-      })
-    )
-    event.dataTransfer.setData("text/plain", title)
+    setDatabasePageDragPayload(event.dataTransfer, {
+      databaseId,
+      pageId: row.pageId,
+      rowId: row.id,
+      title,
+    })
 
     setDraggedKanbanCard(payload)
     setDragOverKanbanOptionId(option.id)
@@ -1109,7 +1106,11 @@ export function DatabaseKanbanView() {
                       ))}
                       {activeCardDropTarget?.targetIndex ===
                       optionItems.length ? (
-                        <div className="database-kanban-card-drop-line" />
+                        <div
+                          aria-hidden="true"
+                          className="drag-drop-line database-kanban-card-drop-line"
+                          data-orientation="horizontal"
+                        />
                       ) : null}
                       {editable && canAddPageToOption ? (
                         <button
