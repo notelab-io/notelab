@@ -1119,6 +1119,103 @@ export function register({ assert, loadModule, test }) {
       ],
     );
   });
+
+  test("database view commands persist chart settings in the active view", async () => {
+    const { getDatabaseViewCommands } = await loadModule(
+      "/src/editor/extensions/database/views/database-view-commands.ts",
+    );
+    const updateDatabaseView = createMutation();
+    const commands = getDatabaseViewCommands({
+      activeDatabaseFilters: [],
+      activeDatabaseSorts: [],
+      activeView: {
+        config: { filters: [] },
+        id: "view-chart",
+        name: "Chart",
+        type: "chart",
+      },
+      databaseId,
+      editable: true,
+      isKanbanView: false,
+      items: [],
+      kanbanGroupProperty: null,
+      mutations: createMutations({ updateDatabaseView }),
+      payload: createPayload(),
+      properties: [],
+      setActiveViewId: () => {},
+      setFilterPickerOpen: () => {},
+      setShowFilterPill: () => {},
+      setShowSortPill: () => {},
+      setSortPickerOpen: () => {},
+    });
+
+    commands.updateDatabaseChartSettings({
+      color: "purple",
+      groupByPropertyId: "property-status",
+      type: "pie",
+    });
+
+    assert.deepEqual(updateDatabaseView.calls[0][0], {
+      config: {
+        chart: {
+          color: "purple",
+          groupByPropertyId: "property-status",
+          omitZeroValues: false,
+          type: "pie",
+          valueColors: {},
+        },
+        filters: [],
+      },
+      databaseId,
+      databaseViewId: "view-chart",
+    });
+  });
+
+  test("database view commands add a chart view", async () => {
+    const { getDatabaseViewCommands } = await loadModule(
+      "/src/editor/extensions/database/views/database-view-commands.ts",
+    );
+    const addDatabaseView = createMutation();
+    const activeViewIds = [];
+    const commands = getDatabaseViewCommands({
+      activeDatabaseFilters: [],
+      activeDatabaseSorts: [],
+      activeView: null,
+      databaseId,
+      editable: true,
+      isKanbanView: false,
+      items: [],
+      kanbanGroupProperty: null,
+      mutations: createMutations({ addDatabaseView }),
+      payload: createPayload(),
+      properties: [],
+      setActiveViewId: (viewId) => activeViewIds.push(viewId),
+      setFilterPickerOpen: () => {},
+      setShowFilterPill: () => {},
+      setShowSortPill: () => {},
+      setSortPickerOpen: () => {},
+    });
+
+    commands.addChartView();
+    addDatabaseView.calls[0][1].onSuccess({
+      views: [{ id: "view-chart", name: "Chart", type: "chart" }],
+    });
+
+    assert.deepEqual(addDatabaseView.calls[0][0], {
+      config: {
+        chart: {
+          color: "auto",
+          omitZeroValues: false,
+          type: "bar",
+          valueColors: {},
+        },
+      },
+      databaseId,
+      name: "Chart",
+      type: "chart",
+    });
+    assert.deepEqual(activeViewIds, ["view-chart"]);
+  });
 }
 
 function createMutation() {
