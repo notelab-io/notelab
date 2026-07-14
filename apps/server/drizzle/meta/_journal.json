@@ -225,6 +225,13 @@
       "when": 1784030400000,
       "tag": "0031_repair_database_realtime_outbox",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1784034000000,
+      "tag": "0032_drop_legacy_comments",
+      "breakpoints": true
     }
   ]
 }

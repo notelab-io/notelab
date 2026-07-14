@@ -200,56 +200,6 @@ export type PagePropertyPresenceTarget = {
   rowId: string;
 };
 
-export type CommentAuthor = {
-  email: string;
-  id: string;
-  image?: string | null;
-  name: string;
-};
-
-export type PageCommentThread = {
-  id: string;
-  workspaceId: string;
-  pageId: string;
-  createdById?: string | null;
-  resolvedAt?: string | null;
-  resolvedById?: string | null;
-  deletedAt?: string | null;
-  createdAt: string;
-  updatedAt: string;
-  lastActivityAt: string;
-};
-
-export type PageCommentReaction = {
-  count: number;
-  emoji: string;
-  reactedByMe: boolean;
-};
-
-export type PageCommentMessage = {
-  id: string;
-  threadId: string;
-  authorId?: string | null;
-  author?: CommentAuthor | null;
-  body: string;
-  editedAt?: string | null;
-  reactions: PageCommentReaction[];
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type PageCommentsPayload = {
-  comments: PageCommentMessage[];
-  thread: PageCommentThread | null;
-};
-
-export type PageThreadsPayload = {
-  threads: Array<{
-    commentCount: number;
-    thread: PageCommentThread;
-  }>;
-};
-
 export type AccessLevel = "view" | "edit" | "full";
 
 export type AccessTargetType = "public" | "user" | "team";
@@ -334,14 +284,6 @@ export function getPageFromDetail(
 
 export const pagePropertiesQueryKey = (pageId: string | null | undefined) =>
   ["page", pageId ?? "none", "properties"] as const;
-
-export const pageCommentsQueryKey = (
-  pageId: string | null | undefined,
-  threadId?: string | null,
-) => ["page", pageId ?? "none", "comments", threadId ?? "active"] as const;
-
-export const pageThreadsQueryKey = (pageId: string | null | undefined) =>
-  ["page", pageId ?? "none", "threads"] as const;
 
 export const pageAccessQueryKey = (pageId: string | null | undefined) =>
   ["page", pageId ?? "none", "access"] as const;
@@ -601,48 +543,6 @@ export const pagePropertiesQueryOptions = (
       }
 
       return apiFetch<PagePropertiesPayload>(`/pages/${pageId}/properties`, {
-        method: "GET",
-        signal,
-      });
-    },
-  });
-
-export const pageCommentsQueryOptions = (
-  apiFetch: ApiFetcher,
-  pageId: string | null | undefined,
-  threadId?: string | null,
-  enabled = true,
-) =>
-  queryOptions({
-    queryKey: pageCommentsQueryKey(pageId, threadId),
-    enabled: Boolean(pageId) && enabled,
-    queryFn: async ({ signal }) => {
-      if (!pageId) {
-        return { comments: [], thread: null };
-      }
-
-      const url = threadId
-        ? `/pages/${pageId}/comments?threadId=${encodeURIComponent(threadId)}`
-        : `/pages/${pageId}/comments`;
-
-      return apiFetch<PageCommentsPayload>(url, { method: "GET", signal });
-    },
-  });
-
-export const pageThreadsQueryOptions = (
-  apiFetch: ApiFetcher,
-  pageId: string | null | undefined,
-  enabled = true,
-) =>
-  queryOptions({
-    queryKey: pageThreadsQueryKey(pageId),
-    enabled: Boolean(pageId) && enabled,
-    queryFn: async ({ signal }) => {
-      if (!pageId) {
-        return { threads: [] };
-      }
-
-      return apiFetch<PageThreadsPayload>(`/pages/${pageId}/threads`, {
         method: "GET",
         signal,
       });

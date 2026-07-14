@@ -7,7 +7,6 @@ import {
   pageSettingsRoutes,
   sessionRoutes,
 } from "../features/auth/routes";
-import { commentRoutes } from "../features/comments/routes";
 import { databaseRoutes } from "../features/databases/routes";
 import { healthRoutes } from "../features/health/routes";
 import { imageRoutes } from "../features/images/routes";
@@ -32,7 +31,6 @@ export function registerRoutes(app: Hono<AppBindings>) {
   app.route("/metadata", metadataRoutes);
   app.route("/workspaces", workspaceRoutes);
   app.route("/api/workspace/settings", workspaceSettingsRoutes);
-  app.route("/", commentRoutes);
   app.route("/search", searchRoutes);
   app.route("/session", sessionRoutes);
   app.route("/user-settings", pageSettingsRoutes);
