@@ -102,6 +102,37 @@ function DatabaseChartSkeleton() {
   )
 }
 
+function DatabaseListSkeleton() {
+  return (
+    <div className="space-y-1 py-1">
+      {Array.from({ length: 7 }).map((_, index) => (
+        <div className="flex h-8 items-center gap-3 px-2" key={index}>
+          <Skeleton className="size-4 shrink-0 rounded-sm" />
+          <Skeleton className={index % 2 === 0 ? "h-4 w-48" : "h-4 w-32"} />
+          <Skeleton className="ml-auto h-4 w-24" />
+          <Skeleton className="h-4 w-20" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function DatabaseGallerySkeleton() {
+  return (
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4 py-2">
+      {Array.from({ length: 6 }).map((_, index) => (
+        <div className="overflow-hidden rounded-md border" key={index}>
+          <Skeleton className="h-[150px] w-full rounded-none" />
+          <div className="flex h-10 items-center gap-2 border-t px-3">
+            <Skeleton className="size-4 shrink-0 rounded-sm" />
+            <Skeleton className={index % 2 === 0 ? "h-4 w-32" : "h-4 w-24"} />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export function DatabaseViewSkeleton({ viewType }: { viewType?: string }) {
   return (
     <div aria-label="Loading database" className="py-2" role="status">
@@ -111,6 +142,10 @@ export function DatabaseViewSkeleton({ viewType }: { viewType?: string }) {
         <DatabaseTimelineSkeleton />
       ) : viewType === "chart" ? (
         <DatabaseChartSkeleton />
+      ) : viewType === "gallery" ? (
+        <DatabaseGallerySkeleton />
+      ) : viewType === "list" ? (
+        <DatabaseListSkeleton />
       ) : (
         <DatabaseTableSkeleton />
       )}
