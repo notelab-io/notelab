@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react"
 import { EditorContent } from "@tiptap/react"
+import { TextSelection } from "@tiptap/pm/state"
 import { SelectionAiDiffDock } from "@/packages/editor/components/editor/selection-ai-diff-dock"
 import { MobileActionBar } from "@/packages/editor/components/editor/mobile-action-bar"
 import { PageMetadata } from "@/packages/editor/components/editor/page-metadata"
@@ -329,6 +330,31 @@ export function Editor({
     selectionAiPreview,
   ])
 
+  const focusPageBodyFromTitle = useCallback(() => {
+    if (!editor || !editable) return
+
+    requestAnimationFrame(() => {
+      const hasContent = editor.state.doc.textContent.trim().length > 0
+
+      if (!hasContent) {
+        editor.chain().focus("start").run()
+        return
+      }
+
+      const paragraph = editor.schema.nodes.paragraph?.create()
+
+      if (!paragraph) {
+        editor.chain().focus("start").run()
+        return
+      }
+
+      const transaction = editor.state.tr.insert(0, paragraph)
+      transaction.setSelection(TextSelection.create(transaction.doc, 1))
+      editor.view.dispatch(transaction.scrollIntoView())
+      editor.view.focus()
+    })
+  }, [editable, editor])
+
   const renderLayoutModule = (
     module: NonNullable<typeof layoutConfig>["modules"][number],
   ) => {
@@ -389,6 +415,7 @@ export function Editor({
         layoutSection={layoutSection}
         onCoverChange={onCoverChange}
         onIconChange={onEmojiChange}
+        onTitleEnter={focusPageBodyFromTitle}
         onTitleChange={onTitleChange}
         workspaceId={workspaceId}
         title={title}
@@ -490,6 +517,7 @@ export function Editor({
               icon={emoji}
               onCoverChange={onCoverChange}
               onIconChange={onEmojiChange}
+              onTitleEnter={focusPageBodyFromTitle}
               onTitleChange={onTitleChange}
               workspaceId={workspaceId}
               title={title}

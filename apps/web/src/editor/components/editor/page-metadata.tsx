@@ -68,6 +68,7 @@ type PageMetadataProps = {
   layoutSection?: "heading" | "properties" | "discussions"
   onCoverChange?: (cover: string) => void
   onIconChange?: (icon: string) => void
+  onTitleEnter?: () => void
   onTitleChange?: (title: string) => void
   workspaceId?: string | null
   title?: string
@@ -176,6 +177,7 @@ export function PageMetadata({
   layoutSection,
   onCoverChange,
   onIconChange,
+  onTitleEnter,
   onTitleChange,
   workspaceId,
   title: titleProp,
@@ -652,6 +654,7 @@ export function PageMetadata({
               if (event.key === "Enter") {
                 event.preventDefault()
                 event.currentTarget.blur()
+                onTitleEnter?.()
               }
             }}
             placeholder="New page"
