@@ -1665,6 +1665,8 @@
       .database-select-cell-trigger
     ) {
     @apply h-auto min-h-8 items-start whitespace-normal;
+    min-width: 0;
+    width: 100%;
     overflow-wrap: anywhere;
   }
 
@@ -1674,6 +1676,19 @@
     text-overflow: clip;
     white-space: normal;
     overflow-wrap: anywhere;
+  }
+
+  .database-cell-scroll[data-wrap-content="true"] .database-page-link {
+    @apply py-1;
+  }
+
+  .database-cell-scroll[data-wrap-content="true"] .database-page-link .database-page-main {
+    @apply min-w-0 items-start;
+  }
+
+  .database-cell-scroll[data-wrap-content="true"] .database-page-title {
+    @apply max-w-full whitespace-normal;
+    word-break: break-word;
   }
 
   .database-cell-scroll[data-wrap-content="false"] .database-relation-cell-trigger {
@@ -1817,13 +1832,14 @@
 
   .database-cell-scroll[data-wrap-content="true"]
     .database-input-cell-wrap:not([data-popover-open="true"]) {
-    @apply h-auto;
+    @apply h-auto min-w-0;
+    width: 100%;
   }
 
   .database-cell-scroll[data-wrap-content="true"]
     .database-input-cell-wrap:not([data-popover-open="true"])
     .database-input-cell {
-    @apply h-auto overflow-x-hidden whitespace-pre-wrap;
+    @apply h-auto min-w-0 overflow-x-hidden whitespace-pre-wrap;
     overflow-wrap: anywhere;
   }
 
