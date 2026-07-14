@@ -181,6 +181,8 @@ export const useEditorInstance = ({
     [editorLifecycleKey],
   );
 
+  useEffect(() => () => dragDrop.destroy(), [dragDrop]);
+
   useEffect(() => {
     editorRef.current = editor;
   }, [editor]);
