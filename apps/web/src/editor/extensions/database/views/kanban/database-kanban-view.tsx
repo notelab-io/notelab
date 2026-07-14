@@ -318,6 +318,7 @@ export function DatabaseKanbanView() {
     hasNextPage,
     isAddingDatabaseRow,
     isFetchingNextPage,
+    layoutSettings,
     showPageIconInTitle,
     showPropertyTitles,
     addDatabaseRow,
@@ -865,7 +866,8 @@ export function DatabaseKanbanView() {
     const pageProperty = property.property
     const key = `${row.pageId}:${pageProperty.id}`
     const persistedValue = propertyValuesByKey[key] ?? ""
-    const wrapContent = getPropertyWrapContent(pageProperty.config)
+    const wrapContent =
+      layoutSettings.wrapAllContent || getPropertyWrapContent(pageProperty.config)
     const isGrouped = groupProperty?.property.id === pageProperty.id
     const propertyMenuKey = `${row.pageId}:${property.id}`
     const PropertyIcon = getDatabasePropertyType(pageProperty.type).icon
@@ -966,6 +968,7 @@ export function DatabaseKanbanView() {
       <div
         className="database-kanban-wrap database-inline-scroll-wrap"
         data-inline-scroll={isInlineKanbanScrollEnabled ? "true" : undefined}
+        data-wrap-content={layoutSettings.wrapAllContent ? "true" : undefined}
         ref={wrapRef}
         style={kanbanWrapStyle}
       >

@@ -4,7 +4,9 @@ import {
   CalendarRange,
   ChartPie,
   Database,
+  GalleryThumbnails,
   Kanban,
+  List,
   Plus,
   Search,
   Table2,
@@ -115,7 +117,11 @@ export function LinkedDataSourcePicker({
                     ? CalendarRange
                     : option.type === "chart"
                       ? ChartPie
-                      : Table2
+                      : option.type === "gallery"
+                        ? GalleryThumbnails
+                        : option.type === "list"
+                          ? List
+                          : Table2
               return (
                 <button
                   className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-accent"

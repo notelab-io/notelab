@@ -11,10 +11,13 @@ import {
   FileText,
   Filter,
   GripVertical,
+  Image as ImageIcon,
   CalendarRange,
   ChartLine,
   ChartPie,
+  GalleryThumbnails,
   Kanban,
+  List,
   Link as LinkIcon,
   Lock,
   MoreHorizontal,
@@ -70,6 +73,7 @@ import {
   getDatabaseFilterOperatorsForType,
   type DatabaseConditionalColorConfig,
   type DatabaseLinkedViewConfig,
+  type DatabaseLayoutSettings,
 } from "./database-view-config";
 import { DatabasePropertyEditSubmenu } from "../properties/database-property-menu";
 import { hasDatabasePropertyEditSettings } from "../properties/database-property-edit-submenu";
@@ -417,7 +421,11 @@ function LinkedDataSourceMenuItem({
         ? CalendarRange
         : view.viewType === "chart"
           ? ChartPie
-          : Table2;
+          : view.viewType === "gallery"
+            ? GalleryThumbnails
+            : view.viewType === "list"
+              ? List
+              : Table2;
 
   return (
     <DropDrawerItem disabled>
@@ -857,6 +865,7 @@ export function DatabaseViewSettingsMenu({
   canAddDatabaseFilter,
   canAddDatabaseSort,
   chartSettings,
+  layoutSettings,
   databaseId,
   databaseName,
   dataSources,
@@ -885,10 +894,13 @@ export function DatabaseViewSettingsMenu({
   onSetViewDateProperty,
   onSetViewGroupProperty,
   onSetViewType,
+  onShowPageIconChange,
+  onShowTitleChange,
   onTogglePropertyTitles,
   onTogglePropertyVisibility,
   onUpdateDatabaseFilter,
   onUpdateDatabaseChartSettings,
+  onUpdateDatabaseLayoutSettings,
   onUpdateDatabaseSort,
   properties,
   sortFieldOptions,
@@ -896,6 +908,8 @@ export function DatabaseViewSettingsMenu({
   viewConfig,
   visiblePropertyCount,
   showPropertyTitles,
+  showPageIcon,
+  showTitle,
 }: {
   activeConditionalColors: DatabaseActiveConditionalColor[];
   activeDatabaseFilters: DatabaseActiveFilter[];
@@ -908,6 +922,7 @@ export function DatabaseViewSettingsMenu({
   canAddDatabaseFilter: boolean;
   canAddDatabaseSort: boolean;
   chartSettings: DatabaseChartSettings;
+  layoutSettings: DatabaseLayoutSettings;
   databaseId?: string;
   databaseName?: string;
   dataSources: DatabaseSourceMenuItem[];
@@ -937,7 +952,11 @@ export function DatabaseViewSettingsMenu({
   onSaveDatabaseViewTitle: (title: string) => void;
   onSetViewDateProperty: (datePropertyId: string | null) => void;
   onSetViewGroupProperty: (groupPropertyId: string | null) => void;
-  onSetViewType: (type: "table" | "kanban" | "timeline" | "chart") => void;
+  onSetViewType: (
+    type: "table" | "kanban" | "timeline" | "chart" | "gallery" | "list",
+  ) => void;
+  onShowPageIconChange: (showPageIcon: boolean) => void;
+  onShowTitleChange?: (showTitle: boolean) => void;
   onTogglePropertyTitles: () => void;
   onTogglePropertyVisibility: (propertyId: string) => void;
   onUpdateDatabaseFilter: (
@@ -947,6 +966,9 @@ export function DatabaseViewSettingsMenu({
   onUpdateDatabaseChartSettings: (
     settings: Partial<DatabaseChartSettings>,
   ) => void;
+  onUpdateDatabaseLayoutSettings: (
+    settings: Partial<DatabaseLayoutSettings>,
+  ) => void;
   onUpdateDatabaseSort: (index: number, patch: DatabaseSortUpdatePatch) => void;
   properties: DatabaseViewProperty[];
   sortFieldOptions: DatabaseSearchableMenuOption[];
@@ -954,6 +976,8 @@ export function DatabaseViewSettingsMenu({
   viewConfig?: unknown;
   visiblePropertyCount: number;
   showPropertyTitles: boolean;
+  showPageIcon: boolean;
+  showTitle: boolean;
 }) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = controlledOpen ?? uncontrolledOpen;
@@ -982,25 +1006,43 @@ export function DatabaseViewSettingsMenu({
   const isKanbanView = activeViewType === "kanban";
   const isTimelineView = activeViewType === "timeline";
   const isChartView = activeViewType === "chart";
+  const isGalleryView = activeViewType === "gallery";
+  const isListView = activeViewType === "list";
   const ViewTypeIcon = isKanbanView
     ? Kanban
     : isTimelineView
       ? CalendarRange
       : isChartView
         ? ChartPie
-        : Table2;
+        : isGalleryView
+          ? GalleryThumbnails
+          : isListView
+            ? List
+            : Table2;
   const viewTypeLabel = isKanbanView
     ? "Kanban"
     : isTimelineView
       ? "Timeline"
       : isChartView
         ? "Chart"
-        : "Table";
+        : isGalleryView
+          ? "Gallery"
+          : isListView
+            ? "List"
+            : "Table";
   const activeDateProperty = dateProperties.find(
     (property) => property.property.id === datePropertyId,
   );
   const activeGroupProperty = groupProperties.find(
     (property) => property.property.id === groupPropertyId,
+  );
+  const visibleCardProperties = properties.filter(
+    (property) =>
+      !getPropertyHiddenForView(
+        property.id,
+        property.property.config,
+        viewConfig,
+      ),
   );
   const pagesById = new Map(
     (navigation?.pages ?? []).map((page) => [page.id, page]),
@@ -1038,7 +1080,11 @@ export function DatabaseViewSettingsMenu({
               ? CalendarRange
               : view.type === "chart"
                 ? ChartPie
-                : Table2;
+                : view.type === "gallery"
+                  ? GalleryThumbnails
+                  : view.type === "list"
+                    ? List
+                    : Table2;
 
         return {
           icon: <ViewIcon />,
@@ -1124,101 +1170,465 @@ export function DatabaseViewSettingsMenu({
               right={viewTypeLabel}
             />
           </DropDrawerSubTrigger>
-          <DropDrawerSubContent className="w-72">
-            <DropDrawerItem onSelect={() => onSetViewType("table")}>
-              <Table2 />
-              <span>Table</span>
-              {!isKanbanView && !isTimelineView && !isChartView ? (
-                <Check className="ml-auto text-foreground" />
-              ) : null}
-            </DropDrawerItem>
-            <DropDrawerItem onSelect={() => onSetViewType("kanban")}>
-              <Kanban />
-              <span>Kanban</span>
-              {isKanbanView ? (
-                <Check className="ml-auto text-foreground" />
-              ) : null}
-            </DropDrawerItem>
-            <DropDrawerItem onSelect={() => onSetViewType("timeline")}>
-              <CalendarRange />
-              <span>Timeline</span>
-              {isTimelineView ? (
-                <Check className="ml-auto text-foreground" />
-              ) : null}
-            </DropDrawerItem>
-            <DropDrawerItem onSelect={() => onSetViewType("chart")}>
-              <ChartPie />
-              <span>Chart</span>
-              {isChartView ? (
-                <Check className="ml-auto text-foreground" />
-              ) : null}
-            </DropDrawerItem>
-          </DropDrawerSubContent>
-        </DropDrawerSub>
-        {isChartView ? (
-          <DatabaseChartSettingsSection
-            onChange={onUpdateDatabaseChartSettings}
-            properties={properties}
-            settings={chartSettings}
-            titlePropertyLabel={titlePropertyLabel}
-          />
-        ) : null}
-        {isTimelineView ? (
-          <DropDrawerSub>
-            <DropDrawerSubTrigger>
-              <ViewSettingsRow
-                icon={<CalendarRange />}
-                label="Date"
-                right={activeDateProperty?.property.name ?? "None"}
-              />
-            </DropDrawerSubTrigger>
-            <DropDrawerSubContent className="w-72">
-              {dateProperties.length > 0 ? (
-                dateProperties.map((property) => {
-                  const PropertyIcon = getDatabasePropertyType(
-                    property.property.type,
-                  ).icon;
-                  const isSelected = property.property.id === datePropertyId;
+          <DropDrawerSubContent className="max-h-[min(46rem,calc(100vh-2rem))] w-72 max-w-[calc(100vw-1rem)] overflow-y-auto p-1">
+            <div className="px-2 py-1.5 text-sm font-semibold text-foreground">
+              Layout
+            </div>
+            <div className="grid grid-cols-3 gap-1.5 px-1 pb-1">
+              {[
+                { icon: Table2, label: "Table", type: "table" as const },
+                { icon: Kanban, label: "Board", type: "kanban" as const },
+                {
+                  icon: CalendarRange,
+                  label: "Timeline",
+                  type: "timeline" as const,
+                },
+                { icon: List, label: "List", type: "list" as const },
+                {
+                  icon: GalleryThumbnails,
+                  label: "Gallery",
+                  type: "gallery" as const,
+                },
+                { icon: ChartPie, label: "Chart", type: "chart" as const },
+              ].map((option) => {
+                const selected = activeViewType === option.type;
 
-                  return (
+                return (
+                  <button
+                    aria-pressed={selected}
+                    className={cn(
+                      "flex h-20 flex-col items-center justify-center gap-1.5 rounded-md border text-xs font-medium text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40",
+                      selected &&
+                        "border-primary bg-primary/10 text-primary ring-1 ring-primary",
+                    )}
+                    key={option.type}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      onSetViewType(option.type);
+                    }}
+                    type="button"
+                  >
+                    <option.icon className="size-5" />
+                    <span>{option.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <DropDrawerSeparator />
+            <DropDrawerItem
+              aria-pressed={showTitle}
+              disabled={!onShowTitleChange}
+              onSelect={(event) => {
+                event.preventDefault();
+                onShowTitleChange?.(!showTitle);
+              }}
+            >
+              <span>Show data source titles</span>
+              <Switch
+                checked={showTitle}
+                className="pointer-events-none ml-auto"
+                size="sm"
+                tabIndex={-1}
+              />
+            </DropDrawerItem>
+            {!isChartView ? (
+              <DropDrawerItem
+                aria-pressed={showPageIcon}
+                onSelect={(event) => {
+                  event.preventDefault();
+                  onShowPageIconChange(!showPageIcon);
+                }}
+              >
+                <span>Show page icon</span>
+                <Switch
+                  checked={showPageIcon}
+                  className="pointer-events-none ml-auto"
+                  size="sm"
+                  tabIndex={-1}
+                />
+              </DropDrawerItem>
+            ) : null}
+            {!isChartView && !isTimelineView ? (
+              <DropDrawerItem
+                aria-pressed={layoutSettings.wrapAllContent}
+                onSelect={(event) => {
+                  event.preventDefault();
+                  onUpdateDatabaseLayoutSettings({
+                    wrapAllContent: !layoutSettings.wrapAllContent,
+                  });
+                }}
+              >
+                <span>Wrap all content</span>
+                <Switch
+                  checked={layoutSettings.wrapAllContent}
+                  className="pointer-events-none ml-auto"
+                  size="sm"
+                  tabIndex={-1}
+                />
+              </DropDrawerItem>
+            ) : null}
+            {!isKanbanView &&
+            !isTimelineView &&
+            !isChartView &&
+            !isGalleryView &&
+            !isListView ? (
+              <DropDrawerItem
+                aria-pressed={layoutSettings.showVerticalLines}
+                onSelect={(event) => {
+                  event.preventDefault();
+                  onUpdateDatabaseLayoutSettings({
+                    showVerticalLines: !layoutSettings.showVerticalLines,
+                  });
+                }}
+              >
+                <span>Show vertical lines</span>
+                <Switch
+                  checked={layoutSettings.showVerticalLines}
+                  className="pointer-events-none ml-auto"
+                  size="sm"
+                  tabIndex={-1}
+                />
+              </DropDrawerItem>
+            ) : null}
+            {isKanbanView || isGalleryView ? (
+              <DropDrawerSub>
+                <DropDrawerSubTrigger>
+                  <ViewSettingsRow
+                    icon={<GripVertical />}
+                    label="Group by"
+                    right={activeGroupProperty?.property.name ?? "None"}
+                  />
+                </DropDrawerSubTrigger>
+                <DropDrawerSubContent className="w-72">
+                  <DropDrawerItem onSelect={() => onSetViewGroupProperty(null)}>
+                    <GripVertical />
+                    <span>No grouping</span>
+                    {groupPropertyId === null ? (
+                      <Check className="ml-auto text-foreground" />
+                    ) : null}
+                  </DropDrawerItem>
+                  {groupProperties.map((property) => {
+                    const PropertyIcon = getDatabasePropertyType(
+                      property.property.type,
+                    ).icon;
+
+                    return (
+                      <DropDrawerItem
+                        key={property.id}
+                        onSelect={() =>
+                          onSetViewGroupProperty(property.property.id)
+                        }
+                      >
+                        <PropertyIcon />
+                        <span>{property.property.name}</span>
+                        {property.property.id === groupPropertyId ? (
+                          <Check className="ml-auto text-foreground" />
+                        ) : null}
+                      </DropDrawerItem>
+                    );
+                  })}
+                </DropDrawerSubContent>
+              </DropDrawerSub>
+            ) : null}
+            {isKanbanView ? (
+              <DropDrawerItem
+                aria-pressed={showPropertyTitles}
+                onSelect={(event) => {
+                  event.preventDefault();
+                  onTogglePropertyTitles();
+                }}
+              >
+                <span>Show property titles</span>
+                <Switch
+                  checked={showPropertyTitles}
+                  className="pointer-events-none ml-auto"
+                  size="sm"
+                  tabIndex={-1}
+                />
+              </DropDrawerItem>
+            ) : null}
+            {isTimelineView ? (
+              <DropDrawerSub>
+                <DropDrawerSubTrigger>
+                  <ViewSettingsRow
+                    icon={<CalendarRange />}
+                    label="Show timeline by"
+                    right={activeDateProperty?.property.name ?? "None"}
+                  />
+                </DropDrawerSubTrigger>
+                <DropDrawerSubContent className="w-72">
+                  {dateProperties.length > 0 ? (
+                    dateProperties.map((property) => {
+                      const PropertyIcon = getDatabasePropertyType(
+                        property.property.type,
+                      ).icon;
+
+                      return (
+                        <DropDrawerItem
+                          key={property.id}
+                          onSelect={() =>
+                            onSetViewDateProperty(property.property.id)
+                          }
+                        >
+                          <PropertyIcon />
+                          <span>{property.property.name}</span>
+                          {property.property.id === datePropertyId ? (
+                            <Check className="ml-auto text-foreground" />
+                          ) : null}
+                        </DropDrawerItem>
+                      );
+                    })
+                  ) : (
+                    <DropDrawerItem disabled>No date properties yet</DropDrawerItem>
+                  )}
+                </DropDrawerSubContent>
+              </DropDrawerSub>
+            ) : null}
+            {isGalleryView ? (
+              <>
+                <DropDrawerSub>
+                  <DropDrawerSubTrigger>
+                    <ViewSettingsRow
+                      icon={<ImageIcon />}
+                      label="Card preview"
+                      right={
+                        layoutSettings.cardPreview === "page-cover"
+                          ? "Page cover"
+                          : "None"
+                      }
+                    />
+                  </DropDrawerSubTrigger>
+                  <DropDrawerSubContent className="w-72">
                     <DropDrawerItem
-                      key={property.id}
                       onSelect={() =>
-                        onSetViewDateProperty(property.property.id)
+                        onUpdateDatabaseLayoutSettings({
+                          cardPreview: "page-cover",
+                        })
                       }
                     >
-                      <PropertyIcon />
-                      <span>{property.property.name}</span>
-                      {isSelected ? (
+                      <ImageIcon />
+                      <span>Page cover</span>
+                      {layoutSettings.cardPreview === "page-cover" ? (
                         <Check className="ml-auto text-foreground" />
                       ) : null}
                     </DropDrawerItem>
-                  );
-                })
-              ) : (
-                <DropDrawerItem disabled>No date properties yet</DropDrawerItem>
-              )}
-            </DropDrawerSubContent>
-          </DropDrawerSub>
-        ) : null}
-        {isKanbanView ? (
-          <DropDrawerItem
-            aria-pressed={showPropertyTitles}
-            onSelect={(event) => {
-              event.preventDefault();
-              onTogglePropertyTitles();
-            }}
-          >
-            <Eye />
-            <span>Show property titles</span>
-            <Switch
-              checked={showPropertyTitles}
-              className="ml-auto pointer-events-none"
-              size="sm"
-              tabIndex={-1}
-            />
-          </DropDrawerItem>
-        ) : null}
+                    <DropDrawerItem
+                      onSelect={() =>
+                        onUpdateDatabaseLayoutSettings({
+                          cardPreview: "none",
+                        })
+                      }
+                    >
+                      <EyeOff />
+                      <span>None</span>
+                      {layoutSettings.cardPreview === "none" ? (
+                        <Check className="ml-auto text-foreground" />
+                      ) : null}
+                    </DropDrawerItem>
+                  </DropDrawerSubContent>
+                </DropDrawerSub>
+                <div className="flex min-h-8 items-center gap-2 px-2 py-1 text-sm">
+                  <span>Card size</span>
+                  <div className="ml-auto flex rounded-md bg-muted p-0.5">
+                    {(["small", "medium", "large"] as const).map((size) => (
+                      <button
+                        className={cn(
+                          "rounded px-2 py-1 text-xs capitalize text-muted-foreground",
+                          layoutSettings.cardSize === size &&
+                            "bg-background text-foreground shadow-sm",
+                        )}
+                        key={size}
+                        onClick={() =>
+                          onUpdateDatabaseLayoutSettings({ cardSize: size })
+                        }
+                        type="button"
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="mt-1 rounded-md bg-muted/40 p-2">
+                  <div className="mb-2 px-1 text-xs font-medium text-muted-foreground">
+                    Card layout
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(["compact", "list"] as const).map((cardLayout) => (
+                      <button
+                        className={cn(
+                          "rounded-md border p-1.5 text-xs font-medium capitalize text-muted-foreground",
+                          layoutSettings.cardLayout === cardLayout &&
+                            "border-primary text-primary ring-1 ring-primary",
+                        )}
+                        key={cardLayout}
+                        onClick={() =>
+                          onUpdateDatabaseLayoutSettings({ cardLayout })
+                        }
+                        type="button"
+                      >
+                        <span className="mb-1.5 block h-12 rounded bg-background p-2">
+                          <span className="mb-2 block size-3 rounded-full bg-current opacity-60" />
+                          {cardLayout === "compact" ? (
+                            <span className="flex flex-wrap gap-1">
+                              <span className="block h-1.5 w-8 rounded bg-current opacity-30" />
+                              <span className="block h-1.5 w-5 rounded bg-current opacity-30" />
+                              <span className="block h-1.5 w-7 rounded bg-current opacity-30" />
+                            </span>
+                          ) : (
+                            <span className="flex flex-col gap-1">
+                              <span className="block h-1.5 w-3/4 rounded bg-current opacity-30" />
+                              <span className="block h-1.5 w-1/2 rounded bg-current opacity-30" />
+                              <span className="block h-1.5 w-2/3 rounded bg-current opacity-30" />
+                            </span>
+                          )}
+                        </span>
+                        {cardLayout}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {layoutSettings.cardLayout === "compact" ? (
+                  <DropDrawerSub>
+                    <DropDrawerSubTrigger>
+                      <Settings2 />
+                      <span>Compact card settings</span>
+                    </DropDrawerSubTrigger>
+                    <DropDrawerSubContent className="w-72">
+                      <div className="px-2 pb-2 pt-1">
+                        <div className="rounded-md bg-muted/40 p-3">
+                          <div className="rounded-md border bg-background p-3">
+                            <div className="mb-3 h-2.5 w-24 rounded bg-muted-foreground/30" />
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className="size-3 rounded-full bg-muted-foreground/25" />
+                              <span className="h-2 w-14 rounded bg-muted-foreground/20" />
+                              <span className="h-2 w-9 rounded bg-muted-foreground/20" />
+                              <span className="h-3 w-3 rounded-sm bg-muted-foreground/20" />
+                              <span className="h-2 w-12 rounded bg-muted-foreground/20" />
+                            </div>
+                          </div>
+                        </div>
+                        <p className="px-1 pt-2 text-xs leading-5 text-muted-foreground">
+                          Enabled properties appear on their own line instead
+                          of wrapping with other properties.
+                        </p>
+                      </div>
+                      <DropDrawerLabel>Full line display</DropDrawerLabel>
+                      <DropDrawerItem
+                        aria-pressed="true"
+                        onSelect={(event) => event.preventDefault()}
+                      >
+                        <NameColumnGlyph />
+                        <span>{titlePropertyLabel}</span>
+                        <Switch
+                          checked
+                          className="pointer-events-none ml-auto"
+                          disabled
+                          size="sm"
+                          tabIndex={-1}
+                        />
+                      </DropDrawerItem>
+                      {visibleCardProperties.length > 0 ? (
+                        visibleCardProperties.map((property) => {
+                          const PropertyIcon = getDatabasePropertyType(
+                            property.property.type,
+                          ).icon;
+                          const fullLine =
+                            layoutSettings.fullLinePropertyIds.includes(
+                              property.id,
+                            );
+
+                          return (
+                            <DropDrawerItem
+                              aria-pressed={fullLine}
+                              key={property.id}
+                              onSelect={(event) => {
+                                event.preventDefault();
+                                onUpdateDatabaseLayoutSettings({
+                                  fullLinePropertyIds: fullLine
+                                    ? layoutSettings.fullLinePropertyIds.filter(
+                                        (propertyId) =>
+                                          propertyId !== property.id,
+                                      )
+                                    : [
+                                        ...layoutSettings.fullLinePropertyIds,
+                                        property.id,
+                                      ],
+                                });
+                              }}
+                            >
+                              <PropertyIcon />
+                              <span>{property.property.name}</span>
+                              <Switch
+                                checked={fullLine}
+                                className="pointer-events-none ml-auto"
+                                size="sm"
+                                tabIndex={-1}
+                              />
+                            </DropDrawerItem>
+                          );
+                        })
+                      ) : (
+                        <DropDrawerItem disabled>
+                          No visible properties
+                        </DropDrawerItem>
+                      )}
+                      <DropDrawerSeparator />
+                      <DropDrawerSub>
+                        <DropDrawerSubTrigger>
+                          <Eye />
+                          <span>Show properties</span>
+                        </DropDrawerSubTrigger>
+                        <DropDrawerSubContent className="w-72">
+                          <DropDrawerItem disabled>
+                            <NameColumnGlyph />
+                            <span>{titlePropertyLabel}</span>
+                            <Eye className="ml-auto text-muted-foreground" />
+                          </DropDrawerItem>
+                          {properties.map((property) => {
+                            const PropertyIcon = getDatabasePropertyType(
+                              property.property.type,
+                            ).icon;
+                            const visible = visibleCardProperties.some(
+                              (candidate) => candidate.id === property.id,
+                            );
+
+                            return (
+                              <DropDrawerItem
+                                aria-pressed={visible}
+                                key={property.id}
+                                onSelect={(event) => {
+                                  event.preventDefault();
+                                  onTogglePropertyVisibility(property.id);
+                                }}
+                              >
+                                <PropertyIcon />
+                                <span>{property.property.name}</span>
+                                {visible ? (
+                                  <Eye className="ml-auto text-muted-foreground" />
+                                ) : (
+                                  <EyeOff className="ml-auto text-muted-foreground" />
+                                )}
+                              </DropDrawerItem>
+                            );
+                          })}
+                        </DropDrawerSubContent>
+                      </DropDrawerSub>
+                    </DropDrawerSubContent>
+                  </DropDrawerSub>
+                ) : null}
+              </>
+            ) : null}
+            {isChartView ? (
+              <DatabaseChartSettingsSection
+                onChange={onUpdateDatabaseChartSettings}
+                properties={properties}
+                settings={chartSettings}
+                titlePropertyLabel={titlePropertyLabel}
+              />
+            ) : null}
+          </DropDrawerSubContent>
+        </DropDrawerSub>
         <DropDrawerSub>
           <DropDrawerSubTrigger>
             <ViewSettingsRow

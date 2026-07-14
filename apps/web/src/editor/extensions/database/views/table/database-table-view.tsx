@@ -750,6 +750,7 @@ export function DatabaseTableView() {
     isAddingDatabaseProperty,
     isAddingDatabaseRow,
     isFetchingNextPage,
+    layoutSettings,
     titlePropertyLabel: nameColumnLabel,
     showPageIconInTitle: nameColumnShowPageIcon,
     addDatabaseRow,
@@ -773,7 +774,8 @@ export function DatabaseTableView() {
   const loadedDatabaseId = requireDatabaseId(databaseId)
   const canEditStructure = editable && (canAddDatabaseProperties ?? true)
   const canUseHeaderMenus = headerMenusEnabled ?? editable
-  const nameColumnWrapContent = getNameColumnWrapContent(databaseConfig)
+  const nameColumnWrapContent =
+    layoutSettings.wrapAllContent || getNameColumnWrapContent(databaseConfig)
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({})
   const [hoveredRowId, setHoveredRowId] = useState<string | null>(null)
   const [draggedRowId, setDraggedRowId] = useState<string | null>(null)
@@ -2054,7 +2056,9 @@ export function DatabaseTableView() {
               const pageProperty = property.property
               const key = `${row.pageId}:${pageProperty.id}`
               const persistedValue = propertyValuesByKey[key] ?? ""
-              const wrapContent = getPropertyWrapContent(pageProperty.config)
+              const wrapContent =
+                layoutSettings.wrapAllContent ||
+                getPropertyWrapContent(pageProperty.config)
 
               return (
                 <Fragment key={property.id}>
@@ -2177,6 +2181,9 @@ export function DatabaseTableView() {
       <div
         className="database-table-wrap database-inline-scroll-wrap"
         data-inline-scroll={isInlineTableScrollEnabled ? "true" : undefined}
+        data-vertical-lines={
+          layoutSettings.showVerticalLines ? "true" : "false"
+        }
         ref={tableWrapRef}
         style={tableWrapStyle}
         onMouseLeave={() => {

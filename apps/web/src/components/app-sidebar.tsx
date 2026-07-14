@@ -49,8 +49,10 @@ import {
   CalendarRange,
   ChartPie,
   DatabaseIcon,
+  GalleryThumbnails,
   HomeIcon,
   Kanban,
+  List,
   MessageCircleQuestionIcon,
   PlusIcon,
   SearchIcon,
@@ -70,6 +72,10 @@ const sidebarNavigationIcons = {
       <CalendarRange className="size-4" />
     ) : view.type === "chart" ? (
       <ChartPie className="size-4" />
+    ) : view.type === "gallery" ? (
+      <GalleryThumbnails className="size-4" />
+    ) : view.type === "list" ? (
+      <List className="size-4" />
     ) : (
       <Table2 className="size-4" />
     ),

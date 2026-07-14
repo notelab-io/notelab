@@ -18,7 +18,9 @@ import {
   Filter,
   CalendarRange,
   ChartPie,
+  GalleryThumbnails,
   Kanban,
+  List,
   Loader2,
   Maximize2,
   MoreHorizontal,
@@ -96,7 +98,9 @@ export function DatabaseViewToolbar() {
     addableSortFieldOptions,
     addDatabaseRow,
     addChartView,
+    addGalleryView,
     addKanbanView,
+    addListView,
     addLinkedDatabaseView,
     addTableView,
     addTimelineView,
@@ -131,6 +135,7 @@ export function DatabaseViewToolbar() {
     isAddingDatabaseRow,
     isAddingDatabaseView,
     linkedDatabaseViews,
+    layoutSettings,
     onShowTitleChange,
     titlePropertyLabel,
     workspaceId,
@@ -154,6 +159,7 @@ export function DatabaseViewToolbar() {
     setSortPickerOpen,
     showExpandButton,
     showFilterPill,
+    showPageIconInTitle,
     showPropertyTitles,
     showSortPill,
     showTitle,
@@ -165,7 +171,9 @@ export function DatabaseViewToolbar() {
     toggleSortPillVisibility,
     updateDatabaseFilter,
     updateDatabaseChartSettings,
+    updateDatabaseLayoutSettings,
     updateDatabaseSort,
+    updateNameColumnConfig,
     visiblePropertyCount,
     viewTabs,
   } = useDatabaseViewContext()
@@ -370,7 +378,11 @@ export function DatabaseViewToolbar() {
                         ? CalendarRange
                         : view.type === "chart"
                           ? ChartPie
-                          : Table2
+                          : view.type === "gallery"
+                            ? GalleryThumbnails
+                            : view.type === "list"
+                              ? List
+                              : Table2
                   const sourceDatabaseId =
                     view.sourceDatabaseId ?? hostDatabaseId ?? databaseId
                   const sourceDatabaseName =
@@ -518,6 +530,32 @@ export function DatabaseViewToolbar() {
                           ) : null}
                         </DropDrawerItem>
                         <DropDrawerItem
+                          disabled={!editable || view.type === "gallery"}
+                          onSelect={() => {
+                            setActiveViewId(view.id)
+                            setViewType("gallery")
+                          }}
+                        >
+                          <GalleryThumbnails />
+                          <span>Gallery</span>
+                          {view.type === "gallery" ? (
+                            <Check className="ml-auto text-foreground" />
+                          ) : null}
+                        </DropDrawerItem>
+                        <DropDrawerItem
+                          disabled={!editable || view.type === "list"}
+                          onSelect={() => {
+                            setActiveViewId(view.id)
+                            setViewType("list")
+                          }}
+                        >
+                          <List />
+                          <span>List</span>
+                          {view.type === "list" ? (
+                            <Check className="ml-auto text-foreground" />
+                          ) : null}
+                        </DropDrawerItem>
+                        <DropDrawerItem
                           disabled={!editable || view.type === "chart"}
                           onSelect={() => {
                             setActiveViewId(view.id)
@@ -661,10 +699,17 @@ export function DatabaseViewToolbar() {
                 </DropDrawerItem>
                 <DropDrawerItem
                   disabled={!databaseId || isAddingDatabaseView}
-                  onSelect={addChartView}
+                  onSelect={addGalleryView}
                 >
-                  <ChartPie className="size-4" />
-                  <span>Chart</span>
+                  <GalleryThumbnails className="size-4" />
+                  <span>Gallery</span>
+                </DropDrawerItem>
+                <DropDrawerItem
+                  disabled={!databaseId || isAddingDatabaseView}
+                  onSelect={addListView}
+                >
+                  <List className="size-4" />
+                  <span>List</span>
                 </DropDrawerItem>
                 <DropDrawerItem
                   disabled={
@@ -676,6 +721,13 @@ export function DatabaseViewToolbar() {
                 >
                   <Kanban className="size-4" />
                   <span>Kanban</span>
+                </DropDrawerItem>
+                <DropDrawerItem
+                  disabled={!databaseId || isAddingDatabaseView}
+                  onSelect={addChartView}
+                >
+                  <ChartPie className="size-4" />
+                  <span>Chart</span>
                 </DropDrawerItem>
                 <DropDrawerItem
                   disabled={
@@ -871,6 +923,7 @@ export function DatabaseViewToolbar() {
                 groupPropertyId={groupProperty?.property.id ?? null}
                 canAddDatabaseFilter={canAddDatabaseFilter}
                 chartSettings={chartSettings}
+                layoutSettings={layoutSettings}
                 titlePropertyLabel={titlePropertyLabel}
                 workspaceId={
                   hostDatabaseWorkspaceId ??
@@ -898,10 +951,15 @@ export function DatabaseViewToolbar() {
                 onSetViewDateProperty={setViewDateProperty}
                 onSetViewGroupProperty={setViewGroupProperty}
                 onSetViewType={setViewType}
+                onShowTitleChange={onShowTitleChange}
+                onShowPageIconChange={(showPageIcon) =>
+                  updateNameColumnConfig?.({ showPageIcon })
+                }
                 onTogglePropertyTitles={togglePropertyTitles}
                 onTogglePropertyVisibility={togglePropertyVisibility}
                 onUpdateDatabaseFilter={updateDatabaseFilter}
                 onUpdateDatabaseChartSettings={updateDatabaseChartSettings}
+                onUpdateDatabaseLayoutSettings={updateDatabaseLayoutSettings}
                 onUpdateDatabaseSort={updateDatabaseSort}
                 properties={properties}
                 filterFieldOptions={filterFieldOptions}
@@ -913,6 +971,8 @@ export function DatabaseViewToolbar() {
                 viewConfig={activeVisibilityConfig}
                 visiblePropertyCount={visiblePropertyCount}
                 showPropertyTitles={showPropertyTitles}
+                showPageIcon={showPageIconInTitle}
+                showTitle={showTitle}
               />
               {canRenderAddRow ? (
               <Button

@@ -154,7 +154,11 @@ function buildViewSection(
     lines.push(`  - ${property.property.name} (${getPropertyTypeHint(property)})`)
   }
 
-  if (descriptor.viewType === "kanban" || descriptor.viewType === "timeline") {
+  if (
+    descriptor.viewType === "kanban" ||
+    descriptor.viewType === "timeline" ||
+    descriptor.viewType === "gallery"
+  ) {
     const groupPropertyId =
       activeViewConfig &&
       typeof activeViewConfig === "object" &&

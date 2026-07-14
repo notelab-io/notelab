@@ -3,7 +3,9 @@ import {
   CalendarRange,
   ChartPie,
   FileText,
+  GalleryThumbnails,
   Kanban,
+  List,
   Table2,
   Trash2,
 } from "lucide-react"
@@ -65,7 +67,11 @@ export function PageLayoutTabs({
                     ? CalendarRange
                     : tab.viewType === "chart"
                       ? ChartPie
-                      : Table2
+                      : tab.viewType === "gallery"
+                        ? GalleryThumbnails
+                        : tab.viewType === "list"
+                          ? List
+                          : Table2
 
               return (
                 <TabsTrigger
