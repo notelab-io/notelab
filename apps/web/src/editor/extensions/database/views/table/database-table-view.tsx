@@ -411,7 +411,6 @@ function DatabaseTable({
 function DatabaseVirtualizedTable({
   columnKeys,
   columnWidths,
-  header,
   measurementKey,
   renderRow,
   rows,
@@ -420,7 +419,6 @@ function DatabaseVirtualizedTable({
 }: {
   columnKeys: string[]
   columnWidths: Record<string, number>
-  header?: ReactNode
   measurementKey: string
   renderRow: (
     row: TableRow,
@@ -528,7 +526,6 @@ function DatabaseVirtualizedTable({
         columnWidths={columnWidths}
         tableMinWidth={tableMinWidth}
       >
-        {header}
         <tbody>
           {virtualizationEnabled
             ? virtualRows.map((virtualRow, virtualIndex) => {
@@ -2313,22 +2310,20 @@ export function DatabaseTableView() {
         ) : null}
         {!isInlineTableScrollEnabled ? renderRowDragRail() : null}
         {!isInlineTableScrollEnabled ? renderRowDropLine() : null}
-        {!isTableGrouped ? (
-          <div
-            className="database-table-sticky-header database-inline-scroll"
-            ref={stickyHeaderScrollRef}
-          >
-            <div className="database-table-scroll-content database-inline-scroll-content">
-              <DatabaseTable
-                columnKeys={columnKeys}
-                columnWidths={columnWidths}
-                tableMinWidth={tableMinWidth}
-              >
-                {renderTableHeader("sticky")}
-              </DatabaseTable>
-            </div>
+        <div
+          className="database-table-sticky-header database-inline-scroll"
+          ref={stickyHeaderScrollRef}
+        >
+          <div className="database-table-scroll-content database-inline-scroll-content">
+            <DatabaseTable
+              columnKeys={columnKeys}
+              columnWidths={columnWidths}
+              tableMinWidth={tableMinWidth}
+            >
+              {renderTableHeader("sticky")}
+            </DatabaseTable>
           </div>
-        ) : null}
+        </div>
         <div
           className="database-table-scroll database-inline-scroll"
           ref={tableScrollRef}
@@ -2381,7 +2376,6 @@ export function DatabaseTableView() {
                           <DatabaseVirtualizedTable
                             columnKeys={columnKeys}
                             columnWidths={columnWidths}
-                            header={renderTableHeader(`group:${section.id}`)}
                             measurementKey={tableMeasurementKey}
                             renderRow={renderTableRow}
                             rows={section.rows}
