@@ -7,7 +7,7 @@ export function register({ assert, loadModule, test }) {
     const extensionPath = fileURLToPath(
       new URL("../../../packages/tiptap-comment-extension/src/index.ts", import.meta.url),
     )
-    const { getCommentIdsAtSelection } = await loadModule(extensionPath)
+    const { getCommentIdsAtSelection, getCommentIdsInRange } = await loadModule(extensionPath)
     const schema = new Schema({
       nodes: {
         doc: { content: "block+" },
@@ -34,6 +34,10 @@ export function register({ assert, loadModule, test }) {
     assert.deepEqual(
       getCommentIdsAtSelection({ schema, state }),
       ["thread-one", "thread-two"],
+    )
+    assert.deepEqual(
+      getCommentIdsInRange({ schema, state }, 1, 6),
+      ["thread-one"],
     )
   })
 

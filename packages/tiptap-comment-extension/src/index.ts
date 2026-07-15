@@ -4,4 +4,4 @@ export {
   type CommentOptions,
   type CommentStorage,
 } from "./comment-extension"
-export { getCommentIdsAtSelection } from "./selection"
+export { getCommentIdsAtSelection, getCommentIdsInRange } from "./selection"

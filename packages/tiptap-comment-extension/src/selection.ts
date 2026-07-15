@@ -8,10 +8,32 @@ function readThreadId(mark: Mark, commentMark: Mark["type"]) {
 }
 
 export function getCommentIdsAtSelection(editor: Editor): string[] {
+  const { selection } = editor.state
+
+  if (selection.empty) {
+    const commentMark = editor.schema.marks.comment
+    if (!commentMark) return []
+
+    const threadIds = new Set<string>()
+    for (const mark of selection.$from.marks()) {
+      const threadId = readThreadId(mark, commentMark)
+      if (threadId) threadIds.add(threadId)
+    }
+    return [...threadIds]
+  }
+
+  return getCommentIdsInRange(editor, selection.from, selection.to)
+}
+
+export function getCommentIdsInRange(
+  editor: Editor,
+  from: number,
+  to: number,
+): string[] {
   const commentMark = editor.schema.marks.comment
   if (!commentMark) return []
 
-  const { doc, selection } = editor.state
+  const { doc } = editor.state
   const threadIds = new Set<string>()
   const collect = (marks: readonly Mark[]) => {
     for (const mark of marks) {
@@ -20,11 +42,9 @@ export function getCommentIdsAtSelection(editor: Editor): string[] {
     }
   }
 
-  if (selection.empty) {
-    collect(selection.$from.marks())
-  } else {
-    doc.nodesBetween(selection.from, selection.to, (node) => collect(node.marks))
-  }
+  const rangeFrom = Math.max(0, Math.min(from, doc.content.size))
+  const rangeTo = Math.max(rangeFrom, Math.min(to, doc.content.size))
+  doc.nodesBetween(rangeFrom, rangeTo, (node) => collect(node.marks))
 
   return [...threadIds]
 }

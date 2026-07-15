@@ -50,6 +50,14 @@ export const CommentExtension = Mark.create<CommentOptions, CommentStorage>({
             ? { "data-comment-id": commentId }
             : {},
       },
+      commentKind: {
+        default: null,
+        parseHTML: (element) => element.dataset.commentKind ?? null,
+        renderHTML: ({ commentKind }) =>
+          commentKind === "block"
+            ? { "data-comment-kind": commentKind }
+            : {},
+      },
     }
   },
 
@@ -75,7 +83,10 @@ export const CommentExtension = Mark.create<CommentOptions, CommentStorage>({
         (threadId) =>
         ({ commands }) => {
           if (!threadId) return false
-          return commands.setMark(this.name, { commentId: threadId })
+          return commands.setMark(this.name, {
+            commentId: threadId,
+            commentKind: "inline",
+          })
         },
       unsetComment:
         (threadId) =>
