@@ -30,6 +30,13 @@ import { SettingsSidebar } from "@/components/settings-sidebar"
 import { Separator } from "@/components/ui/separator"
 import { ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable"
 import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
+import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
@@ -40,7 +47,6 @@ import { useDatabase } from "@notelab/features/databases"
 import {
   usePage,
   useRecordItemVisit,
-  useResolvedPageLayout,
 } from "@notelab/features/pages"
 import { EmbeddedPageDialog } from "@/components/embedded-page-dialog"
 import { useOpenEmbeddedPage } from "@/hooks/use-open-embedded-page"
@@ -121,14 +127,9 @@ function AppLayoutContent({
   const { data: hostPage } = usePage(hostPageId, {
     refetchOnMount: false,
   })
-  const { data: resolvedPageLayout } = useResolvedPageLayout({ pageId })
   const recordItemVisit = useRecordItemVisit()
   const recordedVisitKeyRef = useRef<string | null>(null)
-  const discussionsEnabled = Boolean(
-    pageId &&
-      !databaseId &&
-      resolvedPageLayout?.config.discussionsVisible === true,
-  )
+  const discussionsEnabled = Boolean(pageId && !databaseId)
   const sidePaneState = usePageSidePaneState(pageId)
   const {
     closeSidePane,
@@ -332,6 +333,7 @@ function AppLayoutContent({
         databaseId={databaseId}
         hostPage={hostPage}
       />
+      <PageLayoutOverlayDrawer />
       {isSettingsPage ? <SettingsSidebar /> : <AppSidebar />}
       <ResizablePanelGroup
         className="min-h-0 min-w-0 flex-1 overflow-hidden"
@@ -468,6 +470,36 @@ function AppLayoutContent({
   )
 }
 
+function PageLayoutOverlayDrawer() {
+  const pageLayoutSidebar = useOptionalPageLayoutSidebar()
+  const open = Boolean(pageLayoutSidebar?.overlayPageId)
+
+  return (
+    <Sheet
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) pageLayoutSidebar?.closeOverlay()
+      }}
+      open={open}
+    >
+      <SheetContent
+        className="z-[60] w-[min(100vw,var(--right-sidebar-panel-width))] gap-0 p-0 sm:max-w-[var(--right-sidebar-panel-width)]"
+        overlayClassName="z-[59]"
+      >
+        <SheetHeader className="border-b pr-12">
+          <SheetTitle>Page sidebar</SheetTitle>
+          <SheetDescription className="sr-only">
+            Customized page properties and layout modules.
+          </SheetDescription>
+        </SheetHeader>
+        <div
+          className="min-h-0 flex-1 overflow-y-auto"
+          ref={pageLayoutSidebar?.setOverlayPanelTarget}
+        />
+      </SheetContent>
+    </Sheet>
+  )
+}
+
 function EmbeddedPageDialogHost({
   contextPageId,
   databaseId,
@@ -509,6 +541,7 @@ function AppHeader({
   sidePaneAnimatedOpen: boolean
   sidePaneDatabaseId: string | null
 }) {
+  const pageLayoutSidebar = useOptionalPageLayoutSidebar()
   const showSidePaneHeader = Boolean(
     renderedSidePanePageId || renderedSidePaneDatabaseId,
   )
@@ -520,6 +553,8 @@ function AppHeader({
   const rowNavigationDatabaseId = renderedSidePanePageId
     ? (sidePaneDatabaseId ?? routeDatabaseId)
     : null
+  const sidePaneHasLayoutSidebar =
+    pageLayoutSidebar?.hasOverlaySidebar(renderedSidePanePageId) ?? false
 
   return (
     <>
@@ -551,6 +586,14 @@ function AppHeader({
             bordered={false}
             className="min-w-0 flex-1"
             onClose={onCloseSidePane}
+            onTogglePageSidebar={
+              renderedSidePanePageId && sidePaneHasLayoutSidebar
+                ? () => pageLayoutSidebar?.toggleOverlay(renderedSidePanePageId)
+                : undefined
+            }
+            pageSidebarOpen={
+              pageLayoutSidebar?.overlayPageId === renderedSidePanePageId
+            }
             pathname={sidePanePathname}
             rowNavigationDatabaseId={rowNavigationDatabaseId}
           />

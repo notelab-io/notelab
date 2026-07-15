@@ -10,6 +10,7 @@ import { usePageSidePane } from "@/contexts/page-side-pane"
 import { PageWorkspaceGate } from "@/components/page-workspace-gate"
 import { PagePaneHeader } from "@/components/page-pane-header"
 import { PageEditorPane } from "@/pages/page"
+import { useOptionalPageLayoutSidebar } from "@/contexts/page-layout-sidebar"
 import type { OpenPageOptions } from "@/packages/editor/types"
 
 export function EmbeddedPageDialog({
@@ -22,6 +23,15 @@ export function EmbeddedPageDialog({
     dialogDatabaseId,
     dialogPageId,
   } = usePageSidePane()
+  const pageLayoutSidebar = useOptionalPageLayoutSidebar()
+  const hasLayoutSidebar =
+    pageLayoutSidebar?.hasOverlaySidebar(dialogPageId) ?? false
+  const closeDialog = () => {
+    if (pageLayoutSidebar?.overlayPageId === dialogPageId) {
+      pageLayoutSidebar.closeOverlay()
+    }
+    closeEmbeddedPageDialog()
+  }
   const dialogPathname = dialogPageId
     ? `/p/${encodeURIComponent(dialogPageId)}`
     : "/dashboard"
@@ -30,7 +40,7 @@ export function EmbeddedPageDialog({
     <Dialog
       onOpenChange={(open) => {
         if (!open) {
-          closeEmbeddedPageDialog()
+          closeDialog()
         }
       }}
       open={dialogPageId !== null}
@@ -52,7 +62,7 @@ export function EmbeddedPageDialog({
           leadingControl={
             <Button
               aria-label="Close"
-              onClick={closeEmbeddedPageDialog}
+              onClick={closeDialog}
               size="icon-sm"
               type="button"
               variant="ghost"
@@ -60,6 +70,12 @@ export function EmbeddedPageDialog({
               <XIcon />
             </Button>
           }
+          onTogglePageSidebar={
+            dialogPageId && hasLayoutSidebar
+              ? () => pageLayoutSidebar?.toggleOverlay(dialogPageId)
+              : undefined
+          }
+          pageSidebarOpen={pageLayoutSidebar?.overlayPageId === dialogPageId}
           pathname={dialogPathname}
           rowNavigationDatabaseId={dialogDatabaseId}
           showPaneControls
@@ -70,6 +86,7 @@ export function EmbeddedPageDialog({
               <PageEditorPane
                 databaseId={dialogDatabaseId}
                 key={dialogPageId}
+                layoutPanelMode="overlay"
                 onOpenPage={onOpenPage}
                 pageId={dialogPageId}
               />
