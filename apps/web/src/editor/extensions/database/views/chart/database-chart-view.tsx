@@ -9,6 +9,12 @@ import {
   LabelList,
   Pie,
   PieChart,
+  PolarAngleAxis,
+  PolarGrid,
+  Radar,
+  RadarChart,
+  RadialBar,
+  RadialBarChart,
   XAxis,
   YAxis,
 } from "recharts"
@@ -21,6 +27,7 @@ import {
 } from "@/components/ui/chart"
 import { getPaletteColor } from "@/lib/color-tokens"
 import { useDatabaseViewContext } from "../database-view-context"
+import { shouldSplitDatabaseChartSeries } from "./database-chart-config"
 import {
   DEFAULT_CHART_COLOR,
   createChartData,
@@ -73,8 +80,11 @@ export function DatabaseChartView() {
     groupProperty && groupProperty.id !== "name"
       ? properties.find((property) => property.id === groupProperty.id) ?? null
       : null
-  const shouldSplitSeries =
-    Boolean(splitProperty) && chartSettings.type !== "count"
+  const shouldSplitSeries = shouldSplitDatabaseChartSeries({
+    axisPropertyId: axisProperty?.property.id,
+    splitPropertyId: splitProperty?.property.id,
+    type: chartSettings.type,
+  })
   const chartData = useMemo(
     () =>
       createChartData({
@@ -385,7 +395,6 @@ export function DatabaseChartView() {
           <Pie
             data={chartData}
             dataKey="count"
-            innerRadius={48}
             nameKey="name"
             outerRadius={82}
             paddingAngle={2}
@@ -421,6 +430,78 @@ export function DatabaseChartView() {
             </Pie>
           ) : null}
         </PieChart>
+      )
+    }
+
+    if (chartSettings.type === "radar") {
+      const radarColor = selectedColor ?? DEFAULT_CHART_COLOR
+
+      return (
+        <RadarChart accessibilityLayer data={displayChartData}>
+          <ChartTooltip
+            content={<ChartTooltipContent indicator="line" />}
+            cursor={false}
+          />
+          <PolarAngleAxis dataKey="name" tickLine={false} />
+          <PolarGrid />
+          {shouldSplitSeries ? (
+            chartSeries.map((series, index) => {
+              const color = getSeriesDisplayColor(series, index)
+
+              return (
+                <Radar
+                  dataKey={series.key}
+                  fill={color}
+                  fillOpacity={0.25}
+                  key={series.key}
+                  name={series.label}
+                  stroke={color}
+                  strokeWidth={2}
+                />
+              )
+            })
+          ) : (
+            <Radar
+              dataKey="count"
+              fill={radarColor}
+              fillOpacity={0.6}
+              name={metricLabel}
+              stroke={radarColor}
+              strokeWidth={2}
+            />
+          )}
+        </RadarChart>
+      )
+    }
+
+    if (chartSettings.type === "radial") {
+      const radialChartData = chartData.map((item, index) => ({
+        ...item,
+        fill: getDisplayColor(item, index),
+      }))
+
+      return (
+        <RadialBarChart
+          accessibilityLayer
+          data={radialChartData}
+          endAngle={380}
+          innerRadius={30}
+          outerRadius={124}
+          startAngle={-90}
+        >
+          <ChartTooltip
+            content={<ChartTooltipContent hideLabel nameKey="name" />}
+            cursor={false}
+          />
+          <RadialBar background dataKey="count" name={metricLabel}>
+            <LabelList
+              className="fill-white text-[11px] capitalize mix-blend-luminosity"
+              dataKey="name"
+              position="insideStart"
+              stroke="none"
+            />
+          </RadialBar>
+        </RadialBarChart>
       )
     }
 

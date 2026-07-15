@@ -57,6 +57,10 @@ import { DatabaseFilterPopover } from "./database-filter-menu"
 import { DatabaseSortPopover } from "./database-sort-menu"
 import { useDatabaseViewContext } from "./database-view-context"
 import { DatabaseViewSettingsMenu } from "./database-view-settings-menu"
+import {
+  getNameColumnWrapContent,
+  getPropertyWrapContent,
+} from "./database-view-config"
 
 function ToolbarMenuRow({
   icon,
@@ -172,6 +176,7 @@ export function DatabaseViewToolbar() {
     updateDatabaseFilter,
     updateDatabaseChartSettings,
     updateDatabaseLayoutSettings,
+    updateDatabasePropertyConfig,
     updateDatabaseSort,
     updateNameColumnConfig,
     visiblePropertyCount,
@@ -179,6 +184,19 @@ export function DatabaseViewToolbar() {
   } = useDatabaseViewContext()
   const canRenderAddView = canAddDatabaseViews ?? editable
   const canRenderAddRow = canAddDatabaseRows ?? editable
+  const allContentWrapped =
+    getNameColumnWrapContent(databaseConfig) &&
+    properties.every((property) =>
+      getPropertyWrapContent(property.property.config)
+    )
+  const setAllContentWrapped = async (wrapContent: boolean) => {
+    updateDatabaseLayoutSettings({ wrapAllContent: false })
+    await updateNameColumnConfig?.({ wrapContent })
+
+    for (const property of properties) {
+      await updateDatabasePropertyConfig(property.id, { wrapContent })
+    }
+  }
   const activeViewTab = viewTabs.find((view) => view.id === activeViewTabId)
   const hostDisplayTitle =
     activeViewTab?.isLinked
@@ -901,6 +919,7 @@ export function DatabaseViewToolbar() {
               )}
               <DatabaseViewSettingsMenu
                 activeConditionalColors={activeConditionalColors}
+                allContentWrapped={allContentWrapped}
                 activeDatabaseSorts={activeDatabaseSorts}
                 activeViewType={activeView?.type}
                 activeDatabaseFilters={activeDatabaseFilters}
@@ -951,6 +970,9 @@ export function DatabaseViewToolbar() {
                 onSetViewDateProperty={setViewDateProperty}
                 onSetViewGroupProperty={setViewGroupProperty}
                 onSetViewType={setViewType}
+                onSetAllContentWrapped={(wrapContent) =>
+                  void setAllContentWrapped(wrapContent)
+                }
                 onShowTitleChange={onShowTitleChange}
                 onShowPageIconChange={(showPageIcon) =>
                   updateNameColumnConfig?.({ showPageIcon })

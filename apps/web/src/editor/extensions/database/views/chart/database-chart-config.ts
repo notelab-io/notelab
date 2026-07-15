@@ -5,6 +5,8 @@ export type DatabaseChartType =
   | "horizontal-bar"
   | "line"
   | "pie"
+  | "radar"
+  | "radial"
   | "count"
 
 export type DatabaseChartColor = "auto" | ColorTokenId
@@ -23,6 +25,8 @@ export const databaseChartTypes: DatabaseChartType[] = [
   "horizontal-bar",
   "line",
   "pie",
+  "radar",
+  "radial",
   "count",
 ]
 
@@ -46,6 +50,23 @@ export const defaultDatabaseChartSettings: DatabaseChartSettings = {
   omitZeroValues: false,
   type: "bar",
   valueColors: {},
+}
+
+export function shouldSplitDatabaseChartSeries({
+  axisPropertyId,
+  splitPropertyId,
+  type,
+}: {
+  axisPropertyId?: string
+  splitPropertyId?: string
+  type: DatabaseChartType
+}) {
+  return (
+    Boolean(splitPropertyId) &&
+    axisPropertyId !== splitPropertyId &&
+    type !== "count" &&
+    type !== "radial"
+  )
 }
 
 export function getDatabaseChartSettings(config: unknown): DatabaseChartSettings {
@@ -90,4 +111,3 @@ export function getDatabaseChartSettings(config: unknown): DatabaseChartSettings
     valueColors: storedValueColors,
   }
 }
-

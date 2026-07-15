@@ -104,6 +104,7 @@ export function DatabasePropertyMenu({
   sourceDatabaseName,
   sourcePropertyId,
   type,
+  wrapContent: controlledWrapContent,
   workspaceId,
 }: {
   config?: unknown;
@@ -126,6 +127,7 @@ export function DatabasePropertyMenu({
   sourceDatabaseName?: string;
   sourcePropertyId?: string;
   type: string;
+  wrapContent?: boolean;
   triggerDragProps?: Pick<
     ButtonHTMLAttributes<HTMLButtonElement>,
     "onClick" | "onPointerDownCapture" | "title"
@@ -168,7 +170,7 @@ export function DatabasePropertyMenu({
     (property) =>
       property.property.id === relationDeleteConfig.relatedPropertyId,
   );
-  const wrapContent = getPropertyWrapContent(config);
+  const wrapContent = controlledWrapContent ?? getPropertyWrapContent(config);
   const updatePropertyConfig = (nextConfig: DatabasePropertyConfig) => {
     if (onUpdateConfig) {
       onUpdateConfig(nextConfig);

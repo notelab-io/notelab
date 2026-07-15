@@ -11,6 +11,7 @@ import {
   FileText,
   Filter,
   GripVertical,
+  Gauge,
   Image as ImageIcon,
   CalendarRange,
   ChartLine,
@@ -23,6 +24,7 @@ import {
   MoreHorizontal,
   Palette,
   Plus,
+  Radar as RadarIcon,
   Rows3,
   Search,
   Settings2,
@@ -162,6 +164,8 @@ const chartTypeOptions: Array<{
   { icon: Rows3, label: "Horizontal bar", value: "horizontal-bar" },
   { icon: ChartLine, label: "Line", value: "line" },
   { icon: ChartPie, label: "Pie", value: "pie" },
+  { icon: RadarIcon, label: "Radar", value: "radar" },
+  { icon: Gauge, label: "Radial", value: "radial" },
   { icon: Type, label: "Count", value: "count" },
 ];
 
@@ -206,7 +210,7 @@ function DatabaseChartSettingsSection({
       <DropDrawerLabel className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
         Chart type
       </DropDrawerLabel>
-      <div className="grid grid-cols-5 gap-1.5 px-2 pb-2">
+      <div className="grid grid-cols-7 gap-1.5 px-2 pb-2">
         {chartTypeOptions.map((option) => (
           <button
             aria-label={option.label}
@@ -855,6 +859,7 @@ function ConditionalColorPanel({
 
 export function DatabaseViewSettingsMenu({
   activeConditionalColors,
+  allContentWrapped,
   activeDatabaseFilters,
   activeDatabaseSorts,
   activeViewType,
@@ -891,6 +896,7 @@ export function DatabaseViewSettingsMenu({
   onReorderDatabaseFilters,
   onSaveDatabaseConditionalColors,
   onSaveDatabaseViewTitle,
+  onSetAllContentWrapped,
   onSetViewDateProperty,
   onSetViewGroupProperty,
   onSetViewType,
@@ -912,6 +918,7 @@ export function DatabaseViewSettingsMenu({
   showTitle,
 }: {
   activeConditionalColors: DatabaseActiveConditionalColor[];
+  allContentWrapped: boolean;
   activeDatabaseFilters: DatabaseActiveFilter[];
   activeDatabaseSorts: DatabaseActiveSort[];
   activeViewType?: string;
@@ -950,6 +957,7 @@ export function DatabaseViewSettingsMenu({
     settings: DatabaseConditionalColorConfig[],
   ) => void;
   onSaveDatabaseViewTitle: (title: string) => void;
+  onSetAllContentWrapped: (wrapContent: boolean) => void;
   onSetViewDateProperty: (datePropertyId: string | null) => void;
   onSetViewGroupProperty: (groupPropertyId: string | null) => void;
   onSetViewType: (
@@ -1200,7 +1208,7 @@ export function DatabaseViewSettingsMenu({
                     className={cn(
                       "flex h-20 flex-col items-center justify-center gap-1.5 rounded-md border text-xs font-medium text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40",
                       selected &&
-                        "border-primary bg-primary/10 text-primary ring-1 ring-primary",
+                        "border-primary bg-primary/10 text-primary",
                     )}
                     key={option.type}
                     onClick={(event) => {
@@ -1250,7 +1258,21 @@ export function DatabaseViewSettingsMenu({
                 />
               </DropDrawerItem>
             ) : null}
-            {!isTableView && !isChartView && !isTimelineView ? (
+            {isTableView ? (
+              <DropDrawerItem
+                aria-pressed={allContentWrapped}
+                onSelect={(event) => {
+                  event.preventDefault();
+                  onSetAllContentWrapped(!allContentWrapped);
+                }}
+              >
+                <span>
+                  {allContentWrapped
+                    ? "Unwrap all content"
+                    : "Wrap all content"}
+                </span>
+              </DropDrawerItem>
+            ) : !isChartView && !isTimelineView ? (
               <DropDrawerItem
                 aria-pressed={layoutSettings.wrapAllContent}
                 onSelect={(event) => {

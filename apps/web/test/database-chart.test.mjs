@@ -31,6 +31,51 @@ export function register({ assert, loadModule, test }) {
     );
   });
 
+  test("database chart config preserves radial charts", async () => {
+    const { getDatabaseChartSettings } = await loadModule(
+      "/src/editor/extensions/database/views/chart/database-chart-config.ts",
+    );
+
+    assert.equal(
+      getDatabaseChartSettings({ chart: { type: "radial" } }).type,
+      "radial",
+    );
+  });
+
+  test("database chart config preserves radar charts", async () => {
+    const { getDatabaseChartSettings } = await loadModule(
+      "/src/editor/extensions/database/views/chart/database-chart-config.ts",
+    );
+
+    assert.equal(
+      getDatabaseChartSettings({ chart: { type: "radar" } }).type,
+      "radar",
+    );
+  });
+
+  test("database charts do not split a series by its own axis", async () => {
+    const { shouldSplitDatabaseChartSeries } = await loadModule(
+      "/src/editor/extensions/database/views/chart/database-chart-config.ts",
+    );
+
+    assert.equal(
+      shouldSplitDatabaseChartSeries({
+        axisPropertyId: "status",
+        splitPropertyId: "status",
+        type: "radar",
+      }),
+      false,
+    );
+    assert.equal(
+      shouldSplitDatabaseChartSeries({
+        axisPropertyId: "quarter",
+        splitPropertyId: "status",
+        type: "radar",
+      }),
+      true,
+    );
+  });
+
   test("database chart data groups rows and sums numeric measures", async () => {
     const { createChartData } = await loadModule(
       "/src/editor/extensions/database/views/chart/database-chart-data.ts",
@@ -176,4 +221,3 @@ function createRow(id, name) {
     updatedAt: "2026-01-01T00:00:00.000Z",
   };
 }
-

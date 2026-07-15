@@ -53,6 +53,7 @@ export function DatabaseNamePropertyMenu({
   schemaActionsEnabled = true,
   sortDirection,
   triggerDragProps,
+  wrapContent: controlledWrapContent,
 }: {
   config?: unknown;
   databaseId: string;
@@ -69,6 +70,7 @@ export function DatabaseNamePropertyMenu({
     ButtonHTMLAttributes<HTMLButtonElement>,
     "onClick" | "onPointerDownCapture" | "title"
   >;
+  wrapContent?: boolean;
 }) {
   const updateDatabase = useUpdateDatabase();
   const label = getNameColumnLabel(config);
@@ -77,7 +79,8 @@ export function DatabaseNamePropertyMenu({
     sortDirection ??
     currentSorts.find((sort) => sort.column === "name")?.direction;
   const showPageIcon = getNameColumnShowPageIcon(config);
-  const wrapContent = getNameColumnWrapContent(config);
+  const wrapContent =
+    controlledWrapContent ?? getNameColumnWrapContent(config);
   const updateNameColumnConfig = (nextConfig: DatabaseNameColumnConfig) => {
     if (onUpdateConfig) {
       onUpdateConfig(nextConfig);

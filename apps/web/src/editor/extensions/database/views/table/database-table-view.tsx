@@ -411,6 +411,7 @@ function DatabaseTable({
 function DatabaseVirtualizedTable({
   columnKeys,
   columnWidths,
+  header,
   measurementKey,
   renderRow,
   rows,
@@ -419,6 +420,7 @@ function DatabaseVirtualizedTable({
 }: {
   columnKeys: string[]
   columnWidths: Record<string, number>
+  header?: ReactNode
   measurementKey: string
   renderRow: (
     row: TableRow,
@@ -526,6 +528,7 @@ function DatabaseVirtualizedTable({
         columnWidths={columnWidths}
         tableMinWidth={tableMinWidth}
       >
+        {header}
         <tbody>
           {virtualizationEnabled
             ? virtualRows.map((virtualRow, virtualIndex) => {
@@ -959,7 +962,7 @@ export function DatabaseTableView() {
   useSyncedHorizontalScroll(
     stickyHeaderScrollRef,
     tableScrollRef,
-    tableMinWidth
+    `${tableMinWidth}:${isTableGrouped ? "grouped" : "ungrouped"}`
   )
   const { sentinelRef: rowsScrollSentinelRef } = useDatabaseRowsScroll({
     fetchNextPage,
@@ -1753,6 +1756,9 @@ export function DatabaseTableView() {
           const showLeftInsert = pendingInsertPropertyKey === leftInsertKey
           const showRightInsert = pendingInsertPropertyKey === rightInsertKey
           const property = propertiesById.get(columnId)
+          const propertyWrapContent = property
+            ? getPropertyWrapContent(property.property.config)
+            : false
 
           return (
             <Fragment key={columnId}>
@@ -1840,6 +1846,7 @@ export function DatabaseTableView() {
                               ? "Drag to reorder column"
                               : undefined,
                           }}
+                          wrapContent={nameColumnWrapContent}
                         />
                       ) : (
                         <span
@@ -1936,6 +1943,7 @@ export function DatabaseTableView() {
                             : undefined,
                         }}
                         type={property.property.type}
+                        wrapContent={propertyWrapContent}
                         workspaceId={workspaceId ?? databaseWorkspaceId}
                       />
                     ) : property ? (
@@ -2305,20 +2313,22 @@ export function DatabaseTableView() {
         ) : null}
         {!isInlineTableScrollEnabled ? renderRowDragRail() : null}
         {!isInlineTableScrollEnabled ? renderRowDropLine() : null}
-        <div
-          className="database-table-sticky-header database-inline-scroll"
-          ref={stickyHeaderScrollRef}
-        >
-          <div className="database-table-scroll-content database-inline-scroll-content">
-            <DatabaseTable
-              columnKeys={columnKeys}
-              columnWidths={columnWidths}
-              tableMinWidth={tableMinWidth}
-            >
-              {renderTableHeader("sticky")}
-            </DatabaseTable>
+        {!isTableGrouped ? (
+          <div
+            className="database-table-sticky-header database-inline-scroll"
+            ref={stickyHeaderScrollRef}
+          >
+            <div className="database-table-scroll-content database-inline-scroll-content">
+              <DatabaseTable
+                columnKeys={columnKeys}
+                columnWidths={columnWidths}
+                tableMinWidth={tableMinWidth}
+              >
+                {renderTableHeader("sticky")}
+              </DatabaseTable>
+            </div>
           </div>
-        </div>
+        ) : null}
         <div
           className="database-table-scroll database-inline-scroll"
           ref={tableScrollRef}
@@ -2371,6 +2381,7 @@ export function DatabaseTableView() {
                           <DatabaseVirtualizedTable
                             columnKeys={columnKeys}
                             columnWidths={columnWidths}
+                            header={renderTableHeader(`group:${section.id}`)}
                             measurementKey={tableMeasurementKey}
                             renderRow={renderTableRow}
                             rows={section.rows}
