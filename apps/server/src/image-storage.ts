@@ -210,27 +210,22 @@ class S3ImageStorage implements ImageStorage {
 }
 
 function getS3Config(env: RuntimeEnv): S3Config {
-  const accountId = getStringEnv(env, "R2_ACCOUNT_ID");
-  const endpoint =
-    getStringEnv(env, "R2_ENDPOINT") ??
-    (accountId
-      ? `https://${accountId}.r2.cloudflarestorage.com`
-      : undefined);
-  const accessKeyId = getStringEnv(env, "R2_ACCESS_KEY_ID");
-  const secretAccessKey = getStringEnv(env, "R2_SECRET_ACCESS_KEY");
-  const bucketName = getStringEnv(env, "R2_BUCKET_NAME");
+  const endpoint = getStringEnv(env, "S3_ENDPOINT");
+  const accessKeyId = getStringEnv(env, "S3_ACCESS_KEY_ID");
+  const secretAccessKey = getStringEnv(env, "S3_SECRET_ACCESS_KEY");
+  const bucketName = getStringEnv(env, "S3_BUCKET_NAME");
   const missing = [
-    ["R2_ACCESS_KEY_ID", accessKeyId],
-    ["R2_SECRET_ACCESS_KEY", secretAccessKey],
-    ["R2_BUCKET_NAME", bucketName],
-    ["R2_ENDPOINT or R2_ACCOUNT_ID", endpoint],
+    ["S3_ACCESS_KEY_ID", accessKeyId],
+    ["S3_SECRET_ACCESS_KEY", secretAccessKey],
+    ["S3_BUCKET_NAME", bucketName],
+    ["S3_ENDPOINT", endpoint],
   ]
     .filter(([, value]) => !value)
     .map(([name]) => name);
 
   if (missing.length > 0) {
     throw new Error(
-      `Missing R2 S3 configuration for IMAGE_STORAGE_MODE=s3: ${missing.join(", ")}`,
+      `Missing S3 configuration for IMAGE_STORAGE_MODE=s3: ${missing.join(", ")}`,
     );
   }
 
@@ -244,10 +239,10 @@ function getS3Config(env: RuntimeEnv): S3Config {
 
 function hasS3Config(env: RuntimeEnv) {
   return Boolean(
-    getStringEnv(env, "R2_ACCESS_KEY_ID") &&
-      getStringEnv(env, "R2_SECRET_ACCESS_KEY") &&
-      getStringEnv(env, "R2_BUCKET_NAME") &&
-      (getStringEnv(env, "R2_ENDPOINT") || getStringEnv(env, "R2_ACCOUNT_ID")),
+    getStringEnv(env, "S3_ACCESS_KEY_ID") &&
+      getStringEnv(env, "S3_SECRET_ACCESS_KEY") &&
+      getStringEnv(env, "S3_BUCKET_NAME") &&
+      getStringEnv(env, "S3_ENDPOINT"),
   );
 }
 

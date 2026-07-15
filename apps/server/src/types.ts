@@ -28,11 +28,10 @@ export type AppBindings = {
     IMAGE_UPLOAD_MAX_BYTES?: string;
     IMAGE_UPLOAD_URL_TTL_SECONDS?: string;
     OAUTH_STATE_SECRET: string;
-    R2_ACCESS_KEY_ID?: string;
-    R2_ACCOUNT_ID?: string;
-    R2_BUCKET_NAME?: string;
-    R2_ENDPOINT?: string;
-    R2_SECRET_ACCESS_KEY?: string;
+    S3_ACCESS_KEY_ID?: string;
+    S3_BUCKET_NAME?: string;
+    S3_ENDPOINT?: string;
+    S3_SECRET_ACCESS_KEY?: string;
     GOOGLE_OAUTH_CLIENT_ID?: string;
     GOOGLE_OAUTH_CLIENT_SECRET?: string;
     GITHUB_OAUTH_CLIENT_ID?: string;

@@ -9,7 +9,7 @@ export function register({ assert, loadModule, test }) {
           headers: { "Content-Type": "image/png" },
           method: "PUT",
           storageMode: "s3",
-          url: "https://r2.example/upload",
+          url: "https://objects.example/upload",
         },
       }),
       new Response(null, { status: 200 }),
@@ -24,7 +24,7 @@ export function register({ assert, loadModule, test }) {
       })
 
       assert.equal(result.url, "https://api.notelab.test/images/asset-s3")
-      assert.equal(calls[1].url, "https://r2.example/upload")
+      assert.equal(calls[1].url, "https://objects.example/upload")
       assert.equal(calls[1].init.credentials, "omit")
       assert.equal(calls[1].headers.get("content-type"), "image/png")
       assert.equal(calls[1].headers.has("x-mobile-auth-cookie"), false)
