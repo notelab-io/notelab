@@ -48,7 +48,7 @@ import { DatabasePropertyInput } from "../../properties/database-property-input"
 import { DatabasePageLink } from "../../interactions/database-page-link"
 import { DatabasePropertyMenu } from "../../properties/database-property-menu"
 import { DatabasePropertyValue } from "../../properties/database-property-value"
-import { DatabaseTableCellContent } from "../table/database-table-cell-content"
+import { DatabaseCellContent } from "../database-cell-content"
 import {
   firstScalarValue,
   serializePropertyValue,
@@ -944,7 +944,7 @@ export function DatabaseKanbanView() {
               : "database-kanban-property-value !pl-0"
           }
         >
-          <DatabaseTableCellContent wrapContent={wrapContent}>
+          <DatabaseCellContent wrapContent={wrapContent}>
             <DatabasePropertyValue
               disabledSelect={disabledSelect}
               editable={editable}
@@ -958,7 +958,7 @@ export function DatabaseKanbanView() {
               row={row}
               titlePropertyLabel={titlePropertyLabel}
             />
-          </DatabaseTableCellContent>
+          </DatabaseCellContent>
         </div>
       </div>
     )

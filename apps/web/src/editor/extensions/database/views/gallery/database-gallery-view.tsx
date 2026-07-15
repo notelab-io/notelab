@@ -22,7 +22,7 @@ import { useDatabaseRowsScroll } from "../../interactions/use-database-rows-scro
 import { canCreateRowInKanbanGroup } from "../kanban/database-kanban-config"
 import { useDatabaseViewContext } from "../database-view-context"
 import { DatabasePropertyValue } from "../../properties/database-property-value"
-import { DatabaseTableCellContent } from "../table/database-table-cell-content"
+import { DatabaseCellContent } from "../database-cell-content"
 
 export function DatabaseGalleryView() {
   const {
@@ -156,7 +156,7 @@ export function DatabaseGalleryView() {
                       {property.property.name}
                     </span>
                     <div className="database-gallery-card-property-value">
-                      <DatabaseTableCellContent
+                      <DatabaseCellContent
                         wrapContent={layoutSettings.wrapAllContent}
                       >
                         <DatabasePropertyValue
@@ -179,7 +179,7 @@ export function DatabaseGalleryView() {
                           row={row}
                           titlePropertyLabel={titlePropertyLabel}
                         />
-                      </DatabaseTableCellContent>
+                      </DatabaseCellContent>
                     </div>
                   </div>
                 )

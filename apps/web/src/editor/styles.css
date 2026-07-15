@@ -935,7 +935,7 @@
     @apply min-w-0 max-w-full flex-none overflow-hidden text-sm;
   }
 
-  .database-gallery-card-property-value .database-cell-scroll {
+  .database-gallery-card-property-value .database-cell-content {
     @apply w-auto max-w-full;
   }
 
@@ -977,7 +977,7 @@
 
   .database-gallery-view[data-card-layout="list"]
     .database-gallery-card-property-value
-    .database-cell-scroll {
+    .database-cell-content {
     @apply w-full;
   }
 
@@ -1526,25 +1526,25 @@
     @apply relative min-w-0 pl-5;
   }
 
-  .database-kanban-property-value .database-cell-scroll {
+  .database-kanban-property-value .database-cell-content {
     @apply min-h-7;
   }
 
   .database-kanban-property-value
-    .database-cell-scroll[data-wrap-content="false"]
+    .database-cell-content[data-wrap-content="false"]
     > .database-relation-cell-trigger {
     min-width: max-content;
     width: max-content;
   }
 
   .database-kanban-property-value
-    .database-cell-scroll[data-wrap-content="false"]
+    .database-cell-content[data-wrap-content="false"]
     .database-relation-cell-trigger {
     @apply gap-1.5;
   }
 
   .database-kanban-property-value
-    .database-cell-scroll[data-wrap-content="false"]
+    .database-cell-content[data-wrap-content="false"]
     .database-relation-cell-trigger
     .database-page-link {
     @apply px-0 py-0;
@@ -1642,11 +1642,11 @@
     background-color: var(--database-presence-color);
   }
 
-  .database-cell-scroll {
+  .database-cell-content {
     @apply min-h-8 w-full min-w-0 overflow-hidden;
   }
 
-  .database-cell-scroll[data-wrap-content="false"]
+  .database-cell-content[data-wrap-content="false"]
     > :is(
       .database-checkbox-cell,
       .database-date-cell-trigger,
@@ -1659,11 +1659,31 @@
     width: max-content;
   }
 
-  .database-cell-scroll[data-wrap-content="true"] {
+  .database-cell-content[data-wrap-content="false"] .database-relation-cell-trigger {
+    @apply flex-nowrap;
+  }
+
+  .database-cell-content[data-wrap-content="false"]
+    .database-relation-cell-trigger
+    .database-page-link {
+    width: max-content;
+  }
+
+  .database-cell-content[data-wrap-content="false"] .database-page-link .database-page-main {
+    @apply flex-none;
+  }
+
+  .database-cell-content[data-wrap-content="false"] .database-page-title {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: nowrap;
+  }
+
+  .database-cell-content[data-wrap-content="true"] {
     @apply h-auto overflow-visible;
   }
 
-  .database-cell-scroll[data-wrap-content="true"]
+  .database-cell-content[data-wrap-content="true"]
     > :is(
       .database-date-cell-trigger,
       .database-input-cell-trigger,
@@ -1671,60 +1691,46 @@
       .database-relation-cell-trigger,
       .database-select-cell-trigger
     ) {
-    @apply h-auto min-h-8 items-start whitespace-normal;
-    min-width: 0;
-    width: 100%;
+    @apply h-auto min-h-8 w-full min-w-0 items-start whitespace-normal;
     overflow-wrap: anywhere;
   }
 
-  .database-cell-scroll[data-wrap-content="true"] .database-input-cell-trigger {
+  .database-cell-content[data-wrap-content="true"]
+    :is(
+      .database-date-cell-trigger,
+      .database-input-cell-link,
+      .database-input-cell-trigger,
+      .database-page-title,
+      .database-select-badge
+    ) {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
     word-break: break-word;
   }
 
-  .database-cell-scroll[data-wrap-content="true"] .database-page-title,
-  .database-cell-scroll[data-wrap-content="true"] .database-date-cell-trigger {
-    overflow: visible;
-    text-overflow: clip;
-    white-space: normal;
-    overflow-wrap: anywhere;
+  .database-cell-content[data-wrap-content="true"]
+    .database-input-cell-trigger
+    > .database-input-cell-link {
+    @apply static;
   }
 
-  .database-cell-scroll[data-wrap-content="true"] .database-page-link {
+  .database-cell-content[data-wrap-content="true"]
+    :is(.database-relation-cell-trigger, .database-select-cell-trigger) {
+    @apply flex-wrap;
+  }
+
+  .database-cell-content[data-wrap-content="true"] .database-page-link {
     @apply py-1;
   }
 
-  .database-cell-scroll[data-wrap-content="true"] .database-page-link .database-page-main {
+  .database-cell-content[data-wrap-content="true"] .database-page-link .database-page-main {
     @apply min-w-0 items-start;
   }
 
-  .database-cell-scroll[data-wrap-content="true"] .database-page-title {
-    @apply max-w-full whitespace-normal;
-    word-break: break-word;
-  }
-
-  .database-cell-scroll[data-wrap-content="false"] .database-relation-cell-trigger {
-    @apply flex-nowrap;
-  }
-
-  .database-cell-scroll[data-wrap-content="false"]
-    .database-relation-cell-trigger
-    .database-page-link {
-    width: max-content;
-  }
-
-  .database-cell-scroll[data-wrap-content="false"] .database-page-link .database-page-main {
-    @apply flex-none;
-  }
-
-  .database-cell-scroll[data-wrap-content="false"] .database-page-title {
-    overflow: visible;
-    text-overflow: clip;
-    white-space: nowrap;
-  }
-
-  .database-cell-scroll[data-wrap-content="true"] .database-select-badge {
-    white-space: normal;
-    overflow-wrap: anywhere;
+  .database-cell-content[data-wrap-content="true"] .database-page-title {
+    @apply max-w-full;
   }
 
   .tiptap-editor .database-table th {
@@ -1812,20 +1818,8 @@
     @apply block h-8 min-h-8 w-full resize-none overflow-hidden border-0 bg-transparent px-3 py-1 text-sm leading-6 shadow-none outline-none transition-colors placeholder:text-muted-foreground focus-visible:ring-0;
   }
 
-  .database-input-cell-underlay {
-    @apply text-transparent caret-transparent;
-  }
-
   .database-input-cell-link {
     @apply inline-flex h-8 max-w-full items-center truncate px-3 py-1 text-sm leading-6 text-primary underline underline-offset-2 focus-visible:ring-2 focus-visible:ring-ring/40;
-  }
-
-  .database-input-cell-link[data-wrap-content="true"] {
-    @apply h-auto whitespace-pre-wrap;
-    overflow: visible;
-    text-overflow: clip;
-    overflow-wrap: anywhere;
-    word-break: break-word;
   }
 
   .database-input-cell-trigger {
@@ -1838,28 +1832,6 @@
 
   .database-input-cell-wrap {
     @apply relative h-8 min-h-8 w-full;
-  }
-
-  .database-cell-scroll[data-wrap-content="false"]
-    .database-input-cell-wrap:not([data-popover-open="true"]) {
-    width: max(100%, var(--database-input-cell-content-width, 100%));
-  }
-
-  .database-cell-scroll[data-wrap-content="false"] .database-input-cell {
-    @apply whitespace-pre;
-  }
-
-  .database-cell-scroll[data-wrap-content="true"]
-    .database-input-cell-wrap:not([data-popover-open="true"]) {
-    @apply h-auto min-w-0;
-    width: 100%;
-  }
-
-  .database-cell-scroll[data-wrap-content="true"]
-    .database-input-cell-wrap:not([data-popover-open="true"])
-    .database-input-cell {
-    @apply h-auto min-w-0 overflow-x-hidden whitespace-pre-wrap;
-    overflow-wrap: anywhere;
   }
 
   .database-checkbox-cell {
@@ -1910,12 +1882,6 @@
 
   .database-input-cell-trigger {
     @apply flex min-h-8 w-full min-w-0 items-center px-3 py-1 text-left text-sm leading-6 text-foreground outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/40;
-  }
-
-  .database-input-cell-trigger[data-wrap-content="true"] {
-    @apply h-auto items-start whitespace-pre-wrap;
-    overflow-wrap: anywhere;
-    word-break: break-word;
   }
 
   .database-input-cell-drawer {

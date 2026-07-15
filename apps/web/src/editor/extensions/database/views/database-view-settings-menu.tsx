@@ -1008,6 +1008,7 @@ export function DatabaseViewSettingsMenu({
   const isChartView = activeViewType === "chart";
   const isGalleryView = activeViewType === "gallery";
   const isListView = activeViewType === "list";
+  const isTableView = !activeViewType || activeViewType === "table";
   const ViewTypeIcon = isKanbanView
     ? Kanban
     : isTimelineView
@@ -1249,7 +1250,7 @@ export function DatabaseViewSettingsMenu({
                 />
               </DropDrawerItem>
             ) : null}
-            {!isChartView && !isTimelineView ? (
+            {!isTableView && !isChartView && !isTimelineView ? (
               <DropDrawerItem
                 aria-pressed={layoutSettings.wrapAllContent}
                 onSelect={(event) => {

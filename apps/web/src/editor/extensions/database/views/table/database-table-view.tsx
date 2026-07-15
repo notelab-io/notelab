@@ -50,7 +50,7 @@ import {
 } from "@/lib/color-tokens"
 
 import { AddDatabasePropertyMenu } from "../../properties/add-database-property-menu"
-import { DatabaseTableCellContent } from "./database-table-cell-content"
+import { DatabaseCellContent } from "../database-cell-content"
 import {
   databaseAddPropertyColumnDefaultWidth,
   databaseColumnMinWidth,
@@ -411,6 +411,7 @@ function DatabaseTable({
 function DatabaseVirtualizedTable({
   columnKeys,
   columnWidths,
+  measurementKey,
   renderRow,
   rows,
   tableMinWidth,
@@ -418,6 +419,7 @@ function DatabaseVirtualizedTable({
 }: {
   columnKeys: string[]
   columnWidths: Record<string, number>
+  measurementKey: string
   renderRow: (
     row: TableRow,
     index: number,
@@ -455,6 +457,10 @@ function DatabaseVirtualizedTable({
     rangeExtractor,
     scrollMargin,
   })
+
+  useLayoutEffect(() => {
+    virtualizer.measure()
+  }, [measurementKey, virtualizer])
 
   useLayoutEffect(() => {
     const element = tableRef.current
@@ -774,8 +780,7 @@ export function DatabaseTableView() {
   const loadedDatabaseId = requireDatabaseId(databaseId)
   const canEditStructure = editable && (canAddDatabaseProperties ?? true)
   const canUseHeaderMenus = headerMenusEnabled ?? editable
-  const nameColumnWrapContent =
-    layoutSettings.wrapAllContent || getNameColumnWrapContent(databaseConfig)
+  const nameColumnWrapContent = getNameColumnWrapContent(databaseConfig)
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({})
   const [hoveredRowId, setHoveredRowId] = useState<string | null>(null)
   const [draggedRowId, setDraggedRowId] = useState<string | null>(null)
@@ -827,10 +832,9 @@ export function DatabaseTableView() {
   const isTableFiltered = activeDatabaseFilters.length > 0
   const isTableGrouped = Boolean(groupProperty)
   const renderedProperties = visibleProperties
-  const wrapLayoutKey = useMemo(
+  const tableMeasurementKey = useMemo(
     () =>
       [
-        layoutSettings.wrapAllContent ? "all" : "partial",
         nameColumnWrapContent ? "name-wrap" : "name-nowrap",
         ...renderedProperties.map((property) =>
           getPropertyWrapContent(property.property.config)
@@ -838,7 +842,7 @@ export function DatabaseTableView() {
             : `${property.id}:nowrap`
         ),
       ].join("|"),
-    [layoutSettings.wrapAllContent, nameColumnWrapContent, renderedProperties]
+    [nameColumnWrapContent, renderedProperties]
   )
   const propertiesById = useMemo(
     () =>
@@ -2042,7 +2046,7 @@ export function DatabaseTableView() {
                       wrapContent={nameColumnWrapContent}
                     >
                       {(setActive) => (
-                        <DatabaseTableCellContent
+                        <DatabaseCellContent
                           wrapContent={nameColumnWrapContent}
                         >
                           <DatabasePageLink
@@ -2053,7 +2057,7 @@ export function DatabaseTableView() {
                             pageSummary={row.page}
                             showPageIcon={nameColumnShowPageIcon}
                           />
-                        </DatabaseTableCellContent>
+                        </DatabaseCellContent>
                       )}
                     </DatabaseActiveTableCell>
                     {showRightInsert
@@ -2070,9 +2074,7 @@ export function DatabaseTableView() {
               const pageProperty = property.property
               const key = `${row.pageId}:${pageProperty.id}`
               const persistedValue = propertyValuesByKey[key] ?? ""
-              const wrapContent =
-                layoutSettings.wrapAllContent ||
-                getPropertyWrapContent(pageProperty.config)
+              const wrapContent = getPropertyWrapContent(pageProperty.config)
 
               return (
                 <Fragment key={property.id}>
@@ -2091,7 +2093,7 @@ export function DatabaseTableView() {
                     wrapContent={wrapContent}
                   >
                     {() => (
-                      <DatabaseTableCellContent wrapContent={wrapContent}>
+                      <DatabaseCellContent wrapContent={wrapContent}>
                         <DatabasePropertyValue
                           editable={editable}
                           properties={properties}
@@ -2108,8 +2110,9 @@ export function DatabaseTableView() {
                           property={property}
                           row={row}
                           titlePropertyLabel={nameColumnLabel}
+                          wrapContent={wrapContent}
                         />
-                      </DatabaseTableCellContent>
+                      </DatabaseCellContent>
                     )}
                   </DatabaseActiveTableCell>
                   {showRightInsert
@@ -2195,7 +2198,6 @@ export function DatabaseTableView() {
       <div
         className="database-table-wrap database-inline-scroll-wrap"
         data-inline-scroll={isInlineTableScrollEnabled ? "true" : undefined}
-        data-wrap-content={layoutSettings.wrapAllContent ? "true" : undefined}
         data-vertical-lines={
           layoutSettings.showVerticalLines ? "true" : "false"
         }
@@ -2369,7 +2371,7 @@ export function DatabaseTableView() {
                           <DatabaseVirtualizedTable
                             columnKeys={columnKeys}
                             columnWidths={columnWidths}
-                            key={`${section.id}:${wrapLayoutKey}`}
+                            measurementKey={tableMeasurementKey}
                             renderRow={renderTableRow}
                             rows={section.rows}
                             tableMinWidth={tableMinWidth}
@@ -2403,7 +2405,7 @@ export function DatabaseTableView() {
               <DatabaseVirtualizedTable
                 columnKeys={columnKeys}
                 columnWidths={columnWidths}
-                key={wrapLayoutKey}
+                measurementKey={tableMeasurementKey}
                 renderRow={renderTableRow}
                 rows={sortedRows}
                 tableMinWidth={tableMinWidth}

@@ -108,6 +108,7 @@ type DatabasePropertyValueProps = {
   property: DatabasePropertyListItem
   row: DatabaseRow
   titlePropertyLabel: string
+  wrapContent?: boolean
 }
 
 function formatReadOnlyTimePropertyValue(
@@ -142,6 +143,7 @@ export function DatabasePropertyValue({
   property,
   row,
   titlePropertyLabel,
+  wrapContent: wrapContentOverride,
 }: DatabasePropertyValueProps) {
   const databaseContext = useDatabaseViewContext()
   const pageProperty = property.property
@@ -187,8 +189,9 @@ export function DatabasePropertyValue({
     pageProperty.type === "multi_select" ||
     (cellKind === "person" && getPersonLimit(pageProperty.config) !== "one_person")
   const wrapContent =
-    databaseContext.layoutSettings.wrapAllContent ||
-    getPropertyWrapContent(pageProperty.config)
+    wrapContentOverride ??
+    (databaseContext.layoutSettings.wrapAllContent ||
+      getPropertyWrapContent(pageProperty.config))
   const displayValue =
     pageProperty.type === "status" && !persistedValue
       ? defaultStatusOption.name
@@ -386,7 +389,6 @@ export function DatabasePropertyValue({
       propertyConfig={pageProperty.config}
       type={pageProperty.type}
       value={Array.isArray(value) ? value.join(", ") : value}
-      wrapContent={wrapContent}
     />
   )
 
@@ -677,7 +679,9 @@ function DatabaseRelationPropertyValue({
 
   if (!editable) {
     return selectedLinks.length > 0 ? (
-      <span className="flex min-w-0 flex-wrap gap-1">{selectedLinks}</span>
+      <span className="database-relation-cell-trigger gap-1">
+        {selectedLinks}
+      </span>
     ) : null
   }
 

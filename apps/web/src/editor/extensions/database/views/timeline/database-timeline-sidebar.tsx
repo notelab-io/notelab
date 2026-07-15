@@ -10,7 +10,7 @@ import { databaseNameColumnDefaultWidth } from "../../core/database-contracts"
 import { DatabasePageLink } from "../../interactions/database-page-link"
 import { getNameColumnWrapContent } from "../database-view-config"
 import type { DatabasePropertyListItem } from "../kanban/database-kanban-config"
-import { DatabaseTableCellContent } from "../table/database-table-cell-content"
+import { DatabaseCellContent } from "../database-cell-content"
 import type { TimelineViewRow } from "./database-timeline-rows"
 
 const timelineTableMinWidth = databaseNameColumnDefaultWidth
@@ -175,7 +175,7 @@ export const TimelineSidebarRowCell = memo(function TimelineSidebarRowCell({
         data-timeline-row-id={viewRow.item.id}
         onMouseEnter={() => onRowMouseEnter?.(viewRow.item.id)}
       >
-        <DatabaseTableCellContent wrapContent={nameColumnWrapContent}>
+        <DatabaseCellContent wrapContent={nameColumnWrapContent}>
           <DatabasePageLink
             editable={editable}
             onOpen={onOpenPage}
@@ -183,7 +183,7 @@ export const TimelineSidebarRowCell = memo(function TimelineSidebarRowCell({
             pageSummary={viewRow.item.page}
             showPageIcon={showPageIcon}
           />
-        </DatabaseTableCellContent>
+        </DatabaseCellContent>
       </div>
     </div>
   )

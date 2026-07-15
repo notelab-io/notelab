@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 
-export function DatabaseTableCellContent({
+export function DatabaseCellContent({
   children,
   wrapContent = false,
 }: {
@@ -9,8 +9,7 @@ export function DatabaseTableCellContent({
 }) {
   return (
     <div
-      className="database-cell-scroll"
-      data-database-cell-scroll
+      className="database-cell-content"
       data-wrap-content={wrapContent ? "true" : "false"}
     >
       {children}
