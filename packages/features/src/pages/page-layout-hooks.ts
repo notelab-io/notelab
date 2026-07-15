@@ -24,6 +24,13 @@ export const pageLayoutKeys = {
   ] as const,
 }
 
+type SavePageLayoutInput = {
+  clearPageOverrides?: boolean
+  config: PageLayoutConfig
+  scope: PageLayoutScope
+  scopeId: string
+}
+
 export function useResolvedPageLayout(target: PageLayoutTarget) {
   const { apiFetch } = useNotelabFeatures()
 
@@ -44,14 +51,17 @@ export function useSavePageLayout() {
   const { apiFetch, queryClient } = useNotelabFeatures()
 
   return useMutation({
-    mutationFn: (input: {
-      config: PageLayoutConfig
-      scope: PageLayoutScope
-      scopeId: string
-    }) => apiFetch(`/page-layouts/${input.scope}/${encodeURIComponent(input.scopeId)}`, {
-      method: "PUT",
-      body: JSON.stringify({ config: input.config }),
-    }),
+    mutationFn: (input: SavePageLayoutInput) =>
+      apiFetch(
+        `/page-layouts/${input.scope}/${encodeURIComponent(input.scopeId)}`,
+        {
+          method: "PUT",
+          body: JSON.stringify({
+            config: input.config,
+            clearPageOverrides: input.clearPageOverrides,
+          }),
+        },
+      ),
     onMutate: async (input) => {
       await queryClient.cancelQueries({ queryKey: pageLayoutKeys.all })
       const previous = queryClient.getQueriesData({ queryKey: pageLayoutKeys.all })
