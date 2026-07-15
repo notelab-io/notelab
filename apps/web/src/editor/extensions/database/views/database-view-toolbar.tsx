@@ -57,7 +57,7 @@ import { DatabaseSearchableMenuItems } from "./database-searchable-menu-items"
 import { DatabaseFilterPopover } from "./database-filter-menu"
 import { DatabaseSortPopover } from "./database-sort-menu"
 import { useDatabaseViewContext } from "./database-view-context"
-import { DatabaseViewSettingsMenu } from "./database-view-settings-menu"
+import { DatabaseViewSettingsMenu } from "./view-settings"
 import {
   getNameColumnWrapContent,
   getPropertyWrapContent,
