@@ -63,6 +63,8 @@ export type OpenPageOptions = {
   databaseId?: string | null
 }
 
+export type PageLayoutPanelMode = "auto" | "overlay"
+
 export type EditorProps = {
   commentController?: PageCommentController
   content?: unknown
@@ -76,6 +78,7 @@ export type EditorProps = {
   enableComments?: boolean
   fullWidth?: boolean
   layoutConfig?: PageLayoutConfig
+  layoutPanelMode?: PageLayoutPanelMode
   layoutPreview?: boolean
   onLayoutChange?: (config: PageLayoutConfig) => void
   onContentChange?: (content: unknown) => void
