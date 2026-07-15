@@ -24,7 +24,67 @@ import type { AppBindings } from "../../types"
 export const pageLayoutRoutes = new Hono<AppBindings>()
 
 const scopeSchema = z.enum(["workspace", "database", "page"])
-const saveSchema = z.object({ config: z.unknown() })
+const saveSchema = z.object({
+  clearPageOverrides: z.boolean().optional(),
+  config: z.unknown(),
+})
+
+type PageLayoutWriteInput = {
+  config: PageLayoutConfig
+  scope: PageLayoutScope
+  scopeId: string
+  workspaceId: string
+}
+
+type PageLayoutWriter = Pick<typeof db, "delete" | "insert" | "select">
+
+async function upsertPageLayout(
+  writer: Pick<PageLayoutWriter, "insert">,
+  input: PageLayoutWriteInput,
+) {
+  return writer
+    .insert(pageLayout)
+    .values({
+      config: input.config,
+      id: crypto.randomUUID(),
+      scopeId: input.scopeId,
+      scopeType: input.scope,
+      workspaceId: input.workspaceId,
+    })
+    .onConflictDoUpdate({
+      target: [pageLayout.scopeType, pageLayout.scopeId],
+      set: {
+        config: input.config,
+        updatedAt: new Date(),
+        workspaceId: input.workspaceId,
+      },
+    })
+    .returning()
+}
+
+async function deleteDatabasePageOverrides(
+  writer: Pick<PageLayoutWriter, "delete" | "select">,
+  databaseId: string,
+) {
+  const databasePageIds = writer
+    .select({ pageId: databaseRow.pageId })
+    .from(databaseRow)
+    .where(
+      and(
+        eq(databaseRow.databaseId, databaseId),
+        isNull(databaseRow.deletedAt),
+      ),
+    )
+
+  await writer
+    .delete(pageLayout)
+    .where(
+      and(
+        eq(pageLayout.scopeType, "page"),
+        inArray(pageLayout.scopeId, databasePageIds),
+      ),
+    )
+}
 
 async function getTargetContext(input: {
   databaseId?: string | null
@@ -178,14 +238,26 @@ pageLayoutRoutes.put("/:scope/:scopeId", async (c) => {
   })
   if (scope === "workspace") config = toWorkspacePageLayout(config)
 
-  const [saved] = await db
-    .insert(pageLayout)
-    .values({ id: crypto.randomUUID(), workspaceId: context.workspaceId, scopeType: scope, scopeId, config })
-    .onConflictDoUpdate({
-      target: [pageLayout.scopeType, pageLayout.scopeId],
-      set: { config, updatedAt: new Date(), workspaceId: context.workspaceId },
-    })
-    .returning()
+  const saveInput = {
+    config,
+    scope,
+    scopeId,
+    workspaceId: context.workspaceId,
+  }
+  const shouldClearPageOverrides =
+    scope === "database" && bodyResult.data.clearPageOverrides === true
+
+  if (!shouldClearPageOverrides) {
+    const [saved] = await upsertPageLayout(db, saveInput)
+    return c.json({ layout: saved })
+  }
+
+  const [saved] = await db.transaction(async (tx) => {
+    const savedLayouts = await upsertPageLayout(tx, saveInput)
+    await deleteDatabasePageOverrides(tx, scopeId)
+
+    return savedLayouts
+  })
 
   return c.json({ layout: saved })
 })
