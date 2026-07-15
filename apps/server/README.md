@@ -20,14 +20,8 @@ it separately when collaboration tickets should have an independent signing
 key. Set `COLLABORATION_WEBSOCKET_URL` when the public WebSocket origin cannot
 be derived from the API request URL, such as behind a development proxy.
 
-## Deployment Adapters
+## Runtime Integrations
 
-Cloudflare deployment support lives in the private
-`@notelab-io/cloudflare-adapter` package. The open-source server exports its
-adapter integration surface from `@notelab/server/adapter-api`, so the public
-repo can install and run without GitHub Packages credentials.
-
-The adapter API exports the Hocuspocus factory, ticket helpers, Yjs conversion
-helpers, and collaboration runtime callbacks. Hosted Cloudflare deployments
-should route one page document to one deterministic Durable Object and provide
-their public WebSocket URL through `getCollaborationWebSocketUrl`.
+The server exports an integration surface from `@notelab/server/adapter-api`.
+It includes the Hocuspocus factory, ticket helpers, Yjs conversion helpers, and
+collaboration runtime callbacks for alternate runtimes.

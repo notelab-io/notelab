@@ -14,7 +14,6 @@ const authEnv = {
   BETTER_AUTH_SECRET: getRequiredEnv("BETTER_AUTH_SECRET"),
   BETTER_AUTH_URL: apiBase,
   CLIENT_URL: clientUrl,
-  HYPERDRIVE: { connectionString: databaseUrl },
 };
 const dbClient = createDbClientForUrl(databaseUrl);
 const db = dbClient.db;

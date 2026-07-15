@@ -48,9 +48,8 @@ Self-hosting uses:
 The serverful runtime hosts Hocuspocus and database realtime rooms on the same
 HTTP server. Database rooms broadcast versioned mutation deltas and ephemeral
 cell presence, while PostgreSQL remains authoritative and an outbox retries
-delivery after process failures. Hosted adapters can run the shared Hocuspocus
-core and database rooms inside scoped Cloudflare Durable Objects while keeping
-authoritative state in Postgres.
+delivery after process failures. Alternate runtimes can reuse the shared
+collaboration core while keeping authoritative state in Postgres.
 
 ## Deployment Model
 

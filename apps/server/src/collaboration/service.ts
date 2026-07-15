@@ -74,7 +74,7 @@ export async function getOrCreateCollaborationDocumentState(pageId: string) {
   }
 
   // Another request initialized the document concurrently. Its state is the
-  // canonical base both the client and Durable Object must use.
+  // canonical base every collaborator must use.
   const [concurrent] = await db
     .select({ state: pageCollaborationDocument.state })
     .from(pageCollaborationDocument)

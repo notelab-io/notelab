@@ -13,7 +13,6 @@ dist/
 
 # deps
 node_modules/
-.wrangler
 
 # env
 .env

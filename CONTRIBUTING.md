@@ -36,7 +36,7 @@ Then open `http://localhost`.
 
 ## Project Structure
 
-- `apps/web`: Vite React web client and Cloudflare static worker entrypoint.
+- `apps/web`: Vite React web client.
 - `apps/server`: Hono API, auth, database access, AI tools, integrations, and serverful runtime.
 - `apps/mobile`: Expo mobile client.
 - `apps/desktop`: Tauri desktop shell.

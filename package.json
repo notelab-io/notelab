@@ -12,7 +12,11 @@
   },
   "workspaces": [
     "apps/*",
-    "packages/*"
+    "packages/connectors",
+    "packages/features",
+    "packages/markdown-text-splitter",
+    "packages/page-context",
+    "packages/tiptap-comment-extension"
   ],
   "scripts": {
     "dev": "npm run dev --workspace @notelab/web",
