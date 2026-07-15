@@ -17,7 +17,6 @@ import {
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { DiscussionVisibilityDialog } from "@/components/discussion-visibility-dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -81,8 +80,6 @@ import {
   usePageAccessLevel,
   usePageAccessTargets,
   usePageNavigation,
-  useResolvedPageLayout,
-  useSavePageLayout,
 } from "@notelab/features/pages";
 import {
   useDatabase,
@@ -148,7 +145,6 @@ export function NavActions({
   const navigate = useNavigate();
   const { openLayoutEditor } = useLayoutEditor();
   const [isOpen, setIsOpen] = React.useState(false);
-  const [discussionDialogOpen, setDiscussionDialogOpen] = React.useState(false);
   const [trashConfirmOpen, setTrashConfirmOpen] = React.useState(false);
   const { data: databasePayload } = useDatabase(databaseId, {
     includeDeleted: true,
@@ -158,17 +154,12 @@ export function NavActions({
   const { data: page } = usePage(actionPageId, {
     refetchOnMount: false,
   });
-  const { data: resolvedLayout } = useResolvedPageLayout({
-    databaseId,
-    pageId: actionPageId,
-  });
   const { data: navigation } = usePageNavigation(workspaceId);
   const pages = navigation?.pages ?? [];
   const createPage = useCreatePage();
   const deletePage = useDeletePage();
   const deleteDatabase = useDeleteDatabase();
   const updatePage = useUpdatePage();
-  const saveLayout = useSavePageLayout();
   const setFavorite = useSetPageFavorite();
   const setDatabaseFavorite = useSetDatabaseFavorite();
   const { data: userSettings } = useUserSettings();
@@ -186,8 +177,6 @@ export function NavActions({
   );
   const fullWidthUpdatePending =
     updateUserSettings.isPending || updatePage.isPending;
-  const discussionsVisible = resolvedLayout?.config.discussionsVisible !== false;
-  const discussionDatabaseId = databaseId ?? resolvedLayout?.databaseId ?? null;
   const isFavorite = isDatabasePage
     ? Boolean(databasePayload?.database.isFavorite)
     : Boolean(page?.isFavorite ?? listPage?.isFavorite);
@@ -384,31 +373,6 @@ export function NavActions({
     );
   };
 
-  const enableDiscussions = async (scope: "database" | "page") => {
-    const scopeId = scope === "database" ? discussionDatabaseId : actionPageId;
-    if (!resolvedLayout || !scopeId || saveLayout.isPending) return;
-
-    try {
-      await saveLayout.mutateAsync({
-        config: { ...resolvedLayout.config, discussionsVisible: true },
-        scope,
-        scopeId,
-      });
-      setDiscussionDialogOpen(false);
-      toast.success(
-        scope === "database"
-          ? "Discussions enabled for all pages in this database."
-          : "Discussions enabled for this page.",
-      );
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Could not enable discussions.",
-      );
-    }
-  };
-
   return (
     <div className="flex items-center gap-2 text-sm">
       <div className="hidden font-medium text-muted-foreground md:inline-block">
@@ -416,7 +380,7 @@ export function NavActions({
       </div>
       {hasPageActions ? (
         <>
-          {pageId && discussionsVisible && onOpenDiscussions ? (
+          {pageId && onOpenDiscussions ? (
             <Button
               aria-label="Open discussions"
               className="h-7 gap-1.5 px-2"
@@ -428,19 +392,6 @@ export function NavActions({
             >
               <MessageSquareTextIcon />
               {openDiscussionCount > 0 ? <span>{openDiscussionCount}</span> : null}
-            </Button>
-          ) : null}
-          {pageId && !discussionsVisible ? (
-            <Button
-              className="h-7 gap-1.5 px-2"
-              disabled={!resolvedLayout || saveLayout.isPending}
-              onClick={() => setDiscussionDialogOpen(true)}
-              size="sm"
-              type="button"
-              variant="ghost"
-            >
-              <MessageSquareTextIcon />
-              Enable discussions
             </Button>
           ) : null}
           {pageId && onTogglePageSidebar ? (
@@ -573,14 +524,6 @@ export function NavActions({
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-          <DiscussionVisibilityDialog
-            databaseAvailable={Boolean(discussionDatabaseId)}
-            enabled
-            onApply={(scope) => void enableDiscussions(scope)}
-            onOpenChange={setDiscussionDialogOpen}
-            open={discussionDialogOpen}
-            pending={saveLayout.isPending}
-          />
         </>
       ) : null}
     </div>

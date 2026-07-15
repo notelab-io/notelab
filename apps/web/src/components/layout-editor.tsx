@@ -11,7 +11,7 @@ import { Check, ChevronDown, LayoutPanelLeft, X } from "lucide-react"
 import { toast } from "sonner"
 
 import { LayoutEditorSettings } from "@/components/layout-editor-settings"
-import { DiscussionVisibilityDialog } from "@/components/discussion-visibility-dialog"
+import { LayoutApplyDialog } from "@/components/layout-apply-dialog"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -48,6 +48,12 @@ type LayoutEditorTarget = {
 }
 type LayoutEditorContextValue = {
   openLayoutEditor: (target: LayoutEditorTarget) => void
+}
+
+const saveSuccessMessages: Record<PageLayoutScope, string> = {
+  database: "Database layout saved.",
+  page: "Page layout saved.",
+  workspace: "Workspace layout saved.",
 }
 
 function withoutLayoutFullWidth(config: PageLayoutConfig): PageLayoutConfig {
@@ -111,7 +117,7 @@ function PreviewPageDropdown({
           <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-72">
+      <DropdownMenuContent align="start" className="z-[110] w-72">
         {pages.length ? (
           pages.map((page) => (
             <DropdownMenuItem
@@ -177,16 +183,15 @@ function LayoutEditor({
     useDatabase(databaseId)
   const { data: userSettings = defaultUserSettings } = useUserSettings()
   const [draft, setDraft] = useState<PageLayoutConfig | null>(null)
-  const [pendingDiscussionsVisible, setPendingDiscussionsVisible] = useState<
-    boolean | null
-  >(null)
+  const [applyDialogOpen, setApplyDialogOpen] = useState(false)
   const saveLayout = useSavePageLayout()
   const resetLayout = useResetPageLayout()
   const updateUserSettings = useUpdateUserSettings()
+  const layoutMutationPending = saveLayout.isPending || resetLayout.isPending
 
   useEffect(() => {
     if (resolved?.config) {
-      setDraft(structuredClone(withoutLayoutFullWidth(resolved.config)))
+      setDraft(withoutLayoutFullWidth(resolved.config))
     }
   }, [resolved?.config])
 
@@ -213,13 +218,19 @@ function LayoutEditor({
         })) ?? [],
     [databasePayload?.rows],
   )
-  const resolvedConfig = resolved?.config
-    ? withoutLayoutFullWidth(resolved.config)
-    : null
-  const dirty = Boolean(
-    draft &&
-      resolvedConfig &&
-      JSON.stringify(draft) !== JSON.stringify(resolvedConfig),
+  const resolvedConfig = useMemo(
+    () =>
+      resolved?.config ? withoutLayoutFullWidth(resolved.config) : null,
+    [resolved?.config],
+  )
+  const dirty = useMemo(
+    () =>
+      Boolean(
+        draft &&
+          resolvedConfig &&
+          JSON.stringify(draft) !== JSON.stringify(resolvedConfig),
+      ),
+    [draft, resolvedConfig],
   )
 
   const close = () => {
@@ -227,11 +238,8 @@ function LayoutEditor({
     onClose()
   }
 
-  const save = async (
-    scope: PageLayoutScope,
-    config: PageLayoutConfig | null = draft,
-  ) => {
-    if (!config || !resolved) return
+  const save = async (scope: PageLayoutScope) => {
+    if (!draft || !resolved) return
     const scopeId =
       scope === "workspace"
         ? resolved.workspaceId
@@ -241,17 +249,12 @@ function LayoutEditor({
     if (!scopeId) return
     try {
       await saveLayout.mutateAsync({
-        config: withoutLayoutFullWidth(config),
+        clearPageOverrides: scope === "database" || undefined,
+        config: withoutLayoutFullWidth(draft),
         scope,
         scopeId,
       })
-      toast.success(
-        scope === "workspace"
-          ? "Workspace layout saved."
-          : scope === "database"
-            ? "Database layout saved."
-            : "Page layout saved.",
-      )
+      toast.success(saveSuccessMessages[scope])
       onClose()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not save layout.")
@@ -272,22 +275,6 @@ function LayoutEditor({
       },
     )
   }
-
-  const defaultScope: PageLayoutScope = target.databaseId ? "database" : "page"
-  const scopeOptions: Array<{ label: string; scope: PageLayoutScope }> = [
-    ...(pageId && !target.databaseId
-      ? [{ label: "This page", scope: "page" as const }]
-      : []),
-    ...(databaseId
-      ? [
-          {
-            label: "All pages in this database",
-            scope: "database" as const,
-          },
-        ]
-      : []),
-    { label: "Workspace default", scope: "workspace" },
-  ]
 
   if (isLoading || !draft || !resolved) {
     return (
@@ -318,8 +305,8 @@ function LayoutEditor({
         <div className="ml-2 flex">
           <Button
             className="rounded-r-none"
-            disabled={saveLayout.isPending}
-            onClick={() => save(defaultScope)}
+            disabled={layoutMutationPending}
+            onClick={() => setApplyDialogOpen(true)}
           >
             <Check /> Apply
           </Button>
@@ -328,24 +315,20 @@ function LayoutEditor({
               <Button
                 aria-label="Choose apply scope"
                 className="rounded-l-none border-l border-primary-foreground/20 px-2"
+                disabled={layoutMutationPending}
               >
                 <ChevronDown />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-60">
-              {scopeOptions.map((option) => (
-                <DropdownMenuItem
-                  key={option.scope}
-                  onSelect={() => save(option.scope)}
-                >
-                  {option.label}
-                </DropdownMenuItem>
-              ))}
+            <DropdownMenuContent align="end" className="z-[110] w-60">
+              <DropdownMenuItem onSelect={() => save("workspace")}>
+                Workspace default
+              </DropdownMenuItem>
               {resolved.sources.generic ? (
                 <DropdownMenuItem
                   variant="destructive"
                   onSelect={async () => {
-                    const scope = defaultScope
+                    const scope = target.databaseId ? "database" : "page"
                     const scopeId = scope === "database" ? databaseId : pageId
                     if (!scopeId) return
                     await resetLayout.mutateAsync({ scope, scopeId })
@@ -367,7 +350,11 @@ function LayoutEditor({
           fullWidth={fullWidth}
           fullWidthPending={updateUserSettings.isPending}
           onChange={setDraft}
-          onDiscussionsVisibleChange={setPendingDiscussionsVisible}
+          onDiscussionsVisibleChange={(discussionsVisible) =>
+            setDraft((current) =>
+              current ? { ...current, discussionsVisible } : current,
+            )
+          }
           onFullWidthChange={setFullWidth}
         />
 
@@ -391,18 +378,12 @@ function LayoutEditor({
         </main>
       </div>
 
-      <DiscussionVisibilityDialog
+      <LayoutApplyDialog
         databaseAvailable={Boolean(databaseId)}
-        enabled={pendingDiscussionsVisible ?? draft.discussionsVisible}
-        onApply={(scope) => {
-          const discussionsVisible =
-            pendingDiscussionsVisible ?? draft.discussionsVisible
-          void save(scope, { ...draft, discussionsVisible })
-        }}
-        onOpenChange={(open) => {
-          if (!open && !saveLayout.isPending) setPendingDiscussionsVisible(null)
-        }}
-        open={pendingDiscussionsVisible !== null}
+        onApply={(scope) => void save(scope)}
+        onOpenChange={setApplyDialogOpen}
+        open={applyDialogOpen}
+        pageAvailable={Boolean(pageId)}
         pending={saveLayout.isPending}
       />
     </div>
