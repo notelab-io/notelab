@@ -11,18 +11,6 @@ function percentage(size: number) {
   return `${size}%`
 }
 
-export function getRightSidebarEditorMinSize(openPanelCount: number) {
-  if (openPanelCount >= 2) {
-    return percentage(100 - RIGHT_SIDEBAR_SPLIT_MAX_SIZE * 2)
-  }
-
-  if (openPanelCount === 1) {
-    return percentage(100 - RIGHT_SIDEBAR_SINGLE_MAX_SIZE)
-  }
-
-  return "0%"
-}
-
 export function getRightSidebarEditorDefaultSize(openPanelCount: number) {
   if (openPanelCount >= 2) {
     return percentage(100 - RIGHT_SIDEBAR_SPLIT_DEFAULT_SIZE * 2)
@@ -58,17 +46,6 @@ export function resolveSidebarPanelPercentage(
   }
 
   return value
-}
-
-export function interpolateSidebarPanelPercentage(
-  start: number,
-  target: number,
-  progress: number,
-) {
-  const clampedProgress = Math.min(Math.max(progress, 0), 1)
-  const easedProgress = 1 - (1 - clampedProgress) ** 4
-
-  return start + (target - start) * easedProgress
 }
 
 export type SidebarResizeIntent = "increase" | "decrease"

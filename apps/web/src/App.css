@@ -218,3 +218,14 @@
     @apply font-sans;
     }
 }
+
+[data-panel][data-sidebar-transitioning] {
+  transition: flex-grow 320ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: flex-grow;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-panel][data-sidebar-transitioning] {
+    transition: none;
+  }
+}

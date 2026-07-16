@@ -23,6 +23,7 @@ import { useSession } from "@notelab/features/auth"
 import { useWorkspaces } from "@notelab/features/workspaces"
 import { useAppSearchResults } from "@notelab/features/search"
 import type { AppSearchResult } from "@notelab/features/search"
+import { PageIconDisplay } from "@/lib/page-icon"
 import { useAppStore } from "@/stores/app-store"
 
 type AppSearchContextValue = {
@@ -177,11 +178,7 @@ function useActiveWorkspaceId() {
 
 function ResultIcon({ result }: { result: AppSearchResult }) {
   if (result.emoji) {
-    return (
-      <span className="flex size-5 shrink-0 items-center justify-center">
-        {result.emoji}
-      </span>
-    )
+    return <PageIconDisplay size="sm" value={result.emoji} />
   }
 
   return result.type === "database" ? (

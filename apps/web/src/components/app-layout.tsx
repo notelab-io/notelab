@@ -19,7 +19,6 @@ import {
 } from "@/components/right-sidebars"
 import {
   getRightSidebarEditorDefaultSize,
-  getRightSidebarEditorMinSize,
   type SidebarResizeIntent,
 } from "@/components/sidebar-panel-sizing"
 
@@ -384,11 +383,13 @@ function AppLayoutContent({
         orientation="horizontal"
         style={{ height: "100svh" }}
       >
+        {/* The dock owns the width limit; keeping this minimum relaxed avoids
+            clamping the layout before a sidebar transition can run. */}
         <ResizablePanel
           className="min-h-0 min-w-0"
           defaultSize={getRightSidebarEditorDefaultSize(desktopRightPanelCount)}
           id="app-editor-pane"
-          minSize={getRightSidebarEditorMinSize(desktopRightPanelCount)}
+          minSize="0%"
           style={{
             display: "flex",
             flexDirection: "column",

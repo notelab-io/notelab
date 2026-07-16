@@ -9,16 +9,6 @@ export function register({ assert, loadModule, test }) {
     assert.equal(resolveSidebarPanelPercentage("320px", 0), 0)
   })
 
-  test("sidebar panel closing finishes at an exact collapsed size", async () => {
-    const { interpolateSidebarPanelPercentage } = await loadModule(
-      "/src/components/sidebar-panel-sizing.ts",
-    )
-
-    assert.equal(interpolateSidebarPanelPercentage(28, 0, 0), 28)
-    assert.equal(interpolateSidebarPanelPercentage(28, 0, 1), 0)
-    assert.equal(interpolateSidebarPanelPercentage(28, 0, 2), 0)
-  })
-
   test("two right sidebars use a 2:1:1 editor layout", async () => {
     const {
       getRightSidebarEditorDefaultSize,

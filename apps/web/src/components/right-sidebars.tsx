@@ -6,12 +6,11 @@ import type {
   PointerEvent as ReactPointerEvent,
   ReactNode,
 } from "react"
-import type { PanelImperativeHandle, PanelSize } from "react-resizable-panels"
+import type { PanelImperativeHandle } from "react-resizable-panels"
 
 import {
   getRightSidebarDockMinSize,
   getSidebarResizeIntent,
-  interpolateSidebarPanelPercentage,
   resolveSidebarPanelPercentage,
   RIGHT_SIDEBAR_SINGLE_DEFAULT_SIZE,
   RIGHT_SIDEBAR_SINGLE_MAX_SIZE,
@@ -111,10 +110,17 @@ export function ResizableRightSidebarPanel({
     [onResizeIntent],
   )
 
-  const handlePanelResize = useCallback(
-    ({ inPixels }: PanelSize) => onWidthChange?.(inPixels),
-    [onWidthChange],
-  )
+  useEffect(() => {
+    const element = panelElementRef.current
+    if (!element || !onWidthChange) return
+
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry) onWidthChange(entry.contentRect.width)
+    })
+
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [onWidthChange])
 
   useEffect(() => {
     const stateChanged =
@@ -136,7 +142,6 @@ export function ResizableRightSidebarPanel({
       return
     }
 
-    const startSize = panel.getSize().asPercentage
     const targetSize = open
       ? resolveSidebarPanelPercentage(
           defaultSize,
@@ -145,9 +150,7 @@ export function ResizableRightSidebarPanel({
       : 0
     const skipAnimation =
       document.hidden ||
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
-      Math.abs(startSize - targetSize) < 0.01
-    let animationFrame = 0
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
 
     if (skipAnimation) {
       panel.resize(`${targetSize}%`)
@@ -155,29 +158,29 @@ export function ResizableRightSidebarPanel({
       return
     }
 
-    const startedAt = performance.now()
-    const animate = (now: number) => {
-      const progress = Math.min(
-        (now - startedAt) / RIGHT_SIDEBAR_TRANSITION_MS,
-        1,
-      )
-      const nextSize = interpolateSidebarPanelPercentage(
-        startSize,
-        targetSize,
-        progress,
-      )
-
-      panel.resize(`${nextSize}%`)
-
-      if (progress < 1) {
-        animationFrame = requestAnimationFrame(animate)
-      } else {
-        setAnimating(false)
+    let animationFrame = 0
+    let transitionTimeout = 0
+    const finishTransition = () => setAnimating(false)
+    const handleTransitionEnd = (event: TransitionEvent) => {
+      if (event.target === element && event.propertyName === "flex-grow") {
+        finishTransition()
       }
     }
 
-    animationFrame = requestAnimationFrame(animate)
-    return () => cancelAnimationFrame(animationFrame)
+    element.addEventListener("transitionend", handleTransitionEnd)
+    animationFrame = requestAnimationFrame(() => {
+      panel.resize(`${targetSize}%`)
+      transitionTimeout = window.setTimeout(
+        finishTransition,
+        RIGHT_SIDEBAR_TRANSITION_MS + 50,
+      )
+    })
+
+    return () => {
+      cancelAnimationFrame(animationFrame)
+      window.clearTimeout(transitionTimeout)
+      element.removeEventListener("transitionend", handleTransitionEnd)
+    }
   }, [animating, defaultSize, open])
 
   return (
@@ -201,12 +204,12 @@ export function ResizableRightSidebarPanel({
       />
       <ResizablePanel
         className="min-h-0 min-w-0"
+        data-sidebar-transitioning={transitioning ? "" : undefined}
         defaultSize={open ? defaultSize : "0%"}
         elementRef={panelElementRef}
         id={panelId}
-        maxSize={maxSize}
+        maxSize={transitioning ? "100%" : maxSize}
         minSize={!open || transitioning ? "0%" : minSize}
-        onResize={onWidthChange ? handlePanelResize : undefined}
         panelRef={panelHandleRef}
         style={{
           display: "flex",
@@ -270,10 +273,33 @@ function OverlayRightSidebarPanel({
   )
 }
 
+type SidebarPanelKey = "discussions" | "page" | "view-settings"
+
 type SidebarPanelSelection = {
   ariaLabel: string
-  key: "discussions" | "page" | "view-settings"
+  key: SidebarPanelKey
   panel: ReactNode
+}
+
+function useRetainedSidebarPanel(
+  panel: SidebarPanelSelection | null,
+  availablePanels: Partial<Record<SidebarPanelKey, ReactNode>>,
+) {
+  const renderedPanelRef = useRef(panel)
+
+  if (panel) {
+    renderedPanelRef.current = panel
+  } else if (renderedPanelRef.current) {
+    const currentPanel = availablePanels[renderedPanelRef.current.key]
+    if (currentPanel != null) {
+      renderedPanelRef.current = {
+        ...renderedPanelRef.current,
+        panel: currentPanel,
+      }
+    }
+  }
+
+  return renderedPanelRef.current
 }
 
 type PrimarySidebarPanelOptions = {
@@ -390,6 +416,11 @@ export function RightSidebars({
     utilitySidebarOpen,
     utilitySidebarPanel,
   })
+  const renderedPrimaryPanel = useRetainedSidebarPanel(primaryPanel, {
+    discussions: discussionsPanel,
+    page: pageSidebarPanel,
+    "view-settings": utilitySidebarPanel,
+  })
   const openPanelCount = Number(chatOpen) + Number(primaryPanel !== null)
   const dockOpen = openPanelCount > 0
   const splitDock = openPanelCount === 2
@@ -428,16 +459,18 @@ export function RightSidebars({
       >
         <section
           aria-hidden={!primaryPanel}
-          aria-label={primaryPanel?.ariaLabel}
+          aria-label={
+            primaryPanel?.ariaLabel ?? renderedPrimaryPanel?.ariaLabel
+          }
           className="min-h-0 min-w-0 overflow-hidden"
           inert={primaryPanel ? undefined : true}
         >
-          {primaryPanel ? (
+          {renderedPrimaryPanel ? (
             <div
               className="h-full min-h-0 animate-in fade-in-0 slide-in-from-right-1 duration-200 motion-reduce:animate-none"
-              key={primaryPanel.key}
+              key={renderedPrimaryPanel.key}
             >
-              {primaryPanel.panel}
+              {renderedPrimaryPanel.panel}
             </div>
           ) : null}
         </section>
@@ -483,6 +516,10 @@ export function RightSidebarMobilePanels({
     pageSidebarOpen,
     pageSidebarPanel,
   })
+  const renderedPrimaryPanel = useRetainedSidebarPanel(primaryPanel, {
+    discussions: discussionsPanel,
+    page: pageSidebarPanel,
+  })
   const primaryPanelAvailable =
     pageSidebarPanel != null || discussionsPanel != null
 
@@ -497,12 +534,12 @@ export function RightSidebarMobilePanels({
           panelId="mobile-right-sidebar-primary"
           rightOffset={chatOpen}
         >
-          {primaryPanel ? (
+          {renderedPrimaryPanel ? (
             <div
               className="h-full min-h-0 animate-in fade-in-0 slide-in-from-right-1 duration-200 motion-reduce:animate-none"
-              key={primaryPanel.key}
+              key={renderedPrimaryPanel.key}
             >
-              {primaryPanel.panel}
+              {renderedPrimaryPanel.panel}
             </div>
           ) : null}
         </OverlayRightSidebarPanel>
