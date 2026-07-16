@@ -56,6 +56,7 @@ import {
   EmojiPickerSearch,
 } from "@/components/ui/emoji-picker"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
 
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
@@ -87,16 +88,18 @@ type CommentAvatarAuthor =
 export function CommentAvatar({
   author,
   authorId,
+  className,
   small = false,
 }: {
   author: CommentAvatarAuthor
   authorId?: string | null
+  className?: string
   small?: boolean
 }) {
   const label = getCommentAuthorName(author)
 
   return (
-    <Avatar aria-hidden size={small ? "sm" : "default"}>
+    <Avatar aria-hidden className={className} size={small ? "sm" : "default"}>
       {author?.image ? <AvatarImage alt={label} src={author.image} /> : null}
       <AvatarFallback gradientSeed={getCommentAvatarSeed(author, authorId, label)}>
         {getCommentInitials(label)}
@@ -110,6 +113,7 @@ type CommentItemProps = {
   canReact: boolean
   canResolve: boolean
   className?: string
+  compact?: boolean
   comment: PageCommentMessage
   deletesThread?: boolean
   editingBody: string | null
@@ -133,6 +137,7 @@ function CommentItemComponent({
   canResolve,
   className,
   comment,
+  compact = false,
   deletesThread = false,
   editingBody,
   isMutating,
@@ -156,24 +161,51 @@ function CommentItemComponent({
   )
 
   return (
-    <article className={`group/comment relative flex min-h-16 gap-2 pb-3 ${className || ""}`}>
+    <article
+      className={cn(
+        "group/comment relative flex gap-2",
+        compact ? "min-h-0 pb-2.5" : "min-h-16 pb-3",
+        className,
+      )}
+    >
       <ThreadAvatar>
         <CommentAvatar
           author={comment.author ?? null}
           authorId={comment.authorId}
+          className={compact ? "size-5" : undefined}
           small
         />
       </ThreadAvatar>
       <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 items-center gap-1.5 pr-28 text-sm leading-5">
-          <span className="truncate font-semibold text-foreground">
+        <div
+          className={cn(
+            "flex min-w-0 items-center gap-1.5",
+            compact ? "pr-24 text-[13px] leading-4" : "pr-28 text-sm leading-5",
+          )}
+        >
+          <span
+            className={cn(
+              "truncate text-foreground",
+              compact ? "font-medium" : "font-semibold",
+            )}
+          >
             {getCommentAuthorName(comment.author ?? null)}
           </span>
-          <span className="shrink-0 text-xs font-medium text-muted-foreground">
+          <span
+            className={cn(
+              "shrink-0 text-muted-foreground",
+              compact ? "text-[11px] font-normal" : "text-xs font-medium",
+            )}
+          >
             {formatCommentTime(comment.createdAt)}
           </span>
           {comment.editedAt ? (
-            <span className="shrink-0 text-xs font-medium text-muted-foreground">
+            <span
+              className={cn(
+                "shrink-0 text-muted-foreground",
+                compact ? "text-[11px] font-normal" : "text-xs font-medium",
+              )}
+            >
               (edited)
             </span>
           ) : null}
@@ -295,7 +327,10 @@ function CommentItemComponent({
           <div className="mt-1 flex items-end gap-2">
             <Textarea
               aria-label="Edit comment"
-              className="min-h-8 flex-1 resize-none overflow-hidden rounded-none border-0 bg-transparent px-0 py-1 text-sm leading-6 shadow-none focus-visible:ring-0 md:text-sm dark:bg-transparent"
+              className={cn(
+                "min-h-8 flex-1 resize-none overflow-hidden rounded-none border-0 bg-transparent px-0 py-1 shadow-none focus-visible:ring-0 dark:bg-transparent",
+                compact ? "text-[13px] leading-5" : "text-sm leading-6 md:text-sm",
+              )}
               disabled={isMutating}
               onChange={(event) => onEditingBodyChange(event.target.value)}
               onKeyDown={(event) => {
@@ -338,7 +373,14 @@ function CommentItemComponent({
           </div>
         ) : (
           <>
-            <p className="mt-1 whitespace-pre-wrap break-words text-sm font-medium leading-6 text-foreground">
+            <p
+              className={cn(
+                "whitespace-pre-wrap break-words text-foreground",
+                compact
+                  ? "mt-0.5 text-[13px] font-normal leading-5"
+                  : "mt-1 text-sm font-medium leading-6",
+              )}
+            >
               <CommentMentionText parts={commentTextParts} />
             </p>
             {reactions.length > 0 ? (
@@ -403,6 +445,7 @@ export const CommentItem = memo(
     previous.canReact === next.canReact &&
     previous.canResolve === next.canResolve &&
     previous.className === next.className &&
+    previous.compact === next.compact &&
     previous.comment === next.comment &&
     previous.editingBody === next.editingBody &&
     previous.isMutating === next.isMutating &&
@@ -634,6 +677,7 @@ export function PageCommentThread({
   onThreadCreated,
   onCreateThread,
   collapseLongThreads = false,
+  compact = false,
 }: {
   pageId?: string | null
   threadId?: string | null
@@ -644,6 +688,7 @@ export function PageCommentThread({
   onThreadCreated?: (threadId: string) => void
   onCreateThread?: (body: string) => string | null
   collapseLongThreads?: boolean
+  compact?: boolean
 }) {
   const editorComments = useOptionalPageEditorComments()
   const { data: session } = useSession()
@@ -868,6 +913,7 @@ export function PageCommentThread({
         canReact={Boolean(controller?.canEdit)}
         canResolve={Boolean(controller?.canEdit && !threadResolved && isRoot && thread)}
         comment={comment}
+        compact={compact}
         deletesThread={isRoot}
         editingBody={
           editingComment?.id === comment.id ? editingComment.body : null
@@ -919,7 +965,10 @@ export function PageCommentThread({
                     {renderCommentItem(visibleComments[0], 0)}
                     <div className="pb-1 pl-8">
                       <Button
-                        className="h-7 px-2 text-muted-foreground"
+                        className={cn(
+                          "px-2 text-muted-foreground",
+                          compact && "h-6 text-xs",
+                        )}
                         onClick={() => setThreadExpanded(true)}
                         type="button"
                         variant="ghost"
@@ -943,25 +992,39 @@ export function PageCommentThread({
             {/* Reply composer for the current (active) thread.
                 The single ThreadLine spans to the reply avatar center. */}
             {pageId && controller?.canEdit && !threadResolved ? (
-              <div className="mt-1 flex items-center gap-2 pt-1.5">
+              <div
+                className={cn(
+                  "flex items-center gap-2",
+                  compact ? "mt-0.5 pt-1" : "mt-1 pt-1.5",
+                )}
+              >
                 <ThreadAvatar>
-                  <CommentAvatar author={session?.user ?? null} small />
+                  <CommentAvatar
+                    author={session?.user ?? null}
+                    className={compact ? "size-5" : undefined}
+                    small
+                  />
                 </ThreadAvatar>
                 <div className="relative min-w-0 flex-1">
                   {showMentionHighlight && !mentionMenuOpen ? (
                     <div
                       aria-hidden
-                      className="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre text-sm text-foreground"
+                      className={cn(
+                        "pointer-events-none absolute inset-0 overflow-hidden whitespace-pre text-foreground",
+                        compact ? "text-[13px]" : "text-sm",
+                      )}
                     >
                       <CommentMentionText parts={newCommentTextParts} />
                     </div>
                   ) : null}
                   <input
-                    className={`relative w-full bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none ${
+                    className={cn(
+                      "relative w-full bg-transparent placeholder:text-muted-foreground focus:outline-none",
+                      compact ? "text-[13px]" : "text-sm",
                       showMentionHighlight && !mentionMenuOpen
                         ? "text-transparent caret-foreground"
-                        : "text-foreground"
-                    }`}
+                        : "text-foreground",
+                    )}
                     disabled={isMutating}
                     onChange={(event) => {
                       setNewCommentBody(event.target.value)
@@ -1046,32 +1109,37 @@ export function PageCommentThread({
                     aria-label="Attach file"
                     className="text-muted-foreground"
                     disabled={isMutating}
-                    size="icon-sm"
+                    size={compact ? "icon-xs" : "icon-sm"}
                     type="button"
                     variant="ghost"
                   >
-                    <Paperclip className="size-4" />
+                    <Paperclip className={compact ? "size-3.5" : "size-4"} />
                   </Button>
                   <Button
                     aria-label="Mention person"
                     className="text-muted-foreground"
                     disabled={isMutating}
                     onClick={openMentionPicker}
-                    size="icon-sm"
+                    size={compact ? "icon-xs" : "icon-sm"}
                     type="button"
                     variant="ghost"
                   >
-                    <AtSign className="size-4" />
+                    <AtSign className={compact ? "size-3.5" : "size-4"} />
                   </Button>
                   <Button
                     aria-label="Send reply"
-                    className="h-7 w-7 rounded-full bg-white text-black hover:bg-white/90"
+                    className={cn(
+                      "rounded-full",
+                      compact
+                        ? "bg-foreground text-background hover:bg-foreground/90"
+                        : "h-7 w-7 bg-white text-black hover:bg-white/90",
+                    )}
                     disabled={isMutating || !newCommentBody.trim()}
                     onClick={createComment}
-                    size="icon-sm"
+                    size={compact ? "icon-xs" : "icon-sm"}
                     type="button"
                   >
-                    <ArrowUp className="size-4" />
+                    <ArrowUp className={compact ? "size-3.5" : "size-4"} />
                   </Button>
                 </div>
               </div>

@@ -121,7 +121,7 @@ export function DiscussionsSidebarPanel({
       </header>
 
       <Tabs
-        className="shrink-0 gap-0 border-b px-3 py-2"
+        className="shrink-0 gap-0 border-b px-3"
         onValueChange={(value) => {
           const nextStatus = value as DiscussionStatus
           setStatus(nextStatus)
@@ -131,28 +131,39 @@ export function DiscussionsSidebarPanel({
         }}
         value={status}
       >
-        <TabsList className="w-full">
-          <TabsTrigger className="flex-1" value="open">
+        <TabsList className="w-full justify-start gap-5" variant="underline">
+          <TabsTrigger
+            className="h-10 flex-none rounded-none px-1 text-xs font-medium"
+            value="open"
+          >
             Open
-            <span className="text-xs text-muted-foreground">{openCount}</span>
+            <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] tabular-nums text-muted-foreground">
+              {openCount}
+            </span>
           </TabsTrigger>
-          <TabsTrigger className="flex-1" value="resolved">
+          <TabsTrigger
+            className="h-10 flex-none rounded-none px-1 text-xs font-medium"
+            value="resolved"
+          >
             Resolved
-            <span className="text-xs text-muted-foreground">{resolvedCount}</span>
+            <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] tabular-nums text-muted-foreground">
+              {resolvedCount}
+            </span>
           </TabsTrigger>
         </TabsList>
       </Tabs>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 text-sm">
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4 text-sm">
         {!pageId ? (
           <EmptyState>Open a page to view its discussions.</EmptyState>
         ) : !controller ? (
           <EmptyState>Connecting to discussions…</EmptyState>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {status === "open" && composePage ? (
               <ComposerCard title="New page discussion" onCancel={() => setComposePage(false)}>
                 <PageCommentThread
+                  compact
                   onThreadCreated={() => setComposePage(false)}
                   pageId={pageId}
                   placeholder="Start a discussion…"
@@ -162,13 +173,15 @@ export function DiscussionsSidebarPanel({
 
             {visibleThreads.map((thread) => (
               <article
-                className={`rounded-lg border p-3 transition-colors ${
-                  snapshot.activeThreadId === thread.id ? "border-primary/50 bg-primary/5" : ""
+                className={`rounded-xl border border-border/70 bg-background px-3 py-3 transition-[border-color,background-color,box-shadow] hover:border-border hover:bg-muted/15 ${
+                  snapshot.activeThreadId === thread.id
+                    ? "border-foreground/25 bg-muted/25 ring-1 ring-foreground/10"
+                    : ""
                 }`}
                 key={thread.id}
                 onClick={() => controller.activateThread(thread.id, { openSidebar: false })}
               >
-                <div className="mb-2 flex items-center gap-2 text-[11px] font-medium text-muted-foreground">
+                <div className="mb-2.5 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/75">
                   <span>
                     {thread.kind === "block"
                       ? "Block comment"
@@ -176,14 +189,23 @@ export function DiscussionsSidebarPanel({
                         ? "Inline comment"
                         : "Page discussion"}
                   </span>
-                  {thread.kind !== "page" && !thread.anchorAttached ? <span>Original text removed</span> : null}
+                  {thread.kind !== "page" && !thread.anchorAttached ? (
+                    <span className="rounded-full bg-muted px-1.5 py-0.5 normal-case tracking-normal">
+                      Original text removed
+                    </span>
+                  ) : null}
                 </div>
                 {thread.quote ? (
-                  <blockquote className="mb-3 line-clamp-3 border-l-2 pl-2 text-xs text-muted-foreground">
+                  <blockquote className="mb-3 line-clamp-3 rounded-md border-l-2 border-border bg-muted/30 px-2.5 py-2 text-[12px] leading-5 text-muted-foreground">
                     {thread.quote}
                   </blockquote>
                 ) : null}
-                <PageCommentThread collapseLongThreads pageId={pageId} threadId={thread.id} />
+                <PageCommentThread
+                  collapseLongThreads
+                  compact
+                  pageId={pageId}
+                  threadId={thread.id}
+                />
               </article>
             ))}
 
@@ -207,10 +229,12 @@ function ComposerCard({
   title: string
 }) {
   return (
-    <section className="rounded-lg border bg-muted/20 p-3">
+    <section className="rounded-xl border border-border/70 bg-muted/15 p-3">
       <div className="mb-2 flex items-center justify-between">
-        <h3 className="text-xs font-semibold">{title}</h3>
-        <Button onClick={onCancel} size="sm" type="button" variant="ghost">Cancel</Button>
+        <h3 className="text-xs font-medium">{title}</h3>
+        <Button onClick={onCancel} size="xs" type="button" variant="ghost">
+          Cancel
+        </Button>
       </div>
       {children}
     </section>
@@ -218,7 +242,11 @@ function ComposerCard({
 }
 
 function EmptyState({ children }: { children: React.ReactNode }) {
-  return <div className="px-3 py-8 text-center text-muted-foreground">{children}</div>
+  return (
+    <div className="px-3 py-8 text-center text-xs text-muted-foreground">
+      {children}
+    </div>
+  )
 }
 
 function matchesFilter(thread: CommentThreadSnapshot, filter: DiscussionFilter) {
