@@ -91,6 +91,11 @@ Install dependencies:
 npm install
 ```
 
+Local server and web commands load the ignored root `.env.development` file.
+It contains the PostgreSQL, authentication, image-storage, and Vite settings
+for development; production and Docker self-hosting continue to use their own
+environment files.
+
 Common commands:
 
 | Command | Purpose |

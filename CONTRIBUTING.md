@@ -10,11 +10,20 @@ Prerequisites:
 - npm
 - Docker, if you want to test the self-hosted stack
 
-Install dependencies from the repository root:
+The connector SDK is maintained in the separate Toolkit monorepo. With the
+default `Projects/platform/notelab` and `Projects/platform/toolkit` layout,
+build Toolkit before installing the app:
 
 ```sh
+cd ../toolkit
+npm install
+npm run build:connectors
+cd ../notelab
 npm install
 ```
+
+Development commands load server and Vite variables from the ignored root
+`.env.development` file.
 
 Useful commands:
 
@@ -41,7 +50,7 @@ Then open `http://localhost`.
 - `apps/mobile`: Expo mobile client.
 - `apps/desktop`: Tauri desktop shell.
 - `packages/features`: shared client-side feature queries, hooks, and cache logic.
-- `packages/connectors`: connector implementations and connector UI surfaces.
+- `../toolkit`: separate Toolkit monorepo containing `apps/sdk`, `apps/web`, and the connector client package.
 - `packages/page-context`: editor/page context extraction and markdown helpers.
 - `packages/markdown-text-splitter`: standalone markdown splitting utilities.
 

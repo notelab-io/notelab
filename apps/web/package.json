@@ -18,7 +18,7 @@
     "@fontsource-variable/geist": "^5.2.9",
     "@hocuspocus/provider": "^4.3.0",
     "@linear/sdk": "^86.0.0",
-    "@notelab/connectors": "file:../../packages/connectors",
+    "@notelab/connectors": "file:../../../toolkit/packages/connectors",
     "@notelab/features": "file:../../packages/features",
     "@notelab/page-context": "file:../../packages/page-context",
     "@notelab/tiptap-comment-extension": "file:../../packages/tiptap-comment-extension",

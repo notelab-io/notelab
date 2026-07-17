@@ -26,5 +26,6 @@ target
 *.sw?
 .aura/
 .env.production
+.env.development
 .env
 .dev.vars

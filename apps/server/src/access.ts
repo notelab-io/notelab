@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "./db";
 import type { AppBindings } from "./types";
 import {
@@ -10,6 +10,7 @@ import {
   teamMember,
   page,
   pageAccess,
+  workspace,
 } from "./db/schema";
 import { loadWorkspacePageGraph } from "./page-graph";
 
@@ -45,6 +46,19 @@ export async function getMembership(workspaceId: string, userId: string) {
     .limit(1);
 
   return record ?? null;
+}
+
+export function getWorkspaceMemberships(userId: string) {
+  return db
+    .select({
+      role: member.role,
+      workspaceId: member.organizationId,
+      workspaceName: workspace.name,
+    })
+    .from(member)
+    .innerJoin(workspace, eq(workspace.id, member.organizationId))
+    .where(eq(member.userId, userId))
+    .orderBy(asc(member.createdAt), asc(member.id));
 }
 
 export function isPrivilegedOrgRole(role: string | null | undefined) {

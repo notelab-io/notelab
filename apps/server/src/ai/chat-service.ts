@@ -6,18 +6,9 @@ import {
   type ToolSet,
   type UIMessage,
 } from "ai";
-import { and, eq } from "drizzle-orm";
-
 import { getMembership } from "../access";
-import { db as dbProxy } from "../db";
-import { workspaceIntegration, userIntegration } from "../db/schema";
 import type { AppBindings } from "../types";
-import { buildGithubTools } from "./ask-ai-github-tools";
-import { buildGmailTools } from "./ask-ai-gmail-tools";
-import { buildGoogleCalendarTools } from "./ask-ai-google-calendar-tools";
-import { buildGoogleDriveTools } from "./ask-ai-google-drive-tools";
-import { buildLinearTools } from "./ask-ai-linear-tools";
-import { buildSlackTools } from "./ask-ai-slack-tools";
+import { getRuntimeAdapter } from "../runtime-adapter";
 import {
   buildDatabaseConfigInstruction,
   buildDatabaseConfigTools,
@@ -38,20 +29,6 @@ export type SourceId =
   | "google-drive"
   | "slack"
   | "linear";
-
-type CalendarAccess = {
-  accessToken: string;
-  coworkerCalendarAccessEnabled: boolean;
-};
-
-type IntegrationConnections = {
-  gmail?: string;
-  github?: string;
-  googleCalendar?: CalendarAccess;
-  googleDrive?: string;
-  linear?: string;
-  slack?: string;
-};
 
 export type AiChatRequestBody = {
   allowedPageIds: string[];
@@ -133,10 +110,7 @@ export async function runAiChatTurn(input: {
       return Response.json({ error: "Thread not found" }, { status: 404 });
     }
 
-    const connections = await getIntegrationConnections(workspaceId, userId);
-
     return {
-      connections,
       threadId: thread.id,
       userId,
     };
@@ -145,10 +119,6 @@ export async function runAiChatTurn(input: {
   if (auth instanceof Response) {
     return auth;
   }
-
-  const selectedSources = new Set(requestBody.sources);
-  const shouldUseSource = (source: SourceId) =>
-    selectedSources.size === 0 || selectedSources.has(source);
 
   const hasPageContext = Boolean(requestBody.pageContext);
   const allowedPageIds = requestBody.allowedPageIds;
@@ -174,24 +144,12 @@ export async function runAiChatTurn(input: {
           }),
         }
       : {}),
-    ...(auth.connections.gmail && shouldUseSource("gmail")
-      ? buildGmailTools(auth.connections.gmail)
-      : {}),
-    ...(auth.connections.github && shouldUseSource("github")
-      ? buildGithubTools(auth.connections.github)
-      : {}),
-    ...(auth.connections.googleCalendar && shouldUseSource("google-calendar")
-      ? buildGoogleCalendarTools(auth.connections.googleCalendar)
-      : {}),
-    ...(auth.connections.googleDrive && shouldUseSource("google-drive")
-      ? buildGoogleDriveTools(auth.connections.googleDrive)
-      : {}),
-    ...(auth.connections.slack && shouldUseSource("slack")
-      ? buildSlackTools(auth.connections.slack)
-      : {}),
-    ...(auth.connections.linear && shouldUseSource("linear")
-      ? buildLinearTools(auth.connections.linear)
-      : {}),
+    ...(getRuntimeAdapter().buildConnectorTools?.({
+      env: input.env,
+      sources: requestBody.sources,
+      userId: auth.userId,
+      workspaceId,
+    }) ?? {}),
   };
 
   const model = resolveOpenAiChatModel(input.env.OPENAI_API_KEY, requestBody.model);
@@ -435,55 +393,6 @@ function readAllowedPageIds(
   }
 
   return [...ids];
-}
-
-async function getIntegrationConnections(
-  workspaceId: string,
-  userId: string,
-) {
-  const rows = await dbProxy
-    .select()
-    .from(workspaceIntegration)
-    .where(
-      and(
-        eq(workspaceIntegration.workspaceId, workspaceId),
-        eq(workspaceIntegration.status, "connected"),
-      ),
-    );
-  const byKey = new Map(rows.map((row) => [row.integrationKey, row]));
-  const personalRows = await dbProxy
-    .select()
-    .from(userIntegration)
-    .where(
-      and(
-        eq(userIntegration.workspaceId, workspaceId),
-        eq(userIntegration.userId, userId),
-        eq(userIntegration.status, "connected"),
-      ),
-    );
-
-  const personalByKey = new Map(personalRows.map((row) => [row.integrationKey, row]));
-
-  return {
-    gmail: personalByKey.get("gmail")?.accessToken,
-    github: personalByKey.get("github")?.accessToken,
-    googleCalendar: personalByKey.get("google-calendar")
-      ? ({
-          accessToken: personalByKey.get("google-calendar")!.accessToken,
-          coworkerCalendarAccessEnabled: Boolean(
-            readObject(personalByKey.get("google-calendar")?.metadata)
-              .coworkerCalendarAccessEnabled,
-          ),
-        } satisfies CalendarAccess)
-      : undefined,
-    googleDrive: personalByKey.get("google-drive")?.accessToken,
-    linear: personalByKey.get("linear")?.accessToken,
-    slack: byKey.get("slack")?.accessToken,
-  } satisfies IntegrationConnections;
-}
-
-function readObject(value: unknown) {
-  return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 }
 
 function toProviderErrorMessage(error: unknown) {

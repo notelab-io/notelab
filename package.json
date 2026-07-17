@@ -12,7 +12,6 @@
   },
   "workspaces": [
     "apps/*",
-    "packages/connectors",
     "packages/features",
     "packages/markdown-text-splitter",
     "packages/page-context",

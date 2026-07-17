@@ -15,7 +15,6 @@ require_env DATABASE_URL
 require_env BETTER_AUTH_SECRET
 require_env BETTER_AUTH_URL
 require_env CLIENT_URL
-require_env OAUTH_STATE_SECRET
 require_env IMAGE_STORAGE_MODE
 require_env S3_ENDPOINT
 require_env S3_BUCKET_NAME

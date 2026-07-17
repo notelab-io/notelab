@@ -3,6 +3,9 @@
 import * as React from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { SettingsHeader } from "@/components/settings-header";
 import {
   useActiveWorkspaceId,
@@ -10,7 +13,7 @@ import {
 } from "@notelab/features/integrations";
 import { useSession } from "@notelab/features/auth";
 import { useWorkspaceAccessTargets } from "@notelab/features/workspaces";
-import { getApiErrorMessage } from "@/lib/api";
+import { apiFetch, getApiErrorMessage } from "@/lib/api";
 import { toast } from "sonner";
 
 import {
@@ -66,6 +69,7 @@ export default function WorkspaceIntegrationsSettingsPage() {
   const canManageGoogleDrivePage = canManageLinearPage;
   const canManageGoogleCalendarPage = canManageLinearPage;
   const canManageGmailPage = canManageLinearPage;
+  const canManageOAuthCredentials = currentMember?.role === "owner";
   const controllerContext = {
     isLoadingIntegrations,
     setIntegrationsError,
@@ -178,6 +182,9 @@ export default function WorkspaceIntegrationsSettingsPage() {
             integration={selectedIntegration}
             onBack={() => setSelectedIntegrationId(null)}
           >
+            {canManageOAuthCredentials && activeWorkspaceId ? (
+              <OAuthCredentialCard integrationId={selectedIntegration.id} workspaceId={activeWorkspaceId} onSaved={() => integrationsQuery.refetch()} />
+            ) : null}
             {selectedIntegrationCard}
           </IntegrationDetailShell>
         ) : (
@@ -234,3 +241,44 @@ export default function WorkspaceIntegrationsSettingsPage() {
     </main>
   );
 }
+
+const integrationEndpoint: Record<IntegrationId, string> = {
+  gmail: "gmail", github: "github", googleCalendar: "google-calendar",
+  googleDrive: "google-drive", linear: "linear", slack: "slack",
+};
+type OAuthConfigView = { callbackUrl: string; clientId: string; providerId: string; secretConfigured: boolean };
+
+function OAuthCredentialCard({ integrationId, workspaceId, onSaved }: { integrationId: IntegrationId; workspaceId: string; onSaved: () => Promise<unknown> }) {
+  const endpoint = integrationEndpoint[integrationId];
+  const [config, setConfig] = React.useState<OAuthConfigView | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+  const headers = React.useMemo(() => ({ "x-notelab-workspace-id": workspaceId }), [workspaceId]);
+  const load = React.useCallback(async () => {
+    try { setConfig(await apiFetch<OAuthConfigView>(`/api/workspace/settings/integrations/${endpoint}/oauth-config`, { headers })); }
+    catch (nextError) { setError(getApiErrorMessage(nextError)); }
+  }, [endpoint, headers]);
+  React.useEffect(() => { void load(); }, [load]);
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    try {
+      setError(null);
+      await apiFetch(`/api/workspace/settings/integrations/${endpoint}/oauth-config`, { method: "PUT", headers, body: JSON.stringify({ clientId: String(data.get("clientId") ?? ""), clientSecret: String(data.get("clientSecret") ?? "") || undefined }) });
+      event.currentTarget.reset();
+      await Promise.all([load(), onSaved()]);
+    } catch (nextError) { setError(getApiErrorMessage(nextError)); }
+  }
+  async function remove() {
+    try { await apiFetch(`/api/workspace/settings/integrations/${endpoint}/oauth-config`, { method: "DELETE", headers }); await Promise.all([load(), onSaved()]); }
+    catch (nextError) { setError(getApiErrorMessage(nextError)); }
+  }
+  if (!config) return null;
+  return <Card><CardHeader><CardTitle className="text-base">{config.providerId === "google" ? "Google OAuth app (shared by Gmail, Calendar, and Drive)" : `${selectedName(integrationId)} OAuth app`}</CardTitle></CardHeader><CardContent><form className="grid gap-3" onSubmit={submit}>
+    <Input name="clientId" aria-label="OAuth client ID" defaultValue={config.clientId} placeholder="Client ID" required />
+    <Input name="clientSecret" aria-label="OAuth client secret" type="password" placeholder={config.secretConfigured ? "Secret configured — leave blank to keep" : "Client secret"} required={!config.secretConfigured} />
+    <p className="break-all text-xs text-muted-foreground">Callback URL: {config.callbackUrl}</p>
+    {error ? <p className="text-xs text-destructive">{error}</p> : null}
+    <div className="flex gap-2"><Button size="sm" type="submit">Save credentials</Button>{config.secretConfigured ? <Button size="sm" type="button" variant="outline" onClick={() => void remove()}>Delete</Button> : null}</div>
+  </form></CardContent></Card>;
+}
+function selectedName(id: IntegrationId) { return id === "googleCalendar" ? "Google Calendar" : id === "googleDrive" ? "Google Drive" : id.charAt(0).toUpperCase() + id.slice(1); }

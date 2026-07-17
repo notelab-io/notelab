@@ -38,7 +38,6 @@ services:
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-local-only-change-me-notelab-auth-secret-32}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost}
       CLIENT_URL: ${CLIENT_URL:-http://localhost}
-      OAUTH_STATE_SECRET: ${OAUTH_STATE_SECRET:-local-only-change-me-notelab-oauth-state-secret-32}
       IMAGE_STORAGE_MODE: s3
       S3_ENDPOINT: http://minio:9000
       S3_BUCKET_NAME: ${MINIO_BUCKET:-notelab}
@@ -47,14 +46,6 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       EMAIL_FROM: ${EMAIL_FROM:-}
-      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
-      GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET:-}
-      GITHUB_OAUTH_CLIENT_ID: ${GITHUB_OAUTH_CLIENT_ID:-}
-      GITHUB_OAUTH_CLIENT_SECRET: ${GITHUB_OAUTH_CLIENT_SECRET:-}
-      SLACK_OAUTH_CLIENT_ID: ${SLACK_OAUTH_CLIENT_ID:-}
-      SLACK_OAUTH_CLIENT_SECRET: ${SLACK_OAUTH_CLIENT_SECRET:-}
-      LINEAR_OAUTH_CLIENT_ID: ${LINEAR_OAUTH_CLIENT_ID:-}
-      LINEAR_OAUTH_CLIENT_SECRET: ${LINEAR_OAUTH_CLIENT_SECRET:-}
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s

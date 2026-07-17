@@ -14,8 +14,8 @@
     }
   },
   "scripts": {
-    "dev": "tsx src/serverful.ts",
-    "dev:node": "tsx src/serverful.ts",
+    "dev": "NOTELAB_ENV_FILE=../../.env.development tsx src/serverful.ts",
+    "dev:node": "NOTELAB_ENV_FILE=../../.env.development tsx src/serverful.ts",
     "build": "tsc --noEmit",
     "build:node": "tsc --noEmit",
     "test:insert-database-block": "tsx --test src/services/insert-database-block.test.ts",
@@ -26,11 +26,11 @@
     "test": "tsx --test 'src/**/*.test.ts' 'src/*.test.ts'",
     "test:api-keys": "tsx src/scripts/test-api-key-flow.ts",
     "test:flow": "tsx src/scripts/simulate-user-flow.ts",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
+    "db:generate": "DOTENV_CONFIG_PATH=../../.env.development drizzle-kit generate",
+    "db:migrate": "DOTENV_CONFIG_PATH=../../.env.development drizzle-kit migrate",
     "db:migrate:production": "tsx src/scripts/migrate.ts",
-    "db:reset": "tsx src/scripts/reset-database.ts && drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:reset": "DOTENV_CONFIG_PATH=../../.env.development tsx src/scripts/reset-database.ts && DOTENV_CONFIG_PATH=../../.env.development drizzle-kit migrate",
+    "db:studio": "DOTENV_CONFIG_PATH=../../.env.development drizzle-kit studio"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.72",
@@ -42,7 +42,7 @@
     "@hocuspocus/extension-database": "^4.3.0",
     "@hocuspocus/server": "^4.3.0",
     "@hocuspocus/transformer": "^4.3.0",
-    "@notelab/connectors": "file:../../packages/connectors",
+    "@notelab/connectors": "file:../../../toolkit/packages/connectors",
     "@notelab/features": "file:../../packages/features",
     "@tiptap/pm": "^3.23.6",
     "ai": "^6.0.193",

@@ -1,6 +1,3 @@
-const SAME_ORIGIN_API_BASE_URL = "/api"
-const RAW_API_PREFIX = "/api/_raw"
-
 export const API_BASE_URL = resolveApiBaseUrl()
 
 declare global {
@@ -92,13 +89,6 @@ export function toApiUrl(path: string) {
 
   const normalizedPath = path.startsWith("/") ? path : `/${path}`
 
-  if (
-    API_BASE_URL === SAME_ORIGIN_API_BASE_URL &&
-    normalizedPath.startsWith(`${SAME_ORIGIN_API_BASE_URL}/`)
-  ) {
-    return `${RAW_API_PREFIX}${normalizedPath}`
-  }
-
   return API_BASE_URL
     ? `${API_BASE_URL}${normalizedPath}`
     : normalizedPath
@@ -109,12 +99,12 @@ function resolveApiBaseUrl() {
     typeof window !== "undefined" &&
     window.location.hostname === "app.notelab.io"
   ) {
-    return SAME_ORIGIN_API_BASE_URL
+    return ""
   }
 
   const configuredBaseUrl = import.meta.env.VITE_API_URL?.replace(/\/$/, "")
 
-  if (configuredBaseUrl) {
+  if (configuredBaseUrl && configuredBaseUrl !== "/api") {
     return configuredBaseUrl
   }
 

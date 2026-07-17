@@ -7,39 +7,19 @@ import {
   type ToolSet,
   type UIMessage,
 } from "ai";
-import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Context } from "hono";
 import * as z from "zod";
 
 import { AiProviderConfigError, resolveWorkspaceAiModel } from "../../ai/ai-provider";
-import { buildGithubTools } from "../../ai/ask-ai-github-tools";
-import { buildGmailTools } from "../../ai/ask-ai-gmail-tools";
-import { buildGoogleCalendarTools } from "../../ai/ask-ai-google-calendar-tools";
-import { buildGoogleDriveTools } from "../../ai/ask-ai-google-drive-tools";
-import { buildLinearTools } from "../../ai/ask-ai-linear-tools";
-import { buildSlackTools } from "../../ai/ask-ai-slack-tools";
 import { canAccessPage, getMembership, getPageRecord } from "../../access";
 import { createDbClient, db, runWithDbClient } from "../../db";
-import { workspaceIntegration, userIntegration } from "../../db/schema";
+import { getRuntimeAdapter } from "../../runtime-adapter";
 import type { AppBindings } from "../../types";
 import {
   coerceAiChatRequestBody,
   runAiChatTurn,
 } from "../../ai/chat-service";
-
-type SourceId =
-  | "gmail"
-  | "github"
-  | "google-calendar"
-  | "google-drive"
-  | "slack"
-  | "linear";
-
-type CalendarAccess = {
-  accessToken: string;
-  coworkerCalendarAccessEnabled: boolean;
-};
 
 const askAiRequestSchema = z
   .object({
@@ -131,56 +111,18 @@ aiRoutes.post("/ask", async (c) => {
     return body.response;
   }
 
-  const connections = await getIntegrationConnections(auth.workspaceId, auth.user.id);
-
-  if (
-    !connections.gmail &&
-    !connections.github &&
-    !connections.googleCalendar &&
-    !connections.googleDrive &&
-    !connections.slack &&
-    !connections.linear
-  ) {
-    return c.json(
-      {
-        code: "ASK_AI_INTEGRATION_NOT_CONNECTED",
-        message:
-          "Connect Gmail, GitHub, Google Calendar, Google Drive, Slack, or Linear before asking page integration questions.",
-      },
-      409,
-    );
-  }
-
   const messages = await toModelMessages(body.data.messages, body.data.prompt);
 
   if (!messages.success) {
     return messages.response;
   }
 
-  const sourceFilter = new Set(body.data.sources);
-  const shouldUseSource = (source: SourceId) =>
-    sourceFilter.size === 0 || sourceFilter.has(source);
-
-  const tools: ToolSet = {
-    ...(connections.gmail && shouldUseSource("gmail")
-      ? buildGmailTools(connections.gmail)
-      : {}),
-    ...(connections.github && shouldUseSource("github")
-      ? buildGithubTools(connections.github)
-      : {}),
-    ...(connections.googleCalendar && shouldUseSource("google-calendar")
-      ? buildGoogleCalendarTools(connections.googleCalendar)
-      : {}),
-    ...(connections.googleDrive && shouldUseSource("google-drive")
-      ? buildGoogleDriveTools(connections.googleDrive)
-      : {}),
-    ...(connections.slack && shouldUseSource("slack")
-      ? buildSlackTools(connections.slack)
-      : {}),
-    ...(connections.linear && shouldUseSource("linear")
-      ? buildLinearTools(connections.linear)
-      : {}),
-  };
+  const tools: ToolSet = getRuntimeAdapter().buildConnectorTools?.({
+    env: c.env,
+    sources: body.data.sources,
+    userId: auth.user.id,
+    workspaceId: auth.workspaceId,
+  }) ?? {};
 
   if (Object.keys(tools).length === 0) {
     return c.json(
@@ -623,49 +565,6 @@ function applySkillMarks(
 
     return current;
   }, text);
-}
-
-async function getIntegrationConnections(workspaceId: string, userId: string) {
-  const rows = await db
-    .select()
-    .from(workspaceIntegration)
-    .where(
-      and(
-        eq(workspaceIntegration.workspaceId, workspaceId),
-        eq(workspaceIntegration.status, "connected"),
-      ),
-    );
-  const byKey = new Map(rows.map((row) => [row.integrationKey, row]));
-  const googleCalendar = byKey.get("google-calendar");
-  const personalRows = await db
-    .select()
-    .from(userIntegration)
-    .where(
-      and(
-        eq(userIntegration.workspaceId, workspaceId),
-        eq(userIntegration.userId, userId),
-        eq(userIntegration.status, "connected"),
-      ),
-    );
-  const personalByKey = new Map(
-    personalRows.map((row) => [row.integrationKey, row]),
-  );
-
-  return {
-    gmail: personalByKey.get("gmail")?.accessToken,
-    github: personalByKey.get("github")?.accessToken,
-    googleCalendar: personalByKey.get("google-calendar")
-      ? ({
-          accessToken: personalByKey.get("google-calendar")!.accessToken,
-          coworkerCalendarAccessEnabled: Boolean(
-            readObject(googleCalendar?.metadata).coworkerCalendarAccessEnabled,
-          ),
-        } satisfies CalendarAccess)
-      : undefined,
-    googleDrive: personalByKey.get("google-drive")?.accessToken,
-    linear: personalByKey.get("linear")?.accessToken,
-    slack: byKey.get("slack")?.accessToken,
-  };
 }
 
 async function toModelMessages(rawMessages: unknown[], prompt?: string): Promise<

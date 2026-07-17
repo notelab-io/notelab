@@ -19,31 +19,13 @@ import {
 } from "./config";
 
 type AuthEnv = Record<string, unknown>;
-type AuthCacheEntry = {
-  auth: Auth;
-  database: Database;
-};
-
-const authCache = new WeakMap<object, AuthCacheEntry>();
 
 export function createAuth(
   env: AuthEnv,
   request: Request,
   database: Database = db,
 ): Auth {
-  const cached = typeof env === "object" && env ? authCache.get(env) : undefined;
-
-  if (cached?.database === database) {
-    return cached.auth;
-  }
-
-  const auth = createAuthInstance(env, request, database);
-
-  if (typeof env === "object" && env) {
-    authCache.set(env, { auth, database });
-  }
-
-  return auth;
+  return createAuthInstance(env, request, database);
 }
 
 function createAuthInstance(env: AuthEnv, request: Request, database: Database) {

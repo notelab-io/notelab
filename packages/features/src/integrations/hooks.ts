@@ -59,7 +59,10 @@ export function useStartIntegrationOAuth() {
         {
           ...integrationRequestOptions(workspaceId),
           method: "POST",
-          body: JSON.stringify(input ?? {}),
+          body: JSON.stringify({
+            ...(input && typeof input === "object" ? input : {}),
+            returnUrl: `${window.location.origin}/settings/integrations`,
+          }),
         },
       ),
   })

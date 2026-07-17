@@ -44,6 +44,9 @@ export function getTrustedOrigins(env: RuntimeEnv, requestOrigin: string) {
         "http://localhost:1420",
         "http://127.0.0.1:1420",
         "http://0.0.0.0:1420",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://0.0.0.0:5173",
         "http://192.0.0.2:1420",
       ]
     : [];

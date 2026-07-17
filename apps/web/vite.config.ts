@@ -6,14 +6,14 @@ import tailwindcss from "@tailwindcss/vite";
 const host = process.env.TAURI_DEV_HOST;
 const srcDir = fileURLToPath(new URL("./src", import.meta.url));
 const editorDir = fileURLToPath(new URL("./src/editor", import.meta.url));
-const connectorsDir = fileURLToPath(
-  new URL("../../packages/connectors/src/connectors", import.meta.url),
-);
 const featuresDir = fileURLToPath(
   new URL("../../packages/features/src", import.meta.url),
 );
 const pageContextDir = fileURLToPath(
   new URL("../../packages/page-context/src", import.meta.url),
+);
+const toolkitConnectorsDir = fileURLToPath(
+  new URL("../../../toolkit/packages/connectors/src/connectors", import.meta.url),
 );
 const backendTarget = process.env.VITE_API_URL?.replace(/\/$/, "") ?? "http://127.0.0.1:3000";
 const expectedWsProxyErrorCodes = new Set(["ECONNRESET", "EPIPE"]);
@@ -64,6 +64,7 @@ function isExpectedWsProxyError(error: unknown) {
 
 // https://vite.dev/config/
 export default defineConfig(async () => ({
+  envDir: fileURLToPath(new URL("../..", import.meta.url)),
   plugins: [react(), tailwindcss()],
   resolve: {
     dedupe: ["react", "react-dom"],
@@ -84,28 +85,8 @@ export default defineConfig(async () => ({
         replacement: `${pageContextDir}/index.ts`,
       },
       {
-        find: "@notelab/gmail-connector/ui",
-        replacement: `${connectorsDir}/gmail/src/ui.tsx`,
-      },
-      {
-        find: "@notelab/github-connector/ui",
-        replacement: `${connectorsDir}/github/src/ui.tsx`,
-      },
-      {
-        find: "@notelab/google-calendar-connector/ui",
-        replacement: `${connectorsDir}/google-calendar/src/ui.tsx`,
-      },
-      {
-        find: "@notelab/google-drive-connector/ui",
-        replacement: `${connectorsDir}/google-drive/src/ui.tsx`,
-      },
-      {
-        find: "@notelab/linear-connector/ui",
-        replacement: `${connectorsDir}/linear/src/ui.tsx`,
-      },
-      {
-        find: "@notelab/slack-connector/ui",
-        replacement: `${connectorsDir}/slack/src/ui.tsx`,
+        find: /^@notelab\/connectors\/(.+)\/ui$/,
+        replacement: `${toolkitConnectorsDir}/$1/src/ui.tsx`,
       },
     ],
   },

@@ -1,8 +1,15 @@
 import { getRequiredStringEnv, getStringEnv, type RuntimeEnv } from "./config";
 import type { ImageStorage } from "./image-storage";
 import type { DatabaseRealtimeMutationEvent } from "./services/database-delta";
+import type { ToolSet } from "ai";
 
 export type ServerRuntimeAdapter = {
+  buildConnectorTools?(input: {
+    env: RuntimeEnv;
+    sources: readonly string[];
+    userId: string;
+    workspaceId: string;
+  }): ToolSet;
   applyPageContentUpdate?(input: {
     content: unknown;
     env: RuntimeEnv;

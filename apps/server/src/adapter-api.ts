@@ -1,4 +1,4 @@
-export { getMembership } from "./access";
+export { getMembership, getWorkspaceMemberships } from "./access";
 export { createApp } from "./app";
 export {
   coerceAiChatRequestBody,

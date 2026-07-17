@@ -169,6 +169,14 @@ const integrationParamNames: IntegrationId[] = [
 export function readOAuthCallbackResult(
   params: URLSearchParams,
 ): OAuthCallbackResult | null {
+  const oauthStatus = params.get("oauth");
+  const connector = params.get("connector");
+  if (oauthStatus && connector) {
+    const integration = connector === "google-calendar" ? "googleCalendar" : connector === "google-drive" ? "googleDrive" : connector as IntegrationId;
+    if (!integrationParamNames.includes(integration)) return null;
+    const status = oauthStatus === "success" ? "success" : "error";
+    return { integration, status, message: params.get("message") ?? defaultMessages[integration][status] };
+  }
   const integration = integrationParamNames.find((name) => params.get(name));
 
   if (!integration) {
@@ -190,6 +198,11 @@ export function clearOAuthCallbackParams(params: URLSearchParams) {
   }
 
   params.delete("code");
+  params.delete("oauth");
+  params.delete("connector");
+  params.delete("connection_id");
+  params.delete("provider");
+  params.delete("message");
 
   if (params.get("settings") === "integrations") {
     params.delete("settings");

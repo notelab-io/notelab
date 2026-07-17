@@ -27,19 +27,10 @@ export type AppBindings = {
     IMAGE_STORAGE_MODE?: "s3" | "binding";
     IMAGE_UPLOAD_MAX_BYTES?: string;
     IMAGE_UPLOAD_URL_TTL_SECONDS?: string;
-    OAUTH_STATE_SECRET: string;
     S3_ACCESS_KEY_ID?: string;
     S3_BUCKET_NAME?: string;
     S3_ENDPOINT?: string;
     S3_SECRET_ACCESS_KEY?: string;
-    GOOGLE_OAUTH_CLIENT_ID?: string;
-    GOOGLE_OAUTH_CLIENT_SECRET?: string;
-    GITHUB_OAUTH_CLIENT_ID?: string;
-    GITHUB_OAUTH_CLIENT_SECRET?: string;
-    SLACK_OAUTH_CLIENT_ID?: string;
-    SLACK_OAUTH_CLIENT_SECRET?: string;
-    LINEAR_OAUTH_CLIENT_ID?: string;
-    LINEAR_OAUTH_CLIENT_SECRET?: string;
   };
   Variables: {
     apiKey: ApiKeyContext | null;

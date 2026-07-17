@@ -9,7 +9,7 @@ Notelab is an npm-workspaces monorepo for a notes, pages, databases, comments, A
 - `apps/mobile`: Expo client that reuses shared feature packages and talks to the Notelab API.
 - `apps/desktop`: Tauri shell for the desktop app.
 - `packages/features`: shared TanStack Query hooks, query keys, mutations, cache update logic, and small database contracts used by clients and server.
-- `packages/connectors`: shared connector domain logic and connector-specific UI exports.
+- `../toolkit`: separate Toolkit monorepo; `packages/connectors` provides the connector catalog and optional connector UI exports consumed as `@notelab/connectors`.
 - `packages/page-context`: editor/page context extraction, database markdown construction, and ProseMirror-to-markdown helpers.
 - `packages/markdown-text-splitter`: standalone markdown text splitting utilities.
 
