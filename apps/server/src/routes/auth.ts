@@ -1,7 +1,7 @@
 import { asc } from "drizzle-orm";
 import { Hono } from "hono";
 import { createAuth } from "../auth";
-import { createDbClient, db, runWithDbClient } from "../db";
+import { db, runWithDbEnv } from "../db";
 import { workspace } from "../db/schema";
 import { isSelfHostedRuntime } from "../runtime-adapter";
 import type { AppBindings } from "../types";
@@ -141,9 +141,7 @@ function renameOrganizationFields(value: unknown): unknown {
 
 authRoutes.post("/api/auth/set-password", async (c) => {
   const body = await c.req.json().catch(() => null);
-  const dbClient = createDbClient(c.env);
-
-  return runWithDbClient(dbClient, () => {
+  return runWithDbEnv(c.env, () => {
     const auth = createAuth(c.env, c.req.raw);
 
     return auth.api.setPassword({
@@ -159,10 +157,9 @@ authRoutes.on(["GET", "POST"], "/api/auth/*", async (c) => {
     return c.json({ error: "Not found" }, 404);
   }
 
-  const dbClient = createDbClient(c.env);
   const { request, rewritten } = await getWorkspaceAuthRequest(c.req.raw);
 
-  return runWithDbClient(dbClient, async () => {
+  return runWithDbEnv(c.env, async () => {
     if (await isBlockedSelfHostedWorkspaceCreate(request)) {
       return c.json(
         {

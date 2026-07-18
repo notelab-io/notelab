@@ -59,7 +59,16 @@ export async function drainDatabaseRealtimeOutbox(
 ) {
   const publish = getRuntimeAdapter().publishDatabaseMutation;
 
-  if (!publish) return { delivered: 0, discarded: 0, failed: 0 };
+  if (!publish) {
+    return {
+      backlog: 0,
+      delivered: 0,
+      discarded: 0,
+      failed: 0,
+      maxAttempts: 0,
+      oldestAgeMs: 0,
+    };
+  }
 
   const attemptedAt = new Date();
   const entries = await db.transaction(async (tx) => {
@@ -127,7 +136,25 @@ export async function drainDatabaseRealtimeOutbox(
     }
   }
 
-  return { delivered, discarded, failed };
+  const [health] = await db
+    .select({
+      backlog: sql<number>`count(*)::int`,
+      maxAttempts: sql<number>`coalesce(max(${databaseRealtimeOutbox.attempts}), 0)::int`,
+      oldestCommittedAt: sql<Date | null>`min(${databaseRealtimeOutbox.committedAt})`,
+    })
+    .from(databaseRealtimeOutbox);
+  const oldestCommittedAt = health?.oldestCommittedAt
+    ? new Date(health.oldestCommittedAt).getTime()
+    : attemptedAt.getTime();
+
+  return {
+    backlog: health?.backlog ?? 0,
+    delivered,
+    discarded,
+    failed,
+    maxAttempts: health?.maxAttempts ?? 0,
+    oldestAgeMs: Math.max(0, attemptedAt.getTime() - oldestCommittedAt),
+  };
 }
 
 function toRealtimeEvent(

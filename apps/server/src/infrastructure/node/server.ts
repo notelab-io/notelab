@@ -7,7 +7,7 @@ import path from "node:path";
 import { createApp } from "../../app";
 import { attachNodeCollaborationRuntime } from "../../collaboration/node-runtime";
 import { attachNodeDatabaseRealtimeRuntime } from "../../database-realtime/node-runtime";
-import { createDbClient, runWithDbClient } from "../../db";
+import { runWithDbEnv } from "../../db";
 import { setRuntimeAdapter } from "../../runtime-adapter";
 import { drainDatabaseRealtimeOutbox } from "../../services/database-realtime";
 
@@ -109,7 +109,7 @@ function startDatabaseRealtimeOutboxDrainer() {
     draining = true;
 
     try {
-      await runWithDbClient(createDbClient(env), () =>
+      await runWithDbEnv(env, () =>
         drainDatabaseRealtimeOutbox(env, { limit: 250 })
       );
     } catch (error) {

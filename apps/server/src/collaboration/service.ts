@@ -5,7 +5,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { Schema, type MarkSpec, type NodeSpec } from "@tiptap/pm/model";
 import * as Y from "yjs";
 import { canAccessPageInWorkspace } from "../access";
-import { createDbClient, db, runWithDbClient } from "../db";
+import { db, runWithDbEnv } from "../db";
 import { page, pageCollaborationDocument } from "../db/schema";
 import { getRuntimeAdapter } from "../runtime-adapter";
 import type { RuntimeEnv } from "../config";
@@ -550,5 +550,5 @@ function isTicketClaims(value: unknown): value is CollaborationTicketClaims {
 }
 
 function withDatabase<T>(env: RuntimeEnv, callback: () => Promise<T>) {
-  return runWithDbClient(createDbClient(env), callback);
+  return runWithDbEnv(env, callback);
 }

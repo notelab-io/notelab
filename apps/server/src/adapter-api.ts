@@ -18,7 +18,13 @@ export {
   isLocalDevelopmentHost,
   type RuntimeEnv,
 } from "./config";
-export { createDbClient, runWithDbClient } from "./db";
+export { createDbClient, runWithDbClient, runWithDbEnv } from "./db";
+export {
+  DATABASE_UNAVAILABLE_CODE,
+  DATABASE_UNAVAILABLE_MESSAGE,
+  getDatabaseErrorCode,
+  isDatabaseUnavailableError,
+} from "./db/errors";
 export {
   createImageStorage,
   createS3ImageStorage,

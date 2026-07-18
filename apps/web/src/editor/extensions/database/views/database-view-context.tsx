@@ -232,7 +232,7 @@ export type DatabaseViewContextValue = {
 const DatabaseViewContext = createContext<DatabaseViewContextValue | null>(null)
 const DatabaseRealtimeContext = createContext<{
   cellPresenceByKey: Record<string, DatabasePresenceCollaborator[]>
-  status: "connected" | "connecting" | "disconnected" | "offline"
+  status: "connected" | "connecting" | "disconnected" | "offline" | "unavailable"
 }>({ cellPresenceByKey: {}, status: "offline" })
 
 export function DatabaseViewProvider({
@@ -278,7 +278,11 @@ function DatabaseRealtimeStateProvider({
       }
     : null
   const realtime = useDatabaseRealtime(value.databaseId, {
-    enabled: Boolean(session?.user),
+    enabled: Boolean(
+      session?.user &&
+      value.databaseId &&
+      value.databaseWorkspaceId,
+    ),
     presence,
     publishPresence: value.editable,
   })

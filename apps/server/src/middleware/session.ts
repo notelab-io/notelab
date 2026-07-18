@@ -6,7 +6,7 @@ import {
 } from "../api-keys";
 import { createAuth } from "../auth";
 import { getMembership } from "../access";
-import { createDbClient, runWithDbClient } from "../db";
+import { runWithDbEnv } from "../db";
 import { db } from "../db";
 import { user as userTable } from "../db/schema";
 import type { AppBindings } from "../types";
@@ -49,9 +49,7 @@ export const sessionMiddleware: MiddlewareHandler<AppBindings> = async (
   c,
   next,
 ) => {
-  const dbClient = createDbClient(c.env);
-
-  return await timed(c, "session_db", () => runWithDbClient(dbClient, async () => {
+  return await timed(c, "session_db", () => runWithDbEnv(c.env, async () => {
     c.set("apiKey", null);
     c.set("authMethod", null);
 
@@ -151,6 +149,14 @@ export const sessionMiddleware: MiddlewareHandler<AppBindings> = async (
   }, {
     onTiming(name, durationMs) {
       c.get("serverTimings").push(`notelab_${name};dur=${durationMs}`);
+      console.info(JSON.stringify({
+        durationMs,
+        event: name === "db_connect"
+          ? "database_connection_acquired"
+          : "database_connection_closed",
+        requestId: c.get("requestId"),
+        route: c.req.path,
+      }));
     },
   }));
 };

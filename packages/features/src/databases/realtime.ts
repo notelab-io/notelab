@@ -52,7 +52,7 @@ type DatabaseRealtimeTicket = {
 type DatabaseRealtimeState = {
   cellPresenceByKey: Record<string, DatabasePresenceCollaborator[]>
   collaborators: DatabasePresenceCollaborator[]
-  status: "connected" | "connecting" | "disconnected" | "offline"
+  status: "connected" | "connecting" | "disconnected" | "offline" | "unavailable"
 }
 
 type DatabaseMutationEvent = DatabaseMutationResponse & {
@@ -166,6 +166,7 @@ class DatabaseRealtimeManager {
   private visibilityTimer: ReturnType<typeof setTimeout> | null = null
   private connectionGeneration = 0
   private connecting = false
+  private terminal = false
   private lifecycleListening = false
   private paused = false
   private reconnectAttempt = 0
@@ -186,7 +187,7 @@ class DatabaseRealtimeManager {
     this.listeners.add(listener)
 
     if (this.listeners.size === 1) {
-      if (this.stopped) {
+      if (this.stopped && !this.terminal) {
         this.stopped = false
         this.startLifecycleListeners()
         this.handleLifecycleChange()
@@ -230,6 +231,7 @@ class DatabaseRealtimeManager {
     try {
       const ticket = await this.fetchTicket()
       if (this.stopped || generation !== this.connectionGeneration) return
+      this.reconnectAttempt = 0
 
       const socket = new WebSocket(
         ticket.websocketUrl,
@@ -254,8 +256,10 @@ class DatabaseRealtimeManager {
       socket.addEventListener("error", () => socket.close())
       this.scheduleTicketRefresh(ticket, socket, generation)
       this.recoverIfBehind(ticket.version)
-    } catch {
-      if (!this.stopped && generation === this.connectionGeneration) {
+    } catch (error) {
+      if (ticketFailureAction(error) === "stop") {
+        this.markUnavailable()
+      } else if (!this.stopped && generation === this.connectionGeneration) {
         this.scheduleReconnect()
       }
     } finally {
@@ -452,8 +456,26 @@ class DatabaseRealtimeManager {
     this.presenceByOwner.clear()
     this.paused = false
     this.stopLifecycleListeners()
-    this.setState(getOfflineSnapshot())
+    this.setState(this.terminal ? getUnavailableSnapshot() : getOfflineSnapshot())
     this.idleTimer = setTimeout(this.onIdle, 60_000)
+  }
+
+  private markUnavailable() {
+    this.terminal = true
+    this.stopped = true
+    this.connectionGeneration += 1
+    this.connecting = false
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer)
+    if (this.refreshTimer) clearTimeout(this.refreshTimer)
+    if (this.visibilityTimer) clearTimeout(this.visibilityTimer)
+    this.reconnectTimer = null
+    this.refreshTimer = null
+    this.visibilityTimer = null
+    this.socket?.close(1000, "Database realtime unavailable")
+    this.socket = null
+    this.sessionId = null
+    this.stopLifecycleListeners()
+    this.setState(getUnavailableSnapshot())
   }
 
   private readonly handleOnline = () => this.handleLifecycleChange()
@@ -537,6 +559,15 @@ export function reconnectDelay(
 ) {
   const maximum = Math.min(30_000, 500 * 2 ** Math.max(attempt, 0))
   return Math.floor(random() * maximum)
+}
+
+export function ticketFailureAction(error: unknown): "retry" | "stop" {
+  if (!error || typeof error !== "object" || !("status" in error)) {
+    return "retry"
+  }
+
+  const status = (error as { status?: unknown }).status
+  return status === 401 || status === 403 || status === 404 ? "stop" : "retry"
 }
 
 function isBrowserOnline() {
@@ -674,8 +705,16 @@ const OFFLINE_STATE: DatabaseRealtimeState = {
   collaborators: [],
   status: "offline",
 }
+const UNAVAILABLE_STATE: DatabaseRealtimeState = {
+  cellPresenceByKey: {},
+  collaborators: [],
+  status: "unavailable",
+}
 function getOfflineSnapshot() {
   return OFFLINE_STATE
+}
+function getUnavailableSnapshot() {
+  return UNAVAILABLE_STATE
 }
 function emptySubscribe() {
   return () => undefined

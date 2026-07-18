@@ -297,7 +297,9 @@ export function PageEditorPane({
     databaseId: effectiveDatabaseId,
   });
   const appliedLayout =
-    resolvedLayout && Object.keys(resolvedLayout.sources).length > 0
+    resolvedLayout?.sources &&
+    typeof resolvedLayout.sources === "object" &&
+    Object.keys(resolvedLayout.sources).length > 0
       ? resolvedLayout.config
       : undefined;
   const createPage = useCreatePage();

@@ -479,7 +479,7 @@ export function DatabaseSetupCard({
           ),
         });
 
-        for (const [propertyName, value] of Object.entries(sampleRow.values)) {
+        for (const [propertyName, value] of Object.entries(sampleRow.values ?? {})) {
           const property = propertiesByName.get(propertyName.toLowerCase());
 
           if (!property) {

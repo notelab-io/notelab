@@ -6,7 +6,7 @@ import type { Duplex } from "node:stream";
 import crossws from "crossws/adapters/node";
 import type { WebSocketLike } from "@hocuspocus/server";
 import { createAuth } from "../auth";
-import { createDbClient, runWithDbClient } from "../db";
+import { runWithDbEnv } from "../db";
 import { getDefaultCollaborationHocuspocus } from "./service";
 import type { RuntimeEnv } from "../config";
 
@@ -123,7 +123,7 @@ async function authenticateUpgrade(request: Request, env: RuntimeEnv) {
     return null;
   }
 
-  return runWithDbClient(createDbClient(env), async () => {
+  return runWithDbEnv(env, async () => {
     const auth = createAuth(env, request);
     const session = await auth.api.getSession({ headers });
     return session?.user?.id ?? null;

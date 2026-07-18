@@ -7,6 +7,7 @@ import {
   createCellPresenceByKey,
   reconnectDelay,
   samePresence,
+  ticketFailureAction,
   type DatabasePresenceCollaborator,
 } from "./realtime"
 import { databaseQueryKey } from "./queries"
@@ -113,4 +114,16 @@ test("reconnects use capped full jitter", () => {
   assert.equal(reconnectDelay(0, () => 0.5), 250)
   assert.equal(reconnectDelay(20, () => 0.5), 15_000)
   assert.equal(reconnectDelay(20, () => 1), 30_000)
+})
+
+test("ticket failures stop only for permanent authorization and lookup errors", () => {
+  for (const status of [401, 403, 404]) {
+    assert.equal(ticketFailureAction({ status }), "stop")
+  }
+
+  for (const status of [408, 429, 500, 503]) {
+    assert.equal(ticketFailureAction({ status }), "retry")
+  }
+
+  assert.equal(ticketFailureAction(new TypeError("Failed to fetch")), "retry")
 })

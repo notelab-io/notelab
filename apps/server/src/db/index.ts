@@ -30,13 +30,19 @@ export function createDbClient(env: DbEnv) {
 
   return isSelfHostedRuntime()
     ? createPooledDbClientForUrl(connectionString)
-    : createDbClientForUrl(connectionString);
+    : createDbClientForUrl(connectionString, { queryTimeoutMillis: 15_000 });
 }
 
-export function createDbClientForUrl(connectionString: string) {
+export function createDbClientForUrl(
+  connectionString: string,
+  options: { queryTimeoutMillis?: number } = {},
+) {
   const client = new Client({
     connectionString,
     connectionTimeoutMillis: 3000,
+    ...(options.queryTimeoutMillis
+      ? { query_timeout: options.queryTimeoutMillis }
+      : {}),
     ...(usesLocalSslProxy(connectionString)
       ? { ssl: { rejectUnauthorized: false } }
       : {}),
@@ -85,6 +91,10 @@ export async function runWithDbClient<T>(
   callback: () => Promise<T>,
   options?: { onTiming?: (name: string, durationMs: number) => void },
 ) {
+  if (databaseStore.getStore()) {
+    return callback();
+  }
+
   if (databaseClient.lifecycle === "pooled") {
     const connectStartedAt = performance.now();
     const client = await databaseClient.client.connect();
@@ -119,6 +129,22 @@ export async function runWithDbClient<T>(
       Math.round(performance.now() - endStartedAt),
     );
   }
+}
+
+export function runWithDbEnv<T>(
+  env: DbEnv,
+  callback: () => Promise<T>,
+  options?: { onTiming?: (name: string, durationMs: number) => void },
+) {
+  if (databaseStore.getStore()) {
+    return callback();
+  }
+
+  return runWithDbClient(createDbClient(env), callback, options);
+}
+
+export function hasDatabaseContext() {
+  return Boolean(databaseStore.getStore());
 }
 
 function getConnectionString(env: DbEnv) {

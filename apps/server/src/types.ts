@@ -35,6 +35,7 @@ export type AppBindings = {
   Variables: {
     apiKey: ApiKeyContext | null;
     authMethod: "apiKey" | "session" | null;
+    requestId: string;
     serverTimings: string[];
     user: Auth["$Infer"]["Session"]["user"] | null;
     session: AuthSession | null;

@@ -13,7 +13,7 @@ import * as z from "zod";
 
 import { AiProviderConfigError, resolveWorkspaceAiModel } from "../../ai/ai-provider";
 import { canAccessPage, getMembership, getPageRecord } from "../../access";
-import { createDbClient, db, runWithDbClient } from "../../db";
+import { db, runWithDbEnv } from "../../db";
 import { getRuntimeAdapter } from "../../runtime-adapter";
 import type { AppBindings } from "../../types";
 import {
@@ -94,7 +94,7 @@ aiRoutes.post("/chat", async (c) => {
     env: c.env,
     messages,
     requestBody,
-    withDb: (fn) => runWithDbClient(createDbClient(c.env), fn),
+    withDb: (fn) => runWithDbEnv(c.env, fn),
   });
 });
 
