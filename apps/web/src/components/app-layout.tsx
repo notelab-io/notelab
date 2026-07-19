@@ -44,11 +44,11 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { isEmbeddedMobileViewer } from "@/lib/embedded-view"
-import { useDatabase } from "@notelab/features/databases"
+import { useDatabase } from "@zilobase/features/databases"
 import {
   usePage,
   useRecordItemVisit,
-} from "@notelab/features/pages"
+} from "@zilobase/features/pages"
 import { EmbeddedPageDialog } from "@/components/embedded-page-dialog"
 import { useOpenEmbeddedPage } from "@/hooks/use-open-embedded-page"
 import { LayoutEditorProvider } from "@/components/layout-editor"

@@ -44,8 +44,8 @@ const settingsItems = [
     icon: <PlugIcon />,
   },
   {
-    title: "Notelab AI",
-    href: "/settings/notelab-ai",
+    title: "Zilobase AI",
+    href: "/settings/zilobase-ai",
     icon: <SparklesIcon />,
   },
   {

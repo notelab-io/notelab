@@ -69,10 +69,10 @@ import {
   type CommentMentionMember,
 } from "@/components/page-comment-mentions"
 import { useOptionalPageEditorComments } from "@/components/page-editor-comments"
-import { useSession } from "@notelab/features/auth"
+import { useSession } from "@zilobase/features/auth"
 import {
   usePagePersonAccessTargets,
-} from "@notelab/features/pages"
+} from "@zilobase/features/pages"
 import { usePageCommentController, usePageCommentsSnapshot } from "@/contexts/page-comments-registry"
 import type { CommentAuthorSnapshot, CommentMessageSnapshot } from "@/comments/yjs-comments"
 import { toast } from "sonner"

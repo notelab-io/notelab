@@ -3,7 +3,7 @@ import {
   isStructuralBlockMarkerLine,
   preprocessStructuralBlockMarkdown,
   restoreStructuralBlocksInMarkdownContent,
-} from "@notelab/page-context"
+} from "@zilobase/page-context"
 
 export type GeneratedRange = {
   from: number

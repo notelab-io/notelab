@@ -14,7 +14,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { getApiErrorMessage } from "@/lib/api"
 import { cn } from "@/lib/utils"
-import { useCreateWorkspace } from "@notelab/features/workspaces"
+import { useCreateWorkspace } from "@zilobase/features/workspaces"
 
 export function OnboardingForm({
   className,
@@ -49,7 +49,7 @@ export function OnboardingForm({
               <div className="flex size-8 items-center justify-center rounded-md">
                 <GalleryVerticalEndIcon className="size-6" />
               </div>
-              <span className="sr-only">Notelab</span>
+              <span className="sr-only">Zilobase</span>
             </a>
             <h1 className="text-xl font-bold">Set up your page</h1>
             <FieldDescription>

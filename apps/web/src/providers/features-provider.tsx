@@ -1,27 +1,27 @@
 import {
-  NotelabFeaturesProvider,
-  type NotelabAuthClient,
-} from "@notelab/features"
+  ZilobaseFeaturesProvider,
+  type ZilobaseAuthClient,
+} from "@zilobase/features"
 import type {
   AcceptWorkspaceInvitationResponse,
   Workspace,
   WorkspaceInvitation,
   WorkspaceRole,
-} from "@notelab/features/workspaces"
+} from "@zilobase/features/workspaces"
 import type {
   SessionResponse,
   SignInWithOtpInput,
   SignInWithPasswordInput,
   SignUpInput,
   VerifyEmailOtpInput,
-} from "@notelab/features/auth"
+} from "@zilobase/features/auth"
 
 import { apiFetch, authFetch } from "@/lib/api"
 import { queryClient } from "@/lib/query-client"
 import { useAppStore } from "@/stores/app-store"
 import { isFeatureEnabled } from "@/config/feature-flags"
 
-export const webAuthClient: NotelabAuthClient = {
+export const webAuthClient: ZilobaseAuthClient = {
   getSession: () => apiFetch<SessionResponse>("/session"),
   requestSignInOtp: (email) =>
     authFetch<{ success: boolean }>("/email-otp/send-verification-otp", {
@@ -87,7 +87,7 @@ export function WebFeaturesProvider({
   )
 
   return (
-    <NotelabFeaturesProvider
+    <ZilobaseFeaturesProvider
       value={{
         apiFetch,
         auth: webAuthClient,
@@ -98,7 +98,7 @@ export function WebFeaturesProvider({
       }}
     >
       {children}
-    </NotelabFeaturesProvider>
+    </ZilobaseFeaturesProvider>
   )
 }
 

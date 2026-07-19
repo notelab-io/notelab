@@ -60,10 +60,10 @@ jobs:
             capture { print }
           ' CHANGELOG.md > release-notes.md
           if [ ! -s release-notes.md ]; then
-            echo "Notelab ${{ github.ref_name }}" > release-notes.md
+            echo "Zilobase ${{ github.ref_name }}" > release-notes.md
           fi
 
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release create "${{ github.ref_name }}" --title "Notelab ${{ github.ref_name }}" --notes-file release-notes.md
+        run: gh release create "${{ github.ref_name }}" --title "Zilobase ${{ github.ref_name }}" --notes-file release-notes.md

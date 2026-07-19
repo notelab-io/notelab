@@ -1,8 +1,8 @@
 import { useCallback, useSyncExternalStore } from "react"
 
-const TOOL_OUTPUT_UI_STORAGE_KEY = "notelab.debug.showToolOutputUi"
-const GENERATIVE_TOOL_UI_STORAGE_KEY = "notelab.debug.showGenerativeToolUi"
-const TOOL_OUTPUT_UI_EVENT = "notelab-debug-settings-change"
+const TOOL_OUTPUT_UI_STORAGE_KEY = "zilobase.debug.showToolOutputUi"
+const GENERATIVE_TOOL_UI_STORAGE_KEY = "zilobase.debug.showGenerativeToolUi"
+const TOOL_OUTPUT_UI_EVENT = "zilobase-debug-settings-change"
 
 const isBrowser = typeof window !== "undefined"
 

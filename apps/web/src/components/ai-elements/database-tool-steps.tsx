@@ -11,7 +11,7 @@ import {
   type DatabaseConfigToolName,
   type DatabaseConfigToolOutput,
   isDatabaseConfigToolName,
-} from "@notelab/features/ai-chat";
+} from "@zilobase/features/ai-chat";
 import { getToolName, isToolUIPart, type UIMessage } from "ai";
 import type { LucideIcon } from "lucide-react";
 import {

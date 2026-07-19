@@ -5,9 +5,9 @@ import { useQueryClient } from "@tanstack/react-query"
 import {
   isDatabaseConfigToolName,
   readDatabaseConfigToolIds,
-} from "@notelab/features/ai-chat"
-import { databaseQueryKey } from "@notelab/features/databases"
-import { pageQueryKey } from "@notelab/features/pages"
+} from "@zilobase/features/ai-chat"
+import { databaseQueryKey } from "@zilobase/features/databases"
+import { pageQueryKey } from "@zilobase/features/pages"
 
 type UseDatabaseToolCacheSyncOptions = {
   enabled?: boolean

@@ -10,9 +10,9 @@ import { SettingsHeader } from "@/components/settings-header";
 import {
   useActiveWorkspaceId,
   useIntegrations,
-} from "@notelab/features/integrations";
-import { useSession } from "@notelab/features/auth";
-import { useWorkspaceAccessTargets } from "@notelab/features/workspaces";
+} from "@zilobase/features/integrations";
+import { useSession } from "@zilobase/features/auth";
+import { useWorkspaceAccessTargets } from "@zilobase/features/workspaces";
 import { apiFetch, getApiErrorMessage } from "@/lib/api";
 import { toast } from "sonner";
 
@@ -173,7 +173,7 @@ export default function WorkspaceIntegrationsSettingsPage() {
   return (
     <main className="flex flex-1 flex-col gap-6 px-4 py-8">
       <SettingsHeader
-        description="Connect workspace tools that Notelab can use for page context."
+        description="Connect workspace tools that Zilobase can use for page context."
         title="Integrations"
       />
       <div className="mx-auto grid w-full max-w-4xl gap-4">
@@ -252,7 +252,7 @@ function OAuthCredentialCard({ integrationId, workspaceId, onSaved }: { integrat
   const endpoint = integrationEndpoint[integrationId];
   const [config, setConfig] = React.useState<OAuthConfigView | null>(null);
   const [error, setError] = React.useState<string | null>(null);
-  const headers = React.useMemo(() => ({ "x-notelab-workspace-id": workspaceId }), [workspaceId]);
+  const headers = React.useMemo(() => ({ "x-zilobase-workspace-id": workspaceId }), [workspaceId]);
   const load = React.useCallback(async () => {
     try { setConfig(await apiFetch<OAuthConfigView>(`/api/workspace/settings/integrations/${endpoint}/oauth-config`, { headers })); }
     catch (nextError) { setError(getApiErrorMessage(nextError)); }

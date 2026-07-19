@@ -19,9 +19,9 @@ export function useDatabaseViewNavigation({
     select: (location) =>
       (
         location.state as typeof location.state & {
-          notelabDatabaseViewSelection?: SidebarDatabaseViewSelection
+          zilobaseDatabaseViewSelection?: SidebarDatabaseViewSelection
         }
-      ).notelabDatabaseViewSelection,
+      ).zilobaseDatabaseViewSelection,
   })
   const [activeViewId, setActiveViewId] = useState<string | undefined>(
     requestedViewId,

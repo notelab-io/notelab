@@ -18,17 +18,17 @@
       "@/*": ["./src/*"],
       "@/packages/editor": ["./src/editor/index.ts"],
       "@/packages/editor/*": ["./src/editor/*"],
-      "@notelab/features/databases/property-types": [
+      "@zilobase/features/databases/property-types": [
         "./../../packages/features/src/databases/property-types.ts"
       ],
-      "@notelab/features": ["./../../packages/features/src/index.ts"],
-      "@notelab/features/*": ["./../../packages/features/src/*/index.ts"],
-      "@notelab/connectors/gmail/ui": ["./../../../toolkit/packages/connectors/src/connectors/gmail/src/ui.tsx"],
-      "@notelab/connectors/github/ui": ["./../../../toolkit/packages/connectors/src/connectors/github/src/ui.tsx"],
-      "@notelab/connectors/google-calendar/ui": ["./../../../toolkit/packages/connectors/src/connectors/google-calendar/src/ui.tsx"],
-      "@notelab/connectors/google-drive/ui": ["./../../../toolkit/packages/connectors/src/connectors/google-drive/src/ui.tsx"],
-      "@notelab/connectors/linear/ui": ["./../../../toolkit/packages/connectors/src/connectors/linear/src/ui.tsx"],
-      "@notelab/connectors/slack/ui": ["./../../../toolkit/packages/connectors/src/connectors/slack/src/ui.tsx"]
+      "@zilobase/features": ["./../../packages/features/src/index.ts"],
+      "@zilobase/features/*": ["./../../packages/features/src/*/index.ts"],
+      "@zilobase/toolkit-connector-runtime/gmail/ui": ["./../../../toolkit/packages/connector-runtime/src/connectors/gmail/src/ui.tsx"],
+      "@zilobase/toolkit-connector-runtime/github/ui": ["./../../../toolkit/packages/connector-runtime/src/connectors/github/src/ui.tsx"],
+      "@zilobase/toolkit-connector-runtime/google-calendar/ui": ["./../../../toolkit/packages/connector-runtime/src/connectors/google-calendar/src/ui.tsx"],
+      "@zilobase/toolkit-connector-runtime/google-drive/ui": ["./../../../toolkit/packages/connector-runtime/src/connectors/google-drive/src/ui.tsx"],
+      "@zilobase/toolkit-connector-runtime/linear/ui": ["./../../../toolkit/packages/connector-runtime/src/connectors/linear/src/ui.tsx"],
+      "@zilobase/toolkit-connector-runtime/slack/ui": ["./../../../toolkit/packages/connector-runtime/src/connectors/slack/src/ui.tsx"]
     },
 
     /* Linting */

@@ -3,7 +3,7 @@ import {
   RecursiveMarkdownTextSplitter,
 } from "./index.js";
 
-const sampleMarkdown = `# NoteLab Markdown Splitter
+const sampleMarkdown = `# Zilobase Markdown Splitter
 
 This intro paragraph is intentionally a little long so the recursive
 splitter has a reason to produce more than one chunk when the chunk size

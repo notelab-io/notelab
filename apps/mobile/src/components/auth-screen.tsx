@@ -4,7 +4,7 @@ import {
   useSignInWithOtp,
   useSignUp,
   useVerifyEmailOtp,
-} from '@notelab/features/auth';
+} from '@zilobase/features/auth';
 import * as React from 'react';
 import {
   ActivityIndicator,
@@ -406,7 +406,7 @@ export function AuthScreen() {
 
             <View style={styles.footer}>
               <Text style={styles.legalText}>
-                By continuing, you agree to the Notelab terms and privacy policy.
+                By continuing, you agree to the Zilobase terms and privacy policy.
               </Text>
 
               {__DEV__ && <Text style={styles.debugText}>Auth server: {API_BASE_URL}</Text>}

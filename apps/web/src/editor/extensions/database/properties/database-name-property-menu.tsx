@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dropdrawer";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { useUpdateDatabase } from "@notelab/features/databases";
+import { useUpdateDatabase } from "@zilobase/features/databases";
 
 import {
   getDatabaseSorts,

@@ -1,4 +1,4 @@
-import type { DatabaseProperty } from "@notelab/features/databases"
+import type { DatabaseProperty } from "@zilobase/features/databases"
 
 import {
   cyclingColorTokens,

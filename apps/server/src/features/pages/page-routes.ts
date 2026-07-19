@@ -58,12 +58,12 @@ import {
 } from "../../services/database-commit";
 export const pageRoutes = new Hono<AppBindings>();
 
-const NOTELAB_AI_MODES = new Set(["instruction", "skill"] as const);
-type NotelabAiMode = "instruction" | "skill";
+const ZILOBASE_AI_MODES = new Set(["instruction", "skill"] as const);
+type ZilobaseAiMode = "instruction" | "skill";
 
-const parseNotelabAiModes = (
+const parseZilobaseAiModes = (
   value: string | undefined,
-): NotelabAiMode[] | null => {
+): ZilobaseAiMode[] | null => {
   if (!value) {
     return null;
   }
@@ -71,8 +71,8 @@ const parseNotelabAiModes = (
   const modes = value
     .split(",")
     .map((mode) => mode.trim())
-    .filter((mode): mode is NotelabAiMode =>
-      NOTELAB_AI_MODES.has(mode as NotelabAiMode),
+    .filter((mode): mode is ZilobaseAiMode =>
+      ZILOBASE_AI_MODES.has(mode as ZilobaseAiMode),
     );
 
   if (modes.length === 0) {
@@ -82,15 +82,15 @@ const parseNotelabAiModes = (
   return [...new Set(modes)];
 };
 
-const readNotelabAiMode = (metadata: unknown): NotelabAiMode | null => {
+const readZilobaseAiMode = (metadata: unknown): ZilobaseAiMode | null => {
   if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
     return null;
   }
 
-  const mode = (metadata as { notelabai?: unknown }).notelabai;
+  const mode = (metadata as { zilobaseai?: unknown }).zilobaseai;
 
-  return typeof mode === "string" && NOTELAB_AI_MODES.has(mode as NotelabAiMode)
-    ? (mode as NotelabAiMode)
+  return typeof mode === "string" && ZILOBASE_AI_MODES.has(mode as ZilobaseAiMode)
+    ? (mode as ZilobaseAiMode)
     : null;
 };
 
@@ -113,8 +113,8 @@ type PageListRecord = {
   url: string;
 };
 
-const toNotelabAiPageSummary = (record: PageListRecord) => {
-  const notelabai = readNotelabAiMode(record.metadata);
+const toZilobaseAiPageSummary = (record: PageListRecord) => {
+  const zilobaseai = readZilobaseAiMode(record.metadata);
 
   return {
     id: record.id,
@@ -124,7 +124,7 @@ const toNotelabAiPageSummary = (record: PageListRecord) => {
     url: record.url,
     metadata: {
       emoji: readPageEmoji(record.metadata),
-      notelabai,
+      zilobaseai,
     },
   };
 };
@@ -293,7 +293,7 @@ pageRoutes.get("/", async (c) => {
     return c.json({ error: "Forbidden" }, 403);
   }
 
-  const notelabAiModes = parseNotelabAiModes(c.req.query("notelabai"));
+  const zilobaseAiModes = parseZilobaseAiModes(c.req.query("zilobaseai"));
   const isSummary = c.req.query("fields") === "summary";
   const deletedFilter = c.req.query("deleted") === "only" ? "only" : "active";
   const [accessibleIds, records] = await Promise.all([
@@ -327,12 +327,12 @@ pageRoutes.get("/", async (c) => {
       ? records
       : records.filter((record) => accessibleIds.has(record.id));
 
-  if (notelabAiModes) {
+  if (zilobaseAiModes) {
     accessibleRecords = accessibleRecords
       .filter((record) => {
-        const mode = readNotelabAiMode(record.metadata);
+        const mode = readZilobaseAiMode(record.metadata);
 
-        return Boolean(mode && notelabAiModes.includes(mode));
+        return Boolean(mode && zilobaseAiModes.includes(mode));
       })
       .sort(
         (first, second) =>
@@ -342,7 +342,7 @@ pageRoutes.get("/", async (c) => {
 
   if (isSummary) {
     return c.json({
-      pages: accessibleRecords.map((record) => toNotelabAiPageSummary(record)),
+      pages: accessibleRecords.map((record) => toZilobaseAiPageSummary(record)),
     });
   }
 

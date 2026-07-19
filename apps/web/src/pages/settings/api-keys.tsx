@@ -75,10 +75,10 @@ import {
   useCreateApiKey,
   useDeleteApiKey,
   useUpdateApiKey,
-} from "@notelab/features/api-keys"
-import type { ApiKeyRecord, CreatedApiKeyRecord } from "@notelab/features/api-keys"
-import { useActiveWorkspaceId } from "@notelab/features/integrations"
-import { useWorkspaces } from "@notelab/features/workspaces"
+} from "@zilobase/features/api-keys"
+import type { ApiKeyRecord, CreatedApiKeyRecord } from "@zilobase/features/api-keys"
+import { useActiveWorkspaceId } from "@zilobase/features/integrations"
+import { useWorkspaces } from "@zilobase/features/workspaces"
 import { getApiErrorMessage } from "@/lib/api"
 
 const expirationOptions = [
@@ -110,7 +110,7 @@ export default function ApiKeysSettingsPage() {
     <main className="flex flex-1 flex-col gap-6 px-4 py-8">
       <SettingsHeader
         title="API Keys"
-        description="Create user-scoped keys for programmatic Notelab access."
+        description="Create user-scoped keys for programmatic Zilobase access."
       />
 
       <div className="mx-auto grid w-full max-w-4xl gap-4">

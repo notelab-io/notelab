@@ -9,7 +9,7 @@ import {
 import {
   useCreatePage,
   useUpdatePage,
-} from "@notelab/features/pages"
+} from "@zilobase/features/pages"
 
 export function useNotionImport({
   navigateToEntry = true,

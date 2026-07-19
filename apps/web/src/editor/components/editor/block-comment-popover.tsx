@@ -17,7 +17,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { usePageCommentsSnapshot } from "@/contexts/page-comments-registry"
-import { getCommentIdsInRange } from "@notelab/tiptap-comment-extension"
+import { getCommentIdsInRange } from "@zilobase/tiptap-comment-extension"
 
 import type { DragHandleTarget } from "./types"
 

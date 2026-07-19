@@ -2,12 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type QueryClient, useQueryClient } from "@tanstack/react-query";
 
 import { usePageEditorRegistry } from "@/contexts/page-editor-registry";
-import { useNotelabFeatures } from "@notelab/features";
+import { useZilobaseFeatures } from "@zilobase/features";
 import {
   databaseQueryKey,
   databaseQueryOptions,
   type DatabasePayload,
-} from "@notelab/features/databases";
+} from "@zilobase/features/databases";
 import {
   ensurePageDetail,
   getPrimaryPageParentId,
@@ -18,7 +18,7 @@ import {
   type PageDetail,
   type PageNavigationPayload,
   type PageItemPlacement,
-} from "@notelab/features/pages";
+} from "@zilobase/features/pages";
 import {
   buildContextMarkdown,
   collectRequiredLinkedDatabaseIds,
@@ -31,7 +31,7 @@ import {
   type ContextSourceRef,
   type DatabaseContextPayload,
   type PageDatabaseContext,
-} from "@notelab/page-context";
+} from "@zilobase/page-context";
 
 type UsePageAiContextOptions = {
   attachments?: ContextAttachment[];
@@ -72,7 +72,7 @@ function buildPagePath(
 async function resolvePageForContext(
   pageId: string,
   queryClient: QueryClient,
-  apiFetch: ReturnType<typeof useNotelabFeatures>["apiFetch"],
+  apiFetch: ReturnType<typeof useZilobaseFeatures>["apiFetch"],
   getEditorContent: (pageId: string) => unknown | null,
 ) {
   const cached = getPageFromDetail(
@@ -91,7 +91,7 @@ async function resolvePageForContext(
 async function resolveDatabaseContext(
   databaseId: string,
   queryClient: ReturnType<typeof useQueryClient>,
-  apiFetch: ReturnType<typeof useNotelabFeatures>["apiFetch"],
+  apiFetch: ReturnType<typeof useZilobaseFeatures>["apiFetch"],
   contextCache: Map<string, DatabaseContextPayload>,
 ): Promise<DatabaseContextPayload | null> {
   if (contextCache.has(databaseId)) {
@@ -132,7 +132,7 @@ async function resolveDatabaseContext(
 async function resolveLinkedSchemas(
   schema: DatabaseContextPayload,
   queryClient: ReturnType<typeof useQueryClient>,
-  apiFetch: ReturnType<typeof useNotelabFeatures>["apiFetch"],
+  apiFetch: ReturnType<typeof useZilobaseFeatures>["apiFetch"],
   contextCache: Map<string, DatabaseContextPayload>,
 ) {
   const linkedSourceSchemas: Record<string, DatabaseContextPayload> = {};
@@ -159,7 +159,7 @@ async function resolveLinkedSchemas(
 async function resolvePageDatabases(
   content: unknown,
   queryClient: ReturnType<typeof useQueryClient>,
-  apiFetch: ReturnType<typeof useNotelabFeatures>["apiFetch"],
+  apiFetch: ReturnType<typeof useZilobaseFeatures>["apiFetch"],
   contextCache: Map<string, DatabaseContextPayload>,
 ) {
   const databaseIds = extractDatabaseIds(content);
@@ -197,7 +197,7 @@ export function usePageAiContext({
   workspaceId,
   primarySource = null,
 }: UsePageAiContextOptions) {
-  const { apiFetch } = useNotelabFeatures();
+  const { apiFetch } = useZilobaseFeatures();
   const queryClient = useQueryClient();
   const { getEditorHandle } = usePageEditorRegistry();
   const getEditorContent = useCallback(

@@ -54,10 +54,10 @@ const REQUESTABLE_SOURCES: SourceId[] = [
 ];
 
 const SYSTEM_PROMPT =
-  "You are Notelab's page research assistant. When Notelab page context is provided, treat it as the authoritative source for questions about the current page, attached pages, embedded databases, properties, and rows shown in that context."
-  + " Use Gmail tools when the user asks about email, inbox, people, timelines, project updates, decisions, blockers, or messages from email. Use GitHub tools when the user asks about repositories, issues, pull requests, commits, files, code, releases, bugs, reviews, or work tracked in GitHub. Use Google Calendar tools when the user asks about meetings, schedules, events, availability, free/busy windows, calendars, attendees, or time-based planning. Use Google Drive tools when the user asks about Drive files, Docs, Sheets, Slides, documents, folders, file owners, recently changed files, or content stored in Google Drive. Use Slack tools for workspace Slack context only: channels, private channels the Notelab app can access, threads, canvases, files, project chatter, decisions, blockers, and page messages. Use Linear tools when the user asks about issues, tickets, bugs, tasks, projects, teams, cycles, status, assignees, priorities, blockers, scope, delivery progress, or roadmap work tracked in Linear."
+  "You are Zilobase's page research assistant. When Zilobase page context is provided, treat it as the authoritative source for questions about the current page, attached pages, embedded databases, properties, and rows shown in that context."
+  + " Use Gmail tools when the user asks about email, inbox, people, timelines, project updates, decisions, blockers, or messages from email. Use GitHub tools when the user asks about repositories, issues, pull requests, commits, files, code, releases, bugs, reviews, or work tracked in GitHub. Use Google Calendar tools when the user asks about meetings, schedules, events, availability, free/busy windows, calendars, attendees, or time-based planning. Use Google Drive tools when the user asks about Drive files, Docs, Sheets, Slides, documents, folders, file owners, recently changed files, or content stored in Google Drive. Use Slack tools for workspace Slack context only: channels, private channels the Zilobase app can access, threads, canvases, files, project chatter, decisions, blockers, and page messages. Use Linear tools when the user asks about issues, tickets, bugs, tasks, projects, teams, cycles, status, assignees, priorities, blockers, scope, delivery progress, or roadmap work tracked in Linear."
   + " The connected Gmail, GitHub, Google Calendar, Google Drive, Slack, and Linear tools are read-only. Never claim you sent, modified, archived, labeled, deleted, drafted, posted, updated, assigned, commented on, scheduled, canceled, merged, closed, reopened, reviewed, uploaded, moved, shared, or marked any connected external item."
-  + " Notelab database and page configuration tools may create and update Notelab pages, databases, properties, rows, views, and embeds when the user asks."
+  + " Zilobase database and page configuration tools may create and update Zilobase pages, databases, properties, rows, views, and embeds when the user asks."
   + " Prefer concise answers with dates, participants, links, and message subjects when useful. If available integration results are insufficient, say what is missing and suggest a narrower query.";
 
 export async function runAiChatTurn(input: {
@@ -295,8 +295,8 @@ function buildPageContextInstruction(pageContext: string | null) {
 
   return [
     "",
-    "## Notelab page context",
-    "The following markdown describes the current Notelab page and any attached pages or databases.",
+    "## Zilobase page context",
+    "The following markdown describes the current Zilobase page and any attached pages or databases.",
     "Answer questions about this page, page content, databases, properties, and rows using this context first.",
     "Do not say you lack access to the page when this context is present.",
     "",
@@ -316,7 +316,7 @@ function buildSourceInstruction(input: {
   }
 
   if (input.hasPageContext) {
-    return "No external integration sources are connected. Answer page questions from the Notelab page context above.";
+    return "No external integration sources are connected. Answer page questions from the Zilobase page context above.";
   }
 
   return "No page integration sources are connected. Answer from general knowledge and ask the user to connect Gmail, GitHub, Google Calendar, Google Drive, Slack, or Linear for page-specific data.";

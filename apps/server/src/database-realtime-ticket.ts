@@ -4,9 +4,9 @@ import type { RuntimeEnv } from "./config";
 
 const TICKET_TTL_MS = 30 * 60 * 1000;
 
-export const DATABASE_REALTIME_PROTOCOL = "notelab.database.v1";
+export const DATABASE_REALTIME_PROTOCOL = "zilobase.database.v1";
 export const DATABASE_REALTIME_AUTH_PROTOCOL_PREFIX =
-  "notelab.database.auth.";
+  "zilobase.database.auth.";
 
 export type DatabaseRealtimeTicketClaims = {
   canEdit: boolean;

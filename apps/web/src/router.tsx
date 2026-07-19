@@ -17,14 +17,14 @@ import IntegrationsSettingsPage from "@/pages/settings/integrations"
 import LoginPage from "@/pages/login"
 import OnboardingPage from "@/pages/onboarding"
 import OtpPage from "@/pages/otp"
-import NotelabAiSettingsPage from "@/pages/settings/notelab-ai"
+import ZilobaseAiSettingsPage from "@/pages/settings/zilobase-ai"
 import WorkspaceSettingsPage from "@/pages/settings/workspace"
 import ProfileSettingsPage from "@/pages/settings/profile"
 import TeamSettingsPage from "@/pages/settings/team"
 import SignupPage from "@/pages/signup"
 import Page from "@/pages/page"
-import { sessionQueryOptions } from "@notelab/features/auth"
-import { workspacesQueryOptions } from "@notelab/features/workspaces"
+import { sessionQueryOptions } from "@zilobase/features/auth"
+import { workspacesQueryOptions } from "@zilobase/features/workspaces"
 import { ApiError, apiFetch } from "@/lib/api"
 import { queryClient } from "@/lib/query-client"
 import { webAuthClient } from "@/providers/features-provider"
@@ -245,10 +245,10 @@ const apiKeysSettingsRoute = createRoute({
   component: ApiKeysSettingsPage,
 })
 
-const notelabAiSettingsRoute = createRoute({
+const zilobaseAiSettingsRoute = createRoute({
   getParentRoute: () => appRoute,
-  path: "/settings/notelab-ai",
-  component: NotelabAiSettingsPage,
+  path: "/settings/zilobase-ai",
+  component: ZilobaseAiSettingsPage,
 })
 
 const teamSettingsRoute = createRoute({
@@ -274,7 +274,7 @@ const routeTree = rootRoute.addChildren([
     workspaceSettingsRoute,
     integrationsSettingsRoute,
     apiKeysSettingsRoute,
-    notelabAiSettingsRoute,
+    zilobaseAiSettingsRoute,
     teamSettingsRoute,
   ]),
   pageRoute,

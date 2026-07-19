@@ -1,5 +1,5 @@
 import { Input } from "@/components/ui/input";
-import type { GithubIntegrationStatus } from "@notelab/features/integrations";
+import type { GithubIntegrationStatus } from "@zilobase/features/integrations";
 import { integrationIcons } from "@/lib/integration-icons";
 
 import {
@@ -156,7 +156,7 @@ export function GithubIntegrationCard({
       </IntegrationSectionCard>
 
       <IntegrationPersonalAccountCard
-        description="Connect your GitHub identity so Notelab can verify you belong to the connected GitHub workspace."
+        description="Connect your GitHub identity so Zilobase can verify you belong to the connected GitHub workspace."
         details={
           <>
             <IntegrationDetail

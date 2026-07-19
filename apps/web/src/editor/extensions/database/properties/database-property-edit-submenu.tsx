@@ -59,8 +59,8 @@ import {
   useDatabase,
   useUpdateDatabaseProperty,
   useUpdateDatabasePropertyValue,
-} from "@notelab/features/databases";
-import { usePageNavigation } from "@notelab/features/pages";
+} from "@zilobase/features/databases";
+import { usePageNavigation } from "@zilobase/features/pages";
 import {
   colorTokens,
   getColorTokenBadgeClassName,

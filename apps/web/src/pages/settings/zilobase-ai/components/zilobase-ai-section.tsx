@@ -12,16 +12,16 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import type {
-  NotelabAiMode,
-  NotelabAiPageSummary,
+  ZilobaseAiMode,
+  ZilobaseAiPageSummary,
   Page,
-} from "@notelab/features/pages"
+} from "@zilobase/features/pages"
 
-import { NotelabAiCreateMenu } from "./notelab-ai-create-menu"
-import { NotelabAiItem, NotelabAiItemList } from "./notelab-ai-item"
+import { ZilobaseAiCreateMenu } from "./zilobase-ai-create-menu"
+import { ZilobaseAiItem, ZilobaseAiItemList } from "./zilobase-ai-item"
 
 const sectionConfig: Record<
-  NotelabAiMode,
+  ZilobaseAiMode,
   {
     description: string
     emptyDescription: string
@@ -48,7 +48,7 @@ const sectionConfig: Record<
   },
 }
 
-export function NotelabAiSection({
+export function ZilobaseAiSection({
   isLoading,
   items,
   mode,
@@ -56,8 +56,8 @@ export function NotelabAiSection({
   pagesById,
 }: {
   isLoading: boolean
-  items: NotelabAiPageSummary[]
-  mode: NotelabAiMode
+  items: ZilobaseAiPageSummary[]
+  mode: ZilobaseAiMode
   workspaceId: string | null
   pagesById: Map<string, Page>
 }) {
@@ -76,7 +76,7 @@ export function NotelabAiSection({
           <p className="text-sm text-muted-foreground">{config.description}</p>
         </div>
         {!isLoading ? (
-          <NotelabAiCreateMenu
+          <ZilobaseAiCreateMenu
             existingPageIds={existingPageIds}
             mode={mode}
             workspaceId={workspaceId}
@@ -87,7 +87,7 @@ export function NotelabAiSection({
       <Card className={cn(showList && "gap-0 overflow-hidden py-0")}>
         <CardContent className={cn(showList && "p-0")}>
           {isLoading ? (
-            <NotelabAiSectionSkeleton />
+            <ZilobaseAiSectionSkeleton />
           ) : isEmpty ? (
             <Empty>
               <EmptyHeader>
@@ -97,9 +97,9 @@ export function NotelabAiSection({
               </EmptyHeader>
             </Empty>
           ) : (
-            <NotelabAiItemList>
+            <ZilobaseAiItemList>
               {items.map((page, index) => (
-                <NotelabAiItem
+                <ZilobaseAiItem
                   key={page.id}
                   isFirst={index === 0}
                   isLast={index === items.length - 1}
@@ -108,7 +108,7 @@ export function NotelabAiSection({
                   pageRecord={pagesById.get(page.id)}
                 />
               ))}
-            </NotelabAiItemList>
+            </ZilobaseAiItemList>
           )}
         </CardContent>
       </Card>
@@ -116,7 +116,7 @@ export function NotelabAiSection({
   )
 }
 
-function NotelabAiSectionSkeleton() {
+function ZilobaseAiSectionSkeleton() {
   return (
     <div className="grid gap-2 py-4">
       {Array.from({ length: 2 }).map((_, index) => (

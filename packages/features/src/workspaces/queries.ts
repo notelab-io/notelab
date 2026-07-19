@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query"
 
-import type { NotelabAuthClient } from "../context"
+import type { ZilobaseAuthClient } from "../context"
 
 export type Workspace = {
   id: string
@@ -61,7 +61,7 @@ export const workspaceInvitationsQueryKey = (
   workspaceId: string | null | undefined,
 ) => ["workspaces", workspaceId ?? "none", "invitations"] as const
 
-export const workspacesQueryOptions = (auth: NotelabAuthClient) =>
+export const workspacesQueryOptions = (auth: ZilobaseAuthClient) =>
   queryOptions({
     queryKey: workspacesQueryKey,
     queryFn: async () => {
@@ -113,7 +113,7 @@ export const workspaceAccessTargetsQueryOptions = (
   })
 
 export const workspaceInvitationsQueryOptions = (
-  auth: NotelabAuthClient,
+  auth: ZilobaseAuthClient,
   workspaceId: string | null | undefined,
 ) =>
   queryOptions({

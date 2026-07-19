@@ -15,7 +15,7 @@ function shouldLogPageContext() {
     return false
   }
 
-  return localStorage.getItem("notelabDebugAiContext") === "1"
+  return localStorage.getItem("zilobaseDebugAiContext") === "1"
 }
 
 export function logPageContext(
@@ -26,7 +26,7 @@ export function logPageContext(
     return
   }
 
-  console.group("[Notelab AI Context]")
+  console.group("[Zilobase AI Context]")
   console.log("meta:", meta)
   console.log(`markdown (${meta.charCount} chars):\n`, markdown)
   console.groupEnd()
@@ -42,7 +42,7 @@ export function logPageContextRebuild(meta: {
   }
 
   console.log(
-    `[Notelab AI Context] rebuilt (${meta.attachmentCount} attachments, ${meta.charCount} chars, ${meta.buildMs}ms)`,
+    `[Zilobase AI Context] rebuilt (${meta.attachmentCount} attachments, ${meta.charCount} chars, ${meta.buildMs}ms)`,
   )
 }
 
@@ -54,7 +54,7 @@ export function logPageContextSent(meta: {
     return
   }
 
-  console.log("[Notelab AI Context] sent with message", meta)
+  console.log("[Zilobase AI Context] sent with message", meta)
 }
 
 export function warnPageContextTrimmed(droppedAttachmentIds: string[]) {
@@ -62,7 +62,7 @@ export function warnPageContextTrimmed(droppedAttachmentIds: string[]) {
     return
   }
 
-  console.warn("[Notelab AI Context] trimmed attachments", {
+  console.warn("[Zilobase AI Context] trimmed attachments", {
     dropped: droppedAttachmentIds,
   })
 }

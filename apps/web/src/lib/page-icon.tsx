@@ -1,7 +1,7 @@
 import { FileIcon, FileTextIcon } from "lucide-react"
 
-import { getPageEmoji, type Page } from "@notelab/features/pages"
-import { getDatabaseEmoji } from "@notelab/features/databases"
+import { getPageEmoji, type Page } from "@zilobase/features/pages"
+import { getDatabaseEmoji } from "@zilobase/features/databases"
 import { getIconTextClassName } from "@/lib/color-tokens"
 import { cn } from "@/lib/utils"
 import {

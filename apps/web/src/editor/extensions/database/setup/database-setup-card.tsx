@@ -37,8 +37,8 @@ import {
   useUpdateDatabase,
   useUpdateDatabasePropertyValue,
   type DatabaseProperty,
-} from "@notelab/features/databases";
-import { useUpdatePage, usePageNavigation } from "@notelab/features/pages";
+} from "@zilobase/features/databases";
+import { useUpdatePage, usePageNavigation } from "@zilobase/features/pages";
 
 import {
   getDatabaseSetupTemplate,

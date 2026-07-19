@@ -10,7 +10,7 @@ export const authClient = createAuthClient({
     expoClient({
       scheme: 'mobile',
       storage: SecureStore,
-      storagePrefix: 'notelab-mobile',
+      storagePrefix: 'zilobase-mobile',
     }),
   ],
 });

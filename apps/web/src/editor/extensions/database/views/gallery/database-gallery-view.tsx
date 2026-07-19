@@ -10,7 +10,7 @@ import {
   getPageCover,
   getPageEmoji,
   type PageMetadata,
-} from "@notelab/features/pages"
+} from "@zilobase/features/pages"
 
 import { PageIconDisplay } from "@/lib/page-icon"
 import {

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 
-import { useNotelabFeatures } from "../context"
+import { useZilobaseFeatures } from "../context"
 import { appSearchQueryOptions } from "./queries"
 
 export function useAppSearchResults(
@@ -8,7 +8,7 @@ export function useAppSearchResults(
   query: string,
   enabled?: boolean,
 ) {
-  const { apiFetch } = useNotelabFeatures()
+  const { apiFetch } = useZilobaseFeatures()
 
   return useQuery(appSearchQueryOptions(apiFetch, workspaceId, query, enabled))
 }

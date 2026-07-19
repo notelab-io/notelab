@@ -1,5 +1,5 @@
 {
-  "name": "@notelab/server",
+  "name": "@zilobase/server",
   "version": "0.0.5",
   "license": "MIT",
   "type": "module",
@@ -14,8 +14,8 @@
     }
   },
   "scripts": {
-    "dev": "NOTELAB_ENV_FILE=../../.env.development tsx src/serverful.ts",
-    "dev:node": "NOTELAB_ENV_FILE=../../.env.development tsx src/serverful.ts",
+    "dev": "ZILOBASE_ENV_FILE=../../.env.development tsx src/serverful.ts",
+    "dev:node": "ZILOBASE_ENV_FILE=../../.env.development tsx src/serverful.ts",
     "build": "tsc --noEmit",
     "build:node": "tsc --noEmit",
     "test:insert-database-block": "tsx --test src/services/insert-database-block.test.ts",
@@ -42,8 +42,8 @@
     "@hocuspocus/extension-database": "^4.3.0",
     "@hocuspocus/server": "^4.3.0",
     "@hocuspocus/transformer": "^4.3.0",
-    "@notelab/connectors": "file:../../../toolkit/packages/connectors",
-    "@notelab/features": "file:../../packages/features",
+    "@zilobase/toolkit-connector-runtime": "file:../../../toolkit/packages/connector-runtime",
+    "@zilobase/features": "file:../../packages/features",
     "@tiptap/pm": "^3.23.6",
     "ai": "^6.0.193",
     "better-auth": "^1.6.14",

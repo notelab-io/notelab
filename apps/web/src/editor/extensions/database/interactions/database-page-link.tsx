@@ -11,7 +11,7 @@ import {
   getPageEmoji,
   useUpdatePage,
   type PageMetadata,
-} from "@notelab/features/pages"
+} from "@zilobase/features/pages"
 import { PageIconDisplay } from "@/lib/page-icon"
 
 type DatabasePageSummary = {

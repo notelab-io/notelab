@@ -32,7 +32,7 @@ import {
   type PageLayoutModule,
   type PageLayoutModuleDestination,
   type PageLayoutRegion,
-} from "@notelab/features/pages"
+} from "@zilobase/features/pages"
 
 type PageLayoutModuleCanvasProps = {
   config: PageLayoutConfig

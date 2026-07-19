@@ -1,4 +1,4 @@
-# Notelab Context
+# Zilobase Context
 
 ## Domain Terms
 

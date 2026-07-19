@@ -1,4 +1,4 @@
-# Notelab Server
+# Zilobase Server
 
 ```sh
 npm install
@@ -22,6 +22,6 @@ be derived from the API request URL, such as behind a development proxy.
 
 ## Runtime Integrations
 
-The server exports an integration surface from `@notelab/server/adapter-api`.
+The server exports an integration surface from `@zilobase/server/adapter-api`.
 It includes the Hocuspocus factory, ticket helpers, Yjs conversion helpers, and
 collaboration runtime callbacks for alternate runtimes.

@@ -17,22 +17,22 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { getApiErrorMessage } from "@/lib/api"
 import { PageIcon } from "@/lib/page-icon"
-import { useNotelabFeatures } from "@notelab/features"
+import { useZilobaseFeatures } from "@zilobase/features"
 import {
   useUpdatePage,
   pageQueryKey,
-  type NotelabAiMode,
-  type NotelabAiPageSummary,
+  type ZilobaseAiMode,
+  type ZilobaseAiPageSummary,
   type Page,
   type PageMetadata,
-} from "@notelab/features/pages"
+} from "@zilobase/features/pages"
 
-const modeLabels: Record<NotelabAiMode, string> = {
+const modeLabels: Record<ZilobaseAiMode, string> = {
   instruction: "instruction",
   skill: "skill",
 }
 
-export function NotelabAiItem({
+export function ZilobaseAiItem({
   isFirst,
   isLast,
   mode,
@@ -41,12 +41,12 @@ export function NotelabAiItem({
 }: {
   isFirst: boolean
   isLast: boolean
-  mode: NotelabAiMode
-  page: NotelabAiPageSummary
+  mode: ZilobaseAiMode
+  page: ZilobaseAiPageSummary
   pageRecord?: Page
 }) {
   const navigate = useNavigate()
-  const { apiFetch, queryClient } = useNotelabFeatures()
+  const { apiFetch, queryClient } = useZilobaseFeatures()
   const updatePage = useUpdatePage()
   const [confirmOpen, setConfirmOpen] = React.useState(false)
   const isRemoving = updatePage.isPending
@@ -80,7 +80,7 @@ export function NotelabAiItem({
         id: page.id,
         metadata: {
           ...metadata,
-          notelabai: null,
+          zilobaseai: null,
         },
       },
       {
@@ -167,7 +167,7 @@ export function NotelabAiItem({
   )
 }
 
-export function NotelabAiItemList({
+export function ZilobaseAiItemList({
   children,
 }: {
   children: React.ReactNode

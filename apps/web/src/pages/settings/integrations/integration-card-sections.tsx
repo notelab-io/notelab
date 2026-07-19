@@ -238,7 +238,7 @@ export function IntegrationEmailMatchSetting({
   return (
     <IntegrationSettingToggle
       checked={checked}
-      description={`Members must connect a ${integrationName} account using their Notelab workspace email.`}
+      description={`Members must connect a ${integrationName} account using their Zilobase workspace email.`}
       disabled={disabled || !canManagePage}
       onCheckedChange={(enabled) => {
         if (isPageConnected) {

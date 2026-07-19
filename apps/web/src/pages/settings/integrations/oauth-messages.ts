@@ -14,7 +14,7 @@ const oauthMessages: Record<IntegrationId, Record<string, string>> = {
     consumer_google_account:
       "Use a paid Google Page account, not Gmail.com.",
     email_mismatch:
-      "Use the Gmail account with the same email as your Notelab workspace account.",
+      "Use the Gmail account with the same email as your Zilobase workspace account.",
     email_not_allowed:
       "The connected Google email must be a member or pending invite in this workspace.",
     email_not_in_workspace:
@@ -36,7 +36,7 @@ const oauthMessages: Record<IntegrationId, Record<string, string>> = {
       "Only workspace admins can connect the GitHub workspace.",
     connected: "GitHub connected.",
     email_mismatch:
-      "Use the GitHub account with the same email as your Notelab workspace account.",
+      "Use the GitHub account with the same email as your Zilobase workspace account.",
     github_admin_required:
       "Use a GitHub account that can administer this workspace.",
     github_membership_required:
@@ -58,7 +58,7 @@ const oauthMessages: Record<IntegrationId, Record<string, string>> = {
       "Only workspace admins can connect the Google Calendar page.",
     connected: "Google Calendar connected.",
     email_mismatch:
-      "Use the Google account with the same email as your Notelab workspace account.",
+      "Use the Google account with the same email as your Zilobase workspace account.",
     google_calendar_page_mismatch:
       "Use a Google account from the connected Google Page domain.",
     google_calendar_page_not_connected:
@@ -79,7 +79,7 @@ const oauthMessages: Record<IntegrationId, Record<string, string>> = {
       "Only workspace admins can connect the Google Drive page.",
     connected: "Google Drive connected.",
     email_mismatch:
-      "Use the Google account with the same email as your Notelab workspace account.",
+      "Use the Google account with the same email as your Zilobase workspace account.",
     google_drive_page_mismatch:
       "Use a Google account from the connected Google Page domain.",
     google_drive_page_not_connected:
@@ -99,7 +99,7 @@ const oauthMessages: Record<IntegrationId, Record<string, string>> = {
     admin_required: "Only workspace admins can connect the Slack page.",
     connected: "Slack connected.",
     email_mismatch:
-      "Use the Slack account with the same email as your Notelab workspace account.",
+      "Use the Slack account with the same email as your Zilobase workspace account.",
     invalid_oauth_state: "The Slack connection expired. Try connecting again.",
     missing_access_token: "Slack did not return an app access token.",
     oauth_callback_failed: "Slack connection failed during OAuth.",
@@ -114,7 +114,7 @@ const oauthMessages: Record<IntegrationId, Record<string, string>> = {
     admin_required: "Only workspace admins can connect the Linear page.",
     connected: "Linear connected.",
     email_mismatch:
-      "Use the Linear account with the same email as your Notelab workspace account.",
+      "Use the Linear account with the same email as your Zilobase workspace account.",
     invalid_oauth_state: "The Linear connection expired. Try connecting again.",
     linear_not_configured: "Linear OAuth is not configured.",
     linear_page_mismatch:

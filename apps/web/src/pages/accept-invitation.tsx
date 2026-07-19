@@ -21,8 +21,8 @@ import {
   FieldGroup,
 } from "@/components/ui/field"
 import { Spinner } from "@/components/ui/spinner"
-import { useSession } from "@notelab/features/auth"
-import { useAcceptWorkspaceInvitation } from "@notelab/features/workspaces"
+import { useSession } from "@zilobase/features/auth"
+import { useAcceptWorkspaceInvitation } from "@zilobase/features/workspaces"
 import { getApiErrorMessage } from "@/lib/api"
 
 export default function AcceptInvitationPage() {

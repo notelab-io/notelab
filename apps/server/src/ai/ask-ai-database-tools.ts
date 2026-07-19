@@ -129,7 +129,7 @@ export function buildDatabaseConfigTools(context: ToolContext): ToolSet {
   return {
     createPage: tool({
       description:
-        "Create a new Notelab page. Use before createDatabase when the user wants a fresh host page.",
+        "Create a new Zilobase page. Use before createDatabase when the user wants a fresh host page.",
       inputSchema: z.object({
         name: z.string().trim().min(1).max(240),
         parentPageId: z.string().trim().optional(),
@@ -491,8 +491,8 @@ export function buildDatabaseConfigInstruction(input: {
 
   return [
     "",
-    "## Notelab database and page configuration",
-    "You can create and configure Notelab databases and pages using the database tools.",
+    "## Zilobase database and page configuration",
+    "You can create and configure Zilobase databases and pages using the database tools.",
     "Call tools one at a time in dependency order. Never invent a batch tool.",
     "Typical order: createPage (optional) -> createDatabase -> embed/link (only if user asked) -> createDatabaseProperty -> createDatabaseView/updateDatabaseView -> createDatabaseRow -> setDatabaseCellValue.",
     "When the user asks to embed or add the database to the page/page, call embedDatabaseInPage immediately after createDatabase and before properties, rows, or cell values.",

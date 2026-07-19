@@ -1,4 +1,4 @@
-import type { LinearIntegrationStatus } from "@notelab/features/integrations";
+import type { LinearIntegrationStatus } from "@zilobase/features/integrations";
 import { integrationIcons } from "@/lib/integration-icons";
 
 import {

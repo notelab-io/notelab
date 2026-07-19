@@ -19,10 +19,10 @@ import {
   CommandList,
   CommandShortcut,
 } from "@/components/ui/command"
-import { useSession } from "@notelab/features/auth"
-import { useWorkspaces } from "@notelab/features/workspaces"
-import { useAppSearchResults } from "@notelab/features/search"
-import type { AppSearchResult } from "@notelab/features/search"
+import { useSession } from "@zilobase/features/auth"
+import { useWorkspaces } from "@zilobase/features/workspaces"
+import { useAppSearchResults } from "@zilobase/features/search"
+import type { AppSearchResult } from "@zilobase/features/search"
 import { PageIconDisplay } from "@/lib/page-icon"
 import { useAppStore } from "@/stores/app-store"
 

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
-import { useNotelabFeatures } from "../context"
+import { useZilobaseFeatures } from "../context"
 import { useActiveWorkspaceId } from "../integrations/hooks"
 import {
   aiChatThreadMessagesQueryKey,
@@ -12,14 +12,14 @@ import {
 } from "./queries"
 
 export function useAiChatThreads() {
-  const { apiFetch } = useNotelabFeatures()
+  const { apiFetch } = useZilobaseFeatures()
   const workspaceId = useActiveWorkspaceId()
 
   return useQuery(aiChatThreadsQueryOptions(apiFetch, workspaceId))
 }
 
 export function useCreateAiChatThread() {
-  const { apiFetch } = useNotelabFeatures()
+  const { apiFetch } = useZilobaseFeatures()
   const workspaceId = useActiveWorkspaceId()
   const queryClient = useQueryClient()
 
@@ -30,7 +30,7 @@ export function useCreateAiChatThread() {
         headers: {
           "Content-Type": "application/json",
           ...(workspaceId
-            ? { "x-notelab-workspace-id": workspaceId }
+            ? { "x-zilobase-workspace-id": workspaceId }
             : {}),
         },
         body: JSON.stringify(input ?? {}),
@@ -44,7 +44,7 @@ export function useCreateAiChatThread() {
 }
 
 export function useRenameAiChatThread() {
-  const { apiFetch } = useNotelabFeatures()
+  const { apiFetch } = useZilobaseFeatures()
   const workspaceId = useActiveWorkspaceId()
   const queryClient = useQueryClient()
 
@@ -57,7 +57,7 @@ export function useRenameAiChatThread() {
           headers: {
             "Content-Type": "application/json",
             ...(workspaceId
-              ? { "x-notelab-workspace-id": workspaceId }
+              ? { "x-zilobase-workspace-id": workspaceId }
               : {}),
           },
           body: JSON.stringify({ title: input.title }),
@@ -72,7 +72,7 @@ export function useRenameAiChatThread() {
 }
 
 export function useArchiveAiChatThread() {
-  const { apiFetch } = useNotelabFeatures()
+  const { apiFetch } = useZilobaseFeatures()
   const workspaceId = useActiveWorkspaceId()
   const queryClient = useQueryClient()
 
@@ -83,7 +83,7 @@ export function useArchiveAiChatThread() {
         {
           method: "POST",
           headers: workspaceId
-            ? { "x-notelab-workspace-id": workspaceId }
+            ? { "x-zilobase-workspace-id": workspaceId }
             : undefined,
         },
       ),
@@ -99,7 +99,7 @@ export function useArchiveAiChatThread() {
 }
 
 export function useDeleteAiChatThread() {
-  const { apiFetch } = useNotelabFeatures()
+  const { apiFetch } = useZilobaseFeatures()
   const workspaceId = useActiveWorkspaceId()
   const queryClient = useQueryClient()
 
@@ -110,7 +110,7 @@ export function useDeleteAiChatThread() {
         {
           method: "DELETE",
           headers: workspaceId
-            ? { "x-notelab-workspace-id": workspaceId }
+            ? { "x-zilobase-workspace-id": workspaceId }
             : undefined,
         },
       ),

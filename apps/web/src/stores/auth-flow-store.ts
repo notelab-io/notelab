@@ -25,7 +25,7 @@ export const useAuthFlowStore = create<AuthFlowState>()(
       clearAuthFlow: () => set({ email: null, purpose: null, returnTo: null }),
     }),
     {
-      name: "notelab-auth-flow",
+      name: "zilobase-auth-flow",
       partialize: ({ email, purpose, returnTo }) => ({
         email,
         purpose,

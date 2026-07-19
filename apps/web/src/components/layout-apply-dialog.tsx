@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import type { PageLayoutScope } from "@notelab/features/pages"
+import type { PageLayoutScope } from "@zilobase/features/pages"
 
 type ApplyScope = Extract<PageLayoutScope, "database" | "page">
 

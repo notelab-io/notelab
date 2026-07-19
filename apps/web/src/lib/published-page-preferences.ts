@@ -1,7 +1,7 @@
-import type { EmbeddedItemsOpenAs, Page } from "@notelab/features/pages"
+import type { EmbeddedItemsOpenAs, Page } from "@zilobase/features/pages"
 
 const PUBLISHED_EMBEDDED_ITEMS_OPEN_AS_KEY =
-  "notelab:published:embeddedItemsOpenAs"
+  "zilobase:published:embeddedItemsOpenAs"
 
 export function isPublishedFallbackPage(page: Page | null | undefined) {
   return Boolean(page?.publishedOwnerPreferences)

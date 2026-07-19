@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-Security fixes are handled on the default branch. Until Notelab publishes stable release lines, only the latest code on `main` is supported.
+Security fixes are handled on the default branch. Until Zilobase publishes stable release lines, only the latest code on `main` is supported.
 
 ## Reporting a Vulnerability
 

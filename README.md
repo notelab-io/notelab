@@ -1,15 +1,17 @@
-<h1 align="center">Notelab</h1>
+<h1 align="center">Zilobase</h1>
 
 <p align="center">
   Notes, pages, databases, comments, AI workflows, and integrations in one open-source workspace.
 </p>
 
 <p align="center">
-  <a href="https://app.notelab.io">App</a>
+  <a href="https://zilobase.com">Website</a>
   |
-  <a href="https://docs.notelab.io">Docs</a>
+  <a href="https://app.zilobase.com">App</a>
   |
-  <a href="https://docs.notelab.io/self-hosting">Self-host</a>
+  <a href="https://docs.zilobase.com">Docs</a>
+  |
+  <a href="https://docs.zilobase.com/self-hosting">Self-host</a>
   |
   <a href="./CONTRIBUTING.md">Contribute</a>
   |
@@ -25,7 +27,7 @@
 
 ---
 
-Notelab is an open-source workspace for building and organizing knowledge with structured pages, database views, comments, AI-assisted workflows, and connected tools. It is designed to run as a hosted product or as a self-hosted Docker deployment.
+Zilobase is an open-source workspace for building and organizing knowledge with structured pages, database views, comments, AI-assisted workflows, and connected tools. It is designed to run as a hosted product or as a self-hosted Docker deployment.
 
 ## What You Can Do
 
@@ -74,8 +76,8 @@ docker compose up -d --build
 
 Read the self-hosting guide:
 
-- [Self-hosting overview](https://docs.notelab.io/self-hosting)
-- [Operations guide](https://docs.notelab.io/self-hosting/operations)
+- [Self-hosting overview](https://docs.zilobase.com/self-hosting)
+- [Operations guide](https://docs.zilobase.com/self-hosting/operations)
 
 ## Development
 
@@ -110,7 +112,7 @@ Common commands:
 ## Project Structure
 
 ```text
-notelab/
+zilobase/
 |-- apps/
 |   |-- web       # Vite React web client
 |   |-- server    # Hono API, auth, persistence, AI, integrations
@@ -132,11 +134,11 @@ For a deeper system walkthrough, read [ARCHITECTURE.md](./ARCHITECTURE.md).
 The public self-hosted deployment uses Docker Compose with:
 
 - Caddy for HTTP/HTTPS
-- Notelab for the web client and API
+- Zilobase for the web client and API
 - Postgres for relational data
 - MinIO for S3-compatible image storage
 
-Hosted Notelab Cloud may use private deployment infrastructure. The open-source server exports adapter integration surfaces from `@notelab/server/adapter-api`; hosted-only adapters are outside the public self-hosting path.
+Hosted Zilobase Cloud may use private deployment infrastructure. The open-source server exports adapter integration surfaces from `@zilobase/server/adapter-api`; hosted-only adapters are outside the public self-hosting path.
 
 ## Community
 
@@ -150,4 +152,4 @@ Hosted Notelab Cloud may use private deployment infrastructure. The open-source 
 
 ## License
 
-Notelab is released under the [MIT License](./LICENSE).
+Zilobase is released under the [MIT License](./LICENSE).

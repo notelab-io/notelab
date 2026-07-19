@@ -27,7 +27,7 @@ export function shouldRetryQuery(failureCount: number, error: unknown) {
   return true
 }
 
-export function createNotelabQueryClient() {
+export function createZilobaseQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: {

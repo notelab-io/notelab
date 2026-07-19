@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/sidebar"
 import { useAiChatThreadActions } from "@/hooks/use-ai-chat-thread-actions"
 import { useAiChatThreadState } from "@/hooks/use-ai-chat-thread-state"
-import type { AiChatThread } from "@notelab/features/ai-chat"
+import type { AiChatThread } from "@zilobase/features/ai-chat"
 
 function HistoryThreadMenu({
   thread,

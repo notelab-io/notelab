@@ -28,12 +28,12 @@ import {
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { useNavigate } from "@tanstack/react-router"
-import { useSession } from "@notelab/features/auth"
+import { useSession } from "@zilobase/features/auth"
 import {
   useCreateWorkspace,
   useWorkspaces,
   useSetActiveWorkspace,
-} from "@notelab/features/workspaces"
+} from "@zilobase/features/workspaces"
 import { getApiErrorMessage } from "@/lib/api"
 import { useAppStore } from "@/stores/app-store"
 import { Building2Icon, ChevronDownIcon, PlusIcon } from "lucide-react"

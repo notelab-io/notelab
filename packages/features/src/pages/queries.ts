@@ -14,9 +14,9 @@ export type {
   PageMetadata,
 } from "./item-relationships";
 
-export type NotelabAiMode = "instruction" | "skill";
+export type ZilobaseAiMode = "instruction" | "skill";
 
-export const notelabAiModeLabels: Record<NotelabAiMode, string> = {
+export const zilobaseAiModeLabels: Record<ZilobaseAiMode, string> = {
   instruction: "Use as instruction",
   skill: "Use as skill",
 };
@@ -123,7 +123,7 @@ export type PageCreator = {
   name: string;
 };
 
-export type NotelabAiPageSummary = {
+export type ZilobaseAiPageSummary = {
   id: string;
   name: string;
   workspaceId: string;
@@ -131,7 +131,7 @@ export type NotelabAiPageSummary = {
   url: string;
   metadata: {
     emoji?: string | null;
-    notelabai: NotelabAiMode | null;
+    zilobaseai: ZilobaseAiMode | null;
   };
 };
 
@@ -253,9 +253,9 @@ export const pagesRootQueryKey = () => ["pages"] as const;
 export const pagesNavRootQueryKey = (workspaceId: string | null | undefined) =>
   ["pages", workspaceId ?? "none", "nav"] as const;
 
-export const notelabAiPagesQueryKey = (
+export const zilobaseAiPagesQueryKey = (
   workspaceId: string | null | undefined,
-) => ["pages", workspaceId ?? "none", "notelab-ai"] as const;
+) => ["pages", workspaceId ?? "none", "zilobase-ai"] as const;
 
 export const pageQueryKey = (pageId: string | null | undefined) =>
   ["page", pageId ?? "none"] as const;
@@ -345,12 +345,12 @@ export const pagesQueryOptions = (
     },
   });
 
-export const notelabAiPagesQueryOptions = (
+export const zilobaseAiPagesQueryOptions = (
   apiFetch: ApiFetcher,
   workspaceId: string | null | undefined,
 ) =>
   queryOptions({
-    queryKey: notelabAiPagesQueryKey(workspaceId),
+    queryKey: zilobaseAiPagesQueryKey(workspaceId),
     enabled: Boolean(workspaceId),
     queryFn: async ({ signal }) => {
       if (!workspaceId) {
@@ -360,10 +360,10 @@ export const notelabAiPagesQueryOptions = (
       try {
         const params = new URLSearchParams({
           fields: "summary",
-          notelabai: "instruction,skill",
+          zilobaseai: "instruction,skill",
           workspaceId,
         });
-        const result = await apiFetch<{ pages: NotelabAiPageSummary[] }>(
+        const result = await apiFetch<{ pages: ZilobaseAiPageSummary[] }>(
           `/pages?${params.toString()}`,
           { method: "GET", signal },
         );

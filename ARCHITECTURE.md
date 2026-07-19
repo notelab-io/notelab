@@ -1,15 +1,16 @@
-# Notelab Architecture
+# Zilobase Architecture
 
-Notelab is an npm-workspaces monorepo for a notes, pages, databases, comments, AI workflows, and integrations product. It supports hosted infrastructure and a public self-hosted Docker path.
+Zilobase is an npm-workspaces monorepo for a notes, pages, databases, comments, AI workflows, and integrations product. It supports hosted infrastructure and a public self-hosted Docker path.
 
 ## System Overview
 
 - `apps/web`: Vite React client. It contains the main workspace UI, page editor, database views, settings, auth screens, and client-side routing.
 - `apps/server`: Hono server. It owns auth, workspace APIs, database persistence, image upload signing, AI chat tools, integration OAuth flows, and the serverful runtime.
-- `apps/mobile`: Expo client that reuses shared feature packages and talks to the Notelab API.
+- `apps/mobile`: Expo client that reuses shared feature packages and talks to the Zilobase API.
 - `apps/desktop`: Tauri shell for the desktop app.
 - `packages/features`: shared TanStack Query hooks, query keys, mutations, cache update logic, and small database contracts used by clients and server.
-- `../toolkit`: separate Toolkit monorepo; `packages/connectors` provides the connector catalog and optional connector UI exports consumed as `@notelab/connectors`.
+- `../toolkit`: private Toolkit platform; `packages/connector-runtime` provides the provider catalog and result UI consumed as `@zilobase/toolkit-connector-runtime`.
+- `../toolkit-sdk`: public remote SDK and framework adapters; Zilobase product code does not import it.
 - `packages/page-context`: editor/page context extraction, database markdown construction, and ProseMirror-to-markdown helpers.
 - `packages/markdown-text-splitter`: standalone markdown text splitting utilities.
 
@@ -43,7 +44,7 @@ Self-hosting uses:
 - `postgres`: relational data
 - `minio`: image/object storage
 - `caddy`: public HTTP/HTTPS entrypoint
-- `notelab`: combined web/API container
+- `zilobase`: combined web/API container
 
 The serverful runtime hosts Hocuspocus and database realtime rooms on the same
 HTTP server. Database rooms broadcast versioned mutation deltas and ephemeral
@@ -53,9 +54,9 @@ collaboration core while keeping authoritative state in Postgres.
 
 ## Deployment Model
 
-The public self-host path is Docker Compose with Caddy, Notelab, Postgres, and MinIO. The root `Dockerfile` builds the web client and bundles the serverful Node entrypoint.
+The public self-host path is Docker Compose with Caddy, Zilobase, Postgres, and MinIO. The root `Dockerfile` builds the web client and bundles the serverful Node entrypoint.
 
-Hosted Notelab Cloud may use private deployment infrastructure. The open-source server exposes adapter integration surfaces from `@notelab/server/adapter-api`; hosted-only adapters are outside the public self-hosting path.
+Hosted Zilobase Cloud may use private deployment infrastructure. The open-source server exposes adapter integration surfaces from `@zilobase/server/adapter-api`; hosted-only adapters are outside the public self-hosting path.
 
 ## Development Guidelines
 

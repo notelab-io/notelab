@@ -1,7 +1,7 @@
 import * as React from "react";
 
-import { useUpdateGoogleCalendarIntegrationSettings } from "@notelab/features/integrations";
-import type { GoogleCalendarIntegrationStatus } from "@notelab/features/integrations";
+import { useUpdateGoogleCalendarIntegrationSettings } from "@zilobase/features/integrations";
+import type { GoogleCalendarIntegrationStatus } from "@zilobase/features/integrations";
 import { integrationIcons } from "@/lib/integration-icons";
 import { toast } from "sonner";
 

@@ -3,7 +3,7 @@ import type {
   PageDatabase,
   PageDatabaseView,
   PageItemPlacement,
-} from "@notelab/features/pages"
+} from "@zilobase/features/pages"
 import type { ReactNode } from "react"
 
 import type { PageNavItem } from "@/components/nav-tree"
@@ -192,7 +192,7 @@ function createPageNode(
     isTeamspace: Boolean(page.isTeamspace),
     name: page.name,
     emoji: icons.getPageIcon(page),
-    notelabai: page.metadata?.notelabai ?? null,
+    zilobaseai: page.metadata?.zilobaseai ?? null,
     pageId: page.id,
     pages: [],
   }

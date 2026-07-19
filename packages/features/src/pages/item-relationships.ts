@@ -12,7 +12,7 @@ export type PageMetadata = {
   emoji?: string | null;
   embeddedItemsOpenAs?: EmbeddedItemsOpenAs | null;
   fullWidth?: boolean | null;
-  notelabai?: "instruction" | "skill" | null;
+  zilobaseai?: "instruction" | "skill" | null;
   useUserEmbeddedItemsPreference?: boolean | null;
   useUserFullWidthPreference?: boolean | null;
 };

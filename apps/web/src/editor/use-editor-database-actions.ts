@@ -1,5 +1,5 @@
 import { useCallback } from "react"
-import { useAddDatabaseRow, useCreateDatabase } from "@notelab/features/databases"
+import { useAddDatabaseRow, useCreateDatabase } from "@zilobase/features/databases"
 import { toast } from "sonner"
 import { dropPageOnDatabase } from "./database-page-drag"
 

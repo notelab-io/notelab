@@ -5,7 +5,7 @@ import type {
   GoogleDriveIntegrationStatus,
   LinearIntegrationStatus,
   SlackIntegrationStatus,
-} from "@notelab/features/integrations";
+} from "@zilobase/features/integrations";
 
 export type IntegrationId =
   | "gmail"

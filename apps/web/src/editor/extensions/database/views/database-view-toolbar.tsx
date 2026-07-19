@@ -51,7 +51,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { getDatabaseEmoji } from "@notelab/features/databases"
+import { getDatabaseEmoji } from "@zilobase/features/databases"
 
 import { DatabaseSearchableMenuItems } from "./database-searchable-menu-items"
 import { DatabaseFilterPopover } from "./database-filter-menu"

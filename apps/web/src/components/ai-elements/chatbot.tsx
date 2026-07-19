@@ -46,6 +46,7 @@ import {
   buildMessagePartGroups,
   IntegrationToolTaskGroup,
 } from "@/components/ai-elements/integration-tool-task";
+import { resolveIntegrationToolPresentation } from "@/components/ai-elements/integration-tool-presentation";
 import { PageEditCard } from "@/components/ai-elements/page-edit-card";
 import {
   PromptInput,
@@ -78,39 +79,39 @@ import {
   type AiChatThreadMessagesResponse,
   type ProposePageContentUpdateOutput,
   type PageEditSnapshotPart,
-} from "@notelab/features/ai-chat";
-import { useSession } from "@notelab/features/auth";
-import { useNotelabFeatures } from "@notelab/features";
-import { useDatabase } from "@notelab/features/databases";
+} from "@zilobase/features/ai-chat";
+import { useSession } from "@zilobase/features/auth";
+import { useZilobaseFeatures } from "@zilobase/features";
+import { useDatabase } from "@zilobase/features/databases";
 import {
   useActiveWorkspaceId,
   useIntegrations,
   useWorkspaceAiModels,
-} from "@notelab/features/integrations";
-import { usePageAccessLevel, usePageNavigation } from "@notelab/features/pages";
-import type { WorkspaceAiChatModel } from "@notelab/features/integrations";
+} from "@zilobase/features/integrations";
+import { usePageAccessLevel, usePageNavigation } from "@zilobase/features/pages";
+import type { WorkspaceAiChatModel } from "@zilobase/features/integrations";
 import { useQuery } from "@tanstack/react-query";
 import { integrationIcons } from "@/lib/integration-icons";
 import { useChat } from "@ai-sdk/react";
 import { getApiRequestHeaders, toApiUrl } from "@/lib/api";
-import { GmailToolOutput, isGmailToolName } from "@notelab/connectors/gmail/ui";
+import { GmailToolOutput, isGmailToolName } from "@zilobase/toolkit-connector-runtime/gmail/ui";
 import {
   GithubToolOutput,
   isGithubToolName,
-} from "@notelab/connectors/github/ui";
+} from "@zilobase/toolkit-connector-runtime/github/ui";
 import {
   GoogleCalendarToolOutput,
   isGoogleCalendarToolName,
-} from "@notelab/connectors/google-calendar/ui";
+} from "@zilobase/toolkit-connector-runtime/google-calendar/ui";
 import {
   GoogleDriveToolOutput,
   isGoogleDriveToolName,
-} from "@notelab/connectors/google-drive/ui";
+} from "@zilobase/toolkit-connector-runtime/google-drive/ui";
 import {
   isLinearToolName,
   LinearToolOutput,
-} from "@notelab/connectors/linear/ui";
-import { isSlackToolName, SlackToolOutput } from "@notelab/connectors/slack/ui";
+} from "@zilobase/toolkit-connector-runtime/linear/ui";
+import { isSlackToolName, SlackToolOutput } from "@zilobase/toolkit-connector-runtime/slack/ui";
 import {
   type ChatStatus,
   DefaultChatTransport,
@@ -125,7 +126,7 @@ import {
   prosemirrorToMarkdown,
   type ContextAttachment,
   type ContextSourceRef,
-} from "@notelab/page-context";
+} from "@zilobase/page-context";
 import {
   ArrowDownIcon,
   CheckIcon,
@@ -226,7 +227,7 @@ function logAiChatError(
   const errorDetails = getErrorDetails(error);
 
   console.groupCollapsed(
-    `[notelab ai chat] ${source}: ${errorDetails.message}`,
+    `[zilobase ai chat] ${source}: ${errorDetails.message}`,
   );
   console.error(error);
   console.info("error details", errorDetails);
@@ -389,244 +390,6 @@ const toolSources: Record<string, keyof typeof integrationIcons> = {
   listSlackFiles: "slack",
   lookupSlackCanvasSections: "slack",
   searchSlackMessages: "slack",
-};
-
-const toolPhrases: Record<string, string[]> = {
-  getGmailDraft: [
-    "Opening the Gmail draft",
-    "Reading draft content",
-    "Checking draft metadata",
-  ],
-  getGmailLabel: [
-    "Opening the Gmail label",
-    "Reading label details",
-    "Checking label counts",
-  ],
-  getGmailMessage: [
-    "Opening the Gmail message",
-    "Reading the email details",
-    "Analyzing the message context",
-  ],
-  getGmailMessageAttachment: [
-    "Opening the Gmail attachment",
-    "Reading attachment data",
-    "Checking attachment content",
-  ],
-  getGmailProfile: [
-    "Checking the Gmail profile",
-    "Reading mailbox metadata",
-    "Confirming Gmail access",
-  ],
-  getGmailRawMessage: [
-    "Opening raw Gmail source",
-    "Reading MIME data",
-    "Checking message source",
-  ],
-  getGmailThread: [
-    "Opening the Gmail thread",
-    "Reading the email conversation",
-    "Analyzing thread context",
-  ],
-  listGmailHistory: [
-    "Listing Gmail history",
-    "Reading mailbox changes",
-    "Checking recent Gmail events",
-  ],
-  listGmailDrafts: [
-    "Listing Gmail drafts",
-    "Reading draft messages",
-    "Checking draft metadata",
-  ],
-  listGmailLabels: [
-    "Listing Gmail labels",
-    "Reading mailbox labels",
-    "Checking label counts",
-  ],
-  listGmailMessageAttachments: [
-    "Listing Gmail attachments",
-    "Scanning message parts",
-    "Checking downloadable attachments",
-  ],
-  listGmailThreads: [
-    "Listing Gmail threads",
-    "Reading email conversations",
-    "Scanning thread summaries",
-  ],
-  searchGmailMessages: [
-    "Searching Gmail",
-    "Scanning matching emails",
-    "Analyzing email results",
-  ],
-  getGithubContent: [
-    "Opening GitHub content",
-    "Reading repository files",
-    "Analyzing code context",
-  ],
-  getGithubIssue: [
-    "Opening the GitHub issue",
-    "Reading issue details",
-    "Analyzing issue context",
-  ],
-  getGithubProfile: [
-    "Checking the GitHub profile",
-    "Reading account details",
-    "Confirming GitHub access",
-  ],
-  getGithubPullRequest: [
-    "Opening the GitHub pull request",
-    "Reading PR details",
-    "Analyzing review context",
-  ],
-  getGithubRepository: [
-    "Opening the GitHub repository",
-    "Reading repository details",
-    "Analyzing repo context",
-  ],
-  listGithubCommits: [
-    "Listing GitHub commits",
-    "Scanning commit history",
-    "Analyzing code changes",
-  ],
-  listGithubIssues: [
-    "Listing GitHub issues",
-    "Scanning repository issues",
-    "Analyzing issue status",
-  ],
-  listGithubPullRequests: [
-    "Listing GitHub pull requests",
-    "Scanning PR activity",
-    "Analyzing review status",
-  ],
-  listGithubRepositories: [
-    "Listing GitHub repositories",
-    "Scanning visible repos",
-    "Finding repository context",
-  ],
-  listGoogleCalendarCalendars: [
-    "Listing calendars",
-    "Checking calendar access",
-    "Reading calendar metadata",
-  ],
-  listGoogleCalendarEvents: [
-    "Reading calendar events",
-    "Scanning scheduled meetings",
-    "Analyzing calendar context",
-  ],
-  queryGoogleCalendarFreeBusy: [
-    "Checking availability",
-    "Reading free/busy blocks",
-    "Finding open schedule windows",
-  ],
-  getGoogleDriveFile: [
-    "Opening the Drive file",
-    "Reading file metadata",
-    "Analyzing Drive context",
-  ],
-  getGoogleDriveFileText: [
-    "Reading Drive file text",
-    "Exporting readable content",
-    "Analyzing document content",
-  ],
-  getGoogleDriveProfile: [
-    "Checking the Drive profile",
-    "Reading storage metadata",
-    "Confirming Drive access",
-  ],
-  listGoogleDriveFiles: [
-    "Listing Drive files",
-    "Scanning recent files",
-    "Finding Drive context",
-  ],
-  searchGoogleDriveFiles: [
-    "Searching Drive",
-    "Scanning matching files",
-    "Analyzing Drive results",
-  ],
-  getLinearIssue: [
-    "Opening the Linear issue",
-    "Reading issue details",
-    "Analyzing issue context",
-  ],
-  getLinearIssueComments: [
-    "Reading Linear comments",
-    "Scanning issue discussion",
-    "Analyzing comment context",
-  ],
-  getLinearProfile: [
-    "Checking the Linear page",
-    "Reading Linear profile details",
-    "Confirming Linear access",
-  ],
-  listLinearIssues: [
-    "Listing Linear issues",
-    "Scanning visible tickets",
-    "Analyzing issue context",
-  ],
-  listLinearProjects: [
-    "Listing Linear projects",
-    "Scanning project status",
-    "Analyzing project context",
-  ],
-  listLinearTeams: [
-    "Listing Linear teams",
-    "Scanning visible teams",
-    "Finding team context",
-  ],
-  searchLinearIssues: [
-    "Searching Linear issues",
-    "Scanning ticket matches",
-    "Analyzing Linear results",
-  ],
-  getSlackConversationHistory: [
-    "Reading Slack history",
-    "Scanning recent channel messages",
-    "Analyzing conversation context",
-  ],
-  getSlackFileInfo: [
-    "Opening the Slack file",
-    "Reading file metadata",
-    "Analyzing file context",
-  ],
-  getSlackProfile: [
-    "Checking the Slack page",
-    "Reading Slack profile details",
-    "Confirming Slack access",
-  ],
-  getSlackThread: [
-    "Opening the Slack thread",
-    "Reading threaded replies",
-    "Analyzing thread context",
-  ],
-  getSlackUser: [
-    "Looking up the Slack user",
-    "Reading profile details",
-    "Analyzing user context",
-  ],
-  listSlackCanvases: [
-    "Listing Slack canvases",
-    "Scanning available canvases",
-    "Analyzing canvas matches",
-  ],
-  listSlackConversations: [
-    "Listing Slack channels",
-    "Scanning visible conversations",
-    "Finding the right channel context",
-  ],
-  listSlackFiles: [
-    "Listing Slack files",
-    "Scanning shared files",
-    "Analyzing file matches",
-  ],
-  lookupSlackCanvasSections: [
-    "Searching Slack canvas sections",
-    "Scanning canvas headings",
-    "Analyzing canvas matches",
-  ],
-  searchSlackMessages: [
-    "Searching Slack",
-    "Scanning message matches",
-    "Analyzing Slack results",
-  ],
 };
 
 const pendingPhrases = [
@@ -1114,18 +877,14 @@ const ChatMessage = ({
 
             return (
               <IntegrationToolTaskGroup
-                getToolPhrases={(toolName) => {
-                  const title = toolTitles[toolName] ?? toolName;
-                  return (
-                    toolPhrases[toolName] ?? [
-                      `Running ${title}`,
-                      "Thinking through the tool call",
-                      "Analyzing tool output",
-                    ]
-                  );
-                }}
-                getToolSource={(toolName) => toolSources[toolName]}
-                getToolTitle={(toolName) => toolTitles[toolName] ?? toolName}
+                getToolPresentation={(part, toolName) =>
+                  resolveIntegrationToolPresentation({
+                    legacySource: toolSources[toolName],
+                    legacyTitle: toolTitles[toolName],
+                    part,
+                    toolName,
+                  })
+                }
                 key={`${message.id}-integration-${group.startIndex}`}
                 parts={group.parts}
                 renderGenerativeOutput={
@@ -1273,7 +1032,7 @@ type SeededInitialMessages = {
 };
 
 const Chatbot = (props: ChatbotProps) => {
-  const { apiFetch } = useNotelabFeatures();
+  const { apiFetch } = useZilobaseFeatures();
   const workspaceId = useActiveWorkspaceId();
   const threadMessagesQuery = useQuery(
     aiChatThreadMessagesQueryOptions(apiFetch, workspaceId, props.threadId),
@@ -1516,7 +1275,7 @@ const ChatbotInner = ({
     );
   }, [enabledSources]);
 
-  const { queryClient } = useNotelabFeatures();
+  const { queryClient } = useZilobaseFeatures();
   const { data: session } = useSession();
   const userId = session?.user?.id ?? null;
   const isAgentReady = Boolean(workspaceId && userId && threadId);
@@ -1612,7 +1371,7 @@ const ChatbotInner = ({
         const headers = getApiRequestHeaders();
 
         if (workspaceId) {
-          headers.set("x-notelab-workspace-id", workspaceId);
+          headers.set("x-zilobase-workspace-id", workspaceId);
         }
 
         return headers;

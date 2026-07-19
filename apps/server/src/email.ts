@@ -7,7 +7,7 @@ type EmailMessage = {
 };
 
 const RESEND_EMAILS_URL = "https://api.resend.com/emails";
-const DEFAULT_EMAIL_FROM = "Notelab <hello@notelab.io>";
+const DEFAULT_EMAIL_FROM = "Zilobase <hello@zilobase.com>";
 
 export async function sendEmail(env: RuntimeEnv, email: EmailMessage) {
   const apiKey = getStringEnv(env, "RESEND_API_KEY");
@@ -40,7 +40,7 @@ export async function sendEmail(env: RuntimeEnv, email: EmailMessage) {
 }
 
 async function sendConsoleEmail({ to, subject, text }: EmailMessage) {
-  console.info("\n--- Notelab local email ---");
+  console.info("\n--- Zilobase local email ---");
   console.info(`To: ${to}`);
   console.info(`Subject: ${subject}`);
   console.info(text);

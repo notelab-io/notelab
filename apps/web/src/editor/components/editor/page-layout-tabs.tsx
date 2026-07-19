@@ -16,7 +16,7 @@ import { LinkedDataSourcePicker } from "@/packages/editor/extensions/database/vi
 import type {
   PageLayoutConfig,
   PageLayoutLinkedTab,
-} from "@notelab/features/pages"
+} from "@zilobase/features/pages"
 
 type PageLayoutTabsProps = {
   config: PageLayoutConfig

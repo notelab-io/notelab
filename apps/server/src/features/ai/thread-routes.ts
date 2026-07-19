@@ -162,7 +162,7 @@ async function requireActiveWorkspace(c: Context<AppBindings>) {
   const session = c.get("session");
   const workspaceId =
     session?.activeWorkspaceId ??
-    c.req.header("x-notelab-workspace-id")?.trim();
+    c.req.header("x-zilobase-workspace-id")?.trim();
 
   if (!user) {
     return { response: c.json({ error: "Unauthorized" }, 401) };

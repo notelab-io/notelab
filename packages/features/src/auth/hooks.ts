@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
 
-import { useNotelabFeatures } from "../context"
+import { useZilobaseFeatures } from "../context"
 import {
   sessionQueryKey,
   sessionQueryOptions,
@@ -13,14 +13,14 @@ import {
 } from "./queries"
 
 export function useSession() {
-  const { auth } = useNotelabFeatures()
+  const { auth } = useZilobaseFeatures()
 
   return useQuery(sessionQueryOptions(auth))
 }
 
 async function refreshSessionQuery(
-  auth: ReturnType<typeof useNotelabFeatures>["auth"],
-  queryClient: ReturnType<typeof useNotelabFeatures>["queryClient"],
+  auth: ReturnType<typeof useZilobaseFeatures>["auth"],
+  queryClient: ReturnType<typeof useZilobaseFeatures>["queryClient"],
 ) {
   return queryClient.fetchQuery({
     ...sessionQueryOptions(auth),
@@ -29,7 +29,7 @@ async function refreshSessionQuery(
 }
 
 export function useRequestSignInOtp() {
-  const { auth } = useNotelabFeatures()
+  const { auth } = useZilobaseFeatures()
 
   return useMutation({
     mutationFn: (email: string) => auth.requestSignInOtp(email),
@@ -37,7 +37,7 @@ export function useRequestSignInOtp() {
 }
 
 export function useSignInWithOtp() {
-  const { auth, queryClient } = useNotelabFeatures()
+  const { auth, queryClient } = useZilobaseFeatures()
 
   return useMutation({
     mutationFn: (input: SignInWithOtpInput) => auth.signInWithOtp(input),
@@ -49,7 +49,7 @@ export function useSignInWithOtp() {
 }
 
 export function useSignInWithPassword() {
-  const { auth, queryClient } = useNotelabFeatures()
+  const { auth, queryClient } = useZilobaseFeatures()
 
   return useMutation({
     mutationFn: (input: SignInWithPasswordInput) =>
@@ -62,7 +62,7 @@ export function useSignInWithPassword() {
 }
 
 export function useSignUp() {
-  const { auth } = useNotelabFeatures()
+  const { auth } = useZilobaseFeatures()
 
   return useMutation({
     mutationFn: (input: SignUpInput) => auth.signUp(input),
@@ -70,7 +70,7 @@ export function useSignUp() {
 }
 
 export function useRequestEmailVerificationOtp() {
-  const { auth } = useNotelabFeatures()
+  const { auth } = useZilobaseFeatures()
 
   return useMutation({
     mutationFn: (email: string) => auth.requestEmailVerificationOtp(email),
@@ -78,7 +78,7 @@ export function useRequestEmailVerificationOtp() {
 }
 
 export function useVerifyEmailOtp() {
-  const { auth, queryClient } = useNotelabFeatures()
+  const { auth, queryClient } = useZilobaseFeatures()
 
   return useMutation({
     mutationFn: (input: VerifyEmailOtpInput) => auth.verifyEmailOtp(input),
@@ -90,7 +90,7 @@ export function useVerifyEmailOtp() {
 }
 
 export function useSignOut() {
-  const { auth, queryClient } = useNotelabFeatures()
+  const { auth, queryClient } = useZilobaseFeatures()
 
   return useMutation({
     mutationFn: () => auth.signOut(),
@@ -101,7 +101,7 @@ export function useSignOut() {
 }
 
 export function useUpdateUserProfile() {
-  const { apiFetch, queryClient } = useNotelabFeatures()
+  const { apiFetch, queryClient } = useZilobaseFeatures()
 
   return useMutation({
     mutationFn: (input: { email: string; name: string }) =>
@@ -122,7 +122,7 @@ export function useUpdateUserProfile() {
 }
 
 export function useChangePassword() {
-  const { apiFetch, auth, queryClient } = useNotelabFeatures()
+  const { apiFetch, auth, queryClient } = useZilobaseFeatures()
 
   return useMutation({
     mutationFn: (input: {
@@ -145,7 +145,7 @@ export function useChangePassword() {
 }
 
 export function useSetPassword() {
-  const { apiFetch, auth, queryClient } = useNotelabFeatures()
+  const { apiFetch, auth, queryClient } = useZilobaseFeatures()
 
   return useMutation({
     mutationFn: (input: { newPassword: string }) =>

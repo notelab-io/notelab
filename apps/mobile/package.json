@@ -6,7 +6,7 @@
   "dependencies": {
     "@better-auth/expo": "^1.6.14",
     "@expo/ui": "~56.0.15",
-    "@notelab/features": "file:../../packages/features",
+    "@zilobase/features": "file:../../packages/features",
     "@rn-primitives/portal": "^1.4.0",
     "@rn-primitives/slot": "^1.4.0",
     "@tanstack/react-query": "^5.100.14",

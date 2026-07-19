@@ -85,7 +85,7 @@ test("page document names are deterministic", () => {
 test("explicit WebSocket URL overrides a rewritten request host", () => {
   assert.equal(
     getCollaborationWebSocketUrl(
-      new Request("http://api.notelab.io/pages/page-1/collaboration-ticket"),
+      new Request("http://api.zilobase.com/pages/page-1/collaboration-ticket"),
       {
         COLLABORATION_WEBSOCKET_URL: "ws://localhost:3000/collaboration",
       },

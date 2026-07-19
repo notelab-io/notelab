@@ -4,9 +4,9 @@ import type { AppBindings } from "../../types";
 export const healthRoutes = new Hono<AppBindings>();
 
 healthRoutes.get("/", (c) => {
-  return c.json({ ok: true, service: "notelab-server" });
+  return c.json({ ok: true, service: "zilobase-server" });
 });
 
 healthRoutes.get("/health", (c) => {
-  return c.json({ ok: true, service: "notelab-server" });
+  return c.json({ ok: true, service: "zilobase-server" });
 });

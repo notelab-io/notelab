@@ -11,7 +11,7 @@ import type {
 
 export type ApiFetcher = <T>(path: string, init?: RequestInit) => Promise<T>
 
-export type NotelabAuthClient = {
+export type ZilobaseAuthClient = {
   getSession: () => Promise<SessionResponse>
   requestSignInOtp: (email: string) => Promise<{ success: boolean }>
   signInWithOtp: (input: SignInWithOtpInput) => Promise<{ token: string; user: unknown }>
@@ -41,34 +41,34 @@ export type NotelabAuthClient = {
   ) => Promise<TInvitation[]>
 }
 
-export type NotelabFeaturesConfig = {
+export type ZilobaseFeaturesConfig = {
   apiFetch: ApiFetcher
-  auth: NotelabAuthClient
+  auth: ZilobaseAuthClient
   preferredActiveWorkspaceId?: string | null
   queryClient: QueryClient
   databaseRealtimeEnabled?: boolean
   setPreferredActiveWorkspaceId?: (workspaceId: string | null) => void
 }
 
-const NotelabFeaturesContext = createContext<NotelabFeaturesConfig | null>(null)
+const ZilobaseFeaturesContext = createContext<ZilobaseFeaturesConfig | null>(null)
 
-export function NotelabFeaturesProvider({
+export function ZilobaseFeaturesProvider({
   children,
   value,
-}: React.PropsWithChildren<{ value: NotelabFeaturesConfig }>) {
+}: React.PropsWithChildren<{ value: ZilobaseFeaturesConfig }>) {
   return (
-    <NotelabFeaturesContext.Provider value={value}>
+    <ZilobaseFeaturesContext.Provider value={value}>
       {children}
-    </NotelabFeaturesContext.Provider>
+    </ZilobaseFeaturesContext.Provider>
   )
 }
 
-export function useNotelabFeatures() {
-  const value = useContext(NotelabFeaturesContext)
+export function useZilobaseFeatures() {
+  const value = useContext(ZilobaseFeaturesContext)
 
   if (!value) {
     throw new Error(
-      "NotelabFeaturesProvider is missing. Wrap your app before using @notelab/features hooks.",
+      "ZilobaseFeaturesProvider is missing. Wrap your app before using @zilobase/features hooks.",
     )
   }
 

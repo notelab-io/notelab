@@ -1,10 +1,10 @@
-import { useSession, useSignOut } from '@notelab/features/auth';
+import { useSession, useSignOut } from '@zilobase/features/auth';
 import {
   type Workspace,
   useCreateWorkspace,
   useWorkspaces,
   useSetActiveWorkspace,
-} from '@notelab/features/workspaces';
+} from '@zilobase/features/workspaces';
 import * as React from 'react';
 import {
   ActivityIndicator,

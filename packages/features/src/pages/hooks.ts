@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
-import { useNotelabFeatures } from "../context";
+import { useZilobaseFeatures } from "../context";
 import {
   invalidateDeletedItems,
   invalidateRestoredItems,
@@ -30,8 +30,8 @@ import {
   pageAccessTargetsQueryOptions,
   pagePersonAccessTargetsQueryOptions,
   pagePropertiesQueryOptions,
-  notelabAiPagesQueryKey,
-  notelabAiPagesQueryOptions,
+  zilobaseAiPagesQueryKey,
+  zilobaseAiPagesQueryOptions,
   pagesNavRootQueryKey,
   pagesQueryKey,
   pagesQueryOptions,
@@ -117,7 +117,7 @@ export function usePages(
   workspaceId: string | null | undefined,
   options?: { deleted?: PagesDeletedFilter; enabled?: boolean },
 ) {
-  const { apiFetch } = useNotelabFeatures();
+  const { apiFetch } = useZilobaseFeatures();
 
   return useQuery({
     ...pagesQueryOptions(apiFetch, workspaceId, {
@@ -131,7 +131,7 @@ export function usePageNavigation(
   workspaceId: string | null | undefined,
   options?: { deleted?: PagesDeletedFilter; enabled?: boolean },
 ) {
-  const { apiFetch } = useNotelabFeatures();
+  const { apiFetch } = useZilobaseFeatures();
 
   return useQuery({
     ...pagesQueryOptions(apiFetch, workspaceId, {
@@ -141,10 +141,10 @@ export function usePageNavigation(
   });
 }
 
-export function useNotelabAiPages(workspaceId: string | null | undefined) {
-  const { apiFetch } = useNotelabFeatures();
+export function useZilobaseAiPages(workspaceId: string | null | undefined) {
+  const { apiFetch } = useZilobaseFeatures();
 
-  return useQuery(notelabAiPagesQueryOptions(apiFetch, workspaceId));
+  return useQuery(zilobaseAiPagesQueryOptions(apiFetch, workspaceId));
 }
 
 type PageQueryHookOptions = {
@@ -155,7 +155,7 @@ export function usePage(
   pageId: string | null | undefined,
   options?: PageQueryHookOptions,
 ) {
-  const { apiFetch } = useNotelabFeatures();
+  const { apiFetch } = useZilobaseFeatures();
 
   return useQuery({
     ...pageQueryOptions(apiFetch, pageId),
@@ -168,7 +168,7 @@ export function usePageAccessLevel(
   pageId: string | null | undefined,
   options?: PageQueryHookOptions,
 ) {
-  const { apiFetch } = useNotelabFeatures();
+  const { apiFetch } = useZilobaseFeatures();
 
   return useQuery({
     ...pageQueryOptions(apiFetch, pageId),
@@ -181,7 +181,7 @@ export function usePageDatabaseIds(
   pageId: string | null | undefined,
   options?: PageQueryHookOptions,
 ) {
-  const { apiFetch } = useNotelabFeatures();
+  const { apiFetch } = useZilobaseFeatures();
 
   return useQuery({
     ...pageQueryOptions(apiFetch, pageId),
@@ -191,13 +191,13 @@ export function usePageDatabaseIds(
 }
 
 export function usePageAccess(pageId: string | null | undefined) {
-  const { apiFetch } = useNotelabFeatures();
+  const { apiFetch } = useZilobaseFeatures();
 
   return useQuery(pageAccessQueryOptions(apiFetch, pageId));
 }
 
 export function usePageAccessTargets(workspaceId: string | null | undefined) {
-  const { apiFetch } = useNotelabFeatures();
+  const { apiFetch } = useZilobaseFeatures();
 
   return useQuery(pageAccessTargetsQueryOptions(apiFetch, workspaceId));
 }
@@ -206,7 +206,7 @@ export function usePagePersonAccessTargets(
   pageId: string | null | undefined,
   options?: { enabled?: boolean },
 ) {
-  const { apiFetch } = useNotelabFeatures();
+  const { apiFetch } = useZilobaseFeatures();
 
   return useQuery({
     ...pagePersonAccessTargetsQueryOptions(apiFetch, pageId),
@@ -222,7 +222,7 @@ export function usePageProperties(
   pageId: string | null | undefined,
   options?: PagePropertiesOptions,
 ) {
-  const { apiFetch } = useNotelabFeatures();
+  const { apiFetch } = useZilobaseFeatures();
   const resolvedDatabaseId = useDatabaseIdForRowPage(
     pageId,
     options?.databaseId,
@@ -264,7 +264,7 @@ function isPageNavQueryKey(queryKey: readonly unknown[]) {
 }
 
 export function useCreatePage() {
-  const { apiFetch, queryClient } = useNotelabFeatures();
+  const { apiFetch, queryClient } = useZilobaseFeatures();
 
   return useMutation({
     mutationFn: async ({
@@ -343,9 +343,9 @@ export function useCreatePage() {
           applyNavDelta(current, navDelta ?? { upsertPages: [pageRecord] }),
       );
 
-      if (pageRecord.metadata?.notelabai) {
+      if (pageRecord.metadata?.zilobaseai) {
         await queryClient.invalidateQueries({
-          queryKey: notelabAiPagesQueryKey(pageRecord.workspaceId),
+          queryKey: zilobaseAiPagesQueryKey(pageRecord.workspaceId),
         });
       }
     },
@@ -353,7 +353,7 @@ export function useCreatePage() {
 }
 
 export function useUpsertPageAccess() {
-  const { apiFetch, queryClient } = useNotelabFeatures();
+  const { apiFetch, queryClient } = useZilobaseFeatures();
 
   return useMutation({
     mutationFn: async ({
@@ -386,7 +386,7 @@ export function useUpsertPageAccess() {
 }
 
 export function useDeletePageAccess() {
-  const { apiFetch, queryClient } = useNotelabFeatures();
+  const { apiFetch, queryClient } = useZilobaseFeatures();
 
   return useMutation({
     mutationFn: async ({
@@ -413,7 +413,7 @@ export function useDeletePageAccess() {
 }
 
 export function useSetPagePublished() {
-  const { apiFetch, queryClient } = useNotelabFeatures();
+  const { apiFetch, queryClient } = useZilobaseFeatures();
 
   return useMutation({
     mutationFn: async ({ isPublished, pageId }: SetPagePublishedInput) => {
@@ -457,7 +457,7 @@ type EmbedPageItemInput = {
 };
 
 export function useEmbedPageItem() {
-  const { apiFetch, queryClient } = useNotelabFeatures();
+  const { apiFetch, queryClient } = useZilobaseFeatures();
 
   return useMutation({
     mutationFn: async ({ hostPageId, itemId, kind }: EmbedPageItemInput) =>
@@ -477,7 +477,7 @@ export function useEmbedPageItem() {
 }
 
 export function useRemovePageEmbed() {
-  const { apiFetch, queryClient } = useNotelabFeatures();
+  const { apiFetch, queryClient } = useZilobaseFeatures();
 
   return useMutation({
     mutationFn: async ({ hostPageId, itemId, kind }: EmbedPageItemInput) =>
@@ -500,7 +500,7 @@ export function useRemovePageEmbed() {
 }
 
 export function useUpdatePage() {
-  const { apiFetch, queryClient } = useNotelabFeatures();
+  const { apiFetch, queryClient } = useZilobaseFeatures();
 
   return useMutation({
     mutationFn: async ({ id, ...patch }: UpdatePageInput) => {
@@ -638,9 +638,9 @@ export function useUpdatePage() {
         (current) => applyNavDelta(current, { upsertPages: [page] }),
       );
 
-      if (variables.metadata?.notelabai !== undefined) {
+      if (variables.metadata?.zilobaseai !== undefined) {
         await queryClient.invalidateQueries({
-          queryKey: notelabAiPagesQueryKey(page.workspaceId),
+          queryKey: zilobaseAiPagesQueryKey(page.workspaceId),
         });
       }
     },
@@ -660,7 +660,7 @@ type RestorePageResult = {
 };
 
 export function useDeletePage() {
-  const { apiFetch, queryClient } = useNotelabFeatures();
+  const { apiFetch, queryClient } = useZilobaseFeatures();
 
   return useMutation({
     mutationFn: async (pageId: string) =>
@@ -669,7 +669,7 @@ export function useDeletePage() {
       }),
     onSuccess: async (result) =>
       invalidateDeletedItems({
-        includeNotelabAi: true,
+        includeZilobaseAi: true,
         workspaceId: result.page?.workspaceId,
         queryClient,
         result,
@@ -678,7 +678,7 @@ export function useDeletePage() {
 }
 
 export function useRestorePage() {
-  const { apiFetch, queryClient } = useNotelabFeatures();
+  const { apiFetch, queryClient } = useZilobaseFeatures();
 
   return useMutation({
     mutationFn: async (pageId: string) =>
@@ -687,7 +687,7 @@ export function useRestorePage() {
       }),
     onSuccess: async (result) => {
       await invalidateRestoredItems({
-        includeNotelabAi: true,
+        includeZilobaseAi: true,
         workspaceId: result.page.workspaceId,
         queryClient,
         result,
@@ -698,7 +698,7 @@ export function useRestorePage() {
 }
 
 export function useSetPageFavorite() {
-  const { apiFetch, queryClient } = useNotelabFeatures();
+  const { apiFetch, queryClient } = useZilobaseFeatures();
 
   return useMutation({
     mutationFn: async ({ isFavorite, pageId }: SetPageFavoriteInput) => {
@@ -774,7 +774,7 @@ export function useSetPageFavorite() {
 }
 
 export function useRecordItemVisit() {
-  const { apiFetch, queryClient } = useNotelabFeatures();
+  const { apiFetch, queryClient } = useZilobaseFeatures();
 
   return useMutation({
     mutationFn: async (input: RecordItemVisitInput) =>
@@ -812,7 +812,7 @@ export function useRecordItemVisit() {
 }
 
 export function useUpdatePagePropertyValue() {
-  const { apiFetch, queryClient } = useNotelabFeatures();
+  const { apiFetch, queryClient } = useZilobaseFeatures();
 
   return useMutation({
     mutationFn: async ({

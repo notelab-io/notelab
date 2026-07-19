@@ -1,7 +1,7 @@
 import * as React from "react";
 
-import { useUpdateGmailIntegrationSettings } from "@notelab/features/integrations";
-import type { GmailIntegrationStatus } from "@notelab/features/integrations";
+import { useUpdateGmailIntegrationSettings } from "@zilobase/features/integrations";
+import type { GmailIntegrationStatus } from "@zilobase/features/integrations";
 import { integrationIcons } from "@/lib/integration-icons";
 
 import { GmailIntegrationCard } from "../cards/gmail";
@@ -60,7 +60,7 @@ export function useGmailIntegrationController({
 
   const summary: IntegrationSummary = {
     about:
-      "Gmail lets Notelab read messages visible to the connected Google account so AI answers can include email context.",
+      "Gmail lets Zilobase read messages visible to the connected Google account so AI answers can include email context.",
     category: "AI enterprise search",
     connected: status?.page.connected,
     connectDisabled:

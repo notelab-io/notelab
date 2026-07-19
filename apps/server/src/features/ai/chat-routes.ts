@@ -148,12 +148,12 @@ aiRoutes.post("/ask", async (c) => {
       model,
       stopWhen: stepCountIs(5),
       system: [
-        "You are Notelab's page research assistant.",
+        "You are Zilobase's page research assistant.",
         "Use Gmail tools when the user asks about email, inbox, people, timelines, project updates, decisions, blockers, or messages from email.",
         "Use GitHub tools when the user asks about repositories, issues, pull requests, commits, branches, files, code, releases, bugs, reviews, or work tracked in GitHub.",
         "Use Google Calendar tools when the user asks about meetings, schedules, events, availability, free/busy windows, calendars, attendees, or time-based planning.",
         "Use Google Drive tools when the user asks about Drive files, Docs, Sheets, Slides, documents, folders, file owners, recently changed files, or content stored in Google Drive.",
-        "Use Slack tools for workspace Slack context only: channels, private channels the Notelab app can access, threads, canvases, files, project chatter, decisions, blockers, and page messages.",
+        "Use Slack tools for workspace Slack context only: channels, private channels the Zilobase app can access, threads, canvases, files, project chatter, decisions, blockers, and page messages.",
         "Use Linear tools when the user asks about issues, tickets, bugs, tasks, projects, teams, cycles, status, assignees, priorities, blockers, scope, delivery progress, or roadmap work tracked in Linear.",
         body.data.sources.length
           ? `Only use these selected sources for this request: ${body.data.sources.join(", ")}. Do not use tools from unselected sources.`
@@ -232,7 +232,7 @@ aiRoutes.post("/editor", async (c) => {
         skill: skillContext?.skill ?? null,
       }),
       system: [
-        "You write directly into a Notelab rich-text editor.",
+        "You write directly into a Zilobase rich-text editor.",
         "When selected text is provided, replace that selection according to the user's request instead of answering conversationally.",
         "For selected prose, return prose. Do not turn selected prose into a code block.",
         "When a skill is provided, follow it as reusable writing or transformation guidance for this request.",
@@ -300,7 +300,7 @@ async function resolveEditorSkillContext(
     };
   }
 
-  if (readNotelabAiMode(skill.metadata) !== "skill") {
+  if (readZilobaseAiMode(skill.metadata) !== "skill") {
     return {
       response: Response.json(
         {
@@ -394,7 +394,7 @@ async function requireActiveWorkspace(c: Context<AppBindings>) {
   const session = c.get("session");
   const workspaceId =
     session?.activeWorkspaceId ??
-    c.req.header("x-notelab-workspace-id")?.trim();
+    c.req.header("x-zilobase-workspace-id")?.trim();
 
   if (!user) {
     return { response: c.json({ error: "Unauthorized" }, 401) };
@@ -411,12 +411,12 @@ async function requireActiveWorkspace(c: Context<AppBindings>) {
   return { workspaceId, user };
 }
 
-function readNotelabAiMode(metadata: unknown) {
+function readZilobaseAiMode(metadata: unknown) {
   if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
     return null;
   }
 
-  const mode = (metadata as { notelabai?: unknown }).notelabai;
+  const mode = (metadata as { zilobaseai?: unknown }).zilobaseai;
 
   return mode === "instruction" || mode === "skill" ? mode : null;
 }

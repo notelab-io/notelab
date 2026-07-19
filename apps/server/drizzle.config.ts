@@ -6,6 +6,6 @@ export default defineConfig({
   out: "./drizzle",
   dialect: "postgresql",
   dbCredentials: {
-    url: process.env.DATABASE_URL ?? "postgres://localhost:5432/notelab",
+    url: process.env.DATABASE_URL ?? "postgres://localhost:5432/zilobase",
   },
 });

@@ -7,7 +7,7 @@ import {
   type DragEvent as ReactDragEvent,
 } from "react"
 
-import { useSession } from "@notelab/features/auth"
+import { useSession } from "@zilobase/features/auth"
 import {
   useAddDatabaseView,
   useAddDatabaseProperty,
@@ -20,12 +20,12 @@ import {
   useUpdateDatabaseView,
   useUpdateDatabaseProperty,
   useUpdateDatabasePropertyValue,
-} from "@notelab/features/databases"
-import { useNotelabFeatures } from "@notelab/features"
+} from "@zilobase/features/databases"
+import { useZilobaseFeatures } from "@zilobase/features"
 import {
   usePage,
   usePagePersonAccessTargets,
-} from "@notelab/features/pages"
+} from "@zilobase/features/pages"
 import { ArrowRight, Columns3, Link2 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -148,7 +148,7 @@ export function useDatabaseViewController({
   viewSettingsOpen,
   viewSettingsPanelTarget,
 }: DatabaseViewProps) {
-  const { apiFetch, queryClient } = useNotelabFeatures()
+  const { apiFetch, queryClient } = useZilobaseFeatures()
   const [pendingSourcePropertyMode, setPendingSourcePropertyMode] =
     useState<PendingSourcePropertyMode | null>(null)
   const sourcePropertyModeResolverRef = useRef<

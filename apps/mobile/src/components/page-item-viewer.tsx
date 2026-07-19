@@ -12,7 +12,7 @@ function createMobileWebViewBootstrap(cookie: string | undefined) {
 
   return `
   (function () {
-    window.__NOTELAB_MOBILE_AUTH_COOKIE__ = ${serializedCookie};
+    window.__ZILOBASE_MOBILE_AUTH_COOKIE__ = ${serializedCookie};
     var viewportContent = 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover';
     var meta = document.querySelector('meta[name="viewport"]');
 

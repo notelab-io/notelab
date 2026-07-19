@@ -23,11 +23,11 @@ import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
 import { getApiErrorMessage } from "@/lib/api"
 import { useNotionImport } from "@/hooks/use-notion-import"
-import { useActiveWorkspaceId } from "@notelab/features/integrations"
+import { useActiveWorkspaceId } from "@zilobase/features/integrations"
 import {
   useWorkspaces,
   useUpdateWorkspace,
-} from "@notelab/features/workspaces"
+} from "@zilobase/features/workspaces"
 
 export default function WorkspaceSettingsPage() {
   const activeWorkspaceId = useActiveWorkspaceId()
@@ -183,7 +183,7 @@ function WorkspaceDetailsSection({
             Page details
           </h3>
           <p className="text-sm text-muted-foreground">
-            Update the fields used to identify this workspace across Notelab.
+            Update the fields used to identify this workspace across Zilobase.
           </p>
         </div>
         <Button

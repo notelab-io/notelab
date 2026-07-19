@@ -12,14 +12,14 @@ import { setRuntimeAdapter } from "../../runtime-adapter";
 import { drainDatabaseRealtimeOutbox } from "../../services/database-realtime";
 
 loadEnv({
-  path: process.env.NOTELAB_ENV_FILE ?? path.resolve("apps/server/.env"),
+  path: process.env.ZILOBASE_ENV_FILE ?? path.resolve("apps/server/.env"),
 });
 
 const app = createApp();
 const port = readPort(process.env.PORT) ?? 3000;
 const hostname = process.env.HOST ?? "0.0.0.0";
 const webDistDir =
-  process.env.NOTELAB_WEB_DIST_DIR ??
+  process.env.ZILOBASE_WEB_DIST_DIR ??
   path.resolve("apps/web/dist");
 const apiPathPrefixes = [
   "/api",
@@ -96,8 +96,8 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
 }
 
 server.listen(port, hostname, () => {
-  console.log(`Notelab server listening on http://${hostname}:${port}`);
-  console.log(`Serving Notelab web assets from ${webDistDir}`);
+  console.log(`Zilobase server listening on http://${hostname}:${port}`);
+  console.log(`Serving Zilobase web assets from ${webDistDir}`);
 });
 
 function startDatabaseRealtimeOutboxDrainer() {
@@ -205,7 +205,7 @@ async function serveWebAsset(request: Request) {
   if (isSpaNavigationRequest(request, pathname)) {
     return (
       (await tryServeFile(path.join(webDistDir, "index.html"), request)) ??
-      new Response("Notelab web build was not found", { status: 500 })
+      new Response("Zilobase web build was not found", { status: 500 })
     );
   }
 

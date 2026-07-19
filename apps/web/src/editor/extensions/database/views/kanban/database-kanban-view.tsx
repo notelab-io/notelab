@@ -11,8 +11,8 @@ import { toast } from "sonner"
 import {
   useMoveDatabaseRow,
   useReorderDatabaseRows,
-} from "@notelab/features/databases"
-import { useUpdatePage } from "@notelab/features/pages"
+} from "@zilobase/features/databases"
+import { useUpdatePage } from "@zilobase/features/pages"
 import {
   getColorTokenBadgeClassName,
   getColorTokenDotClassName,
@@ -1251,7 +1251,7 @@ export function DatabaseKanbanView() {
           <AlertDialogHeader>
             <AlertDialogTitle>Clear sorting to reorder?</AlertDialogTitle>
             <AlertDialogDescription>
-              Row order is manual. To save this move, Notelab needs to clear the
+              Row order is manual. To save this move, Zilobase needs to clear the
               active sorting first.
             </AlertDialogDescription>
           </AlertDialogHeader>

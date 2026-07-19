@@ -20,7 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Fonts } from '@/constants/theme';
 import { type ThemePalette, useAppTheme, useThemedStyles } from '@/hooks/use-app-theme';
-import type { SessionResponse } from '@notelab/features/auth';
+import type { SessionResponse } from '@zilobase/features/auth';
 
 const CONTROL_SIZE = 44;
 const BUTTON_OUTER_SIZE = CONTROL_SIZE + 4;

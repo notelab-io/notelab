@@ -8,7 +8,7 @@ import type {
 import type { CreatedPage } from "@/packages/editor/extensions/page-block"
 import type { HocuspocusProvider } from "@hocuspocus/provider"
 import type { CollaborationUser } from "./use-page-collaboration"
-import type { PageLayoutConfig } from "@notelab/features/pages"
+import type { PageLayoutConfig } from "@zilobase/features/pages"
 import type { PageCommentController } from "@/comments/yjs-comments"
 
 export type EditorCollaboration = {

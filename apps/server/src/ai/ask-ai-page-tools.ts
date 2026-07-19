@@ -21,7 +21,7 @@ export function buildPageEditTools(allowedPageIds: string[]): ToolSet {
   return {
     proposePageContentUpdate: tool({
       description:
-        "Update a Notelab page in page context. Prefer editMode patch when the user asks to change, shorten, rewrite, or fix a specific section: copy the exact existing section into searchText and provide only that section's replacement in replaceText. Use editMode full only when the user explicitly wants the entire page rewritten. Never use full mode to change just the intro or a single paragraph.",
+        "Update a Zilobase page in page context. Prefer editMode patch when the user asks to change, shorten, rewrite, or fix a specific section: copy the exact existing section into searchText and provide only that section's replacement in replaceText. Use editMode full only when the user explicitly wants the entire page rewritten. Never use full mode to change just the intro or a single paragraph.",
       inputSchema: pageEditInputSchema,
       execute: async (input) => {
         const parsed = validatePageEditInput(input);

@@ -18,9 +18,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { useActiveWorkspaceId } from "@notelab/features/integrations"
-import { usePageNavigation } from "@notelab/features/pages"
-import type { PageLayoutLinkedTab } from "@notelab/features/pages"
+import { useActiveWorkspaceId } from "@zilobase/features/integrations"
+import { usePageNavigation } from "@zilobase/features/pages"
+import type { PageLayoutLinkedTab } from "@zilobase/features/pages"
 import { Input } from "@/components/ui/input"
 
 export function LinkedDataSourcePicker({

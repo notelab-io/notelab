@@ -1,4 +1,4 @@
-import type { GoogleDriveIntegrationStatus } from "@notelab/features/integrations";
+import type { GoogleDriveIntegrationStatus } from "@zilobase/features/integrations";
 import { integrationIcons } from "@/lib/integration-icons";
 
 import {

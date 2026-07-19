@@ -1,7 +1,7 @@
 import * as React from "react";
 
-import { useUpdateGithubIntegrationSettings } from "@notelab/features/integrations";
-import type { GithubIntegrationStatus } from "@notelab/features/integrations";
+import { useUpdateGithubIntegrationSettings } from "@zilobase/features/integrations";
+import type { GithubIntegrationStatus } from "@zilobase/features/integrations";
 import { integrationIcons } from "@/lib/integration-icons";
 import { toast } from "sonner";
 
@@ -73,7 +73,7 @@ export function useGithubIntegrationController({
 
   const summary: IntegrationSummary = {
     about:
-      "GitHub lets Notelab read visible repositories, issues, pull requests, commits, and files so AI answers can include engineering context.",
+      "GitHub lets Zilobase read visible repositories, issues, pull requests, commits, and files so AI answers can include engineering context.",
     category: "AI enterprise search",
     connected: status?.connected,
     connectDisabled:

@@ -14,20 +14,20 @@ import { Button } from "@/components/ui/button"
 import { ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable"
 import { TrashedItemBanner } from "@/components/trashed-item-banner"
 import { cn } from "@/lib/utils"
-import { getDatabaseCover, getDatabaseEmoji } from "@notelab/features/databases"
+import { getDatabaseCover, getDatabaseEmoji } from "@zilobase/features/databases"
 import {
   useUpdatePage,
   usePage,
   usePageAccessLevel,
-} from "@notelab/features/pages"
+} from "@zilobase/features/pages"
 import {
   useDatabase,
   useRestoreDatabase,
   useUpdateDatabase,
-} from "@notelab/features/databases"
+} from "@zilobase/features/databases"
 import { EmbeddedPageDialog } from "@/components/embedded-page-dialog"
 import { useOpenEmbeddedPage } from "@/hooks/use-open-embedded-page"
-import { useSession } from "@notelab/features/auth"
+import { useSession } from "@zilobase/features/auth"
 import { PageMetadata as PageMetadataView } from "@/packages/editor/components/editor/page-metadata"
 import { DatabaseView } from "@/packages/editor/extensions/database"
 import { toast } from "sonner"

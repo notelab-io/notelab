@@ -1,7 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query"
 import { useSyncExternalStore } from "react"
 
-import { useNotelabFeatures } from "../context"
+import { useZilobaseFeatures } from "../context"
 
 import { findDatabaseIdForRowPage } from "./row-page-properties"
 
@@ -22,7 +22,7 @@ export function useDatabaseIdForRowPage(
   pageId: string | null | undefined,
   explicitDatabaseId?: string | null,
 ) {
-  const { queryClient } = useNotelabFeatures()
+  const { queryClient } = useZilobaseFeatures()
 
   const resolvedFromCache = useSyncExternalStore(
     (onStoreChange) => {

@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
 
-import { useNotelabFeatures } from "../context"
+import { useZilobaseFeatures } from "../context"
 import {
   defaultUserSettings,
   userSettingsQueryKey,
@@ -11,13 +11,13 @@ import {
 type UpdateUserSettingsInput = Partial<UserSettings>
 
 export function useUserSettings() {
-  const { apiFetch } = useNotelabFeatures()
+  const { apiFetch } = useZilobaseFeatures()
 
   return useQuery(userSettingsQueryOptions(apiFetch))
 }
 
 export function useUpdateUserSettings() {
-  const { apiFetch, queryClient } = useNotelabFeatures()
+  const { apiFetch, queryClient } = useZilobaseFeatures()
 
   return useMutation({
     mutationFn: async (patch: UpdateUserSettingsInput) => {

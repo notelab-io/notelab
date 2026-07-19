@@ -10,7 +10,7 @@ import { toast } from "sonner"
 import {
   useMoveDatabaseRow,
   useReorderDatabaseRows,
-} from "@notelab/features/databases"
+} from "@zilobase/features/databases"
 
 import type { SortableDatabaseItem } from "../../interactions/database-item-utils"
 import { setDatabasePageDragPayload } from "../../interactions/database-page-drop"

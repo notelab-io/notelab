@@ -2,7 +2,7 @@ export const API_BASE_URL = resolveApiBaseUrl()
 
 declare global {
   interface Window {
-    __NOTELAB_MOBILE_AUTH_COOKIE__?: string
+    __ZILOBASE_MOBILE_AUTH_COOKIE__?: string
   }
 }
 
@@ -97,7 +97,7 @@ export function toApiUrl(path: string) {
 function resolveApiBaseUrl() {
   if (
     typeof window !== "undefined" &&
-    window.location.hostname === "app.notelab.io"
+    window.location.hostname === "app.zilobase.com"
   ) {
     return ""
   }
@@ -116,7 +116,7 @@ function readEmbeddedMobileAuthCookie() {
     return null
   }
 
-  const cookie = window.__NOTELAB_MOBILE_AUTH_COOKIE__
+  const cookie = window.__ZILOBASE_MOBILE_AUTH_COOKIE__
 
   return typeof cookie === "string" && cookie.trim() ? cookie : null
 }

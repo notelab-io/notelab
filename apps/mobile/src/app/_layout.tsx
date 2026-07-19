@@ -17,7 +17,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { NAV_THEME } from '@/lib/theme';
 import { MobileFeaturesProvider } from '@/providers/mobile-features-provider';
 import { MobileViewerProvider, useMobileViewer } from '@/providers/mobile-viewer-provider';
-import { useSession } from '@notelab/features/auth';
+import { useSession } from '@zilobase/features/auth';
 import * as React from 'react';
 
 export default function TabLayout() {

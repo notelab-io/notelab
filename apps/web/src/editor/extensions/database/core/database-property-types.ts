@@ -25,7 +25,7 @@ import {
   isReadOnlyPropertyType as isCanonicalReadOnlyPropertyType,
   isSelectLikePropertyType as isCanonicalSelectLikePropertyType,
   type DatabasePropertyType as DatabasePropertyTypeId,
-} from "@notelab/features/databases/property-types"
+} from "@zilobase/features/databases/property-types"
 import { cyclingColorTokens } from "@/lib/color-tokens"
 
 export const defaultStatusOption = {

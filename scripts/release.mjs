@@ -60,7 +60,7 @@ if (!staged) {
 }
 
 run("git", ["commit", "-m", `chore: release ${tag}`], { stdio: "inherit" })
-run("git", ["tag", "-a", tag, "-m", `Notelab ${tag}`], { stdio: "inherit" })
+run("git", ["tag", "-a", tag, "-m", `Zilobase ${tag}`], { stdio: "inherit" })
 
 console.log(`\nCreated release commit and tag ${tag}.`)
 console.log("Publish with:")

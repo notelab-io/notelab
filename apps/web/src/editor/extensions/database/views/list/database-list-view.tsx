@@ -1,6 +1,6 @@
 import { useMemo, useState, type DragEvent } from "react"
 import { GripVertical, Loader2, Plus } from "lucide-react"
-import { useReorderDatabaseRows } from "@notelab/features/databases"
+import { useReorderDatabaseRows } from "@zilobase/features/databases"
 
 import { DatabasePageLink } from "../../interactions/database-page-link"
 import {

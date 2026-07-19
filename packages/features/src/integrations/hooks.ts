@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
 
-import { useNotelabFeatures } from "../context"
+import { useZilobaseFeatures } from "../context"
 import { useSession } from "../auth/hooks"
 import { workspacesQueryOptions } from "../workspaces/queries"
 import {
@@ -25,25 +25,25 @@ type OAuthStart = {
 }
 
 export function useIntegrations() {
-  const { apiFetch } = useNotelabFeatures()
+  const { apiFetch } = useZilobaseFeatures()
 
   return useQuery(integrationsQueryOptions(apiFetch, useActiveWorkspaceId()))
 }
 
 export function useWorkspaceAiModels() {
-  const { apiFetch } = useNotelabFeatures()
+  const { apiFetch } = useZilobaseFeatures()
 
   return useQuery(aiModelsQueryOptions(apiFetch, useActiveWorkspaceId()))
 }
 
 export function useWorkspaceAiProviders() {
-  const { apiFetch } = useNotelabFeatures()
+  const { apiFetch } = useZilobaseFeatures()
 
   return useQuery(aiProvidersQueryOptions(apiFetch, useActiveWorkspaceId()))
 }
 
 export function useStartIntegrationOAuth() {
-  const { apiFetch } = useNotelabFeatures()
+  const { apiFetch } = useZilobaseFeatures()
   const workspaceId = useActiveWorkspaceId()
 
   return useMutation({
@@ -69,7 +69,7 @@ export function useStartIntegrationOAuth() {
 }
 
 export function useDisconnectIntegration() {
-  const { apiFetch, queryClient } = useNotelabFeatures()
+  const { apiFetch, queryClient } = useZilobaseFeatures()
   const workspaceId = useActiveWorkspaceId()
 
   return useMutation({
@@ -100,7 +100,7 @@ export function useDisconnectIntegration() {
 }
 
 export function useUpdateLinearIntegrationSettings() {
-  const { apiFetch, queryClient } = useNotelabFeatures()
+  const { apiFetch, queryClient } = useZilobaseFeatures()
   const workspaceId = useActiveWorkspaceId()
 
   return useMutation({
@@ -122,7 +122,7 @@ export function useUpdateLinearIntegrationSettings() {
 }
 
 export function useUpdateSlackIntegrationSettings() {
-  const { apiFetch, queryClient } = useNotelabFeatures()
+  const { apiFetch, queryClient } = useZilobaseFeatures()
   const workspaceId = useActiveWorkspaceId()
 
   return useMutation({
@@ -144,7 +144,7 @@ export function useUpdateSlackIntegrationSettings() {
 }
 
 export function useUpdateGithubIntegrationSettings() {
-  const { apiFetch, queryClient } = useNotelabFeatures()
+  const { apiFetch, queryClient } = useZilobaseFeatures()
   const workspaceId = useActiveWorkspaceId()
 
   return useMutation({
@@ -166,7 +166,7 @@ export function useUpdateGithubIntegrationSettings() {
 }
 
 export function useUpdateGmailIntegrationSettings() {
-  const { apiFetch, queryClient } = useNotelabFeatures()
+  const { apiFetch, queryClient } = useZilobaseFeatures()
   const workspaceId = useActiveWorkspaceId()
 
   return useMutation({
@@ -188,7 +188,7 @@ export function useUpdateGmailIntegrationSettings() {
 }
 
 export function useUpdateGoogleDriveIntegrationSettings() {
-  const { apiFetch, queryClient } = useNotelabFeatures()
+  const { apiFetch, queryClient } = useZilobaseFeatures()
   const workspaceId = useActiveWorkspaceId()
 
   return useMutation({
@@ -210,7 +210,7 @@ export function useUpdateGoogleDriveIntegrationSettings() {
 }
 
 export function useUpdateGoogleCalendarIntegrationSettings() {
-  const { apiFetch, queryClient } = useNotelabFeatures()
+  const { apiFetch, queryClient } = useZilobaseFeatures()
   const workspaceId = useActiveWorkspaceId()
 
   return useMutation({
@@ -235,7 +235,7 @@ export function useUpdateGoogleCalendarIntegrationSettings() {
 }
 
 export function useUpdateWorkspaceAiProvider() {
-  const { apiFetch, queryClient } = useNotelabFeatures()
+  const { apiFetch, queryClient } = useZilobaseFeatures()
   const workspaceId = useActiveWorkspaceId()
 
   return useMutation({
@@ -281,7 +281,7 @@ export type IntegrationEndpoint =
   | "slack"
 
 export function useActiveWorkspaceId() {
-  const { auth, preferredActiveWorkspaceId } = useNotelabFeatures()
+  const { auth, preferredActiveWorkspaceId } = useZilobaseFeatures()
   const { data: sessionData } = useSession()
   const { data: workspaces = [] } = useQuery(workspacesQueryOptions(auth))
   const sessionWorkspaceId = sessionData?.session?.activeWorkspaceId ?? null

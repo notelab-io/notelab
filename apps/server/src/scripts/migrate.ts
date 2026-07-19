@@ -8,20 +8,20 @@ const migrationsFolder =
   fileURLToPath(new URL("../../drizzle", import.meta.url));
 
 main().catch((error) => {
-  console.error("Notelab database migrations failed", error);
+  console.error("Zilobase database migrations failed", error);
   process.exit(1);
 });
 
 async function main() {
   const dbClient = createDbClientForUrl(databaseUrl);
 
-  console.info(`Running Notelab database migrations from ${migrationsFolder}`);
+  console.info(`Running Zilobase database migrations from ${migrationsFolder}`);
 
   await dbClient.client.connect();
 
   try {
     await migrate(dbClient.db, { migrationsFolder });
-    console.info("Notelab database migrations complete");
+    console.info("Zilobase database migrations complete");
   } finally {
     await dbClient.client.end();
   }

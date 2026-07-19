@@ -10,12 +10,12 @@ import type {
   DatabaseProperty,
   DatabaseRow,
   DatabaseView,
-} from "@notelab/features/databases"
+} from "@zilobase/features/databases"
 import {
   useDatabaseRealtime,
   type DatabasePresenceCollaborator,
-} from "@notelab/features/databases"
-import { useSession } from "@notelab/features/auth"
+} from "@zilobase/features/databases"
+import { useSession } from "@zilobase/features/auth"
 
 import type { DatabasePropertyValue } from "../core/utils"
 import type {

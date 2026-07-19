@@ -6,7 +6,7 @@ import {
   useSyncExternalStore,
 } from "react"
 
-import { useNotelabFeatures, type ApiFetcher } from "../context"
+import { useZilobaseFeatures, type ApiFetcher } from "../context"
 import {
   applyDatabaseMutationToPageProperties,
   recoverPagePropertiesIfBehind,
@@ -77,7 +77,7 @@ export function useDatabaseRealtime(
   } = {},
 ) {
   const { apiFetch, databaseRealtimeEnabled = false, queryClient } =
-    useNotelabFeatures()
+    useZilobaseFeatures()
   const ownerIdRef = useRef<string>(crypto.randomUUID())
   const enabled = Boolean(
     databaseRealtimeEnabled && options.enabled !== false && databaseId,

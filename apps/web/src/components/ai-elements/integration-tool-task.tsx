@@ -10,14 +10,16 @@ import { Shimmer } from "@/components/ai-elements/shimmer";
 import type { ToolPart } from "@/components/ai-elements/tool";
 import { integrationIcons } from "@/lib/integration-icons";
 import { getToolName, isToolUIPart, type UIMessage } from "ai";
-import { isProposePageContentUpdateToolName } from "@notelab/features/ai-chat";
+import { isProposePageContentUpdateToolName } from "@zilobase/features/ai-chat";
 import { isDatabaseConfigToolPart } from "@/components/ai-elements/database-tool-steps";
 import { useEffect, useState, type ReactNode } from "react";
+import type { IntegrationToolPresentation } from "@/components/ai-elements/integration-tool-presentation";
 
 type IntegrationToolTaskGroupProps = {
-  getToolPhrases: (toolName: string) => string[];
-  getToolTitle: (toolName: string) => string;
-  getToolSource: (toolName: string) => keyof typeof integrationIcons | undefined;
+  getToolPresentation: (
+    part: ToolPart,
+    toolName: string,
+  ) => IntegrationToolPresentation;
   parts: ToolPart[];
   renderGenerativeOutput?: (part: ToolPart, toolName: string) => ReactNode;
 };
@@ -44,22 +46,19 @@ function isIntegrationToolPart(part: ToolPart) {
 }
 
 const IntegrationToolTaskItem = ({
-  getToolPhrases,
-  getToolSource,
-  getToolTitle,
+  getToolPresentation,
   part,
   renderGenerativeOutput,
 }: {
-  getToolPhrases: (toolName: string) => string[];
-  getToolSource: (toolName: string) => keyof typeof integrationIcons | undefined;
-  getToolTitle: (toolName: string) => string;
+  getToolPresentation: (
+    part: ToolPart,
+    toolName: string,
+  ) => IntegrationToolPresentation;
   part: ToolPart;
   renderGenerativeOutput?: (part: ToolPart, toolName: string) => ReactNode;
 }) => {
   const toolName = getStaticToolName(part);
-  const title = getToolTitle(toolName);
-  const source = getToolSource(toolName);
-  const phrases = getToolPhrases(toolName);
+  const { progressPhrases, source, title } = getToolPresentation(part, toolName);
   const finishedLabel = finishedLabels[part.state];
   const isRunning =
     !finishedLabel &&
@@ -67,24 +66,24 @@ const IntegrationToolTaskItem = ({
   const [phraseIndex, setPhraseIndex] = useState(0);
 
   useEffect(() => {
-    if (!isRunning || phrases.length < 2) {
+    if (!isRunning || progressPhrases.length < 2) {
       return;
     }
 
     const interval = window.setInterval(() => {
-      setPhraseIndex((index) => (index + 1) % phrases.length);
+      setPhraseIndex((index) => (index + 1) % progressPhrases.length);
     }, 1700);
 
     return () => {
       window.clearInterval(interval);
     };
-  }, [isRunning, phrases.length]);
+  }, [isRunning, progressPhrases.length]);
 
   const statusText = part.errorText
     ? part.errorText
     : finishedLabel
       ? `${finishedLabel}: ${title}`
-      : phrases[phraseIndex % phrases.length] ?? `Running ${title}`;
+      : progressPhrases[phraseIndex % progressPhrases.length] ?? `Running ${title}`;
 
   const generativeOutput = renderGenerativeOutput?.(part, toolName);
 
@@ -132,9 +131,7 @@ const IntegrationToolTaskItem = ({
 };
 
 export const IntegrationToolTaskGroup = ({
-  getToolPhrases,
-  getToolSource,
-  getToolTitle,
+  getToolPresentation,
   parts,
   renderGenerativeOutput,
 }: IntegrationToolTaskGroupProps) => {
@@ -150,7 +147,7 @@ export const IntegrationToolTaskGroup = ({
     : hasError
       ? "Search finished with errors"
       : parts.length === 1
-        ? getToolTitle(getStaticToolName(parts[0]!))
+        ? getToolPresentation(parts[0]!, getStaticToolName(parts[0]!)).title
         : "Searched connected sources";
 
   return (
@@ -159,9 +156,7 @@ export const IntegrationToolTaskGroup = ({
       <TaskContent>
         {parts.map((part) => (
           <IntegrationToolTaskItem
-            getToolPhrases={getToolPhrases}
-            getToolSource={getToolSource}
-            getToolTitle={getToolTitle}
+            getToolPresentation={getToolPresentation}
             key={part.toolCallId}
             part={part}
             renderGenerativeOutput={renderGenerativeOutput}

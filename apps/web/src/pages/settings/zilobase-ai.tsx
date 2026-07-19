@@ -1,18 +1,18 @@
 import * as React from "react"
 
 import { SettingsHeader } from "@/components/settings-header"
-import { useActiveWorkspaceId } from "@notelab/features/integrations"
+import { useActiveWorkspaceId } from "@zilobase/features/integrations"
 import {
-  useNotelabAiPages,
+  useZilobaseAiPages,
   usePages,
-} from "@notelab/features/pages"
+} from "@zilobase/features/pages"
 
-import { NotelabAiSection } from "./notelab-ai/components/notelab-ai-section"
+import { ZilobaseAiSection } from "./zilobase-ai/components/zilobase-ai-section"
 
-export default function NotelabAiSettingsPage() {
+export default function ZilobaseAiSettingsPage() {
   const workspaceId = useActiveWorkspaceId()
   const { data: aiPages = [], isLoading } =
-    useNotelabAiPages(workspaceId)
+    useZilobaseAiPages(workspaceId)
   const { data: pages = [] } = usePages(workspaceId)
   const pagesById = React.useMemo(
     () => new Map(pages.map((page) => [page.id, page])),
@@ -22,7 +22,7 @@ export default function NotelabAiSettingsPage() {
   const instructions = React.useMemo(
     () =>
       aiPages.filter(
-        (page) => page.metadata.notelabai === "instruction",
+        (page) => page.metadata.zilobaseai === "instruction",
       ),
     [aiPages],
   )
@@ -30,7 +30,7 @@ export default function NotelabAiSettingsPage() {
   const skills = React.useMemo(
     () =>
       aiPages.filter(
-        (page) => page.metadata.notelabai === "skill",
+        (page) => page.metadata.zilobaseai === "skill",
       ),
     [aiPages],
   )
@@ -38,19 +38,19 @@ export default function NotelabAiSettingsPage() {
   return (
     <main className="flex flex-1 flex-col gap-6 px-4 py-8">
       <SettingsHeader
-        title="Notelab AI"
+        title="Zilobase AI"
         description="Manage pages used as AI instructions and skills."
       />
 
       <div className="mx-auto grid w-full max-w-4xl gap-4">
-        <NotelabAiSection
+        <ZilobaseAiSection
           isLoading={isLoading}
           items={instructions}
           mode="instruction"
           workspaceId={workspaceId ?? null}
           pagesById={pagesById}
         />
-        <NotelabAiSection
+        <ZilobaseAiSection
           isLoading={isLoading}
           items={skills}
           mode="skill"

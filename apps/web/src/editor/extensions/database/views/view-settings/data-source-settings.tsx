@@ -19,8 +19,8 @@ import {
   DropDrawerSubContent,
   DropDrawerSubTrigger,
 } from "@/components/ui/dropdrawer";
-import { useDatabase } from "@notelab/features/databases";
-import { usePageNavigation } from "@notelab/features/pages";
+import { useDatabase } from "@zilobase/features/databases";
+import { usePageNavigation } from "@zilobase/features/pages";
 
 import { getDatabasePropertyType } from "../../core/database-property-types";
 import { hasDatabasePropertyEditSettings } from "../../properties/database-property-edit-submenu";

@@ -1,7 +1,7 @@
 import * as React from "react";
 
-import { useUpdateGoogleDriveIntegrationSettings } from "@notelab/features/integrations";
-import type { GoogleDriveIntegrationStatus } from "@notelab/features/integrations";
+import { useUpdateGoogleDriveIntegrationSettings } from "@zilobase/features/integrations";
+import type { GoogleDriveIntegrationStatus } from "@zilobase/features/integrations";
 import { integrationIcons } from "@/lib/integration-icons";
 
 import { GoogleDriveIntegrationCard } from "../cards/google-drive";
@@ -60,7 +60,7 @@ export function useGoogleDriveIntegrationController({
 
   const summary: IntegrationSummary = {
     about:
-      "Google Drive lets Notelab read visible Drive files, Docs, Sheets, and Slides using read-only access for AI page research.",
+      "Google Drive lets Zilobase read visible Drive files, Docs, Sheets, and Slides using read-only access for AI page research.",
     category: "AI enterprise search",
     connected: status?.page.connected,
     connectDisabled:

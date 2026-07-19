@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
 
-import { useNotelabFeatures } from "../context"
+import { useZilobaseFeatures } from "../context"
 import { sessionQueryKey, sessionQueryOptions } from "../auth/queries"
 import {
   pageRootQueryKey,
@@ -19,7 +19,7 @@ import {
 } from "./queries"
 
 export function useWorkspaces() {
-  const { auth } = useNotelabFeatures()
+  const { auth } = useZilobaseFeatures()
 
   return useQuery(workspacesQueryOptions(auth))
 }
@@ -27,7 +27,7 @@ export function useWorkspaces() {
 export function useWorkspaceAccessTargets(
   workspaceId: string | null | undefined,
 ) {
-  const { apiFetch } = useNotelabFeatures()
+  const { apiFetch } = useZilobaseFeatures()
 
   return useQuery(workspaceAccessTargetsQueryOptions(apiFetch, workspaceId))
 }
@@ -35,7 +35,7 @@ export function useWorkspaceAccessTargets(
 export function useWorkspaceInvitations(
   workspaceId: string | null | undefined,
 ) {
-  const { auth } = useNotelabFeatures()
+  const { auth } = useZilobaseFeatures()
 
   return useQuery(workspaceInvitationsQueryOptions(auth, workspaceId))
 }
@@ -45,7 +45,7 @@ export function useCreateWorkspace() {
     auth,
     queryClient,
     setPreferredActiveWorkspaceId,
-  } = useNotelabFeatures()
+  } = useZilobaseFeatures()
 
   return useMutation({
     mutationFn: (name: string) =>
@@ -67,7 +67,7 @@ export function useCreateWorkspace() {
 }
 
 export function useInviteWorkspaceMember() {
-  const { auth, queryClient } = useNotelabFeatures()
+  const { auth, queryClient } = useZilobaseFeatures()
 
   return useMutation({
     mutationFn: (input: {
@@ -94,7 +94,7 @@ export function useAcceptWorkspaceInvitation() {
     auth,
     queryClient,
     setPreferredActiveWorkspaceId,
-  } = useNotelabFeatures()
+  } = useZilobaseFeatures()
 
   return useMutation({
     mutationFn: (invitationId: string) =>
@@ -120,7 +120,7 @@ export function useSetActiveWorkspace() {
     auth,
     queryClient,
     setPreferredActiveWorkspaceId,
-  } = useNotelabFeatures()
+  } = useZilobaseFeatures()
 
   return useMutation({
     mutationFn: (workspaceId: string) => auth.setActiveWorkspace(workspaceId),
@@ -140,7 +140,7 @@ export function useSetActiveWorkspace() {
 }
 
 export function useUpdateWorkspace() {
-  const { apiFetch, queryClient } = useNotelabFeatures()
+  const { apiFetch, queryClient } = useZilobaseFeatures()
 
   return useMutation({
     mutationFn: ({

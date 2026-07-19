@@ -76,7 +76,7 @@ export const sessionMiddleware: MiddlewareHandler<AppBindings> = async (
       }
 
       const requestedWorkspaceId = c.req
-        .header("x-notelab-workspace-id")
+        .header("x-zilobase-workspace-id")
         ?.trim();
 
       if (
@@ -148,7 +148,7 @@ export const sessionMiddleware: MiddlewareHandler<AppBindings> = async (
     await timed(c, "session_next", next);
   }, {
     onTiming(name, durationMs) {
-      c.get("serverTimings").push(`notelab_${name};dur=${durationMs}`);
+      c.get("serverTimings").push(`zilobase_${name};dur=${durationMs}`);
       console.info(JSON.stringify({
         durationMs,
         event: name === "db_connect"
@@ -172,7 +172,7 @@ async function timed<T>(
     return await run();
   } finally {
     c.get("serverTimings").push(
-      `notelab_${name};dur=${Math.round(performance.now() - startedAt)}`,
+      `zilobase_${name};dur=${Math.round(performance.now() - startedAt)}`,
     );
   }
 }

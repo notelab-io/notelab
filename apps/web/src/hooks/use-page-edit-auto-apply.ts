@@ -13,15 +13,15 @@ import {
   type ProposePageContentUpdateOutput,
   type PageEditSnapshotPart,
   WORKSPACE_EDIT_SNAPSHOT_PART_TYPE,
-} from "@notelab/features/ai-chat"
-import { prosemirrorToMarkdown } from "@notelab/page-context"
+} from "@zilobase/features/ai-chat"
+import { prosemirrorToMarkdown } from "@zilobase/page-context"
 
 import { usePageEditorRegistry } from "@/contexts/page-editor-registry"
 import { usePageEditApplier } from "@/hooks/use-page-edit-applier"
 import {
   logPageEdit,
   warnPageEdit,
-} from "@notelab/features/ai-chat"
+} from "@zilobase/features/ai-chat"
 
 type UsePageEditAutoApplyOptions = {
   enabled?: boolean

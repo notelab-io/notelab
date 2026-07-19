@@ -20,12 +20,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { getPageEmoji, usePages, type Page } from "@notelab/features/pages";
-import { useNotelabFeatures } from "@notelab/features";
+import { getPageEmoji, usePages, type Page } from "@zilobase/features/pages";
+import { useZilobaseFeatures } from "@zilobase/features";
 import {
   databaseRootQueryKey,
   type DatabasePayload,
-} from "@notelab/features/databases";
+} from "@zilobase/features/databases";
 import { colorWithAlpha, getPaletteColor } from "@/lib/color-tokens";
 import {
   setDatabasePageDragPayload,
@@ -46,7 +46,7 @@ export type PageBlockOptions = {
 type PageSummary = Pick<Page, "id" | "metadata" | "name">;
 
 function findCachedDatabaseRowPage(
-  queryClient: ReturnType<typeof useNotelabFeatures>["queryClient"],
+  queryClient: ReturnType<typeof useZilobaseFeatures>["queryClient"],
   pageId: string | null,
 ): PageSummary | null {
   if (!pageId) {
@@ -67,7 +67,7 @@ function findCachedDatabaseRowPage(
 }
 
 function useCachedDatabaseRowPage(pageId: string | null) {
-  const { queryClient } = useNotelabFeatures();
+  const { queryClient } = useZilobaseFeatures();
 
   return useSyncExternalStore(
     (onStoreChange) => queryClient.getQueryCache().subscribe(onStoreChange),

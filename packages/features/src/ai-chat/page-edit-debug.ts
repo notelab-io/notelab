@@ -9,7 +9,7 @@ function shouldLogPageEdit() {
     return false
   }
 
-  return localStorage.getItem("notelabDebugPageEdit") === "1"
+  return localStorage.getItem("zilobaseDebugPageEdit") === "1"
 }
 
 export function logPageEdit(event: string, meta?: PageEditLogMeta) {
@@ -18,11 +18,11 @@ export function logPageEdit(event: string, meta?: PageEditLogMeta) {
   }
 
   if (meta) {
-    console.log(`[Notelab Page Edit] ${event}`, meta)
+    console.log(`[Zilobase Page Edit] ${event}`, meta)
     return
   }
 
-  console.log(`[Notelab Page Edit] ${event}`)
+  console.log(`[Zilobase Page Edit] ${event}`)
 }
 
 export function warnPageEdit(event: string, meta?: PageEditLogMeta) {
@@ -31,9 +31,9 @@ export function warnPageEdit(event: string, meta?: PageEditLogMeta) {
   }
 
   if (meta) {
-    console.warn(`[Notelab Page Edit] ${event}`, meta)
+    console.warn(`[Zilobase Page Edit] ${event}`, meta)
     return
   }
 
-  console.warn(`[Notelab Page Edit] ${event}`)
+  console.warn(`[Zilobase Page Edit] ${event}`)
 }

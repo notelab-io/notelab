@@ -13,7 +13,7 @@ const pageContextDir = fileURLToPath(
   new URL("../../packages/page-context/src", import.meta.url),
 );
 const toolkitConnectorsDir = fileURLToPath(
-  new URL("../../../toolkit/packages/connectors/src/connectors", import.meta.url),
+  new URL("../../../toolkit/packages/connector-runtime/src/connectors", import.meta.url),
 );
 const backendTarget = process.env.VITE_API_URL?.replace(/\/$/, "") ?? "http://127.0.0.1:3000";
 const expectedWsProxyErrorCodes = new Set(["ECONNRESET", "EPIPE"]);
@@ -72,20 +72,20 @@ export default defineConfig(async () => ({
       { find: "@/packages/editor", replacement: editorDir },
       { find: "@", replacement: srcDir },
       {
-        find: "@notelab/features/databases/property-types",
+        find: "@zilobase/features/databases/property-types",
         replacement: `${featuresDir}/databases/property-types.ts`,
       },
       {
-        find: /^@notelab\/features\/(.+)$/,
+        find: /^@zilobase\/features\/(.+)$/,
         replacement: `${featuresDir}/$1/index.ts`,
       },
-      { find: /^@notelab\/features$/, replacement: `${featuresDir}/index.ts` },
+      { find: /^@zilobase\/features$/, replacement: `${featuresDir}/index.ts` },
       {
-        find: "@notelab/page-context",
+        find: "@zilobase/page-context",
         replacement: `${pageContextDir}/index.ts`,
       },
       {
-        find: /^@notelab\/connectors\/(.+)\/ui$/,
+        find: /^@zilobase\/connectors\/(.+)\/ui$/,
         replacement: `${toolkitConnectorsDir}/$1/src/ui.tsx`,
       },
     ],

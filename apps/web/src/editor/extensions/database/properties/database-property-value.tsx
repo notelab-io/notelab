@@ -9,8 +9,8 @@ import {
   type DatabasePayload,
   type DatabaseProperty,
   type DatabaseRow as FeatureDatabaseRow,
-} from "@notelab/features/databases"
-import { getPageEmoji, type PageMetadata } from "@notelab/features/pages"
+} from "@zilobase/features/databases"
+import { getPageEmoji, type PageMetadata } from "@zilobase/features/pages"
 import {
   Popover,
   PopoverContent,

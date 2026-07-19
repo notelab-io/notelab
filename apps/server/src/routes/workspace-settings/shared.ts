@@ -6,7 +6,7 @@ import type { AppBindings } from "../../types";
 export async function requireActiveWorkspace(c: Context<AppBindings>) {
   const user = c.get("user");
   const session = c.get("session");
-  const workspaceId = session?.activeWorkspaceId ?? c.req.header("x-notelab-workspace-id")?.trim();
+  const workspaceId = session?.activeWorkspaceId ?? c.req.header("x-zilobase-workspace-id")?.trim();
   if (!user) return { response: c.json({ error: "Unauthorized" }, 401) };
   if (!workspaceId) return { response: c.json({ error: "No active workspace" }, 409) };
   const membership = await getMembership(workspaceId, user.id);

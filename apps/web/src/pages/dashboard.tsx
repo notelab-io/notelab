@@ -30,8 +30,8 @@ import {
 import {
   getDatabaseEmoji,
   useCreateDatabase,
-} from "@notelab/features/databases";
-import { useActiveWorkspaceId } from "@notelab/features/integrations";
+} from "@zilobase/features/databases";
+import { useActiveWorkspaceId } from "@zilobase/features/integrations";
 import {
   useCreatePage,
   usePageNavigation,
@@ -39,13 +39,13 @@ import {
   type PageDatabase,
   type PageItemPlacement,
   type PageNavigationPayload,
-} from "@notelab/features/pages";
+} from "@zilobase/features/pages";
 import type {
   DatabasePayload,
   DatabaseProperty,
   DatabaseView,
   PagePropertyValue,
-} from "@notelab/features/databases";
+} from "@zilobase/features/databases";
 
 type HomepageView = "recents" | "favourites" | "shared" | "private";
 

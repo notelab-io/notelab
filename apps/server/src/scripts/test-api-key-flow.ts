@@ -62,15 +62,15 @@ async function main() {
   await dbClient.client.connect();
 
   const stamp = Date.now();
-  const email = `api-key-flow-${stamp}@notelab.local`;
-  const password = "notelab-test-password";
+  const email = `api-key-flow-${stamp}@zilobase.local`;
+  const password = "zilobase-test-password";
   const jar = new CookieJar();
 
   console.info(`Creating test user ${email}`);
   const signup = await authJsonRequest<{ user: { id: string; email: string } }>(
     "/sign-up/email",
     {
-      name: "Notelab API Key Tester",
+      name: "Zilobase API Key Tester",
       email,
       password,
       callbackURL: "/onboarding",

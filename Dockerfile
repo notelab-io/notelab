@@ -23,13 +23,13 @@ FROM node:22-bookworm-slim AS runtime
 ENV NODE_ENV=production \
   HOST=0.0.0.0 \
   PORT=3000 \
-  NOTELAB_WEB_DIST_DIR=/app/apps/web/dist \
+  ZILOBASE_WEB_DIST_DIR=/app/apps/web/dist \
   DRIZZLE_MIGRATIONS_DIR=/app/apps/server/drizzle
 
 WORKDIR /app
 
-RUN groupadd --system notelab \
-  && useradd --system --gid notelab --home /app notelab
+RUN groupadd --system zilobase \
+  && useradd --system --gid zilobase --home /app zilobase
 
 COPY --from=build /app/dist/server ./dist/server
 COPY --from=build /app/apps/web/dist ./apps/web/dist
@@ -37,9 +37,9 @@ COPY --from=build /app/apps/server/drizzle ./apps/server/drizzle
 COPY docker/entrypoint.sh ./docker/entrypoint.sh
 
 RUN chmod +x ./docker/entrypoint.sh \
-  && chown -R notelab:notelab /app
+  && chown -R zilobase:zilobase /app
 
-USER notelab
+USER zilobase
 
 EXPOSE 3000
 

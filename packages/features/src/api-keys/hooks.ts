@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
 
-import { useNotelabFeatures } from "../context"
+import { useZilobaseFeatures } from "../context"
 import { useActiveWorkspaceId } from "../integrations/hooks"
 import {
   apiKeysQueryKey,
@@ -10,14 +10,14 @@ import {
 } from "./queries"
 
 export function useApiKeys(workspaceId?: string | null) {
-  const { apiFetch } = useNotelabFeatures()
+  const { apiFetch } = useZilobaseFeatures()
   const activeWorkspaceId = useActiveWorkspaceId()
 
   return useQuery(apiKeysQueryOptions(apiFetch, workspaceId ?? activeWorkspaceId))
 }
 
 export function useCreateApiKey() {
-  const { apiFetch, queryClient } = useNotelabFeatures()
+  const { apiFetch, queryClient } = useZilobaseFeatures()
 
   return useMutation({
     mutationFn: (input: {
@@ -38,7 +38,7 @@ export function useCreateApiKey() {
 }
 
 export function useUpdateApiKey() {
-  const { apiFetch, queryClient } = useNotelabFeatures()
+  const { apiFetch, queryClient } = useZilobaseFeatures()
 
   return useMutation({
     mutationFn: ({
@@ -63,7 +63,7 @@ export function useUpdateApiKey() {
 }
 
 export function useDeleteApiKey() {
-  const { apiFetch, queryClient } = useNotelabFeatures()
+  const { apiFetch, queryClient } = useZilobaseFeatures()
 
   return useMutation({
     mutationFn: ({

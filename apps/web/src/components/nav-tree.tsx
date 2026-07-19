@@ -17,7 +17,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar"
-import { type NotelabAiMode } from "@notelab/features/pages"
+import { type ZilobaseAiMode } from "@zilobase/features/pages"
 import { getSidebarDatabaseViewSearchId } from "@/components/database-view-navigation"
 
 export type PageNavItem = {
@@ -32,7 +32,7 @@ export type PageNavItem = {
   name: string
   navNodeId?: string
   emoji: ReactNode
-  notelabai?: NotelabAiMode | null
+  zilobaseai?: ZilobaseAiMode | null
   pageId: string | null
   pages: PageNavItem[]
 }
@@ -183,7 +183,7 @@ function NavTreeItem({
                 state={
                   ((previous: Record<string, unknown>) => ({
                     ...previous,
-                    notelabDatabaseViewSelection: {
+                    zilobaseDatabaseViewSelection: {
                       databaseId: item.databaseId,
                       token: crypto.randomUUID(),
                       viewId: sidebarSelectedViewId,
@@ -199,7 +199,7 @@ function NavTreeItem({
                 <TrailingIndicators
                   isDatabase={item.isDatabase}
                   isLinked={item.isLinked}
-                  notelabai={item.notelabai}
+                  zilobaseai={item.zilobaseai}
                 />
               </Link>
             ) : (
@@ -214,7 +214,7 @@ function NavTreeItem({
                 <TrailingIndicators
                   isDatabase={item.isDatabase}
                   isLinked={item.isLinked}
-                  notelabai={item.notelabai}
+                  zilobaseai={item.zilobaseai}
                 />
               </Link>
             )}
@@ -324,22 +324,22 @@ function LeadingItemIcon({
 function TrailingIndicators({
   isDatabase,
   isLinked,
-  notelabai,
+  zilobaseai,
 }: {
   isDatabase?: boolean
   isLinked?: boolean
-  notelabai?: NotelabAiMode | null
+  zilobaseai?: ZilobaseAiMode | null
 }) {
-  const showNotelabai = notelabai && !isDatabase
+  const showZilobaseai = zilobaseai && !isDatabase
 
-  if (!showNotelabai && !isLinked) {
+  if (!showZilobaseai && !isLinked) {
     return null
   }
 
   return (
     <span className="ml-auto flex shrink-0 items-center gap-1.5">
-      {showNotelabai ? (
-        <span className="text-xs text-sidebar-foreground/60">{notelabai}</span>
+      {showZilobaseai ? (
+        <span className="text-xs text-sidebar-foreground/60">{zilobaseai}</span>
       ) : null}
       {isLinked ? (
         <ArrowUpRightIcon

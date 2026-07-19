@@ -7,7 +7,7 @@ import {
 } from "./databases/queries";
 import { applyPageFavoriteToNav } from "./pages/nav-delta";
 import {
-  notelabAiPagesQueryKey,
+  zilobaseAiPagesQueryKey,
   pagesNavRootQueryKey,
   pageQueryKey,
   pagesRootQueryKey,
@@ -71,12 +71,12 @@ export async function favoritePages({
 }
 
 export async function invalidateDeletedItems({
-  includeNotelabAi = false,
+  includeZilobaseAi = false,
   workspaceId,
   queryClient,
   result,
 }: {
-  includeNotelabAi?: boolean;
+  includeZilobaseAi?: boolean;
   workspaceId: string | null | undefined;
   queryClient: QueryClient;
   result: DeletedItemIds;
@@ -89,9 +89,9 @@ export async function invalidateDeletedItems({
     queryClient.invalidateQueries({
       queryKey: pagesNavRootQueryKey(workspaceId),
     }),
-    includeNotelabAi
+    includeZilobaseAi
       ? queryClient.invalidateQueries({
-          queryKey: notelabAiPagesQueryKey(workspaceId),
+          queryKey: zilobaseAiPagesQueryKey(workspaceId),
         })
       : Promise.resolve(),
   ]);
@@ -106,12 +106,12 @@ export async function invalidateDeletedItems({
 }
 
 export async function invalidateRestoredItems({
-  includeNotelabAi = false,
+  includeZilobaseAi = false,
   workspaceId,
   queryClient,
   result,
 }: {
-  includeNotelabAi?: boolean;
+  includeZilobaseAi?: boolean;
   workspaceId: string;
   queryClient: QueryClient;
   result: RestoredItemIds;
@@ -120,9 +120,9 @@ export async function invalidateRestoredItems({
     queryClient.invalidateQueries({
       queryKey: pagesNavRootQueryKey(workspaceId),
     }),
-    includeNotelabAi
+    includeZilobaseAi
       ? queryClient.invalidateQueries({
-          queryKey: notelabAiPagesQueryKey(workspaceId),
+          queryKey: zilobaseAiPagesQueryKey(workspaceId),
         })
       : Promise.resolve(),
     ...result.restoredDatabaseIds.map((databaseId) =>

@@ -23,7 +23,7 @@ export function register({ assert, loadModule, test }) {
         pageId: "page-1",
       })
 
-      assert.equal(result.url, "https://api.notelab.test/images/asset-s3")
+      assert.equal(result.url, "https://api.zilobase.test/images/asset-s3")
       assert.equal(calls[1].url, "https://objects.example/upload")
       assert.equal(calls[1].init.credentials, "omit")
       assert.equal(calls[1].headers.get("content-type"), "image/png")
@@ -37,7 +37,7 @@ export function register({ assert, loadModule, test }) {
     const { uploadPageImage } = await loadModule("/src/lib/image-upload.ts")
     const previousWindow = globalThis.window
     globalThis.window = {
-      __NOTELAB_MOBILE_AUTH_COOKIE__: "session=mobile",
+      __ZILOBASE_MOBILE_AUTH_COOKIE__: "session=mobile",
     }
     const calls = mockFetch([
       jsonResponse({
@@ -47,7 +47,7 @@ export function register({ assert, loadModule, test }) {
           headers: { "Content-Type": "image/png" },
           method: "PUT",
           storageMode: "binding",
-          url: "http://api.notelab.io/images/uploads/asset-binding/body",
+          url: "http://api.zilobase.com/images/uploads/asset-binding/body",
         },
       }),
       new Response(null, { status: 200 }),
@@ -62,10 +62,10 @@ export function register({ assert, loadModule, test }) {
         pageId: "page-1",
       })
 
-      assert.equal(result.url, "https://api.notelab.test/images/asset-binding")
+      assert.equal(result.url, "https://api.zilobase.test/images/asset-binding")
       assert.equal(
         calls[1].url,
-        "https://api.notelab.test/images/uploads/asset-binding/body",
+        "https://api.zilobase.test/images/uploads/asset-binding/body",
       )
       assert.equal(calls[1].init.credentials, "include")
       assert.equal(calls[1].headers.get("x-mobile-auth-cookie"), "session=mobile")

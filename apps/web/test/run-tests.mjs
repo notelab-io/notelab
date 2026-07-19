@@ -9,7 +9,7 @@ import { build } from "esbuild"
 const testDir = dirname(fileURLToPath(import.meta.url))
 const appDir = join(testDir, "..")
 const srcDir = join(appDir, "src")
-const tempDir = await mkdtemp(join(tmpdir(), "notelab-web-tests-"))
+const tempDir = await mkdtemp(join(tmpdir(), "zilobase-web-tests-"))
 const loadedModules = new Map()
 
 const tests = []
@@ -57,11 +57,11 @@ async function loadModule(path) {
     define: {
       "import.meta.env": JSON.stringify({
         DEV: false,
-        VITE_API_URL: "https://api.notelab.test",
+        VITE_API_URL: "https://api.zilobase.test",
       }),
     },
     entryPoints: [sourcePath],
-    external: ["@notelab/features"],
+    external: ["@zilobase/features"],
     format: "esm",
     jsx: "automatic",
     logLevel: "silent",
@@ -78,7 +78,7 @@ async function loadModule(path) {
 
 function aliasPlugin() {
   return {
-    name: "notelab-test-alias",
+    name: "zilobase-test-alias",
     setup(build) {
       build.onResolve({ filter: /^@\/packages\/editor\/?/ }, async (args) => ({
         path: await resolveAliasPath(
@@ -86,7 +86,7 @@ function aliasPlugin() {
         ),
       }))
       build.onResolve(
-        { filter: /^@notelab\/features\/databases\/property-types$/ },
+        { filter: /^@zilobase\/features\/databases\/property-types$/ },
         () => ({
           path: join(
             appDir,

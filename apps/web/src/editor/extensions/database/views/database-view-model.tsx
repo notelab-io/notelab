@@ -3,7 +3,7 @@ import type {
   DatabaseProperty,
   DatabaseRow,
   PagePropertyValue,
-} from "@notelab/features/databases"
+} from "@zilobase/features/databases"
 
 import {
   getConfiguredGroupProperty,

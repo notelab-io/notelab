@@ -8,15 +8,15 @@ import type { Content, Editor } from "@tiptap/core"
 import type { PageEditorHandle } from "@/contexts/page-editor-registry"
 import { parseMarkdownContent } from "@/editor/editor-ai-utils"
 import type { PageEditPreviewControls } from "@/editor/types"
-import { useNotelabFeatures } from "@notelab/features"
-import { pageQueryKey, type PageDetail } from "@notelab/features/pages"
+import { useZilobaseFeatures } from "@zilobase/features"
+import { pageQueryKey, type PageDetail } from "@zilobase/features/pages"
 import {
   logPageEdit,
   resolvePageEditMarkdown,
   warnPageEdit,
   type ProposePageContentUpdateOutput,
-} from "@notelab/features/ai-chat"
-import { prosemirrorToMarkdown } from "@notelab/page-context"
+} from "@zilobase/features/ai-chat"
+import { prosemirrorToMarkdown } from "@zilobase/page-context"
 
 type ResolvePageEditInput = Pick<
   ProposePageContentUpdateOutput,
@@ -50,7 +50,7 @@ type CommitPageEditResult =
 
 export function usePageEditApplier() {
   const { getEditorHandle } = usePageEditorRegistry()
-  const { apiFetch } = useNotelabFeatures()
+  const { apiFetch } = useZilobaseFeatures()
   const queryClient = useQueryClient()
 
   const resolvePageEdit = useCallback(
@@ -204,7 +204,7 @@ export function usePageEditApplier() {
         body: JSON.stringify({ content: input.beforeContentJson }),
         headers: {
           "Content-Type": "application/json",
-          "x-notelab-workspace-id": workspaceId,
+          "x-zilobase-workspace-id": workspaceId,
         },
         method: "PATCH",
       })

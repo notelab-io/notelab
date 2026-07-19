@@ -8,7 +8,7 @@ import {
   toWorkspacePageLayout,
   type PageLayoutConfig,
   type PageLayoutScope,
-} from "@notelab/features/pages/layouts"
+} from "@zilobase/features/pages/layouts"
 import {
   canAccessDatabaseInWorkspace,
   canAccessPageInWorkspace,

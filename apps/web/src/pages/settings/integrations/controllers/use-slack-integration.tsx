@@ -1,7 +1,7 @@
 import * as React from "react";
 
-import { useUpdateSlackIntegrationSettings } from "@notelab/features/integrations";
-import type { SlackIntegrationStatus } from "@notelab/features/integrations";
+import { useUpdateSlackIntegrationSettings } from "@zilobase/features/integrations";
+import type { SlackIntegrationStatus } from "@zilobase/features/integrations";
 import { integrationIcons } from "@/lib/integration-icons";
 
 import { SlackIntegrationCard } from "../cards/slack";
@@ -60,7 +60,7 @@ export function useSlackIntegrationController({
 
   const summary: IntegrationSummary = {
     about:
-      "Slack gives Notelab access to the channels, files, canvases, and threads the installed app can see. Personal DMs stay outside this workspace connector.",
+      "Slack gives Zilobase access to the channels, files, canvases, and threads the installed app can see. Personal DMs stay outside this workspace connector.",
     category: "AI enterprise search",
     connected: status?.page.connected,
     connectDisabled:

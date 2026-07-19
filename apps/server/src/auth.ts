@@ -74,7 +74,7 @@ function sharedAuthOptions(env: AuthEnv) {
         async sendVerificationOTP({ email, otp, type }) {
           await sendEmail(env, {
             to: email,
-            subject: `Your Notelab ${type} code`,
+            subject: `Your Zilobase ${type} code`,
             text: `Use this one-time code for ${type}: ${otp}`,
           });
         },
@@ -83,8 +83,8 @@ function sharedAuthOptions(env: AuthEnv) {
         async sendMagicLink({ email, url }) {
           await sendEmail(env, {
             to: email,
-            subject: "Your Notelab magic link",
-            text: `Open this link to sign in to Notelab:\n\n${url}`,
+            subject: "Your Zilobase magic link",
+            text: `Open this link to sign in to Zilobase:\n\n${url}`,
           });
         },
       }),
@@ -107,7 +107,7 @@ function sharedAuthOptions(env: AuthEnv) {
 
           await sendEmail(env, {
             to: data.email,
-            subject: `Invitation to join ${data.organization.name} on Notelab`,
+            subject: `Invitation to join ${data.organization.name} on Zilobase`,
             text: [
               `${data.inviter.user.name} (${data.inviter.user.email}) invited you to ${data.organization.name}.`,
               "",

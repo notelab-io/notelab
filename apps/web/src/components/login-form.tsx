@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { getApiErrorMessage } from "@/lib/api"
-import { useSignInWithPassword } from "@notelab/features/auth"
+import { useSignInWithPassword } from "@zilobase/features/auth"
 import { GalleryVerticalEndIcon } from "lucide-react"
 
 export function LoginForm({

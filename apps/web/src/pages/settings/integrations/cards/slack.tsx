@@ -1,4 +1,4 @@
-import type { SlackIntegrationStatus } from "@notelab/features/integrations";
+import type { SlackIntegrationStatus } from "@zilobase/features/integrations";
 import { integrationIcons } from "@/lib/integration-icons";
 
 import {
@@ -121,7 +121,7 @@ export function SlackIntegrationCard({
       </IntegrationSectionCard>
 
       <IntegrationPersonalAccountCard
-        description="Connect your Slack identity so Notelab can verify you belong to the connected Slack page."
+        description="Connect your Slack identity so Zilobase can verify you belong to the connected Slack page."
         details={
           <>
             <IntegrationDetail

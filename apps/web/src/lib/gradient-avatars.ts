@@ -1,4 +1,4 @@
-const DEFAULT_AVATAR_SEED = "notelab"
+const DEFAULT_AVATAR_SEED = "zilobase"
 const MIN_HUE_DISTANCE = 72
 const AVATAR_LIGHTNESS = 42
 

@@ -30,7 +30,7 @@ import { toast } from "sonner"
 import {
   useMoveDatabaseRow,
   useReorderDatabaseRows,
-} from "@notelab/features/databases"
+} from "@zilobase/features/databases"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -2466,7 +2466,7 @@ export function DatabaseTableView() {
           <AlertDialogHeader>
             <AlertDialogTitle>Clear sorting to reorder?</AlertDialogTitle>
             <AlertDialogDescription>
-              Row order is manual. To save this move, Notelab needs to clear the
+              Row order is manual. To save this move, Zilobase needs to clear the
               active sorting first.
             </AlertDialogDescription>
           </AlertDialogHeader>

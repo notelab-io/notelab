@@ -27,18 +27,18 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { useSession } from "@notelab/features/auth";
-import { useWorkspaces } from "@notelab/features/workspaces";
+import { useSession } from "@zilobase/features/auth";
+import { useWorkspaces } from "@zilobase/features/workspaces";
 import {
   useAddDatabaseRow,
   useCreateDatabase,
   useSetDatabaseFavorite,
-} from "@notelab/features/databases";
+} from "@zilobase/features/databases";
 import {
   useCreatePage,
   usePageNavigation,
   useSetPageFavorite,
-} from "@notelab/features/pages";
+} from "@zilobase/features/pages";
 import { useAppStore } from "@/stores/app-store";
 import { getDatabaseIconNode, getPageIconNode } from "@/lib/page-icon";
 import { useAiChatThreadActions } from "@/hooks/use-ai-chat-thread-actions";

@@ -21,7 +21,7 @@ import {
   getPageEmoji,
   resolvePageFullWidth,
   type PageMetadata,
-} from "@notelab/features/pages";
+} from "@zilobase/features/pages";
 import {
   useUpdatePage,
   useRestorePage,
@@ -32,11 +32,11 @@ import {
   usePageAccessLevel,
   usePageDatabaseIds,
   useResolvedPageLayout,
-} from "@notelab/features/pages";
+} from "@zilobase/features/pages";
 import { EmbeddedPageDialog } from "@/components/embedded-page-dialog";
 import { useOpenEmbeddedPage } from "@/hooks/use-open-embedded-page";
-import { useSession } from "@notelab/features/auth";
-import { useUserSettings } from "@notelab/features/user-settings";
+import { useSession } from "@zilobase/features/auth";
+import { useUserSettings } from "@zilobase/features/user-settings";
 import { usePageEditorRegistry } from "@/contexts/page-editor-registry";
 import { createPageEditorHandle } from "@/hooks/use-page-edit-applier";
 import { Editor, type PageEditPreviewControls } from "@/packages/editor";

@@ -294,7 +294,7 @@ export function integrationRequestOptions(
   }
 
   const headers = new Headers(init?.headers)
-  headers.set("x-notelab-workspace-id", workspaceId)
+  headers.set("x-zilobase-workspace-id", workspaceId)
 
   return { ...init, headers }
 }

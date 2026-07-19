@@ -28,13 +28,13 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
-import { useActiveWorkspaceId } from "@notelab/features/integrations";
-import { useDatabase } from "@notelab/features/databases";
+import { useActiveWorkspaceId } from "@zilobase/features/integrations";
+import { useDatabase } from "@zilobase/features/databases";
 import {
   defaultUserSettings,
   useUpdateUserSettings,
   useUserSettings,
-} from "@notelab/features/user-settings";
+} from "@zilobase/features/user-settings";
 import { formatPageBreadcrumbLabel } from "@/lib/page-icon";
 import {
   embeddedItemsOpenAsLabels,
@@ -46,7 +46,7 @@ import {
   type EmbeddedItemsOpenAs,
   type Page,
   type PageItemPlacement,
-} from "@notelab/features/pages";
+} from "@zilobase/features/pages";
 import { useOptionalPageSidePane } from "@/contexts/page-side-pane";
 import {
   isPublishedFallbackPage,
@@ -550,7 +550,7 @@ function getSettingsPageTitle(pathname: string) {
 
   const titles: Record<string, string> = {
     integrations: "Integrations",
-    "notelab-ai": "Notelab AI",
+    "zilobase-ai": "Zilobase AI",
     workspace: "Workspace",
     profile: "Profile",
     team: "Team",

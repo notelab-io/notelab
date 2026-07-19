@@ -1,7 +1,7 @@
 import type {
   DatabasePayload,
   DatabaseProperty,
-} from "@notelab/features/databases"
+} from "@zilobase/features/databases"
 
 import {
   getPropertyValue,

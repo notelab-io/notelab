@@ -2,7 +2,7 @@ import type { ReactNode } from "react"
 
 import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
-import type { PageLayoutConfig } from "@notelab/features/pages"
+import type { PageLayoutConfig } from "@zilobase/features/pages"
 
 type LayoutEditorSettingsProps = {
   draft: PageLayoutConfig

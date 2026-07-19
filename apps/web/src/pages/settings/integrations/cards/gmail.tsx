@@ -1,4 +1,4 @@
-import type { GmailIntegrationStatus } from "@notelab/features/integrations";
+import type { GmailIntegrationStatus } from "@zilobase/features/integrations";
 import { integrationIcons } from "@/lib/integration-icons";
 
 import {

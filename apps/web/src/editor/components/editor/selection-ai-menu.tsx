@@ -18,7 +18,7 @@ import {
 import { getApiRequestHeaders, toApiUrl } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import type { SelectionAiDiffPreview } from "@/packages/editor/types"
-import { useNotelabAiPages } from "@notelab/features/pages"
+import { useZilobaseAiPages } from "@zilobase/features/pages"
 
 type SelectionAiMenuProps = {
   editor: Editor
@@ -32,11 +32,11 @@ export function SelectionAiMenu({
   workspaceId,
 }: SelectionAiMenuProps) {
   const { data: aiPages = [], isLoading } =
-    useNotelabAiPages(workspaceId)
+    useZilobaseAiPages(workspaceId)
   const skills = React.useMemo(
     () =>
       aiPages.filter(
-        (page) => page.metadata.notelabai === "skill",
+        (page) => page.metadata.zilobaseai === "skill",
       ),
     [aiPages],
   )
@@ -101,7 +101,7 @@ export function SelectionAiMenu({
       })
 
       if (workspaceId) {
-        headers.set("x-notelab-workspace-id", workspaceId)
+        headers.set("x-zilobase-workspace-id", workspaceId)
       }
 
       const response = await fetch(toApiUrl("/api/ai/editor"), {

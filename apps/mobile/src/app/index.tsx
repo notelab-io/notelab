@@ -1,13 +1,13 @@
-import { getDatabaseEmoji } from "@notelab/features/databases";
-import { useWorkspaces } from "@notelab/features/workspaces";
-import { useSession } from "@notelab/features/auth";
+import { getDatabaseEmoji } from "@zilobase/features/databases";
+import { useWorkspaces } from "@zilobase/features/workspaces";
+import { useSession } from "@zilobase/features/auth";
 import {
   getPageEmoji,
   usePageNavigation,
   type Page,
   type PageDatabase,
   type PageItemPlacement,
-} from "@notelab/features/pages";
+} from "@zilobase/features/pages";
 import { SymbolView } from "expo-symbols";
 import * as React from "react";
 import {

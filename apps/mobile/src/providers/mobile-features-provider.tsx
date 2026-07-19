@@ -1,26 +1,26 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import {
-  createNotelabQueryClient,
-  NotelabFeaturesProvider,
-  type NotelabAuthClient,
-} from '@notelab/features';
+  createZilobaseQueryClient,
+  ZilobaseFeaturesProvider,
+  type ZilobaseAuthClient,
+} from '@zilobase/features';
 import type {
   SessionResponse,
   SignInWithOtpInput,
   SignUpInput,
   VerifyEmailOtpInput,
-} from '@notelab/features/auth';
+} from '@zilobase/features/auth';
 import type {
   Workspace,
   WorkspaceInvitation,
   WorkspaceRole,
-} from '@notelab/features/workspaces';
+} from '@zilobase/features/workspaces';
 import * as React from 'react';
 
 import { apiFetch } from '@/lib/api';
 import { authClient } from '@/lib/auth-client';
 
-const mobileAuthClient: NotelabAuthClient = {
+const mobileAuthClient: ZilobaseAuthClient = {
   getSession: () => apiFetch<SessionResponse>('/session'),
   requestSignInOtp: (email) =>
     authClient.$fetch('/email-otp/send-verification-otp', {
@@ -103,18 +103,18 @@ const mobileAuthClient: NotelabAuthClient = {
 type ProviderProps = React.PropsWithChildren;
 
 export function MobileFeaturesProvider({ children }: ProviderProps) {
-  const [queryClient] = React.useState(() => createNotelabQueryClient());
+  const [queryClient] = React.useState(() => createZilobaseQueryClient());
 
   return (
     <QueryClientProvider client={queryClient}>
-      <NotelabFeaturesProvider
+      <ZilobaseFeaturesProvider
         value={{
           apiFetch,
           auth: mobileAuthClient,
           queryClient,
         }}>
         {children}
-      </NotelabFeaturesProvider>
+      </ZilobaseFeaturesProvider>
     </QueryClientProvider>
   );
 }

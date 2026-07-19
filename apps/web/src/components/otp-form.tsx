@@ -24,7 +24,7 @@ import {
   useRequestSignInOtp,
   useSignInWithOtp,
   useVerifyEmailOtp,
-} from "@notelab/features/auth"
+} from "@zilobase/features/auth"
 import { useAuthFlowStore } from "@/stores/auth-flow-store"
 
 export function OtpForm({
@@ -101,7 +101,7 @@ export function OtpForm({
               <div className="flex size-8 items-center justify-center rounded-md">
                 <GalleryVerticalEndIcon className="size-6" />
               </div>
-              <span className="sr-only">Notelab</span>
+              <span className="sr-only">Zilobase</span>
             </a>
             <h1 className="text-xl font-bold">Enter verification code</h1>
             <FieldDescription className="text-center">

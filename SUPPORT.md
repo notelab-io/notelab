@@ -19,6 +19,6 @@ Do not open public issues for vulnerabilities. See `SECURITY.md` and report priv
 Start with:
 
 - `README.md`
-- `https://docs.notelab.io/self-hosting`
+- `https://docs.zilobase.com/self-hosting`
 
 When asking for help, include your deployment method, relevant environment variable names without secret values, container status, and logs with secrets redacted.

@@ -1,7 +1,7 @@
 import { DatabaseIcon, XIcon } from "lucide-react"
 
 import { PageIconDisplay, PageIcon } from "@/lib/page-icon"
-import type { ContextAttachment } from "@notelab/page-context"
+import type { ContextAttachment } from "@zilobase/page-context"
 
 function AttachmentIcon({ attachment }: { attachment: ContextAttachment }) {
   if (attachment.emoji) {

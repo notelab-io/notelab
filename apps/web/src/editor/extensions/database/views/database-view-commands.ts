@@ -13,7 +13,7 @@ import type {
   useUpdateDatabaseProperty,
   useUpdateDatabasePropertyValue,
   useUpdateDatabaseView,
-} from "@notelab/features/databases";
+} from "@zilobase/features/databases";
 
 import { defaultStatusOption } from "../core/database-property-types";
 import {

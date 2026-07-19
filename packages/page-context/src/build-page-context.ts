@@ -14,7 +14,7 @@ export function buildContextMarkdown(input: BuildContextInput): BuildContextResu
   const maxChars = input.maxChars ?? DEFAULT_MAX_CHARS
   const trimmedAttachmentIds: string[] = []
   const sectionMarkdown = input.sections.map((section) => buildSection(section))
-  let markdown = ["# Notelab page context", "", ...sectionMarkdown]
+  let markdown = ["# Zilobase page context", "", ...sectionMarkdown]
     .filter(Boolean)
     .join("\n\n")
     .trim()
@@ -39,7 +39,7 @@ export function buildContextMarkdown(input: BuildContextInput): BuildContextResu
       ...attachedSections.slice(0, index + 1),
     ].filter((section): section is ContextSection => Boolean(section))
     const candidateMarkdown = [
-      "# Notelab page context",
+      "# Zilobase page context",
       "",
       ...candidate.map((section) => buildSection(section)),
     ]

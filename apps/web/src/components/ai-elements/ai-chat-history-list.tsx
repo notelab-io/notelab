@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAiChatThreadActions } from "@/hooks/use-ai-chat-thread-actions";
-import type { AiChatThread } from "@notelab/features/ai-chat";
+import type { AiChatThread } from "@zilobase/features/ai-chat";
 import { ArchiveIcon, MoreHorizontalIcon, Trash2Icon } from "lucide-react";
 import { useMemo } from "react";
 

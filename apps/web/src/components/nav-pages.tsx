@@ -1,7 +1,7 @@
 import { useState, type DragEvent } from "react"
 import { Link, useLocation, useNavigate } from "@tanstack/react-router"
-import { useDeleteDatabase } from "@notelab/features/databases"
-import { useDeletePage } from "@notelab/features/pages"
+import { useDeleteDatabase } from "@zilobase/features/databases"
+import { useDeletePage } from "@zilobase/features/pages"
 import {
   ArrowUpRightIcon,
   DatabaseIcon,

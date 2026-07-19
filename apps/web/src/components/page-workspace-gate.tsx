@@ -15,14 +15,14 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { getApiErrorMessage } from "@/lib/api"
-import { useNotelabFeatures } from "@notelab/features"
-import { useActiveWorkspaceId } from "@notelab/features/integrations"
+import { useZilobaseFeatures } from "@zilobase/features"
+import { useActiveWorkspaceId } from "@zilobase/features/integrations"
 import {
   parseActiveWorkspaceMismatchError,
   pageQueryKey,
   pageQueryOptions,
-} from "@notelab/features/pages"
-import { useWorkspaces, useSetActiveWorkspace } from "@notelab/features/workspaces"
+} from "@zilobase/features/pages"
+import { useWorkspaces, useSetActiveWorkspace } from "@zilobase/features/workspaces"
 
 type PageWorkspaceGateProps = {
   children: React.ReactNode
@@ -33,7 +33,7 @@ export function PageWorkspaceGate({
   children,
   pageId,
 }: PageWorkspaceGateProps) {
-  const { apiFetch, queryClient } = useNotelabFeatures()
+  const { apiFetch, queryClient } = useZilobaseFeatures()
   const activeWorkspaceId = useActiveWorkspaceId()
   const { data: workspaces = [] } = useWorkspaces()
   const setActiveWorkspace = useSetActiveWorkspace()

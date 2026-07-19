@@ -19,19 +19,19 @@ import {
   PromptInputCommandList,
 } from "@/components/ai-elements/prompt-input";
 import { PageIconDisplay, PageIcon } from "@/lib/page-icon";
-import { useActiveWorkspaceId } from "@notelab/features/integrations";
-import type { AppSearchResult } from "@notelab/features/search";
+import { useActiveWorkspaceId } from "@zilobase/features/integrations";
+import type { AppSearchResult } from "@zilobase/features/search";
 import {
   getPrimaryPageParentId,
   usePageNavigation,
   type Page,
   type PageDatabase,
   type PageItemPlacement,
-} from "@notelab/features/pages";
+} from "@zilobase/features/pages";
 import type {
   ContextAttachment,
   ContextSourceRef,
-} from "@notelab/page-context";
+} from "@zilobase/page-context";
 
 const MAX_VISIBLE_PER_GROUP = 3;
 
@@ -274,7 +274,7 @@ function buildAttachMenuItems({
     const path = buildPagePath(pagesById, page.id, placements);
     const pageSearchText = `${title} ${path}`;
     const isCurrentPage = page.id === currentPageId;
-    const isSkill = page.metadata?.notelabai === "skill";
+    const isSkill = page.metadata?.zilobaseai === "skill";
 
     if (!isCurrentPage && matchesQuery(pageSearchText, query)) {
       const result: AppSearchResult = {

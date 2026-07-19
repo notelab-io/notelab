@@ -18,21 +18,21 @@ import { PageIconDisplay } from "@/lib/page-icon"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
 import { usePageEditorComments } from "@/components/page-editor-comments"
-import { useSession } from "@notelab/features/auth"
+import { useSession } from "@zilobase/features/auth"
 import {
   useDatabaseRealtime,
   type DatabasePresenceCollaborator,
-} from "@notelab/features/databases"
+} from "@zilobase/features/databases"
 import {
   useUpdatePagePropertyValue,
   usePagePersonAccessTargets,
   usePageProperties,
-} from "@notelab/features/pages"
+} from "@zilobase/features/pages"
 import { usePageCommentsSnapshot } from "@/contexts/page-comments-registry"
 import type {
   PageLayoutConfig,
   PagePropertyPresenceTarget,
-} from "@notelab/features/pages"
+} from "@zilobase/features/pages"
 import {
   formatCommentButtonLabel,
   PageCommentThread,

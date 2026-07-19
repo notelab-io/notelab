@@ -1,3 +1,3 @@
-import { createNotelabQueryClient } from "@notelab/features"
+import { createZilobaseQueryClient } from "@zilobase/features"
 
-export const queryClient = createNotelabQueryClient()
+export const queryClient = createZilobaseQueryClient()

@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useCallback, useRef } from "react";
 
-import { useNotelabFeatures } from "../context";
+import { useZilobaseFeatures } from "../context";
 import {
   invalidateDeletedItems,
   invalidateRestoredItems,
@@ -150,7 +150,7 @@ type SetDatabaseFavoriteInput = {
 };
 
 async function commitDatabaseMutation(
-  queryClient: ReturnType<typeof useNotelabFeatures>["queryClient"],
+  queryClient: ReturnType<typeof useZilobaseFeatures>["queryClient"],
   databaseId: string,
   response: unknown,
 ) {
@@ -164,7 +164,7 @@ async function commitDatabaseMutation(
 }
 
 function restoreDatabasePayloadAfterFailedMutation(
-  queryClient: ReturnType<typeof useNotelabFeatures>["queryClient"],
+  queryClient: ReturnType<typeof useZilobaseFeatures>["queryClient"],
   databaseId: string,
   previous: DatabasePayload,
 ) {
@@ -373,7 +373,7 @@ export function useDatabase(
   databaseId: string | null | undefined,
   options?: { includeDeleted?: boolean; schemaOnly?: boolean },
 ) {
-  const { apiFetch } = useNotelabFeatures();
+  const { apiFetch } = useZilobaseFeatures();
   const query = useQuery(databaseQueryOptions(apiFetch, databaseId, options));
   const hasNextPage = false;
 
@@ -390,7 +390,7 @@ export function useDatabase(
 }
 
 export function useDatabaseAccess(databaseId: string | null | undefined) {
-  const { apiFetch } = useNotelabFeatures();
+  const { apiFetch } = useZilobaseFeatures();
   return useQuery(databaseAccessQueryOptions(apiFetch, databaseId));
 }
 
@@ -402,7 +402,7 @@ type DatabaseAccessInput = {
 };
 
 export function useUpsertDatabaseAccess() {
-  const { apiFetch, queryClient } = useNotelabFeatures();
+  const { apiFetch, queryClient } = useZilobaseFeatures();
   return useMutation({
     mutationFn: async ({ databaseId, ...body }: DatabaseAccessInput) =>
       apiFetch(`/databases/${databaseId}/access`, {
@@ -418,7 +418,7 @@ export function useUpsertDatabaseAccess() {
 }
 
 export function useDeleteDatabaseAccess() {
-  const { apiFetch, queryClient } = useNotelabFeatures();
+  const { apiFetch, queryClient } = useZilobaseFeatures();
   return useMutation({
     mutationFn: async ({
       databaseId,
@@ -439,7 +439,7 @@ export function useDeleteDatabaseAccess() {
 }
 
 export function useSetDatabasePublished() {
-  const { apiFetch, queryClient } = useNotelabFeatures();
+  const { apiFetch, queryClient } = useZilobaseFeatures();
   return useMutation({
     mutationFn: async ({
       databaseId,
@@ -472,7 +472,7 @@ export function useSetDatabasePublished() {
 }
 
 export function useCreateDatabase() {
-  const { apiFetch, queryClient } = useNotelabFeatures();
+  const { apiFetch, queryClient } = useZilobaseFeatures();
 
   return useMutation({
     mutationFn: async (input: CreateDatabaseInput) => {
@@ -503,7 +503,7 @@ export function useCreateDatabase() {
 }
 
 export function useUpdateDatabase() {
-  const { apiFetch, queryClient } = useNotelabFeatures();
+  const { apiFetch, queryClient } = useZilobaseFeatures();
 
   return useMutation({
     mutationFn: async ({ databaseId, ...patch }: UpdateDatabaseInput) => {
@@ -571,7 +571,7 @@ export function useUpdateDatabase() {
 }
 
 export function useUpdateDatabaseView() {
-  const { apiFetch, queryClient } = useNotelabFeatures();
+  const { apiFetch, queryClient } = useZilobaseFeatures();
   const mutationSequenceRef = useRef(0);
   const latestMutationByViewRef = useRef(new Map<string, number>());
 
@@ -649,7 +649,7 @@ export function useUpdateDatabaseView() {
 }
 
 export function useAddDatabaseView() {
-  const { apiFetch, queryClient } = useNotelabFeatures();
+  const { apiFetch, queryClient } = useZilobaseFeatures();
 
   return useMutation({
     mutationFn: async ({ databaseId, ...input }: AddDatabaseViewInput) => {
@@ -679,7 +679,7 @@ type RestoreDatabaseResult = {
 };
 
 export function useDeleteDatabase() {
-  const { apiFetch, queryClient } = useNotelabFeatures();
+  const { apiFetch, queryClient } = useZilobaseFeatures();
 
   return useMutation({
     mutationFn: async (databaseId: string) =>
@@ -696,7 +696,7 @@ export function useDeleteDatabase() {
 }
 
 export function useRestoreDatabase() {
-  const { apiFetch, queryClient } = useNotelabFeatures();
+  const { apiFetch, queryClient } = useZilobaseFeatures();
 
   return useMutation({
     mutationFn: async (databaseId: string) =>
@@ -713,7 +713,7 @@ export function useRestoreDatabase() {
 }
 
 export function useDeleteDatabaseView() {
-  const { apiFetch, queryClient } = useNotelabFeatures();
+  const { apiFetch, queryClient } = useZilobaseFeatures();
 
   return useMutation({
     mutationFn: async ({
@@ -731,7 +731,7 @@ export function useDeleteDatabaseView() {
 }
 
 export function useAddDatabaseProperty() {
-  const { apiFetch, queryClient } = useNotelabFeatures();
+  const { apiFetch, queryClient } = useZilobaseFeatures();
 
   return useMutation({
     mutationFn: async ({ databaseId, ...input }: AddPropertyInput) => {
@@ -749,7 +749,7 @@ export function useAddDatabaseProperty() {
 }
 
 export function useUpdateDatabaseProperty() {
-  const { apiFetch, queryClient } = useNotelabFeatures();
+  const { apiFetch, queryClient } = useZilobaseFeatures();
 
   return useMutation({
     onMutate: async (variables) => {
@@ -795,7 +795,7 @@ export function useUpdateDatabaseProperty() {
 }
 
 export function useDeleteDatabaseProperty() {
-  const { apiFetch, queryClient } = useNotelabFeatures();
+  const { apiFetch, queryClient } = useZilobaseFeatures();
 
   return useMutation({
     mutationFn: async ({
@@ -813,7 +813,7 @@ export function useDeleteDatabaseProperty() {
 }
 
 export function useDuplicateDatabaseProperty() {
-  const { apiFetch, queryClient } = useNotelabFeatures();
+  const { apiFetch, queryClient } = useZilobaseFeatures();
 
   return useMutation({
     mutationFn: async ({
@@ -835,7 +835,7 @@ export function useDuplicateDatabaseProperty() {
 }
 
 export function useAddDatabaseRow() {
-  const { apiFetch, queryClient } = useNotelabFeatures();
+  const { apiFetch, queryClient } = useZilobaseFeatures();
 
   return useMutation({
     mutationFn: async ({
@@ -930,7 +930,7 @@ export function useAddDatabaseRow() {
 }
 
 export function useReorderDatabaseRows() {
-  const { apiFetch, queryClient } = useNotelabFeatures();
+  const { apiFetch, queryClient } = useZilobaseFeatures();
 
   return useMutation({
     onMutate: async (variables) => {
@@ -972,7 +972,7 @@ export function useReorderDatabaseRows() {
 }
 
 export function useMoveDatabaseRow() {
-  const { apiFetch, queryClient } = useNotelabFeatures();
+  const { apiFetch, queryClient } = useZilobaseFeatures();
 
   return useMutation({
     onMutate: async (variables) => {
@@ -1024,7 +1024,7 @@ export function useMoveDatabaseRow() {
 }
 
 export function useUpdateDatabasePropertyValue() {
-  const { apiFetch, queryClient } = useNotelabFeatures();
+  const { apiFetch, queryClient } = useZilobaseFeatures();
 
   return useMutation({
     onMutate: async (variables) => {
@@ -1071,7 +1071,7 @@ export function useUpdateDatabasePropertyValue() {
 }
 
 export function useSetDatabaseFavorite() {
-  const { apiFetch, queryClient } = useNotelabFeatures();
+  const { apiFetch, queryClient } = useZilobaseFeatures();
 
   return useMutation({
     mutationFn: async ({ databaseId, isFavorite }: SetDatabaseFavoriteInput) =>

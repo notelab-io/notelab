@@ -14,20 +14,20 @@ import { Input } from "@/components/ui/input";
 
 import { getApiErrorMessage } from "@/lib/api";
 import { PageIcon } from "@/lib/page-icon";
-import { useNotelabFeatures } from "@notelab/features";
+import { useZilobaseFeatures } from "@zilobase/features";
 import {
   getPrimaryPageParentId,
   useCreatePage,
   useUpdatePage,
   usePageNavigation,
   pageQueryKey,
-  type NotelabAiMode,
+  type ZilobaseAiMode,
   type Page,
   type PageItemPlacement,
-} from "@notelab/features/pages";
+} from "@zilobase/features/pages";
 
 const modeConfig: Record<
-  NotelabAiMode,
+  ZilobaseAiMode,
   {
     buttonLabel: string;
     createItemLabel: string;
@@ -106,17 +106,17 @@ function buildLinkablePageOptions(
     });
 }
 
-export function NotelabAiCreateMenu({
+export function ZilobaseAiCreateMenu({
   existingPageIds,
   mode,
   workspaceId,
 }: {
   existingPageIds: string[];
-  mode: NotelabAiMode;
+  mode: ZilobaseAiMode;
   workspaceId: string | null;
 }) {
   const navigate = useNavigate();
-  const { apiFetch, queryClient } = useNotelabFeatures();
+  const { apiFetch, queryClient } = useZilobaseFeatures();
   const createPage = useCreatePage();
   const updatePage = useUpdatePage();
   const { data: navigation, isLoading: isLoadingPages } =
@@ -194,7 +194,7 @@ export function NotelabAiCreateMenu({
         id: pageId,
         metadata: {
           ...metadata,
-          notelabai: mode,
+          zilobaseai: mode,
         },
       });
 
@@ -212,7 +212,7 @@ export function NotelabAiCreateMenu({
 
     try {
       const page = await createPage.mutateAsync({
-        metadata: { notelabai: mode },
+        metadata: { zilobaseai: mode },
         name: config.newPageTitle,
         workspaceId,
       });

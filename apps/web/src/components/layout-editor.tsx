@@ -23,7 +23,7 @@ import { Editor } from "@/packages/editor"
 import {
   useDatabase,
   useDatabaseIdForRowPage,
-} from "@notelab/features/databases"
+} from "@zilobase/features/databases"
 import {
   getPageCover,
   getPageEmoji,
@@ -35,12 +35,12 @@ import {
   useSavePageLayout,
   type PageLayoutConfig,
   type PageLayoutScope,
-} from "@notelab/features/pages"
+} from "@zilobase/features/pages"
 import {
   defaultUserSettings,
   useUpdateUserSettings,
   useUserSettings,
-} from "@notelab/features/user-settings"
+} from "@zilobase/features/user-settings"
 
 type LayoutEditorTarget = {
   databaseId?: string | null

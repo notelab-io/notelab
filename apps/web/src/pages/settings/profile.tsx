@@ -20,7 +20,7 @@ import {
   useSetPassword,
   useSession,
   useUpdateUserProfile,
-} from "@notelab/features/auth"
+} from "@zilobase/features/auth"
 
 export default function ProfileSettingsPage() {
   const { data: sessionData } = useSession()

@@ -1,6 +1,6 @@
-# Contributing to Notelab
+# Contributing to Zilobase
 
-Thanks for your interest in improving Notelab. This guide explains how to set up the repo, make focused changes, and submit pull requests that are straightforward to review.
+Thanks for your interest in improving Zilobase. This guide explains how to set up the repo, make focused changes, and submit pull requests that are straightforward to review.
 
 ## Development Setup
 
@@ -11,14 +11,14 @@ Prerequisites:
 - Docker, if you want to test the self-hosted stack
 
 The connector SDK is maintained in the separate Toolkit monorepo. With the
-default `Projects/platform/notelab` and `Projects/platform/toolkit` layout,
+default `Projects/platform/zilobase` and `Projects/platform/toolkit` layout,
 build Toolkit before installing the app:
 
 ```sh
 cd ../toolkit
 npm install
 npm run build:connectors
-cd ../notelab
+cd ../zilobase
 npm install
 ```
 
@@ -112,4 +112,4 @@ PR descriptions should explain:
 
 ## License
 
-By contributing to Notelab, you agree that your contributions are licensed under the MIT License that covers this repository.
+By contributing to Zilobase, you agree that your contributions are licensed under the MIT License that covers this repository.

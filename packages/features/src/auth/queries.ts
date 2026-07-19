@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query"
 
-import type { NotelabAuthClient } from "../context"
+import type { ZilobaseAuthClient } from "../context"
 
 export type SessionUser = {
   id: string
@@ -48,7 +48,7 @@ export type VerifyEmailOtpInput = {
 
 export const sessionQueryKey = ["session"] as const
 
-export const sessionQueryOptions = (auth: NotelabAuthClient) =>
+export const sessionQueryOptions = (auth: ZilobaseAuthClient) =>
   queryOptions({
     queryKey: sessionQueryKey,
     queryFn: async () => {

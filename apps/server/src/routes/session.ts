@@ -125,7 +125,7 @@ async function timed<T>(
     return await run();
   } finally {
     c.get("serverTimings").push(
-      `notelab_${name};dur=${Math.round(performance.now() - startedAt)}`,
+      `zilobase_${name};dur=${Math.round(performance.now() - startedAt)}`,
     );
   }
 }

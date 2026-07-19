@@ -1,8 +1,8 @@
-import { useActiveWorkspaceId } from "@notelab/features/integrations";
+import { useActiveWorkspaceId } from "@zilobase/features/integrations";
 import {
   useAiChatThreads,
   useCreateAiChatThread,
-} from "@notelab/features/ai-chat";
+} from "@zilobase/features/ai-chat";
 import { useRouterState } from "@tanstack/react-router";
 import { useCallback, useEffect } from "react";
 import { create } from "zustand";

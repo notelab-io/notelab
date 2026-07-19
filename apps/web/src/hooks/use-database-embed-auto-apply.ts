@@ -1,8 +1,8 @@
 import { useEffect, useRef } from "react"
 import { getToolName, isToolUIPart, type UIMessage } from "ai"
 
-import { readDatabaseConfigToolIds } from "@notelab/features/ai-chat"
-import { insertDatabaseBlockInContent } from "@notelab/page-context"
+import { readDatabaseConfigToolIds } from "@zilobase/features/ai-chat"
+import { insertDatabaseBlockInContent } from "@zilobase/page-context"
 
 import { usePageEditorRegistry } from "@/contexts/page-editor-registry"
 

@@ -58,7 +58,7 @@ import {
   useDuplicateDatabaseProperty,
   useUpdateDatabase,
   useUpdateDatabaseProperty,
-} from "@notelab/features/databases";
+} from "@zilobase/features/databases";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";

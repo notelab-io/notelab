@@ -4,7 +4,7 @@ import {
   type StatesArray,
   WebSocketStatus,
 } from "@hocuspocus/provider"
-import type { SessionUser } from "@notelab/features/auth"
+import type { SessionUser } from "@zilobase/features/auth"
 import * as Y from "yjs"
 import { apiFetch } from "@/lib/api"
 

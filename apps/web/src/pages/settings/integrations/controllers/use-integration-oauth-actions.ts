@@ -4,8 +4,8 @@ import type { Dispatch, SetStateAction } from "react";
 import {
   useDisconnectIntegration,
   useStartIntegrationOAuth,
-} from "@notelab/features/integrations";
-import type { IntegrationEndpoint } from "@notelab/features/integrations";
+} from "@zilobase/features/integrations";
+import type { IntegrationEndpoint } from "@zilobase/features/integrations";
 import { getApiErrorMessage } from "@/lib/api";
 import { toast } from "sonner";
 

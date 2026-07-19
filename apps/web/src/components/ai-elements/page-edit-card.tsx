@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import {
   isStalePageEditResolveError,
   type PageEditSnapshotPart,
-} from "@notelab/features/ai-chat"
+} from "@zilobase/features/ai-chat"
 import {
   CheckIcon,
   EyeIcon,

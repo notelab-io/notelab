@@ -2,25 +2,25 @@ import { useCallback } from "react"
 
 import { usePageSidePane } from "@/contexts/page-side-pane"
 import type { OpenPageSidePaneOptions } from "@/contexts/page-side-pane"
-import { useNotelabFeatures } from "@notelab/features"
+import { useZilobaseFeatures } from "@zilobase/features"
 import {
   defaultUserSettings,
   userSettingsQueryKey,
   type UserSettings,
-} from "@notelab/features/user-settings"
+} from "@zilobase/features/user-settings"
 import {
   getPageFromDetail,
   resolveEmbeddedItemsOpenAs,
   pageQueryKey,
   type Page,
-} from "@notelab/features/pages"
+} from "@zilobase/features/pages"
 import {
   isPublishedFallbackPage,
   readPublishedEmbeddedItemsOpenAs,
 } from "@/lib/published-page-preferences"
 
 function resolveOpenPagesAsFromCache(
-  queryClient: ReturnType<typeof useNotelabFeatures>["queryClient"],
+  queryClient: ReturnType<typeof useZilobaseFeatures>["queryClient"],
   hostPageId: string | null | undefined,
   fallbackPage: Page | null | undefined,
 ) {
@@ -51,7 +51,7 @@ export function useOpenEmbeddedPage({
   databaseId?: string | null
   page: Page | null | undefined
 }) {
-  const { queryClient } = useNotelabFeatures()
+  const { queryClient } = useZilobaseFeatures()
   const {
     closeEmbeddedPageDialog,
     closeSidePane,

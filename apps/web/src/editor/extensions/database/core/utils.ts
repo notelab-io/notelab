@@ -1,4 +1,4 @@
-import type { PagePropertyValue } from "@notelab/features/databases"
+import type { PagePropertyValue } from "@zilobase/features/databases"
 
 export type DatabasePropertyValue = string | string[]
 

@@ -3,13 +3,13 @@ services:
     image: caddy:2-alpine
     restart: unless-stopped
     depends_on:
-      notelab:
+      zilobase:
         condition: service_healthy
     environment:
-      NOTELAB_SITE_ADDRESS: ${NOTELAB_SITE_ADDRESS:-http://localhost}
+      ZILOBASE_SITE_ADDRESS: ${ZILOBASE_SITE_ADDRESS:-http://localhost}
     ports:
-      - "${NOTELAB_HTTP_PORT:-80}:80"
-      - "${NOTELAB_HTTPS_PORT:-443}:443"
+      - "${ZILOBASE_HTTP_PORT:-80}:80"
+      - "${ZILOBASE_HTTPS_PORT:-443}:443"
     volumes:
       - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
@@ -20,7 +20,7 @@ services:
       timeout: 5s
       retries: 5
 
-  notelab:
+  zilobase:
     build:
       context: .
     restart: unless-stopped
@@ -34,15 +34,15 @@ services:
     environment:
       HOST: 0.0.0.0
       PORT: 3000
-      DATABASE_URL: postgres://${POSTGRES_USER:-notelab}:${POSTGRES_PASSWORD:-notelab}@postgres:5432/${POSTGRES_DB:-notelab}
-      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-local-only-change-me-notelab-auth-secret-32}
+      DATABASE_URL: postgres://${POSTGRES_USER:-zilobase}:${POSTGRES_PASSWORD:-zilobase}@postgres:5432/${POSTGRES_DB:-zilobase}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-local-only-change-me-zilobase-auth-secret-32}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost}
       CLIENT_URL: ${CLIENT_URL:-http://localhost}
       IMAGE_STORAGE_MODE: s3
       S3_ENDPOINT: http://minio:9000
-      S3_BUCKET_NAME: ${MINIO_BUCKET:-notelab}
-      S3_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-notelab}
-      S3_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-notelab-minio-password}
+      S3_BUCKET_NAME: ${MINIO_BUCKET:-zilobase}
+      S3_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-zilobase}
+      S3_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-zilobase-minio-password}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       EMAIL_FROM: ${EMAIL_FROM:-}
@@ -57,9 +57,9 @@ services:
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-notelab}
-      POSTGRES_USER: ${POSTGRES_USER:-notelab}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-notelab}
+      POSTGRES_DB: ${POSTGRES_DB:-zilobase}
+      POSTGRES_USER: ${POSTGRES_USER:-zilobase}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-zilobase}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -73,8 +73,8 @@ services:
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-notelab}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-notelab-minio-password}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-zilobase}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-zilobase-minio-password}
     volumes:
       - minio_data:/data
     healthcheck:
@@ -89,17 +89,17 @@ services:
       minio:
         condition: service_healthy
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-notelab}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-notelab-minio-password}
-      MINIO_BUCKET: ${MINIO_BUCKET:-notelab}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-zilobase}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-zilobase-minio-password}
+      MINIO_BUCKET: ${MINIO_BUCKET:-zilobase}
     entrypoint:
       - /bin/sh
       - -c
       - |
         set -eu
-        mc alias set notelab http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"
-        mc mb --ignore-existing "notelab/$$MINIO_BUCKET"
-        mc anonymous set none "notelab/$$MINIO_BUCKET"
+        mc alias set zilobase http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"
+        mc mb --ignore-existing "zilobase/$$MINIO_BUCKET"
+        mc anonymous set none "zilobase/$$MINIO_BUCKET"
 
 volumes:
   caddy_data:

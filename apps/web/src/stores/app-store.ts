@@ -13,7 +13,7 @@ export const useAppStore = create<AppState>()(
       setActiveWorkspaceId: (activeWorkspaceId) => set({ activeWorkspaceId }),
     }),
     {
-      name: "notelab-app",
+      name: "zilobase-app",
     },
   ),
 )

@@ -65,8 +65,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useSession } from "@notelab/features/auth";
-import { useActiveWorkspaceId } from "@notelab/features/integrations";
+import { useSession } from "@zilobase/features/auth";
+import { useActiveWorkspaceId } from "@zilobase/features/integrations";
 import {
   useCreatePage,
   useDeletePage,
@@ -80,7 +80,7 @@ import {
   usePageAccessLevel,
   usePageAccessTargets,
   usePageNavigation,
-} from "@notelab/features/pages";
+} from "@zilobase/features/pages";
 import {
   useDatabase,
   useDatabaseAccess,
@@ -89,11 +89,11 @@ import {
   useSetDatabaseFavorite,
   useSetDatabasePublished,
   useUpsertDatabaseAccess,
-} from "@notelab/features/databases";
+} from "@zilobase/features/databases";
 import {
   useUpdateUserSettings,
   useUserSettings,
-} from "@notelab/features/user-settings";
+} from "@zilobase/features/user-settings";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { usePageCommentsSnapshot } from "@/contexts/page-comments-registry";
@@ -102,16 +102,16 @@ import { useLayoutEditor } from "@/components/layout-editor";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   getPrimaryPageParentId,
-  notelabAiModeLabels,
+  zilobaseAiModeLabels,
   resolvePageFullWidth,
   type AccessLevel,
   type AccessTargetType,
-  type NotelabAiMode,
+  type ZilobaseAiMode,
   type PageAccessRule,
   type PageMetadata,
-} from "@notelab/features/pages";
+} from "@zilobase/features/pages";
 
-const notelabAiModes: NotelabAiMode[] = ["instruction", "skill"];
+const zilobaseAiModes: ZilobaseAiMode[] = ["instruction", "skill"];
 
 const moreActions = [
   "Customize layout",
@@ -348,9 +348,9 @@ export function NavActions({
       },
     );
   };
-  const notelabAiMode = pageMetadata.notelabai ?? null;
+  const zilobaseAiMode = pageMetadata.zilobaseai ?? null;
 
-  const setNotelabAiMode = (mode: NotelabAiMode) => {
+  const setZilobaseAiMode = (mode: ZilobaseAiMode) => {
     if (!page || updatePage.isPending) {
       return;
     }
@@ -360,7 +360,7 @@ export function NavActions({
         id: page.id,
         metadata: {
           ...pageMetadata,
-          notelabai: notelabAiMode === mode ? null : mode,
+          zilobaseai: zilobaseAiMode === mode ? null : mode,
         },
       },
       {
@@ -368,7 +368,7 @@ export function NavActions({
           toast.error(
             error instanceof Error
               ? error.message
-              : "Could not update Notelab AI setting.",
+              : "Could not update Zilobase AI setting.",
           );
         },
       },
@@ -479,10 +479,10 @@ export function NavActions({
                 </>
               ) : null}
               {!isDatabasePage ? (
-                <NotelabAiSubmenu
+                <ZilobaseAiSubmenu
                   disabled={!page || updatePage.isPending}
-                  mode={notelabAiMode}
-                  onSelect={setNotelabAiMode}
+                  mode={zilobaseAiMode}
+                  onSelect={setZilobaseAiMode}
                 />
               ) : null}
               {moreActions.map((label) => (
@@ -540,24 +540,24 @@ export function NavActions({
   );
 }
 
-function NotelabAiSubmenu({
+function ZilobaseAiSubmenu({
   disabled,
   mode,
   onSelect,
 }: {
   disabled: boolean;
-  mode: NotelabAiMode | null;
-  onSelect: (mode: NotelabAiMode) => void;
+  mode: ZilobaseAiMode | null;
+  onSelect: (mode: ZilobaseAiMode) => void;
 }) {
   return (
     <DropDrawerSub>
       <DropDrawerSubTrigger disabled={disabled}>
         <SparklesIcon />
-        <span className="flex-1">Notelab AI</span>
+        <span className="flex-1">Zilobase AI</span>
         {mode ? <span className="text-muted-foreground">{mode}</span> : null}
       </DropDrawerSubTrigger>
       <DropDrawerSubContent className="w-64">
-        {notelabAiModes.map((value) => (
+        {zilobaseAiModes.map((value) => (
           <DropDrawerItem
             key={value}
             disabled={disabled}
@@ -566,7 +566,7 @@ function NotelabAiSubmenu({
               onSelect(value);
             }}
           >
-            <span>{notelabAiModeLabels[value]}</span>
+            <span>{zilobaseAiModeLabels[value]}</span>
             {mode === value ? <CheckIcon className="ml-auto" /> : null}
           </DropDrawerItem>
         ))}

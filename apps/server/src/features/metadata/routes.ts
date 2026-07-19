@@ -20,7 +20,7 @@ metadataRoutes.get("/bookmark", async (c) => {
       headers: {
         accept: "text/html,application/xhtml+xml",
         "user-agent":
-          "Mozilla/5.0 (compatible; NotelabBookmarkBot/1.0; +https://notelab.io)",
+          "Mozilla/5.0 (compatible; ZilobaseBookmarkBot/1.0; +https://zilobase.com)",
       },
       redirect: "follow",
     });

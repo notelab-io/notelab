@@ -6,7 +6,7 @@ import {
   useAiChatThreads,
   useCreateAiChatThread,
   useDeleteAiChatThread,
-} from "@notelab/features/ai-chat";
+} from "@zilobase/features/ai-chat";
 import { MessageSquarePlusIcon, Trash2Icon } from "lucide-react";
 import { useCallback } from "react";
 import { toast } from "sonner";

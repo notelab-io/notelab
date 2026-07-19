@@ -224,7 +224,7 @@ export function attachNodeDatabaseRealtimeRuntime(
     socket: Duplex,
     head: Buffer,
   ) => {
-    const url = new URL(request.url ?? "/", "http://notelab.local");
+    const url = new URL(request.url ?? "/", "http://zilobase.local");
 
     if (url.pathname !== "/database-collaboration") return;
 

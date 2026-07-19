@@ -1,7 +1,7 @@
 import * as React from "react";
 
-import { useUpdateLinearIntegrationSettings } from "@notelab/features/integrations";
-import type { LinearIntegrationStatus } from "@notelab/features/integrations";
+import { useUpdateLinearIntegrationSettings } from "@zilobase/features/integrations";
+import type { LinearIntegrationStatus } from "@zilobase/features/integrations";
 import { integrationIcons } from "@/lib/integration-icons";
 
 import { LinearIntegrationCard } from "../cards/linear";
@@ -68,7 +68,7 @@ export function useLinearIntegrationController({
 
   const summary: IntegrationSummary = {
     about:
-      "Linear connects issues, projects, teams, and cycles so Notelab can answer with current product and planning context.",
+      "Linear connects issues, projects, teams, and cycles so Zilobase can answer with current product and planning context.",
     category: "AI enterprise search",
     connected: status?.page.connected,
     connectDisabled:

@@ -1,6 +1,6 @@
 # Governance
 
-Notelab is currently maintained by the project owner and invited maintainers.
+Zilobase is currently maintained by the project owner and invited maintainers.
 
 ## Decision Making
 

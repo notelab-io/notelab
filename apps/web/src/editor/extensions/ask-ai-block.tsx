@@ -150,7 +150,7 @@ function AskAiPopover({
       })
 
       if (workspaceId) {
-        headers.set("x-notelab-workspace-id", workspaceId)
+        headers.set("x-zilobase-workspace-id", workspaceId)
       }
 
       const response = await fetch(toApiUrl("/api/ai/editor"), {
@@ -449,7 +449,7 @@ function AskAiBlockView({ editor, getPos, node }: ReactNodeViewProps) {
       })
 
       if (workspaceId) {
-        headers.set("x-notelab-workspace-id", workspaceId)
+        headers.set("x-zilobase-workspace-id", workspaceId)
       }
 
       const response = await fetch(toApiUrl("/api/ai/editor"), {

@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
 
-import { useNotelabFeatures } from "../context"
+import { useZilobaseFeatures } from "../context"
 import {
   type PageLayoutConfig,
   type PageLayoutScope,
@@ -32,7 +32,7 @@ type SavePageLayoutInput = {
 }
 
 export function useResolvedPageLayout(target: PageLayoutTarget) {
-  const { apiFetch } = useNotelabFeatures()
+  const { apiFetch } = useZilobaseFeatures()
 
   return useQuery({
     queryKey: pageLayoutKeys.resolved(target),
@@ -48,7 +48,7 @@ export function useResolvedPageLayout(target: PageLayoutTarget) {
 }
 
 export function useSavePageLayout() {
-  const { apiFetch, queryClient } = useNotelabFeatures()
+  const { apiFetch, queryClient } = useZilobaseFeatures()
 
   return useMutation({
     mutationFn: (input: SavePageLayoutInput) =>
@@ -78,7 +78,7 @@ export function useSavePageLayout() {
 }
 
 export function useResetPageLayout() {
-  const { apiFetch, queryClient } = useNotelabFeatures()
+  const { apiFetch, queryClient } = useZilobaseFeatures()
 
   return useMutation({
     mutationFn: (input: { scope: PageLayoutScope; scopeId: string }) =>

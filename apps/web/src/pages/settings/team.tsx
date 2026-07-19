@@ -45,17 +45,17 @@ import {
 } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
-import { useSession } from "@notelab/features/auth"
+import { useSession } from "@zilobase/features/auth"
 import {
   useInviteWorkspaceMember,
   useWorkspaceAccessTargets,
   useWorkspaceInvitations,
-} from "@notelab/features/workspaces"
+} from "@zilobase/features/workspaces"
 import type {
   WorkspaceInvitation,
   WorkspaceMember,
   WorkspaceRole,
-} from "@notelab/features/workspaces"
+} from "@zilobase/features/workspaces"
 import { useAppStore } from "@/stores/app-store"
 
 export default function TeamSettingsPage() {

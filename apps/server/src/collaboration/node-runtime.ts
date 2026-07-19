@@ -39,15 +39,15 @@ export function attachNodeCollaborationRuntime(
           peer.websocket as unknown as WebSocketLike,
           peer.request as Request,
         );
-        (peer as CollaborationPeer)._notelabCollaboration = connection;
+        (peer as CollaborationPeer)._zilobaseCollaboration = connection;
       },
       message(peer, message) {
-        (peer as CollaborationPeer)._notelabCollaboration?.handleMessage(
+        (peer as CollaborationPeer)._zilobaseCollaboration?.handleMessage(
           message.uint8Array(),
         );
       },
       close(peer, event) {
-        (peer as CollaborationPeer)._notelabCollaboration?.handleClose({
+        (peer as CollaborationPeer)._zilobaseCollaboration?.handleClose({
           code: event.code ?? 1000,
           reason: event.reason ?? "",
         });
@@ -70,7 +70,7 @@ export function attachNodeCollaborationRuntime(
     socket: Duplex,
     head: Buffer,
   ) {
-    const url = new URL(request.url ?? "/", "http://notelab.local");
+    const url = new URL(request.url ?? "/", "http://zilobase.local");
 
     if (url.pathname !== "/collaboration") {
       if (!options.passthroughPaths?.includes(url.pathname)) {
@@ -146,7 +146,7 @@ function toUpgradeRequest(request: IncomingMessage) {
   const protocol = Array.isArray(forwardedProtocol)
     ? forwardedProtocol[0]
     : forwardedProtocol ?? "http";
-  const host = request.headers.host ?? "notelab.local";
+  const host = request.headers.host ?? "zilobase.local";
   const headers = new Headers();
 
   for (const [key, value] of Object.entries(request.headers)) {
@@ -219,7 +219,7 @@ function sweepExpiredEntries(
 }
 
 type CollaborationPeer = {
-  _notelabCollaboration?: {
+  _zilobaseCollaboration?: {
     handleClose(event: { code: number; reason: string }): void;
     handleMessage(message: Uint8Array): void;
   };

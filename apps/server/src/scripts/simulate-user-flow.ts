@@ -191,9 +191,9 @@ async function main() {
   await dbClient.client.connect();
 
   const stamp = Date.now();
-  const email = `flow-${stamp}@notelab.local`;
-  const invitedEmail = `invite-${stamp}@notelab.local`;
-  const password = "notelab-test-password";
+  const email = `flow-${stamp}@zilobase.local`;
+  const invitedEmail = `invite-${stamp}@zilobase.local`;
+  const password = "zilobase-test-password";
   const signupJar = new CookieJar();
   const magicLinkJar = new CookieJar();
 
@@ -201,7 +201,7 @@ async function main() {
   const signup = await jsonRequest<{ user: { id: string; email: string } }>(
     "/sign-up/email",
     {
-      name: "Notelab Flow Tester",
+      name: "Zilobase Flow Tester",
       email,
       password,
       callbackURL: "/onboarding",
@@ -235,8 +235,8 @@ async function main() {
   }>(
     "/workspace/create",
     {
-      name: "Notelab Flow Org",
-      slug: `notelab-flow-${stamp}`,
+      name: "Zilobase Flow Org",
+      slug: `zilobase-flow-${stamp}`,
     },
     signupJar,
   );
@@ -250,8 +250,8 @@ async function main() {
   }>(
     "/workspace/create",
     {
-      name: "Notelab Flow Second Org",
-      slug: `notelab-flow-second-${stamp}`,
+      name: "Zilobase Flow Second Org",
+      slug: `zilobase-flow-second-${stamp}`,
     },
     signupJar,
   );

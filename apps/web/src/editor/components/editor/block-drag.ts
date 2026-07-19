@@ -29,7 +29,7 @@ export {
 export { getDatabaseBlockDragImagePlacement } from "./block-drag-preview"
 
 export const EDITOR_BLOCK_DRAG_MIME =
-  "application/x-notelab-editor-block-drag"
+  "application/x-zilobase-editor-block-drag"
 
 export type BlockDragPayload = {
   editorId: string

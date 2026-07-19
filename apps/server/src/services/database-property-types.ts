@@ -6,4 +6,4 @@ export {
   normalizeDatabasePropertyType,
   shouldClearValuesForPropertyTypeChange,
   type DatabasePropertyType,
-} from "@notelab/features/databases/property-types";
+} from "@zilobase/features/databases/property-types";

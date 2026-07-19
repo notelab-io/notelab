@@ -20,7 +20,7 @@ export function createCorsMiddleware(): MiddlewareHandler<AppBindings> {
       "Authorization",
       "x-api-key",
       "x-mobile-auth-cookie",
-      "x-notelab-workspace-id",
+      "x-zilobase-workspace-id",
       "Content-Length",
     ],
     allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
