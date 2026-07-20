@@ -1,7 +1,13 @@
-import type { Entitlements, Feature } from "@zilobase/core-ports";
+import type {
+  Entitlements,
+  EntitlementContext,
+  EntitlementResolver,
+  Feature,
+  Tier,
+} from "@zilobase/core-ports";
 
 import type { LicensePayload } from "./payload.ts";
-import { featuresForTier } from "./tiers.ts";
+import { featuresForTier, TIER_RANK } from "./tiers.ts";
 import { verifyLicense, type VerifyOptions } from "./verify.ts";
 
 /** Entitlements for an unlicensed (Community) instance. */
@@ -10,7 +16,9 @@ export const COMMUNITY_ENTITLEMENTS: Entitlements = {
   seats: null,
   features: [],
   expiresAt: null,
+  isTrial: false,
   has: () => false,
+  atLeast: (tier) => TIER_RANK.community >= TIER_RANK[tier],
   withinSeatLimit: () => true,
 };
 
@@ -24,7 +32,9 @@ export function entitlementsFromPayload(payload: LicensePayload): Entitlements {
     seats: payload.seats,
     features: [...granted],
     expiresAt: payload.expiresAt,
+    isTrial: payload.isTrial ?? false,
     has: (feature) => granted.has(feature),
+    atLeast: (tier: Tier) => TIER_RANK[payload.tier] >= TIER_RANK[tier],
     withinSeatLimit: (activeUsers) =>
       payload.seats === null ? true : activeUsers <= payload.seats,
   };
@@ -46,4 +56,20 @@ export function loadEntitlements(
   } catch {
     return COMMUNITY_ENTITLEMENTS;
   }
+}
+
+/**
+ * Self-host / air-gap resolver: one offline license token covers the whole
+ * instance, so `workspaceId` is ignored. Cloud provides a different resolver
+ * (subscription lookup keyed by workspace) implementing the same interface.
+ */
+export function createLicenseResolver(
+  getToken: () => string | null | undefined,
+  options?: VerifyOptions,
+): EntitlementResolver {
+  return {
+    resolve(_ctx?: EntitlementContext): Promise<Entitlements> {
+      return Promise.resolve(loadEntitlements(getToken(), options));
+    },
+  };
 }

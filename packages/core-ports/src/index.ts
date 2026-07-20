@@ -1,5 +1,6 @@
 export type { Tier, Feature } from "./feature.ts";
 export type { Entitlements } from "./entitlements.ts";
+export type { EntitlementResolver, EntitlementContext } from "./resolver.ts";
 export type {
   PortKey,
   AuditEvent,

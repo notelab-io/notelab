@@ -22,6 +22,10 @@ export interface VerifyOptions {
  * Verify a license token's signature and expiry offline (no network), and
  * return its payload. Throws `LicenseError` on any problem. Air-gap safe: the
  * only input is the embedded public key.
+ *
+ * Grace: if `graceUntil` is set, the token stays valid until then even past
+ * `expiresAt` (the caller can warn during the window); after `graceUntil` it
+ * hard-fails.
  */
 export function verifyLicense(token: string, options: VerifyOptions = {}): LicensePayload {
   const parts = token.split(".");
@@ -51,8 +55,17 @@ export function verifyLicense(token: string, options: VerifyOptions = {}): Licen
   }
 
   const now = options.now ?? Date.now();
-  if (payload.expiresAt !== null && now > payload.expiresAt) {
+  const hardExpiry = payload.graceUntil ?? payload.expiresAt;
+  if (hardExpiry !== null && now > hardExpiry) {
     throw new LicenseError("License expired.");
   }
   return payload;
+}
+
+/** True when the token is past `expiresAt` but still inside its grace window. */
+export function isInGrace(payload: LicensePayload, now: number = Date.now()): boolean {
+  if (payload.expiresAt === null) return false;
+  if (now <= payload.expiresAt) return false;
+  const grace = payload.graceUntil ?? payload.expiresAt;
+  return now <= grace;
 }

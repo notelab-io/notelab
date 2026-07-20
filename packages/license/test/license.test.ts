@@ -3,8 +3,12 @@ import assert from "node:assert/strict";
 import { generateKeyPairSync } from "node:crypto";
 
 import { signLicense } from "../src/sign.ts";
-import { verifyLicense, LicenseError } from "../src/verify.ts";
-import { loadEntitlements, entitlementsFromPayload } from "../src/entitlements.ts";
+import { verifyLicense, isInGrace, LicenseError } from "../src/verify.ts";
+import {
+  loadEntitlements,
+  entitlementsFromPayload,
+  createLicenseResolver,
+} from "../src/entitlements.ts";
 import type { LicensePayload } from "../src/payload.ts";
 
 function devKeys() {
@@ -37,70 +41,84 @@ test("sign -> verify round trip", () => {
   assert.equal(result.seats, 25);
 });
 
-test("professional tier grants SSO but not SCIM or audit", () => {
+test("professional grants SSO but not SCIM or audit", () => {
   const ent = entitlementsFromPayload(payload({ tier: "professional" }));
   assert.equal(ent.has("sso.saml"), true);
   assert.equal(ent.has("scim"), false);
   assert.equal(ent.has("audit.log"), false);
 });
 
-test("enterprise tier grants audit, SCIM, and white-label", () => {
+test("enterprise grants audit, SCIM, and white-label", () => {
   const ent = entitlementsFromPayload(payload({ tier: "enterprise", seats: 500 }));
   assert.equal(ent.has("audit.log"), true);
   assert.equal(ent.has("scim"), true);
   assert.equal(ent.has("branding.white_label"), true);
 });
 
-test("seat limit is enforced", () => {
-  const ent = entitlementsFromPayload(payload({ seats: 25 }));
-  assert.equal(ent.withinSeatLimit(25), true);
-  assert.equal(ent.withinSeatLimit(26), false);
+test("atLeast() implements tier ordering", () => {
+  const pro = entitlementsFromPayload(payload({ tier: "professional" }));
+  assert.equal(pro.atLeast("community"), true);
+  assert.equal(pro.atLeast("professional"), true);
+  assert.equal(pro.atLeast("enterprise"), false);
+
+  const ent = entitlementsFromPayload(payload({ tier: "enterprise" }));
+  assert.equal(ent.atLeast("enterprise"), true);
 });
 
-test("null seats means unlimited", () => {
-  const ent = entitlementsFromPayload(payload({ seats: null }));
-  assert.equal(ent.withinSeatLimit(1_000_000), true);
+test("isTrial flows through", () => {
+  assert.equal(entitlementsFromPayload(payload({ isTrial: true })).isTrial, true);
+  assert.equal(entitlementsFromPayload(payload()).isTrial, false);
+});
+
+test("seat limit is enforced; null seats = unlimited", () => {
+  assert.equal(entitlementsFromPayload(payload({ seats: 25 })).withinSeatLimit(26), false);
+  assert.equal(entitlementsFromPayload(payload({ seats: null })).withinSeatLimit(1e6), true);
 });
 
 test("add-on features extend tier defaults", () => {
-  const ent = entitlementsFromPayload(
-    payload({ tier: "professional", features: ["audit.log"] }),
-  );
+  const ent = entitlementsFromPayload(payload({ tier: "professional", features: ["audit.log"] }));
   assert.equal(ent.has("audit.log"), true);
   assert.equal(ent.has("sso.saml"), true);
 });
 
-test("a tampered token is rejected", () => {
-  const { publicKeyPem, privateKeyPem } = devKeys();
-  const token = signLicense(payload(), privateKeyPem);
-  const tampered = `${token.slice(0, -3)}aaa`;
-  assert.throws(() => verifyLicense(tampered, { publicKeyPem }), LicenseError);
-});
-
-test("a token signed by a different key is rejected", () => {
+test("tampered and wrong-key tokens are rejected", () => {
   const a = devKeys();
   const b = devKeys();
   const token = signLicense(payload(), a.privateKeyPem);
+  assert.throws(() => verifyLicense(`${token.slice(0, -3)}aaa`, { publicKeyPem: a.publicKeyPem }), LicenseError);
   assert.throws(() => verifyLicense(token, { publicKeyPem: b.publicKeyPem }), LicenseError);
 });
 
-test("an expired token throws in verify", () => {
+test("expired past grace throws; inside grace still verifies", () => {
+  const { publicKeyPem, privateKeyPem } = devKeys();
+  const token = signLicense(
+    payload({ expiresAt: 5_000, graceUntil: 10_000 }),
+    privateKeyPem,
+  );
+  // inside grace window (expired but before graceUntil)
+  assert.doesNotThrow(() => verifyLicense(token, { publicKeyPem, now: 7_000 }));
+  assert.equal(isInGrace(verifyLicense(token, { publicKeyPem, now: 7_000 }), 7_000), true);
+  // past grace
+  assert.throws(() => verifyLicense(token, { publicKeyPem, now: 11_000 }), /expired/i);
+});
+
+test("no grace window => hard-stop at expiresAt", () => {
   const { publicKeyPem, privateKeyPem } = devKeys();
   const token = signLicense(payload({ expiresAt: 5_000 }), privateKeyPem);
-  assert.throws(
-    () => verifyLicense(token, { publicKeyPem, now: 6_000 }),
-    /expired/i,
-  );
+  assert.throws(() => verifyLicense(token, { publicKeyPem, now: 6_000 }), /expired/i);
 });
 
-test("loadEntitlements fails safe to Community on a bad token", () => {
-  const ent = loadEntitlements("garbage.token");
-  assert.equal(ent.tier, "community");
-  assert.equal(ent.has("sso.saml"), false);
-  assert.equal(ent.withinSeatLimit(1_000_000), true);
-});
-
-test("loadEntitlements returns Community when no token is present", () => {
+test("loadEntitlements fails safe to Community", () => {
+  assert.equal(loadEntitlements("garbage.token").tier, "community");
   assert.equal(loadEntitlements(null).tier, "community");
-  assert.equal(loadEntitlements(undefined).tier, "community");
+  assert.equal(loadEntitlements(null).atLeast("professional"), false);
+});
+
+test("createLicenseResolver resolves instance-wide entitlements", async () => {
+  const { publicKeyPem, privateKeyPem } = devKeys();
+  const token = signLicense(payload({ tier: "enterprise", seats: 500 }), privateKeyPem);
+  const resolver = createLicenseResolver(() => token, { publicKeyPem });
+  const ent = await resolver.resolve({ workspaceId: "ws_ignored_on_selfhost" });
+  assert.equal(ent.tier, "enterprise");
+  assert.equal(ent.has("scim"), true);
 });
