@@ -3,6 +3,14 @@ import type { ImageStorage } from "./image-storage";
 import type { DatabaseRealtimeMutationEvent } from "./services/database-delta";
 import type { ToolSet } from "ai";
 
+export type OutboundEmailMessage = {
+  from: string;
+  html: string;
+  subject: string;
+  text: string;
+  to: string;
+};
+
 export type ServerRuntimeAdapter = {
   buildConnectorTools?(input: {
     env: RuntimeEnv;
@@ -27,6 +35,10 @@ export type ServerRuntimeAdapter = {
   publishDatabaseMutation?(input: {
     env: RuntimeEnv;
     event: DatabaseRealtimeMutationEvent;
+  }): Promise<void>;
+  sendEmail?(input: {
+    env: RuntimeEnv;
+    message: OutboundEmailMessage;
   }): Promise<void>;
   selfHosted?: false;
 };

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { sendEmail } from "./email";
+import { setRuntimeAdapter, type OutboundEmailMessage } from "./runtime-adapter";
 
 const message = {
   subject: "Welcome",
@@ -31,4 +32,29 @@ test("validates SMTP configuration before connecting", async () => {
     sendEmail({ SMTP_HOST: "smtp.example.com", SMTP_SECURE: "maybe" }, message),
     /SMTP_SECURE must be either true or false/,
   );
+});
+
+test("delegates email delivery to the runtime adapter when configured", async () => {
+  let delivered: OutboundEmailMessage | undefined;
+
+  setRuntimeAdapter({
+    async sendEmail({ message: outbound }) {
+      delivered = outbound;
+    },
+    selfHosted: false,
+  });
+
+  try {
+    await sendEmail({ EMAIL_FROM: "Zilobase <hello@zilobase.com>" }, message);
+  } finally {
+    setRuntimeAdapter({});
+  }
+
+  assert.deepEqual(delivered, {
+    from: "Zilobase <hello@zilobase.com>",
+    html: "<p>Thanks for signing up.</p>",
+    subject: "Welcome",
+    text: "Thanks for signing up.",
+    to: "user@example.com",
+  });
 });

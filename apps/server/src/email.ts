@@ -1,5 +1,9 @@
 import nodemailer from "nodemailer";
 import { getStringEnv, type RuntimeEnv } from "./config";
+import {
+  getRuntimeAdapter,
+  type OutboundEmailMessage,
+} from "./runtime-adapter";
 
 type EmailMessage = {
   to: string;
@@ -11,10 +15,24 @@ const DEFAULT_EMAIL_FROM = "Zilobase <hello@zilobase.com>";
 const DEFAULT_SMTP_PORT = 587;
 
 export async function sendEmail(env: RuntimeEnv, email: EmailMessage) {
+  const message: OutboundEmailMessage = {
+    from: getStringEnv(env, "EMAIL_FROM") ?? DEFAULT_EMAIL_FROM,
+    html: textToHtml(email.text),
+    subject: email.subject,
+    text: email.text,
+    to: email.to,
+  };
+  const runtimeSendEmail = getRuntimeAdapter().sendEmail;
+
+  if (runtimeSendEmail) {
+    await runtimeSendEmail({ env, message });
+    return;
+  }
+
   const host = getStringEnv(env, "SMTP_HOST")?.trim();
 
   if (!host) {
-    await sendConsoleEmail(email);
+    await sendConsoleEmail(message);
     return;
   }
 
@@ -36,13 +54,7 @@ export async function sendEmail(env: RuntimeEnv, email: EmailMessage) {
     socketTimeout: 300_000,
   });
 
-  await transport.sendMail({
-    from: getStringEnv(env, "EMAIL_FROM") ?? DEFAULT_EMAIL_FROM,
-    html: textToHtml(email.text),
-    subject: email.subject,
-    text: email.text,
-    to: email.to,
-  });
+  await transport.sendMail(message);
 }
 
 function getSmtpPort(env: RuntimeEnv) {
@@ -77,7 +89,7 @@ function textToHtml(value: string) {
   return `<p>${escaped.replaceAll("\n", "<br>")}</p>`;
 }
 
-async function sendConsoleEmail({ to, subject, text }: EmailMessage) {
+async function sendConsoleEmail({ to, subject, text }: OutboundEmailMessage) {
   console.info("\n--- Zilobase local email ---");
   console.info(`To: ${to}`);
   console.info(`Subject: ${subject}`);
