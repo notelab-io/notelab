@@ -22,7 +22,11 @@ export type AppBindings = {
     DATABASE_URL?: string;
     EMAIL_FROM?: string;
     OPENAI_API_KEY?: string;
-    RESEND_API_KEY?: string;
+    SMTP_HOST?: string;
+    SMTP_PASSWORD?: string;
+    SMTP_PORT?: string;
+    SMTP_SECURE?: string;
+    SMTP_USER?: string;
     IMAGE_READ_URL_TTL_SECONDS?: string;
     IMAGE_STORAGE_MODE?: "s3" | "binding";
     IMAGE_UPLOAD_MAX_BYTES?: string;
