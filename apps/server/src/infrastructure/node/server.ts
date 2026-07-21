@@ -6,9 +6,12 @@ import { stat } from "node:fs/promises";
 import path from "node:path";
 import { createApp } from "../../app";
 import { initEdition } from "../../edition";
+import { getLicenseStatus, startLicenseRevalidation } from "../../entitlements";
 import { attachNodeCollaborationRuntime } from "../../collaboration/node-runtime";
 import { attachNodeDatabaseRealtimeRuntime } from "../../database-realtime/node-runtime";
-import { runWithDbEnv } from "../../db";
+import { db, runWithDbEnv } from "../../db";
+import { user } from "../../db/schema";
+import { sql } from "drizzle-orm";
 import { setRuntimeAdapter } from "../../runtime-adapter";
 import { drainDatabaseRealtimeOutbox } from "../../services/database-realtime";
 
@@ -107,6 +110,22 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
     server.close(() => process.exit(0));
   });
 }
+
+// Verify the license on boot and re-verify periodically (so an expired/rotated
+// key takes effect without a restart), plus a soft seat check.
+startLicenseRevalidation({
+  countActiveUsers: async () => {
+    const [row] = await db.select({ count: sql<number>`count(*)::int` }).from(user);
+    return row?.count ?? 0;
+  },
+});
+const license = getLicenseStatus();
+console.log(
+  `Zilobase edition: ${license.tier}` +
+    (license.isTrial ? " (trial)" : "") +
+    (license.inGrace ? " (in grace period)" : "") +
+    (license.error ? ` — license error: ${license.error}` : ""),
+);
 
 // Load edition (enterprise plugins) before serving, so auth includes them.
 void initEdition().finally(() => {
