@@ -89,24 +89,9 @@ export const account = pgTable(
   ],
 );
 
-// Enterprise SSO (Better Auth `sso` plugin). EE-owned; the table exists only in
-// enterprise/cloud builds. Field keys match Better Auth's ssoProvider model.
-export const ssoProvider = pgTable(
-  "sso_provider",
-  {
-    id: text("id").primaryKey(),
-    issuer: text("issuer").notNull(),
-    oidcConfig: text("oidc_config"),
-    samlConfig: text("saml_config"),
-    userId: text("user_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
-    providerId: text("provider_id").notNull().unique(),
-    organizationId: text("organization_id"),
-    domain: text("domain").notNull(),
-  },
-  (table) => [index("sso_provider_domain_idx").on(table.domain)],
-);
+// NOTE: the enterprise `sso_provider` table is intentionally NOT defined here.
+// It is owned by the Enterprise edition (zilobase-ee) and created by the EE
+// migration, so the community core carries no enterprise schema.
 
 export const verification = pgTable(
   "verification",
