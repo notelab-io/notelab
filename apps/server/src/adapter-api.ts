@@ -42,6 +42,7 @@ export {
   getDatabaseUrl,
   getRuntimeAdapter,
   setRuntimeAdapter,
+  type OutboundEmailMessage,
   type ServerRuntimeAdapter,
 } from "./runtime-adapter";
 export {

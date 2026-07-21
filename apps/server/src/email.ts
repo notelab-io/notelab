@@ -1,4 +1,9 @@
+import nodemailer from "nodemailer";
 import { getStringEnv, type RuntimeEnv } from "./config";
+import {
+  getRuntimeAdapter,
+  type OutboundEmailMessage,
+} from "./runtime-adapter";
 
 type EmailMessage = {
   to: string;
@@ -6,40 +11,85 @@ type EmailMessage = {
   text: string;
 };
 
-const RESEND_EMAILS_URL = "https://api.resend.com/emails";
 const DEFAULT_EMAIL_FROM = "Zilobase <hello@zilobase.com>";
+const DEFAULT_SMTP_PORT = 587;
 
 export async function sendEmail(env: RuntimeEnv, email: EmailMessage) {
-  const apiKey = getStringEnv(env, "RESEND_API_KEY");
+  const message: OutboundEmailMessage = {
+    from: getStringEnv(env, "EMAIL_FROM") ?? DEFAULT_EMAIL_FROM,
+    html: textToHtml(email.text),
+    subject: email.subject,
+    text: email.text,
+    to: email.to,
+  };
+  const runtimeSendEmail = getRuntimeAdapter().sendEmail;
 
-  if (!apiKey) {
-    await sendConsoleEmail(email);
+  if (runtimeSendEmail) {
+    await runtimeSendEmail({ env, message });
     return;
   }
 
-  const response = await fetch(RESEND_EMAILS_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: getStringEnv(env, "EMAIL_FROM") ?? DEFAULT_EMAIL_FROM,
-      to: email.to,
-      subject: email.subject,
-      text: email.text,
-    }),
+  const host = getStringEnv(env, "SMTP_HOST")?.trim();
+
+  if (!host) {
+    await sendConsoleEmail(message);
+    return;
+  }
+
+  const port = getSmtpPort(env);
+  const user = getStringEnv(env, "SMTP_USER")?.trim();
+  const password = getStringEnv(env, "SMTP_PASSWORD");
+
+  if (Boolean(user) !== Boolean(password)) {
+    throw new Error("SMTP_USER and SMTP_PASSWORD must be configured together");
+  }
+
+  const transport = nodemailer.createTransport({
+    auth: user && password ? { pass: password, user } : undefined,
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    host,
+    port,
+    secure: getSmtpSecure(env, port),
+    socketTimeout: 300_000,
   });
 
-  if (!response.ok) {
-    const responseText = await response.text();
-    throw new Error(
-      `Resend email failed with status ${response.status}: ${responseText}`,
-    );
-  }
+  await transport.sendMail(message);
 }
 
-async function sendConsoleEmail({ to, subject, text }: EmailMessage) {
+function getSmtpPort(env: RuntimeEnv) {
+  const configured = getStringEnv(env, "SMTP_PORT");
+  const port = configured ? Number(configured) : DEFAULT_SMTP_PORT;
+
+  if (!Number.isInteger(port) || port < 1 || port > 65_535) {
+    throw new Error("SMTP_PORT must be an integer between 1 and 65535");
+  }
+
+  return port;
+}
+
+function getSmtpSecure(env: RuntimeEnv, port: number) {
+  const configured = getStringEnv(env, "SMTP_SECURE")?.trim().toLowerCase();
+
+  if (!configured) return port === 465;
+  if (configured === "true") return true;
+  if (configured === "false") return false;
+
+  throw new Error("SMTP_SECURE must be either true or false");
+}
+
+function textToHtml(value: string) {
+  const escaped = value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+
+  return `<p>${escaped.replaceAll("\n", "<br>")}</p>`;
+}
+
+async function sendConsoleEmail({ to, subject, text }: OutboundEmailMessage) {
   console.info("\n--- Zilobase local email ---");
   console.info(`To: ${to}`);
   console.info(`Subject: ${subject}`);
