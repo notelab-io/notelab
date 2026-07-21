@@ -43,5 +43,5 @@ function licenseGatePlugin() {
 
 /** Better Auth plugins contributed by the Enterprise edition. */
 export function enterprisePlugins(): unknown[] {
-  return [licenseGatePlugin(), sso()];
+  return [licenseGatePlugin(), sso({ trustEmailVerified: true })];
 }

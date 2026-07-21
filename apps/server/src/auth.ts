@@ -44,6 +44,17 @@ function createAuthInstance(env: AuthEnv, request: Request, database: Database) 
   });
 }
 
+function getSsoTrustedProviders(env: AuthEnv): string[] {
+  // SSO providers are trusted corporate IdPs configured by workspace admins, so
+  // their accounts may be auto-linked to an existing user (e.g. a returning SSO
+  // login) instead of being rejected with "account not linked". List the SSO
+  // providerIds to trust via ZILOBASE_SSO_TRUSTED_PROVIDERS (comma-separated).
+  const raw = typeof env.ZILOBASE_SSO_TRUSTED_PROVIDERS === "string"
+    ? env.ZILOBASE_SSO_TRUSTED_PROVIDERS
+    : "";
+  return raw.split(",").map((p) => p.trim()).filter(Boolean);
+}
+
 function sharedAuthOptions(env: AuthEnv) {
   return {
     emailAndPassword: {
@@ -52,6 +63,15 @@ function sharedAuthOptions(env: AuthEnv) {
     },
     emailVerification: {
       autoSignInAfterVerification: true,
+    },
+    account: {
+      accountLinking: {
+        enabled: true,
+        trustedProviders: getSsoTrustedProviders(env),
+        // We trust the corporate SSO IdP, so don't also require the local user's
+        // email to be pre-verified before linking a trusted SSO account.
+        requireLocalEmailVerified: false,
+      },
     },
     plugins: [
       // Enterprise-edition plugins (SSO, ...). Empty in the Community build; each
