@@ -58,7 +58,7 @@ export default function PlanSettingsPage() {
 
       <div className="mx-auto grid w-full max-w-4xl gap-4">
         <CurrentPlanCard status={license.data} isLoading={license.isLoading} />
-        <ActivateCard tier={license.data?.tier ?? "community"} />
+        <ActivateCard />
       </div>
     </main>
   )
@@ -128,7 +128,7 @@ function CurrentPlanCard({
   )
 }
 
-function ActivateCard({ tier }: { tier: LicenseStatus["tier"] }) {
+function ActivateCard() {
   const queryClient = useQueryClient()
   const [code, setCode] = React.useState("")
   const [token, setToken] = React.useState("")
