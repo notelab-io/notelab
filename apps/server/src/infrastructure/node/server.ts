@@ -7,6 +7,7 @@ import path from "node:path";
 import { createApp } from "../../app";
 import { initEdition } from "../../edition";
 import { getLicenseStatus, startLicenseRevalidation } from "../../entitlements";
+import { applyPersistedLicense } from "../../routes/license";
 import { attachNodeCollaborationRuntime } from "../../collaboration/node-runtime";
 import { attachNodeDatabaseRealtimeRuntime } from "../../database-realtime/node-runtime";
 import { db, runWithDbEnv } from "../../db";
@@ -111,29 +112,43 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
   });
 }
 
-// Verify the license on boot and re-verify periodically (so an expired/rotated
-// key takes effect without a restart), plus a soft seat check.
-startLicenseRevalidation({
-  countActiveUsers: async () => {
-    const [row] = await db.select({ count: sql<number>`count(*)::int` }).from(user);
-    return row?.count ?? 0;
-  },
-});
-const license = getLicenseStatus();
-console.log(
-  `Zilobase edition: ${license.tier}` +
-    (license.isTrial ? " (trial)" : "") +
-    (license.inGrace ? " (in grace period)" : "") +
-    (license.error ? ` — license error: ${license.error}` : ""),
-);
+const nodeEnv = process.env as Record<string, unknown>;
 
-// Load edition (enterprise plugins) before serving, so auth includes them.
-void initEdition().finally(() => {
+async function bootstrap() {
+  // Apply the admin-uploaded license (persisted in DB) before anything reads
+  // entitlements; falls back to the ZILOBASE_LICENSE env var.
+  await runWithDbEnv(nodeEnv, () => applyPersistedLicense()).catch((error) => {
+    console.warn("[license] could not load persisted license; using env/Community.", error);
+  });
+
+  // Verify on boot + re-verify periodically (expired/rotated key takes effect
+  // without a restart), plus a soft seat check.
+  startLicenseRevalidation({
+    countActiveUsers: () =>
+      runWithDbEnv(nodeEnv, async () => {
+        const [row] = await db.select({ count: sql<number>`count(*)::int` }).from(user);
+        return row?.count ?? 0;
+      }),
+  });
+
+  const license = getLicenseStatus();
+  console.log(
+    `Zilobase edition: ${license.tier}` +
+      (license.isTrial ? " (trial)" : "") +
+      (license.inGrace ? " (in grace period)" : "") +
+      (license.error ? ` — license error: ${license.error}` : ""),
+  );
+
+  // Load edition (enterprise plugins) before serving, so auth includes them.
+  await initEdition().catch(() => {});
+
   server.listen(port, hostname, () => {
     console.log(`Zilobase server listening on http://${hostname}:${port}`);
     console.log(`Serving Zilobase web assets from ${webDistDir}`);
   });
-});
+}
+
+void bootstrap();
 
 function startDatabaseRealtimeOutboxDrainer() {
   const env = process.env as Record<string, unknown>;

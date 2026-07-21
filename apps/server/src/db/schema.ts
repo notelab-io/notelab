@@ -27,6 +27,14 @@ export const user = pgTable("user", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+// Instance-level key/value settings (e.g. the persisted license token so an
+// admin-uploaded key survives restarts). Community-neutral.
+export const instanceSetting = pgTable("instance_setting", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 export const pageSettings = pgTable("page_settings", {
   id: text("id").primaryKey(),
   userId: text("user_id")
