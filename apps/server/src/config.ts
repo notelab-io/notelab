@@ -51,8 +51,22 @@ export function getTrustedOrigins(env: RuntimeEnv, requestOrigin: string) {
       ]
     : [];
 
+  // Extra trusted origins (comma-separated), e.g. enterprise SSO IdP origins the
+  // Better Auth `sso` plugin must trust for OIDC discovery.
+  const extraOrigins = (getStringEnv(env, "ZILOBASE_EXTRA_TRUSTED_ORIGINS") ?? "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
   return Array.from(
-    new Set([requestOrigin, ...getClientOrigins(env), "mobile://", "mobile://*", ...developmentOrigins]),
+    new Set([
+      requestOrigin,
+      ...getClientOrigins(env),
+      "mobile://",
+      "mobile://*",
+      ...developmentOrigins,
+      ...extraOrigins,
+    ]),
   );
 }
 

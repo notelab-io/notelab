@@ -27,6 +27,14 @@ export const user = pgTable("user", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+// Instance-level key/value settings (e.g. the persisted license token so an
+// admin-uploaded key survives restarts). Community-neutral.
+export const instanceSetting = pgTable("instance_setting", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 export const pageSettings = pgTable("page_settings", {
   id: text("id").primaryKey(),
   userId: text("user_id")
@@ -88,6 +96,10 @@ export const account = pgTable(
     index("account_user_provider_idx").on(table.userId, table.providerId),
   ],
 );
+
+// NOTE: the enterprise `sso_provider` table is intentionally NOT defined here.
+// It is owned by the Enterprise edition (zilobase-ee) and created by the EE
+// migration, so the community core carries no enterprise schema.
 
 export const verification = pgTable(
   "verification",

@@ -29,3 +29,6 @@ target
 .env.development
 .env
 .dev.vars
+
+# Lockfile is regenerated on install (cross-repo file: deps churn it)
+package-lock.json
