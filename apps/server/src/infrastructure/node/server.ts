@@ -5,6 +5,7 @@ import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import path from "node:path";
 import { createApp } from "../../app";
+import { initEdition } from "../../edition";
 import { attachNodeCollaborationRuntime } from "../../collaboration/node-runtime";
 import { attachNodeDatabaseRealtimeRuntime } from "../../database-realtime/node-runtime";
 import { runWithDbEnv } from "../../db";
@@ -50,9 +51,21 @@ const server = createServer(async (incoming, outgoing) => {
       : await serveWebAsset(request);
 
     outgoing.statusCode = response.status;
+    // `Headers.forEach` collapses multiple Set-Cookie headers into one
+    // comma-joined string, which browsers cannot parse (breaking multi-cookie
+    // responses like the SSO OAuth callback). Forward Set-Cookie separately as
+    // an array so each cookie becomes its own header.
+    const setCookies =
+      typeof response.headers.getSetCookie === "function"
+        ? response.headers.getSetCookie()
+        : [];
     response.headers.forEach((value, key) => {
+      if (key.toLowerCase() === "set-cookie") return;
       outgoing.setHeader(key, value);
     });
+    if (setCookies.length > 0) {
+      outgoing.setHeader("set-cookie", setCookies);
+    }
 
     if (!response.body) {
       outgoing.end();
@@ -95,9 +108,12 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
   });
 }
 
-server.listen(port, hostname, () => {
-  console.log(`Zilobase server listening on http://${hostname}:${port}`);
-  console.log(`Serving Zilobase web assets from ${webDistDir}`);
+// Load edition (enterprise plugins) before serving, so auth includes them.
+void initEdition().finally(() => {
+  server.listen(port, hostname, () => {
+    console.log(`Zilobase server listening on http://${hostname}:${port}`);
+    console.log(`Serving Zilobase web assets from ${webDistDir}`);
+  });
 });
 
 function startDatabaseRealtimeOutboxDrainer() {
