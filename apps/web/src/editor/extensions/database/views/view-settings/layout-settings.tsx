@@ -116,7 +116,7 @@ export function LayoutSettingsSection({
               right={viewTypeLabel}
             />
           </DropDrawerSubTrigger>
-          <DropDrawerSubContent className="max-h-[min(46rem,calc(100vh-2rem))] w-72 max-w-[calc(100vw-1rem)] overflow-y-auto p-1">
+          <DropDrawerSubContent className="w-72 max-w-[calc(100vw-1rem)] p-1">
             <div className="grid grid-cols-3 gap-1.5 px-1 pb-1">
               {databaseViewTypeOptions.map((option) => {
                 const selected = activeViewType === option.type;
@@ -574,4 +574,3 @@ export function LayoutSettingsSection({
 
   );
 }
-

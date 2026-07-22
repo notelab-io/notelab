@@ -463,8 +463,13 @@ function DropDrawerContent({
     <DropdownMenuContent
       data-slot="drop-drawer-content"
       align="end"
+      collisionPadding={8}
       sideOffset={4}
-      className={className}
+      sticky="always"
+      className={cn(
+        "max-h-none overflow-x-visible overflow-y-visible",
+        className,
+      )}
       {...props}
     >
       {children}
@@ -503,7 +508,7 @@ function DropDrawerItem({
         data-inset={inset}
         data-disabled={disabled}
         className={cn(
-          "flex min-h-9 cursor-pointer items-center justify-between gap-2 rounded-md px-2 py-2 text-sm text-popover-foreground outline-hidden select-none hover:bg-accent [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground",
+          "my-0.5 flex min-h-9 cursor-pointer items-center justify-between gap-2 rounded-md px-2 py-2 text-[13px] text-popover-foreground outline-hidden select-none hover:bg-accent [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground",
           inset && "pl-8",
           variant === "destructive" &&
             "text-destructive hover:bg-destructive/10 hover:text-destructive [&_svg]:text-destructive",
@@ -530,7 +535,7 @@ function DropDrawerItem({
   return (
     <DropdownMenuItem
       data-slot="drop-drawer-item"
-      className={className}
+      className={cn("my-0.5 text-[13px]", className)}
       onSelect={onSelect}
       onClick={onClick as React.MouseEventHandler<HTMLDivElement>}
       variant={variant}
@@ -777,7 +782,7 @@ const SubmenuDefinitionContext = React.createContext<SubmenuDefinition | null>(
 // Submenu components
 function DropDrawerSub({
   children,
-  displayMode: _displayMode,
+  displayMode = "nested",
   id,
   title,
   ...props
@@ -835,6 +840,7 @@ function DropDrawerSub({
     <DropdownMenuSub
       data-slot="drop-drawer-sub"
       data-submenu-id={submenuId}
+      displayMode={displayMode}
       title={title}
       // Don't pass id to DropdownMenuSub as it doesn't accept this prop
       {...props}
@@ -878,7 +884,7 @@ function DropDrawerSubTrigger({
         data-slot="drop-drawer-sub-trigger"
         data-inset={inset}
         className={cn(
-          "flex min-h-9 cursor-pointer items-center justify-between gap-2 rounded-md px-2 py-2 text-sm text-popover-foreground outline-hidden select-none hover:bg-accent [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground",
+          "my-0.5 flex min-h-9 cursor-pointer items-center justify-between gap-2 rounded-md px-2 py-2 text-[13px] text-popover-foreground outline-hidden select-none hover:bg-accent [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground",
           inset && "pl-8",
           className,
         )}
@@ -895,7 +901,7 @@ function DropDrawerSubTrigger({
     <DropdownMenuSubTrigger
       data-slot="drop-drawer-sub-trigger"
       data-inset={inset}
-      className={className}
+      className={cn("my-0.5 text-[13px]", className)}
       inset={inset}
       {...props}
     >

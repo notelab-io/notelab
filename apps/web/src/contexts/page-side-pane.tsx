@@ -42,9 +42,8 @@ export type PageSidePaneContextValue = {
 export const PageSidePaneContext =
   createContext<PageSidePaneContextValue | null>(null)
 
-export const WORKSPACE_SIDE_PANE_TRANSITION_MS = 320
+export const WORKSPACE_SIDE_PANE_TRANSITION_MS = 200
 
-const WORKSPACE_SIDE_PANE_EASING = "cubic-bezier(0.16, 1, 0.3, 1)"
 const SIDE_PANE_PAGE_PARAM = "p"
 const SIDE_PANE_DATABASE_PARAM = "d"
 
@@ -52,19 +51,16 @@ export const pageSidePaneGridShellClass =
   "grid min-h-0 flex-1 overflow-hidden [grid-template-rows:3rem_minmax(0,1fr)]"
 
 export const pageSidePaneMobilePanelTransitionClass =
-  "max-md:transition-[transform,opacity] max-md:duration-320 max-md:ease-[cubic-bezier(0.16,1,0.3,1)] max-md:motion-reduce:transition-none"
+  "transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none"
 
 export function getPageSidePaneGridStyle(
   visible: boolean,
-  open: boolean,
+  _open: boolean,
 ): CSSProperties {
   return {
     gridTemplateColumns: visible
-      ? open
-        ? "minmax(0, 1fr) minmax(0, 1fr)"
-        : "minmax(0, 1fr) minmax(0, 0fr)"
+      ? "minmax(0, 1fr) minmax(0, 1fr)"
       : "minmax(0, 1fr)",
-    transition: `grid-template-columns ${WORKSPACE_SIDE_PANE_TRANSITION_MS}ms ${WORKSPACE_SIDE_PANE_EASING}`,
   }
 }
 
@@ -73,8 +69,8 @@ export function getPageSidePaneMobilePanelClassName(open: boolean) {
     "max-md:absolute max-md:inset-0 max-md:z-10 max-md:flex max-md:w-full max-md:flex-col max-md:overflow-hidden max-md:border-l-0 max-md:bg-background",
     pageSidePaneMobilePanelTransitionClass,
     open
-      ? "max-md:opacity-100 max-md:[transform:translate3d(0,0,0)]"
-      : "max-md:pointer-events-none max-md:opacity-0 max-md:[transform:translate3d(100%,0,0)]",
+      ? "[transform:translate3d(0,0,0)]"
+      : "pointer-events-none [transform:translate3d(100%,0,0)]",
   )
 }
 
@@ -125,7 +121,12 @@ export function getPageSidePaneHeaderCellClassName({
 }) {
   return cn(
     "flex h-12 min-h-0 min-w-0 items-center overflow-hidden bg-background",
-    side === "side" && splitActive && "border-l border-border",
+    side === "side" && [
+      "transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
+      splitActive
+        ? "border-l border-border [transform:translate3d(0,0,0)]"
+        : "pointer-events-none [transform:translate3d(100%,0,0)]",
+    ],
     className,
   )
 }
