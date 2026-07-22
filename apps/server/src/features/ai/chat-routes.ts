@@ -20,6 +20,10 @@ import {
   coerceAiChatRequestBody,
   runAiChatTurn,
 } from "../../ai/chat-service";
+import {
+  buildToolkitTools,
+  isToolkitConfigured,
+} from "../../integrations/toolkit";
 
 const askAiRequestSchema = z
   .object({
@@ -117,12 +121,20 @@ aiRoutes.post("/ask", async (c) => {
     return messages.response;
   }
 
-  const tools: ToolSet = getRuntimeAdapter().buildConnectorTools?.({
-    env: c.env,
-    sources: body.data.sources,
-    userId: auth.user.id,
-    workspaceId: auth.workspaceId,
-  }) ?? {};
+  const tools: ToolSet = isToolkitConfigured(c.env)
+    ? await buildToolkitTools({
+        env: c.env,
+        signal: c.req.raw.signal,
+        sources: body.data.sources,
+        userId: auth.user.id,
+        workspaceId: auth.workspaceId,
+      })
+    : getRuntimeAdapter().buildConnectorTools?.({
+        env: c.env,
+        sources: body.data.sources,
+        userId: auth.user.id,
+        workspaceId: auth.workspaceId,
+      }) ?? {};
 
   if (Object.keys(tools).length === 0) {
     return c.json(

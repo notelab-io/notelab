@@ -16,6 +16,10 @@ import {
 import { buildPageEditTools } from "./ask-ai-page-tools";
 import { resolveOpenAiChatModel } from "./ai-provider";
 import {
+  buildToolkitTools,
+  isToolkitConfigured,
+} from "../integrations/toolkit";
+import {
   getAiChatThreadForUser,
   maybeAutoTitleAiChatThread,
   syncAiChatThreadMessages,
@@ -123,6 +127,20 @@ export async function runAiChatTurn(input: {
   const hasPageContext = Boolean(requestBody.pageContext);
   const allowedPageIds = requestBody.allowedPageIds;
   const hasPageEditAccess = hasPageContext && requestBody.canEditPages;
+  const connectorTools = isToolkitConfigured(input.env)
+    ? await buildToolkitTools({
+        env: input.env,
+        signal: input.abortSignal,
+        sources: requestBody.sources,
+        userId: auth.userId,
+        workspaceId,
+      })
+    : getRuntimeAdapter().buildConnectorTools?.({
+        env: input.env,
+        sources: requestBody.sources,
+        userId: auth.userId,
+        workspaceId,
+      }) ?? {};
 
   if (hasPageContext) {
     console.warn(
@@ -144,12 +162,7 @@ export async function runAiChatTurn(input: {
           }),
         }
       : {}),
-    ...(getRuntimeAdapter().buildConnectorTools?.({
-      env: input.env,
-      sources: requestBody.sources,
-      userId: auth.userId,
-      workspaceId,
-    }) ?? {}),
+    ...connectorTools,
   };
 
   const model = resolveOpenAiChatModel(input.env.OPENAI_API_KEY, requestBody.model);

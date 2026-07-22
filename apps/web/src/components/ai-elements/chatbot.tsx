@@ -1032,22 +1032,21 @@ const ChatbotInner = ({
     return queryModels.length ? queryModels : fallbackModels;
   }, [aiModelsQuery.data?.models]);
   const enabledSources = useMemo<SourceId[] | null>(() => {
-    const statuses = integrationsQuery.data;
+    const integrations = integrationsQuery.data;
 
-    if (!statuses && integrationsQuery.isLoading) {
+    if (!integrations && integrationsQuery.isLoading) {
       return null;
     }
 
-    return [
-      ...(statuses?.gmail?.connected ? (["gmail"] as const) : []),
-      ...(statuses?.github?.connected ? (["github"] as const) : []),
-      ...(statuses?.googleCalendar?.connected
-        ? (["google-calendar"] as const)
-        : []),
-      ...(statuses?.googleDrive?.connected ? (["google-drive"] as const) : []),
-      ...(statuses?.slack?.connected ? (["slack"] as const) : []),
-      ...(statuses?.linear?.connected ? (["linear"] as const) : []),
-    ];
+    const connectedConnectorIds = new Set(
+      integrations?.accounts
+        .filter((account) => account.status === "active")
+        .map((account) => account.connectorId) ?? [],
+    );
+
+    return availableSources
+      .map((source) => source.id)
+      .filter((sourceId) => connectedConnectorIds.has(sourceId));
   }, [integrationsQuery.data, integrationsQuery.isLoading]);
 
   const selectedModelData = useMemo(
