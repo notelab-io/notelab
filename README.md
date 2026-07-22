@@ -29,19 +29,26 @@
 
 Zilobase is an open-source workspace for building and organizing knowledge with structured pages, database views, comments, AI-assisted workflows, and connected tools. It is designed to run as a hosted product or as a self-hosted Docker deployment.
 
+## OpenAI Build Week 2026
+
+Zilobase is the Work & Productivity submission: a collaborative workspace where
+pages and databases provide durable context while Toolkit-powered integrations
+provide live context from GitHub, Gmail, Google Calendar, Google Drive, Slack,
+and Linear.
+
+Codex running GPT-5.6 was used to design the standalone Toolkit boundary,
+integrate its server-side SDK, build the connection settings experience, review
+tool and permission behavior, add regression tests, and verify the server and
+web applications. Read the form-ready [project story, tags, judge walkthrough,
+and demo outline](./BUILD_WEEK.md).
+
 ## What You Can Do
 
 - **Write and organize pages** with a rich editor, nested navigation, comments, and workspace context.
 - **Model structured information** with standalone or embedded databases, table views, kanban views, timeline views, properties, filters, sorting, and grouping.
 - **Work with AI in context** using page-aware chat, workspace tools, and supported page/database edit flows.
-- **Connect external systems** through shared connector packages for GitHub, Gmail, Google Calendar, Google Drive, Linear, and Slack.
+- **Connect external systems** through the server-side Toolkit SDK for GitHub, Gmail, Google Calendar, Google Drive, Linear, and Slack.
 - **Run it yourself** with Docker Compose, Caddy, Postgres, and MinIO.
-
-## Preview
-
-| Workspace | Databases | AI workflows |
-| --- | --- | --- |
-| Replace with a workspace screenshot. | Replace with a database screenshot. | Replace with an AI/chat screenshot. |
 
 ## Quick Start
 
