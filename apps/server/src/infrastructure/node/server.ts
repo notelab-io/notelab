@@ -20,7 +20,8 @@ loadEnv({
   path: process.env.ZILOBASE_ENV_FILE ?? path.resolve("apps/server/.env"),
 });
 
-const app = createApp();
+/** Set in bootstrap after `initEdition()` so EE routes/plugins are included. */
+let app: ReturnType<typeof createApp> | null = null;
 const port = readPort(process.env.PORT) ?? 3000;
 const hostname = process.env.HOST ?? "0.0.0.0";
 const webDistDir =
@@ -48,6 +49,14 @@ const apiPathPrefixes = [
 
 const server = createServer(async (incoming, outgoing) => {
   try {
+    if (!app) {
+      outgoing.statusCode = 503;
+      outgoing.setHeader("content-type", "application/json");
+      outgoing.setHeader("retry-after", "2");
+      outgoing.end(JSON.stringify({ error: "starting" }));
+      return;
+    }
+
     const request = toRequest(incoming);
     const url = new URL(request.url);
     const response = isApiPath(url.pathname)
@@ -139,8 +148,10 @@ async function bootstrap() {
       (license.error ? ` — license error: ${license.error}` : ""),
   );
 
-  // Load edition (enterprise plugins) before serving, so auth includes them.
+  // Load edition (auth plugins + admin routes) before createApp, so the route
+  // tree and Better Auth include Enterprise contributions when present.
   await initEdition().catch(() => {});
+  app = createApp();
 
   server.listen(port, hostname, () => {
     console.log(`Zilobase server listening on http://${hostname}:${port}`);

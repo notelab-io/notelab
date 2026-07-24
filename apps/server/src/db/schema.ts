@@ -97,9 +97,33 @@ export const account = pgTable(
   ],
 );
 
-// NOTE: the enterprise `sso_provider` table is intentionally NOT defined here.
-// It is owned by the Enterprise edition (zilobase-ee) and created by the EE
-// migration, so the community core carries no enterprise schema.
+/**
+ * Better Auth SSO provider row (`@better-auth/sso` model: `ssoProvider`).
+ *
+ * The **table is created only by the commercial EE migration** (`migrate-ee.mjs`).
+ * The type must still live here so the Drizzle adapter can resolve the model when
+ * the EE SSO plugin is loaded — otherwise BA throws:
+ *   The model "ssoProvider" was not found in the schema object.
+ * Community builds never load the SSO plugin and never query this table.
+ */
+export const ssoProvider = pgTable(
+  "sso_provider",
+  {
+    id: text("id").primaryKey(),
+    issuer: text("issuer").notNull(),
+    oidcConfig: text("oidc_config"),
+    samlConfig: text("saml_config"),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    providerId: text("provider_id").notNull().unique(),
+    organizationId: text("organization_id"),
+    domain: text("domain").notNull(),
+    // Column name matches EE migrate (Better Auth default field name).
+    domainVerified: boolean("domainVerified").default(false),
+  },
+  (table) => [index("sso_provider_domain_idx").on(table.domain)],
+);
 
 export const verification = pgTable(
   "verification",

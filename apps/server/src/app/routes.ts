@@ -8,6 +8,7 @@ import {
   sessionRoutes,
 } from "../features/auth/routes";
 import { databaseRoutes } from "../features/databases/routes";
+import { getEEAdminRoutes } from "../edition";
 import { healthRoutes } from "../features/health/routes";
 import { licenseRoutes } from "../routes/license";
 import { imageRoutes } from "../features/images/routes";
@@ -38,4 +39,11 @@ export function registerRoutes(app: Hono<AppBindings>) {
   app.route("/user-settings", pageSettingsRoutes);
   app.route("/pages", pageRoutes);
   app.route("/page-layouts", pageLayoutRoutes);
+
+  // Commercial edition only: Teams/Enterprise admin APIs. Empty in Community
+  // (getEEAdminRoutes() is null). Call createApp() after initEdition().
+  const eeAdmin = getEEAdminRoutes();
+  if (eeAdmin) {
+    app.route("/api/admin", eeAdmin);
+  }
 }

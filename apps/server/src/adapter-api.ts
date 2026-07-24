@@ -1,5 +1,6 @@
 export { getMembership, getWorkspaceMemberships } from "./access";
 export { createApp } from "./app";
+export { initEdition, getEEPlugins, getEEAdminRoutes } from "./edition";
 export {
   coerceAiChatRequestBody,
   runAiChatTurn,
