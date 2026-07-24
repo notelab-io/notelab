@@ -250,7 +250,7 @@ function PageSection({
                 }}
               >
                 <UploadIcon className="text-muted-foreground" />
-                <span>Import Notion</span>
+                <span>Import pages</span>
               </DropDrawerItem>
             ) : null}
           </DropDrawerContent>

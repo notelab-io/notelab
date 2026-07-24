@@ -40,7 +40,7 @@ export async function importNotionZipFile({
   const markdownFiles = entries.filter((entry) => entry.path.endsWith(".md"))
 
   if (markdownFiles.length > 0) {
-    throw new NotionImportError("Export your Notion pages as HTML, not Markdown.")
+    throw new NotionImportError("Export your pages as HTML, not Markdown.")
   }
 
   const htmlEntries = entries
@@ -54,7 +54,7 @@ export async function importNotionZipFile({
     .sort((first, second) => getDepth(first.path) - getDepth(second.path))
 
   if (htmlEntries.length === 0) {
-    throw new NotionImportError("No Notion HTML pages were found in this zip.")
+    throw new NotionImportError("No HTML pages were found in this zip.")
   }
 
   const pageIdsByPath = new Map<string, string>()

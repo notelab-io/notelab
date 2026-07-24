@@ -237,7 +237,7 @@ function MultiWorkspaceSwitcher({
                 <Input
                   id="new-workspace-name"
                   name="workspaceName"
-                  placeholder="Acme Inc."
+                  placeholder="My workspace"
                   autoComplete="workspace"
                   disabled={createWorkspace.isPending}
                   required

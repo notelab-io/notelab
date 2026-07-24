@@ -104,7 +104,7 @@ export interface RevalidationOptions {
   /**
    * Returns the current active-user count for a seat check. The licensing
    * framework stays DB-agnostic; the host (which has DB access) supplies this.
-   * Over-limit is a soft, non-blocking warning (Mattermost's model).
+   * Over-limit is a soft, non-blocking warning.
    */
   countActiveUsers?: () => Promise<number>;
 }
@@ -126,7 +126,7 @@ async function runSeatCheck(count?: () => Promise<number>): Promise<void> {
 
 /**
  * Periodically re-verify the license so an expired/rotated key takes effect
- * without a restart (Mattermost re-checks on an interval too), and run a soft
+ * without a restart, and run a soft
  * seat check. Returns a stop function. Default: every 6 hours.
  */
 export function startLicenseRevalidation(options: RevalidationOptions = {}): () => void {

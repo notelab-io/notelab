@@ -23,6 +23,6 @@ export interface LicensePayload {
    * hard-fails. `null`/absent means no grace (hard-stop at `expiresAt`).
    */
   readonly graceUntil?: number | null;
-  /** Optional binding to stop key sharing (Plane-style 1 key : 1 instance). */
+  /** Optional binding to stop key sharing (1 key : 1 instance). */
   readonly instanceId?: string;
 }

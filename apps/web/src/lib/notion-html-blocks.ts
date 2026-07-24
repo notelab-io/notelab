@@ -45,7 +45,7 @@ export function normalizeNotionHtmlBlocks(
   const warnings: string[] = []
 
   if (!doc.querySelector(".page-body")) {
-    warnings.push("Notion page body was not found; imported the document body.")
+    warnings.push("Page body was not found; imported the document body.")
   }
 
   const body = doc.createElement("div")
@@ -285,7 +285,7 @@ function normalizeBody(
 
   for (const database of Array.from(body.querySelectorAll(".collection-content"))) {
     database.replaceWith(createParagraph(doc, "[Database skipped]"))
-    warnings.push("Skipped a Notion database.")
+    warnings.push("Skipped an embedded database.")
   }
 
   for (const toc of Array.from(body.querySelectorAll("nav"))) {

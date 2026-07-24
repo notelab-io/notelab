@@ -70,7 +70,7 @@ function WorkspaceImportSection({
         <div className="space-y-1">
           <CardTitle>Import</CardTitle>
           <CardDescription>
-            Bring pages into this workspace from a Notion HTML zip export.
+            Bring pages into this workspace from an HTML zip export.
           </CardDescription>
         </div>
         <Button
@@ -80,7 +80,7 @@ function WorkspaceImportSection({
           type="button"
         >
           {isImporting ? <Spinner /> : <UploadIcon />}
-          Import Notion
+          Import pages
         </Button>
       </CardHeader>
       <input

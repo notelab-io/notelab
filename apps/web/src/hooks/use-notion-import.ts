@@ -38,11 +38,11 @@ export function useNotionImport({
       }
 
       if (!workspaceId) {
-        toast.error("Select a workspace before importing Notion pages.")
+        toast.error("Select a workspace before importing pages.")
         return
       }
 
-      const toastId = toast.loading("Importing Notion pages...")
+      const toastId = toast.loading("Importing pages...")
 
       setIsImporting(true)
 
@@ -59,7 +59,7 @@ export function useNotionImport({
             : ""
 
         toast.success(
-          `Imported ${result.createdPageIds.length} Notion page${result.createdPageIds.length === 1 ? "" : "s"}.${suffix}`,
+          `Imported ${result.createdPageIds.length} page${result.createdPageIds.length === 1 ? "" : "s"}.${suffix}`,
           { id: toastId },
         )
 
@@ -73,7 +73,7 @@ export function useNotionImport({
         toast.error(
           error instanceof NotionImportError || error instanceof Error
             ? error.message
-            : "Could not import Notion pages.",
+            : "Could not import pages.",
           { id: toastId },
         )
       } finally {

@@ -88,9 +88,9 @@ export function LoginForm({
               <div className="flex size-8 items-center justify-center rounded-md">
                 <GalleryVerticalEndIcon className="size-6" />
               </div>
-              <span className="sr-only">Acme Inc.</span>
+              <span className="sr-only">Zilobase</span>
             </a>
-            <h1 className="text-xl font-bold">Welcome to Acme Inc.</h1>
+            <h1 className="text-xl font-bold">Welcome to Zilobase</h1>
             <FieldDescription>
               Don&apos;t have an account? <Link to="/signup">Sign up</Link>
             </FieldDescription>

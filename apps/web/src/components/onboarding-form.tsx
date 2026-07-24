@@ -64,7 +64,7 @@ export function OnboardingForm({
               id="workspace-name"
               name="workspaceName"
               type="text"
-              placeholder="Acme Inc."
+              placeholder="My workspace"
               autoComplete="workspace"
               disabled={createWorkspace.isPending}
               required

@@ -5,9 +5,8 @@ import type { Feature, Tier } from "@zilobase/core-ports";
  * each tier unlocks (Parnas: the most volatile business decision, hidden behind
  * one module). Re-tiering a feature is a one-line edit here.
  */
-// Notion-mapped: Teams (Professional) = Notion Business (SSO lands here);
-// Enterprise = Notion Enterprise (SCIM, audit, security). Enterprise is a
-// strict superset of Professional.
+// Teams (Professional) = SSO + domain + admin controls.
+// Enterprise = SCIM, audit, security. Enterprise is a strict superset of Professional.
 const PROFESSIONAL_FEATURES: readonly Feature[] = [
   "sso.saml",
   "sso.oidc.enterprise",

@@ -6,7 +6,7 @@ import {
   useState,
   type ReactNode,
 } from "react"
-import { Copy, HelpCircle, Sigma } from "lucide-react"
+import { Copy, Sigma } from "lucide-react"
 import type { ThemedToken } from "shiki"
 import { toast } from "sonner"
 
@@ -139,7 +139,7 @@ const builtInReferences: FormulaReferenceItem[] = [
     'split("apple,pear", ",")',
   ]),
   createBuiltInReference("trim", "Remove whitespace from the beginning and end of text.", [
-    '" notion ".trim()',
+    '"  hello  ".trim()',
   ]),
 ]
 
@@ -312,19 +312,9 @@ export function DatabaseFormulaDialog({
             <DialogTitle className="flex items-center gap-2">
               <Sigma className="size-5 text-muted-foreground" />
               <span>Edit formula</span>
-              <a
-                aria-label="Formula syntax"
-                className="text-muted-foreground transition-colors hover:text-foreground"
-                href="https://www.notion.com/help/formula-syntax"
-                rel="noreferrer"
-                target="_blank"
-              >
-                <HelpCircle className="size-4" />
-              </a>
             </DialogTitle>
             <DialogDescription className="sr-only">
-              Write a Notion-style formula for{" "}
-              {property?.property.name ?? "this property"}.
+              Write a formula for {property?.property.name ?? "this property"}.
             </DialogDescription>
           </DialogHeader>
 

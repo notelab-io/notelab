@@ -958,7 +958,7 @@ function callEagerFormulaFunction(name: string, args: FormulaValue[]) {
     case "datesubtract":
       return addDate(args[0], requireNumber(args[1]) * -1, textValue(args[2]))
     case "day":
-      return notionDay(requireDate(args[0]))
+      return calendarDay(requireDate(args[0]))
     case "divide":
       return requireNumber(args[0]) / requireNumber(args[1])
     case "e":
@@ -1140,7 +1140,7 @@ function callFormulaMethod(
     case "date":
       return requireDate(objectValue).getDate()
     case "day":
-      return notionDay(requireDate(objectValue))
+      return calendarDay(requireDate(objectValue))
     case "email":
     case "name":
       return personTextValue(objectValue)
@@ -1798,7 +1798,7 @@ function dateBetween(left: FormulaValue, right: FormulaValue, unit: string) {
   throw new Error(`Unknown date unit: ${unit}`)
 }
 
-function notionDay(date: Date) {
+function calendarDay(date: Date) {
   const day = date.getDay()
 
   return day === 0 ? 7 : day

@@ -58,7 +58,7 @@ function statusBody() {
   };
 }
 
-/** Sanitized license status (like Mattermost GetSanitizedClientLicense). */
+/** Sanitized license status for the client (no raw token). */
 licenseRoutes.get("/", (c) => c.json(statusBody()));
 
 /**
