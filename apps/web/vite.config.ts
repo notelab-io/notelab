@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { fileURLToPath, URL } from "node:url";
 import { defineConfig, type ProxyOptions } from "vite";
 import react from "@vitejs/plugin-react";
@@ -12,6 +13,43 @@ const featuresDir = fileURLToPath(
 const pageContextDir = fileURLToPath(
   new URL("../../packages/page-context/src", import.meta.url),
 );
+const eeWebStub = fileURLToPath(
+  new URL("./src/edition/ee-web.stub.ts", import.meta.url),
+);
+/**
+ * Commercial builds set ZILOBASE_EDITION=enterprise and resolve the private
+ * @zilobase/ee-web package. Community always gets the empty stub so no EE UI
+ * ships in the public artifact (commercial UI stays out of the OSS build).
+ */
+function resolveEeWebEntry(): string {
+  if (process.env.ZILOBASE_EDITION !== "enterprise") return eeWebStub;
+
+  const candidates = [
+    process.env.ZILOBASE_EE_WEB_ENTRY,
+    // Docker commercial image copies zilobase-ee → ee-src
+    fileURLToPath(
+      new URL("../../ee-src/packages/web-admin/src/index.ts", import.meta.url),
+    ),
+    // Local monorepo: platform/zilobase-ee next to platform/zilobase
+    fileURLToPath(
+      new URL(
+        "../../../zilobase-ee/packages/web-admin/src/index.ts",
+        import.meta.url,
+      ),
+    ),
+  ].filter((p): p is string => Boolean(p));
+
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) return candidate;
+  }
+
+  console.warn(
+    "[vite] ZILOBASE_EDITION=enterprise but @zilobase/ee-web entry not found; using community stub",
+  );
+  return eeWebStub;
+}
+
+const eeWebEntry = resolveEeWebEntry();
 const backendTarget = process.env.VITE_API_URL?.replace(/\/$/, "") ?? "http://127.0.0.1:3000";
 const expectedWsProxyErrorCodes = new Set(["ECONNRESET", "EPIPE"]);
 
@@ -81,6 +119,8 @@ export default defineConfig(async () => ({
         find: "@zilobase/page-context",
         replacement: `${pageContextDir}/index.ts`,
       },
+      // Commercial → private ee-web; Community → empty stub (see resolveEeWebEntry).
+      { find: "@zilobase/ee-web", replacement: eeWebEntry },
     ],
   },
 

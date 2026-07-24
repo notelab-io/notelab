@@ -24,6 +24,7 @@ import TeamSettingsPage from "@/pages/settings/team"
 import PlanSettingsPage from "@/pages/settings/plan"
 import SignupPage from "@/pages/signup"
 import Page from "@/pages/page"
+import { getEESettingsRoutes } from "@zilobase/ee-web"
 import { sessionQueryOptions } from "@zilobase/features/auth"
 import { workspacesQueryOptions } from "@zilobase/features/workspaces"
 import { ApiError, apiFetch } from "@/lib/api"
@@ -264,6 +265,15 @@ const planSettingsRoute = createRoute({
   component: PlanSettingsPage,
 })
 
+// Commercial build only: SSO / Domains (etc.). Community stub returns [].
+const eeSettingsRoutes = getEESettingsRoutes().map((def) =>
+  createRoute({
+    getParentRoute: () => appRoute,
+    path: def.path,
+    component: def.component,
+  }),
+)
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
@@ -284,6 +294,7 @@ const routeTree = rootRoute.addChildren([
     zilobaseAiSettingsRoute,
     teamSettingsRoute,
     planSettingsRoute,
+    ...eeSettingsRoutes,
   ]),
   pageRoute,
   databaseRoute,

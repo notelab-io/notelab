@@ -22,7 +22,8 @@
         "./../../packages/features/src/databases/property-types.ts"
       ],
       "@zilobase/features": ["./../../packages/features/src/index.ts"],
-      "@zilobase/features/*": ["./../../packages/features/src/*/index.ts"]
+      "@zilobase/features/*": ["./../../packages/features/src/*/index.ts"],
+      "@zilobase/ee-web": ["./src/edition/ee-web.stub.ts"]
     },
 
     /* Linting */

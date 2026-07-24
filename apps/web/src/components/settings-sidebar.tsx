@@ -4,12 +4,15 @@ import {
   ArrowLeftIcon,
   Building2Icon,
   CreditCardIcon,
+  GlobeIcon,
   KeyRoundIcon,
   PlugIcon,
+  ShieldIcon,
   SparklesIcon,
   UserIcon,
   UsersIcon,
 } from "lucide-react"
+import { getEESettingsNavItems } from "@zilobase/ee-web"
 
 import {
   AppSidebarHeader,
@@ -28,7 +31,12 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 
-const settingsItems = [
+const EE_NAV_ICONS = {
+  shield: <ShieldIcon />,
+  globe: <GlobeIcon />,
+} as const
+
+const communitySettingsItems = [
   {
     title: "Profile",
     href: "/settings/profile",
@@ -64,6 +72,16 @@ const settingsItems = [
     href: "/settings/plan",
     icon: <CreditCardIcon />,
   },
+]
+
+// Commercial build injects SSO / Domains here; community stub returns [].
+const settingsItems = [
+  ...communitySettingsItems,
+  ...getEESettingsNavItems().map((item) => ({
+    title: item.title,
+    href: item.href,
+    icon: EE_NAV_ICONS[item.icon] ?? <ShieldIcon />,
+  })),
 ]
 
 export function SettingsSidebar({
